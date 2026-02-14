@@ -2,10 +2,10 @@
 
 **Product:** CFOKit — The Open Source CFO Toolkit
 **Phase:** 1 — Single-Business Bookkeeper on GCP
-**Target Audience:** The author (solo consultant, cash-basis business), and technically sophisticated open-source enthusiasts who want AI-assisted bookkeeping
+**Target Audience:** The author (single-member Delaware LLC with S-corp election, registered in NY, cash-basis consulting), and technically sophisticated open-source enthusiasts who want AI-assisted bookkeeping
 **Date:** 2026-02-14
 
-CFOKit is an open-source AI CFO toolkit. Phase 1 delivers a working bookkeeper agent for a single cash-basis consulting business: transaction categorization, report generation, and scheduled summaries — all driven by Claude AI with QuickBooks integration via MCP, deployed to GCP, and operated through Slack.
+CFOKit is an open-source AI CFO toolkit. Phase 1 delivers a working bookkeeper agent for the author's business — a single-member Delaware LLC that elects S-corp taxation, registered in New York, operating on a cash basis as a consulting practice. The bookkeeper handles transaction categorization, report generation, and scheduled summaries — all driven by Claude AI with QuickBooks integration via MCP, deployed to GCP, and operated through Slack.
 
 Multi-business support, additional agents (tax preparer, compliance monitor, cashflow analyst), and additional cloud providers are deferred to Phase 2+. This repository is the open-source project; operational concerns (monitoring, alerting, dashboards) for production deployment belong in a separate private infrastructure repository.
 
@@ -108,10 +108,10 @@ sequenceDiagram
     User->>Slack: "@cfokit setup"
     Slack->>FastAPI: POST /slack/events
     FastAPI->>Handler: route("setup", request)
-    Handler->>Slack: "Configure your business: entity type, state, fiscal year"
-    User->>Slack: "S-corp, NY, Jan 1"
+    Handler->>Slack: "Configure your business: entity type, formation state, operating state, fiscal year"
+    User->>Slack: "Single-member LLC with S-corp election, formed in DE, operating in NY, Jan 1"
     Slack->>FastAPI: POST /slack/events
-    Handler->>Firestore: save_config(entity_type=s_corp, state=NY, fiscal_year_start=01-01)
+    Handler->>Firestore: save_config(entity_type=s_corp, formation_state=DE, operating_state=NY, fiscal_year_start=01-01)
 
     Handler->>Slack: "Connect QuickBooks: [Authorize Link]"
     User->>QB: Click authorize link, grant access
@@ -379,13 +379,14 @@ Create the `Transaction` Pydantic model for cash-basis consulting transactions. 
 
 #### Story 2.2: Implement BusinessConfig model
 
-Create the `BusinessConfig` model for single-business configuration. This replaces the multi-client `Client` model — Phase 1 supports one business only.
+Create the `BusinessConfig` model for single-business configuration. This replaces the multi-client `Client` model — Phase 1 supports one business only. The primary configuration is the author's business: a single-member Delaware LLC with S-corp election, registered in NY.
 
 **Acceptance criteria:**
-- `core/models/business_config.py` defines `BusinessConfig` with fields: entity_type (enum: sole_prop, s_corp, llc), state (str), fiscal_year_start (date), slack_channel_id, quickbooks_company_id, quickbooks_connected (bool), created_at, updated_at
-- `EntityType` enum: `sole_prop`, `s_corp`, `llc`
-- Entity type determines which skills are loaded (e.g., S-corp loads reasonable compensation skill)
-- Unit tests cover entity type validation and fiscal year constraints
+- `core/models/business_config.py` defines `BusinessConfig` with fields: entity_type (enum: sole_prop, s_corp, llc), formation_state (str, e.g. "DE"), operating_state (str, e.g. "NY"), fiscal_year_start (date), slack_channel_id, quickbooks_company_id, quickbooks_connected (bool), created_at, updated_at
+- `EntityType` enum: `sole_prop`, `s_corp`, `llc` — note that `s_corp` covers both direct S-corps and LLCs electing S-corp taxation (the tax treatment, not the legal form, determines which skills load)
+- `formation_state` and `operating_state` are tracked separately because they determine different tax obligations (e.g., Delaware franchise tax vs. NY state income tax)
+- Entity type determines which skills are loaded (S-corp loads reasonable compensation skill)
+- Unit tests cover entity type validation, state validation, and fiscal year constraints
 
 **Key files:** `core/models/business_config.py`, `tests/unit/test_models/test_business_config.py`
 **Labels:** `epic:models`, `sub-phase:foundation`
@@ -399,11 +400,11 @@ Implement `tests/factories.py` with factories for Transaction and BusinessConfig
 
 **Acceptance criteria:**
 - `TransactionFactory.create(**overrides)` returns a valid Transaction with sensible defaults (consulting income, recent date, categorized)
-- `BusinessConfigFactory.create(**overrides)` returns a valid BusinessConfig
+- `BusinessConfigFactory.create(**overrides)` returns a valid BusinessConfig — defaults to `entity_type=s_corp, formation_state="DE", operating_state="NY"` matching the author's business
 - `create_batch(n)` returns `n` instances with unique IDs
 - `tests/conftest.py` provides `transaction_factory` and `config_factory` fixtures
 - `tests/conftest.py` provides `fixtures_dir` path fixture
-- `tests/fixtures/` contains `sample_transactions.json` with representative consulting transactions (income from clients, software subscriptions, meals, travel, office supplies)
+- `tests/fixtures/` contains `sample_transactions.json` with representative consulting business transactions: client consulting income, payroll (owner reasonable compensation), software subscriptions, meals, travel, office supplies, Delaware franchise tax payment, NY state tax payment
 
 **Key files:** `tests/factories.py`, `tests/conftest.py`, `tests/fixtures/sample_transactions.json`
 **Labels:** `epic:models`, `sub-phase:foundation`
@@ -491,19 +492,22 @@ Integration tests that verify the MCP server works end-to-end with a mock QuickB
 Create markdown skill files with domain knowledge relevant to categorizing transactions for a cash-basis consulting business.
 
 **Skills to author:**
-- `core/skills/consulting/transaction_categorization.md` — Common consulting expense categories, how to identify them, categorization rules for ambiguous transactions (e.g., is a software subscription an office expense or a cost of goods?)
-- `core/skills/consulting/cash_basis_accounting.md` — Cash basis rules, when to recognize revenue and expenses, differences from accrual
+- `core/skills/consulting/transaction_categorization.md` — Common consulting expense categories (professional services income, software/SaaS subscriptions, meals & entertainment, travel, office expenses, professional development, insurance), how to identify them, categorization rules for ambiguous transactions
+- `core/skills/consulting/cash_basis_accounting.md` — Cash basis rules, when to recognize revenue and expenses, implications for a consulting business (retainers, milestone payments, prepaid expenses)
 - `core/skills/federal_tax/meal_deductions.md` — 50% deduction rules, documentation requirements, business meal vs. personal
-- `core/skills/federal_tax/home_office.md` — Home office deduction rules for consultants
-- `core/skills/s_corp/reasonable_compensation.md` — IRS reasonable compensation rules for S-corp owner-employees
+- `core/skills/federal_tax/home_office.md` — Home office deduction rules for consultants (simplified method vs. regular method)
+- `core/skills/s_corp/reasonable_compensation.md` — IRS reasonable compensation rules for S-corp owner-employees, salary vs. distribution split, payroll tax implications, how this applies to single-member LLCs with S-corp election
+- `core/skills/s_corp/payroll_obligations.md` — Payroll categorization for owner-employee: salary, employer payroll taxes (FICA, FUTA, SUI), how to categorize payroll service fees
+- `core/skills/state/delaware_franchise_tax.md` — Delaware LLC annual franchise tax ($300 flat fee), due date (June 1), how to categorize the payment
+- `core/skills/state/ny_state_obligations.md` — NY state filing requirements for a Delaware LLC registered as a foreign LLC in NY, NY state income tax, NYC considerations if applicable
 
 **Acceptance criteria:**
 - Each skill file is well-structured markdown with clear headings
 - Content is accurate and actionable for Claude (not just reference material — includes decision rules)
-- Skills are scoped to consulting/cash-basis context
+- Skills are scoped to the author's specific situation: single-member LLC with S-corp election, cash basis, consulting
 - Each skill is under 50KB
 
-**Key files:** `core/skills/consulting/*.md`, `core/skills/federal_tax/*.md`, `core/skills/s_corp/*.md`
+**Key files:** `core/skills/consulting/*.md`, `core/skills/federal_tax/*.md`, `core/skills/s_corp/*.md`, `core/skills/state/*.md`
 **Labels:** `epic:skills`, `sub-phase:foundation`
 **blocks:** `[4.3]`
 
@@ -517,7 +521,7 @@ Create the YAML agent definition for the bookkeeper agent. This defines which sk
 - `core/agents/bookkeeper.yaml` defines:
   - `name`: bookkeeper
   - `description`: AI bookkeeper for cash-basis consulting businesses
-  - `skills`: list of skill file paths (entity-type-conditional: S-corp skills only loaded for S-corp entities)
+  - `skills`: list of skill file paths — consulting and federal tax skills always loaded; S-corp skills loaded when entity_type is s_corp; state skills loaded based on formation_state and operating_state
   - `tools`: quickbooks_mcp
   - `triggers`: on-demand (Slack), daily-summary, weekly-review, monthly-close
 - YAML parses without errors
@@ -574,7 +578,7 @@ Create `core/shared/skill_loader.py` that loads markdown skill files. Entity-typ
 
 **Acceptance criteria:**
 - `load_skills(agent_name, entity_type?)` loads the skills listed in the agent's YAML definition
-- Entity type filtering: only loads entity-type-specific skills (e.g., S-corp skills) when the entity type matches
+- Entity type filtering: loads S-corp skills when entity_type is s_corp, state-specific skills based on formation_state and operating_state
 - Path traversal protection: rejects `..`, absolute paths, and null bytes
 - Returns dict mapping skill name → content string
 - Unit tests: valid loading, entity-type filtering, path traversal rejection, nonexistent skill handling
@@ -855,7 +859,7 @@ Handle the OAuth redirect after the user authorizes QuickBooks access.
 - Validates CSRF state parameter against stored state
 - Exchanges code for access + refresh tokens via `quickbooks_oauth.exchange_code()`
 - Stores tokens in Secret Manager
-- Updates BusinessConfig with `quickbooks_connected = True` and `quickbooks_company_id`
+- Updates BusinessConfig with `quickbooks_connected=True` and `quickbooks_company_id`
 - Redirects to a success page or returns success HTML
 - Error handling: invalid state, expired code, QuickBooks API errors
 - Unit tests mock QuickBooks OAuth and verify token storage
@@ -1187,11 +1191,11 @@ The following are explicitly **out of scope** for Phase 1:
 - **OpenClaw integration** — Deferred to Phase 2. Placeholder README only.
 - **Accrual basis accounting** — Cash basis only in Phase 1.
 - **Wave and Stripe integrations** — QuickBooks only in Phase 1.
-- **501(c)(3) and 501(c)(6) entity types** — Deferred to Phase 2.
+- **Nonprofit entity types** (501(c)(3), 501(c)(6)) — Deferred to Phase 2. Phase 1 supports sole_prop, s_corp (including LLCs with S-corp election), and llc.
 - **E-filing integration** — Deferred to Phase 4.
 - **Web dashboard** — All interaction is via Slack.
 - **Multi-currency** — USD only.
-- **State tax expansion** — Federal + NY only.
+- **State tax expansion** — Federal + Delaware + NY only in Phase 1. Additional states deferred.
 - **Operational automation** (monitoring, alerting, dashboards) — Belongs in a separate private infrastructure repository, not this open-source project.
 - **CLI interface** — Slack is the primary interface for Phase 1. CLI may be added in Phase 2 for developer convenience.
 

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-CFOKit is an open-source AI CFO toolkit — an AI bookkeeper agent that categorizes transactions, generates reports, and posts automated financial summaries for a cash-basis consulting business. It uses Anthropic Claude AI, QuickBooks integration via Model Context Protocol (MCP), and deploys to GCP.
+CFOKit is an open-source AI CFO toolkit — an AI bookkeeper agent that categorizes transactions, generates reports, and posts automated financial summaries for a cash-basis consulting business. Built for the author's business (single-member Delaware LLC with S-corp election, registered in NY) but configurable for other entity types. Uses Anthropic Claude AI, QuickBooks integration via Model Context Protocol (MCP), and deploys to GCP.
 
 **Status:** Greenfield project. `docs/PRD.md` defines the Phase 1 scope, architecture, and all stories. Treat it as the authoritative source of truth for implementation decisions.
 
@@ -31,7 +31,8 @@ core/                        # Shared business logic (platform-agnostic)
 ├── skills/                  # CFO domain knowledge as markdown
 │   ├── consulting/          # Transaction categorization, cash basis accounting
 │   ├── federal_tax/         # Meal deductions, home office
-│   └── s_corp/              # Reasonable compensation
+│   ├── s_corp/              # Reasonable compensation, payroll obligations
+│   └── state/               # Delaware franchise tax, NY state obligations
 ├── agents/                  # Agent definitions in YAML (bookkeeper)
 ├── integrations/
 │   └── quickbooks_mcp/      # QuickBooks MCP server (tools, OAuth)
@@ -118,8 +119,9 @@ SLACK_CHANNEL_ID             # Required — Channel for bot messages and summari
 QUICKBOOKS_CLIENT_ID         # Required — QuickBooks OAuth app client ID
 QUICKBOOKS_CLIENT_SECRET     # Required — QuickBooks OAuth app client secret
 QUICKBOOKS_REDIRECT_URI      # Required — OAuth callback URL
-ENTITY_TYPE                  # sole_prop | s_corp | llc (default: sole_prop)
-STATE                        # State of incorporation (default: NY)
+ENTITY_TYPE                  # sole_prop | s_corp | llc (default: s_corp)
+FORMATION_STATE              # State of formation (default: DE)
+OPERATING_STATE              # State of registration/operations (default: NY)
 FISCAL_YEAR_START            # e.g. 2026-01-01
 CLAUDE_DAILY_TOKEN_LIMIT     # Daily token budget (default: 1000000)
 CLAUDE_MONTHLY_TOKEN_LIMIT   # Monthly token budget (default: 20000000)
