@@ -1,11 +1,196 @@
 # CFOKit — Phase 1 Product Requirements Document
 
 **Product:** CFOKit — The Open Source CFO Toolkit
-**Phase:** 1 — GCP Deployment + Core Adapter Pattern
-**Target Audience:** Solo founders (S-corps/LLCs), small business owners, fractional CFOs, tech-savvy consultants
+**Phase:** 1 — Single-Business Bookkeeper on GCP
+**Target Audience:** The author (solo consultant, cash-basis business), and technically sophisticated open-source enthusiasts who want AI-assisted bookkeeping
 **Date:** 2026-02-14
 
-CFOKit is an open-source AI CFO toolkit. Phase 1 delivers the bookkeeper agent, the platform-agnostic core, GCP cloud deployment, and the adapter pattern that enables future cloud providers. Tax preparer, compliance monitor, and cashflow analyst agents are deferred to Phase 2. OpenClaw integration is deferred to Phase 2 — Phase 1 creates placeholder directories only.
+CFOKit is an open-source AI CFO toolkit. Phase 1 delivers a working bookkeeper agent for a single cash-basis consulting business: transaction categorization, report generation, and scheduled summaries — all driven by Claude AI with QuickBooks integration via MCP, deployed to GCP, and operated through Slack.
+
+Multi-business support, additional agents (tax preparer, compliance monitor, cashflow analyst), and additional cloud providers are deferred to Phase 2+. This repository is the open-source project; operational concerns (monitoring, alerting, dashboards) for production deployment belong in a separate private infrastructure repository.
+
+---
+
+## Interaction Flows
+
+Before defining stories, these sequence diagrams establish how the system actually works. All flows go through Claude AI, which uses QuickBooks MCP tools to read and write financial data.
+
+### Transaction Categorization (On-Demand)
+
+The core interaction. The user asks CFOKit to categorize recent transactions. Claude fetches uncategorized transactions from QuickBooks, applies domain knowledge from skills, categorizes each one, and updates QuickBooks.
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant Slack
+    participant FastAPI
+    participant Handler as CategorizeHandler
+    participant Claude as Claude AI
+    participant MCP as QuickBooks MCP
+    participant QB as QuickBooks API
+
+    User->>Slack: "@cfokit categorize recent transactions"
+    Slack->>FastAPI: POST /slack/events
+    FastAPI->>FastAPI: Verify Slack signature
+    FastAPI->>Handler: route("categorize", request)
+    Handler->>Handler: Load bookkeeper skills
+    Handler->>Claude: invoke(user_msg, skills, mcp_tools=[quickbooks])
+
+    Claude->>MCP: tool: list_transactions(status="uncategorized", since="2026-02-01")
+    MCP->>QB: GET /v3/company/{id}/query?query=SELECT * FROM Purchase WHERE ...
+    QB-->>MCP: transactions[]
+    MCP-->>Claude: transactions[]
+
+    Claude->>MCP: tool: get_chart_of_accounts()
+    MCP->>QB: GET /v3/company/{id}/query?query=SELECT * FROM Account
+    QB-->>MCP: accounts[]
+    MCP-->>Claude: accounts[]
+
+    loop Each uncategorized transaction
+        Claude->>Claude: Apply skills (deduction rules, category mapping)
+        Claude->>MCP: tool: update_transaction(id, account_id, memo)
+        MCP->>QB: POST /v3/company/{id}/purchase?operation=update
+        QB-->>MCP: updated
+        MCP-->>Claude: confirmed
+    end
+
+    Claude-->>Handler: "Categorized 12 transactions: 5 consulting revenue, 3 software, 2 meals, 1 travel, 1 office"
+    Handler->>Firestore: save_audit_event(categorize, 12 transactions)
+    Handler->>Slack: formatted summary message
+    Slack-->>User: Summary with categories and any flagged items
+```
+
+### Report Generation
+
+The user asks for a financial report. Claude pulls the data from QuickBooks and adds analysis.
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant Slack
+    participant FastAPI
+    participant Handler as ReportHandler
+    participant Claude as Claude AI
+    participant MCP as QuickBooks MCP
+    participant QB as QuickBooks API
+
+    User->>Slack: "@cfokit January P&L"
+    Slack->>FastAPI: POST /slack/events
+    FastAPI->>Handler: route("report", request)
+    Handler->>Claude: invoke(user_msg, skills, mcp_tools=[quickbooks])
+
+    Claude->>MCP: tool: get_profit_and_loss(start="2026-01-01", end="2026-01-31")
+    MCP->>QB: GET /v3/company/{id}/reports/ProfitAndLoss?...
+    QB-->>MCP: P&L data
+    MCP-->>Claude: P&L data
+
+    Claude->>Claude: Analyze using skills (tax implications, trends)
+    Claude-->>Handler: Formatted P&L with insights
+
+    Handler->>Firestore: save_audit_event(report, "january_pl")
+    Handler->>Slack: Formatted report
+    Slack-->>User: P&L report with analysis
+```
+
+### Initial Setup
+
+First-time configuration: the user connects QuickBooks via OAuth and sets business parameters.
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant Slack
+    participant FastAPI
+    participant Handler as SetupHandler
+    participant QB as QuickBooks OAuth
+    participant SecretMgr as Secret Manager
+
+    User->>Slack: "@cfokit setup"
+    Slack->>FastAPI: POST /slack/events
+    FastAPI->>Handler: route("setup", request)
+    Handler->>Slack: "Configure your business: entity type, state, fiscal year"
+    User->>Slack: "S-corp, NY, Jan 1"
+    Slack->>FastAPI: POST /slack/events
+    Handler->>Firestore: save_config(entity_type=s_corp, state=NY, fiscal_year_start=01-01)
+
+    Handler->>Slack: "Connect QuickBooks: [Authorize Link]"
+    User->>QB: Click authorize link, grant access
+    QB->>FastAPI: GET /oauth/callback?code=AUTH_CODE
+    FastAPI->>QB: Exchange code for tokens
+    QB-->>FastAPI: access_token, refresh_token
+    FastAPI->>SecretMgr: Store tokens
+    FastAPI->>Slack: "QuickBooks connected successfully!"
+    Slack-->>User: Confirmation
+```
+
+### Daily Summary (Scheduled)
+
+Automated daily job. Cloud Scheduler triggers a Cloud Run Job that reviews the previous day's activity.
+
+```mermaid
+sequenceDiagram
+    participant Scheduler as Cloud Scheduler
+    participant Job as Cloud Run Job
+    participant Logic as DailySummaryJob
+    participant Claude as Claude AI
+    participant MCP as QuickBooks MCP
+    participant QB as QuickBooks API
+    participant Slack
+
+    Scheduler->>Job: Trigger daily_summary
+    Job->>Logic: run()
+    Logic->>MCP: Start QuickBooks MCP server
+    Logic->>Claude: invoke("Summarize yesterday's transactions", skills, mcp_tools)
+
+    Claude->>MCP: tool: list_transactions(date=yesterday)
+    MCP->>QB: GET /v3/company/{id}/query
+    QB-->>MCP: transactions[]
+    MCP-->>Claude: transactions[]
+
+    Claude->>Claude: Generate summary with skills
+    Claude-->>Logic: Summary with categories, totals, flagged items
+
+    Logic->>Firestore: save_audit_event(daily_summary)
+    Logic->>Slack: Post summary to configured channel
+```
+
+### Transaction Reclassification
+
+The user asks to change a transaction's category. Claude finds and updates it.
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant Slack
+    participant FastAPI
+    participant Handler as CategorizeHandler
+    participant Claude as Claude AI
+    participant MCP as QuickBooks MCP
+    participant QB as QuickBooks API
+
+    User->>Slack: "@cfokit move the Uber charge on Feb 3 from travel to meals"
+    Slack->>FastAPI: POST /slack/events
+    FastAPI->>Handler: route("categorize", request)
+    Handler->>Claude: invoke(user_msg, skills, mcp_tools=[quickbooks])
+
+    Claude->>MCP: tool: list_transactions(vendor="Uber", date="2026-02-03")
+    MCP->>QB: GET /v3/company/{id}/query
+    QB-->>MCP: matching transaction
+    MCP-->>Claude: transaction details
+
+    Claude->>MCP: tool: get_chart_of_accounts()
+    MCP-->>Claude: accounts (finds "Meals & Entertainment")
+
+    Claude->>MCP: tool: update_transaction(id, account_id=meals_account, memo="Reclassified per user request")
+    MCP->>QB: POST /v3/company/{id}/purchase?operation=update
+    QB-->>MCP: updated
+    MCP-->>Claude: confirmed
+
+    Claude-->>Handler: "Moved Uber charge ($24.50) from Travel to Meals & Entertainment"
+    Handler->>Firestore: save_audit_event(reclassify, transaction_id)
+    Handler->>Slack: Confirmation
+    Slack-->>User: Confirmation with details
+```
 
 ---
 
@@ -13,1467 +198,980 @@ CFOKit is an open-source AI CFO toolkit. Phase 1 delivers the bookkeeper agent, 
 
 Phase 1 is **done** when:
 
-- All core business logic (`core/`) is implemented and platform-agnostic
-- Adapter protocol interfaces are defined and have in-memory reference implementations
-- GCP adapters (Firestore, Secret Manager, Pub/Sub, Cloud Scheduler) pass conformance tests
-- FastAPI application deploys to GCP Cloud Run via one-click `deploy.sh`
-- Scheduled jobs (daily summary, weekly review, monthly close) run on Cloud Run Jobs
-- CI pipeline passes: lint, security scanning, unit tests (85%+ coverage), integration tests, GCP cloud tests
-- Combined test coverage meets 80% floor
-- Bookkeeper agent is defined and functional; tax preparer, compliance monitor, and cashflow analyst agents deferred to Phase 2
-- Bookkeeper-relevant skills authored (categorization-focused S-corp reasonable compensation, depreciation, meal deductions, sales tax)
-- Slack webhook integration works end-to-end with signature verification
-- `deploy-openclaw/` exists as a placeholder directory structure
+- A user can message CFOKit in Slack and get transactions categorized in QuickBooks
+- A user can request P&L and transaction summary reports via Slack
+- QuickBooks OAuth connect flow works end-to-end
+- QuickBooks MCP server reads and writes transactions via the QuickBooks API
+- Scheduled jobs (daily summary, weekly review, monthly close) run automatically and post to Slack
+- Business configuration (entity type, state, fiscal year) is persisted in Firestore
+- Claude API usage is tracked and budget-capped
+- Slack signature verification rejects unsigned/forged/replayed requests
+- Sensitive data (OAuth tokens, API keys) is stored in Secret Manager, never in Firestore or logs
+- GCP infrastructure deploys via `deploy.sh` with Terraform
+- CI pipeline passes: lint, unit tests, integration tests
+- Local development works in a dev container with zero manual setup
+- Directory structure includes placeholder READMEs for AWS, Azure, and OpenClaw adapters
 
 ---
 
 ## Sub-phases
 
-### MVP (Weeks 1-4) — Foundation
+### Foundation (Weeks 1-3)
 
-Build the repository scaffolding, core data models, adapter protocols with in-memory implementations, CFO skills, and shared utilities. At exit, `uv run pytest tests/unit/ -x` passes with 85%+ coverage and the full adapter conformance suite runs against in-memory implementations.
-
-**Exit criteria:**
-- Repository structure matches architecture spec
-- CI pipeline runs lint + security + unit tests on every push
-- 2 Pydantic models (Transaction, Client) pass validation tests with factory-generated data
-- All 4 adapter protocols have in-memory implementations passing 15+ conformance tests each
-- Bookkeeper-relevant skill markdown files exist and pass structure/content regression tests
-- Bookkeeper agent YAML definition exists
-- Shared utilities (claude_client, skill_loader, mcp_manager, slack_client) are implemented with tests
-
-### Beta (Weeks 5-8) — Handlers + GCP
-
-Implement request handlers, GCP adapter implementations, and the FastAPI application with security middleware. At exit, the application runs locally with GCP emulators and handles Slack webhook requests.
+Build the repository, dev environment, data models, QuickBooks MCP server, skills, and shared utilities. At exit, a developer can clone the repo, open it in Claude Code or a dev container, and run `uv run pytest` with all tests passing.
 
 **Exit criteria:**
-- All 4 request handlers (categorize, report, setup, help) pass unit tests with mock adapters
-- All 4 GCP adapters pass conformance tests against emulators
-- FastAPI app starts, routes requests to handlers, and returns responses
-- Slack signature verification rejects unsigned/forged/replayed requests
-- Rate limiting returns 429 on threshold breach
-- Health endpoint responds without leaking internal details
-- Integration tests pass with TestClient
+- Dev container starts with all dependencies, emulators, and tooling pre-installed
+- Transaction and BusinessConfig models pass validation tests
+- QuickBooks MCP server exposes tools and passes tests against mock API
+- Bookkeeper skills exist for consulting/cash-basis categorization
+- Claude client, skill loader, MCP manager, and Slack client have tests
+- `uv run pytest tests/unit/ -x` passes
 
-### GA (Weeks 9-12) — Deploy + Harden
+### Core (Weeks 4-6)
 
-GCP infrastructure via Terraform, scheduled jobs, documentation, and CI hardening. At exit, `deploy-cloud/gcp/deploy.sh` provisions infrastructure and deploys a working service.
+Implement request handlers, GCP storage, and the FastAPI application with security. At exit, the application runs locally with the Firestore emulator and handles Slack webhook requests end-to-end.
 
 **Exit criteria:**
-- Terraform provisions all GCP resources (Cloud Run, Firestore, Pub/Sub, Cloud Scheduler, Secret Manager)
+- Categorize, report, setup, and help handlers pass unit tests
+- Firestore storage layer passes tests against emulator
+- Secret Manager wrapper works for token storage
+- FastAPI app routes Slack events to handlers
+- Slack signature verification rejects invalid requests
+- Rate limiting and Claude API budget caps are enforced
+- QuickBooks OAuth callback endpoint stores tokens in Secret Manager
+- Integration tests pass with TestClient + in-memory storage + mocked Claude
+
+### Deploy (Weeks 7-9)
+
+GCP infrastructure via Terraform, scheduled jobs, and documentation. At exit, `deploy-cloud/gcp/deploy.sh` provisions infrastructure and deploys a working service.
+
+**Exit criteria:**
+- Terraform provisions Cloud Run, Firestore, Cloud Scheduler, and Secret Manager
 - `deploy.sh` performs end-to-end deployment
-- All 3 scheduled jobs (daily summary, weekly review, monthly close) run on Cloud Run Jobs
-- E2E smoke tests pass against staging
-- Documentation covers getting started, deployment, architecture, adapter development, and skill development
-- CI includes cloud adapter tests (GCP emulator), coverage gating, and security scanning
-- `deploy-openclaw/` placeholder directories and READMEs exist
+- Daily summary, weekly review, and monthly close jobs run on Cloud Run Jobs
+- README, getting started guide, and GCP deployment guide are complete
+- Placeholder READMEs exist for AWS, Azure, and OpenClaw directories
 
 ---
 
 ## Epics
 
-### Epic 1: Repository Scaffolding & CI Foundation
+### Epic 1: Repository Scaffolding & Dev Environment
 
-> Set up the project structure, tooling configuration, and CI pipeline that all subsequent work depends on.
+> Set up the project structure, tooling, CI pipeline, and dev container that all subsequent work depends on.
 
-**Sub-phase:** MVP
+**Sub-phase:** Foundation
 **Dependencies:** None
 
 #### Story 1.1: Initialize repository with uv and pyproject.toml
 
-Create the Python project with `uv init`, configure `pyproject.toml` with project metadata, Python 3.11+ requirement, and dependency groups (runtime + dev).
+Create the Python project with `uv init`, configure `pyproject.toml` with project metadata, Python 3.11+ requirement, and dependency groups.
 
 **Acceptance criteria:**
-- `pyproject.toml` exists with project name `cfokit`, Python `>=3.11`, and all dev dependencies (pytest, pytest-asyncio, pytest-cov, pytest-xdist, pytest-timeout, hypothesis, ruff, mypy, bandit, pip-audit, detect-secrets)
+- `pyproject.toml` exists with project name `cfokit`, Python `>=3.11`
+- Dev dependencies: pytest, pytest-asyncio, pytest-cov, pytest-timeout, ruff, mypy
+- Runtime dependencies: anthropic, fastapi, uvicorn, pydantic, slack-sdk, mcp, google-cloud-firestore, google-cloud-secret-manager, httpx, python-quickbooks
 - `uv sync` succeeds and creates `uv.lock`
-- `.python-version` specifies 3.11+
-- `pyproject.toml` includes `[tool.pytest.ini_options]` with `asyncio_mode = "auto"`, `timeout = 30`, `strict_markers = true`, `filterwarnings = ["error"]`, and cloud marker definitions
-- `pyproject.toml` includes `[tool.coverage.run]` and `[tool.coverage.report]` with `fail_under = 80`
+- `.python-version` specifies 3.11
+- `pyproject.toml` includes `[tool.pytest.ini_options]` with `asyncio_mode = "auto"`, `timeout = 30`
+- `pyproject.toml` includes `[tool.coverage.run]` and `[tool.coverage.report]`
 
 **Key files:** `pyproject.toml`, `uv.lock`, `.python-version`
-**Labels:** `epic:scaffolding`, `sub-phase:mvp`
-**parallel-group:** `1.init`
+**Labels:** `epic:scaffolding`, `sub-phase:foundation`
 **blocks:** `[1.2, 1.3, 1.4, 1.5]`
 
 ---
 
-#### Story 1.2: Create directory structure with __init__.py files
+#### Story 1.2: Create directory structure
 
-Create all directories and `__init__.py` files for the three-layer architecture: `core/` (skills, agents, integrations, models, adapters, shared), `deploy-cloud/` (shared/handlers, gcp, aws, azure), `deploy-openclaw/`, `tests/`, `docs/`, `examples/`, `scripts/`.
+Create all directories and `__init__.py` files. Include placeholder `README.md` files in future-phase directories (AWS, Azure, OpenClaw) describing what will be added.
 
 **Acceptance criteria:**
-- All directories from the architecture spec exist
+- `core/` tree: `skills/`, `agents/`, `integrations/quickbooks_mcp/`, `models/`, `shared/`
+- `deploy-cloud/shared/handlers/`, `deploy-cloud/shared/middleware/`, `deploy-cloud/shared/routes/`, `deploy-cloud/shared/jobs/`
+- `deploy-cloud/gcp/adapters/`, `deploy-cloud/gcp/agents/cfo_bot/`, `deploy-cloud/gcp/agents/scheduled_jobs/`, `deploy-cloud/gcp/terraform/`
+- `deploy-cloud/aws/README.md` — "AWS adapters (DynamoDB, Secrets Manager, SNS+SQS) planned for Phase 2"
+- `deploy-cloud/azure/README.md` — "Azure adapters (Cosmos DB, Key Vault, Service Bus) planned for Phase 3"
+- `deploy-openclaw/README.md` — "OpenClaw integration planned for Phase 2"
+- `tests/unit/`, `tests/integration/`, `tests/cloud/`, `tests/e2e/`, `tests/fixtures/`
 - Every Python package directory has an `__init__.py`
-- `deploy-openclaw/` contains placeholder subdirectories: `agents/`, `skills/`, `workflows/`
-- `deploy-openclaw/README.md` exists with "Coming in Phase 2" placeholder content
-- `core/integrations/` contains placeholder subdirectories: `quickbooks_mcp/`, `wave_mcp/`, `stripe_mcp/`, and `README.md`
-- `tests/` directory has `unit/`, `integration/`, `cloud/`, `e2e/`, `adapters/`, `fixtures/` subdirectories
 
-**Key files:** All `__init__.py` files, `deploy-openclaw/README.md`, `core/integrations/README.md`
-**Labels:** `epic:scaffolding`, `sub-phase:mvp`
-**parallel-group:** `1.init-seq`
-**blocks:** `[2.1, 3.1, 4.1]`
+**Key files:** All `__init__.py` files, placeholder READMEs
+**Labels:** `epic:scaffolding`, `sub-phase:foundation`
+**blocks:** `[2.1, 3.1, 4.1, 5.1]`
 
 ---
 
 #### Story 1.3: Configure linting and type checking
 
-Set up ruff (linter + formatter) and mypy configuration in `pyproject.toml`. Add `.gitignore` for Python projects.
+Set up ruff and mypy in `pyproject.toml`. Expand `.gitignore` for Python projects.
 
 **Acceptance criteria:**
 - `pyproject.toml` includes `[tool.ruff]` and `[tool.ruff.lint]` configuration
 - `pyproject.toml` includes `[tool.mypy]` configuration targeting `core/` and `deploy-cloud/shared/`
-- `uv run ruff check .` and `uv run ruff format --check .` pass on empty project
-- `uv run mypy core/ deploy-cloud/shared/` passes on empty project
-- `.gitignore` covers Python artifacts, `.env`, IDE files, cloud credential files
+- `uv run ruff check .` and `uv run ruff format --check .` pass
+- `.gitignore` covers Python artifacts (`.venv`, `__pycache__`, `*.pyc`), `.env`, IDE files, cloud credential files
 
 **Key files:** `pyproject.toml` (ruff/mypy sections), `.gitignore`
-**Labels:** `epic:scaffolding`, `sub-phase:mvp`
-**parallel-group:** `1.init-seq`
-**blocks:** `[]`
+**Labels:** `epic:scaffolding`, `sub-phase:foundation`
 
 ---
 
 #### Story 1.4: Set up CI pipeline with GitHub Actions
 
-Create the CI workflow with jobs for lint, security scanning, unit tests, integration tests, and GCP cloud adapter tests. All GitHub Actions pinned to commit SHAs, all Docker service images pinned to digest hashes.
+Create the CI workflow with lint, unit test, and integration test jobs.
 
 **Acceptance criteria:**
-- `.github/workflows/test.yml` exists with jobs: `lint`, `security`, `unit`, `integration`, `cloud-gcp`, `coverage`
+- `.github/workflows/test.yml` exists with jobs: `lint`, `unit`, `integration`
 - `lint` job runs ruff check, ruff format --check, and mypy
-- `security` job runs bandit, pip-audit, and detect-secrets
-- `unit` job runs pytest with `--cov-fail-under=85`
-- `cloud-gcp` job uses Firestore emulator service container
-- `coverage` job enforces 80% combined floor
+- `unit` job runs pytest with coverage reporting
+- `integration` job runs integration tests
 - All `uses:` actions reference commit SHAs, not tags
-- `.secrets.baseline` file exists for detect-secrets
 
-**Key files:** `.github/workflows/test.yml`, `.secrets.baseline`
-**Labels:** `epic:scaffolding`, `sub-phase:mvp`
-**parallel-group:** `1.init-seq`
-**blocks:** `[]`
+**Key files:** `.github/workflows/test.yml`
+**Labels:** `epic:scaffolding`, `sub-phase:foundation`
 
 ---
 
-#### Story 1.5: Create project root files
+#### Story 1.5: Create dev container for Claude Code
 
-Add standard open-source project files: LICENSE (MIT), README.md (abbreviated — full version in Epic 11), CONTRIBUTING.md, CODE_OF_CONDUCT.md, SECURITY.md, CHANGELOG.md, ROADMAP.md, `.env.example`.
+Create `.devcontainer/devcontainer.json` and supporting scripts for zero-friction local development. The container must work in Claude Code cloud containers.
 
 **Acceptance criteria:**
-- `LICENSE` contains MIT license text
-- `README.md` has project name, tagline, brief description, and "under construction" note
-- `CONTRIBUTING.md` has contribution guidelines referencing the adapter pattern and skill development
-- `.env.example` lists all required and optional environment variables with placeholder values
-- No file contains actual secrets or API keys
+- `.devcontainer/devcontainer.json` specifies Python 3.11+ base image
+- Container installs `uv`, Google Cloud SDK, and Firestore emulator
+- `postCreateCommand` runs `uv sync` to install all dependencies
+- `postStartCommand` starts Firestore emulator in background
+- Firestore emulator is accessible at `localhost:8080`
+- `.env.example` lists all required environment variables with descriptions and placeholder values
+- Developer can open repo in Claude Code, wait for container setup, and immediately run `uv run pytest`
 
-**Key files:** `LICENSE`, `README.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `CHANGELOG.md`, `ROADMAP.md`, `.env.example`
-**Labels:** `epic:scaffolding`, `sub-phase:mvp`
-**parallel-group:** `1.init-seq`
-**blocks:** `[]`
+**Key files:** `.devcontainer/devcontainer.json`, `.devcontainer/setup.sh`, `.env.example`
+**Labels:** `epic:scaffolding`, `sub-phase:foundation`
 
 ---
 
-### Epic 2: Core Data Models
+### Epic 2: Data Models
 
-> Define Pydantic data models for the domain entities that handlers, adapters, and agents operate on.
+> Define the Pydantic models for the domain entities.
 
-**Sub-phase:** MVP
+**Sub-phase:** Foundation
 **Dependencies:** Epic 1
 
 #### Story 2.1: Implement Transaction model
 
-Create the `Transaction` Pydantic model with fields for id, amount, vendor, date, category, description, tenant_id, and metadata. Include custom validators for amount (positive or zero), date format, and vendor string constraints.
+Create the `Transaction` Pydantic model for cash-basis consulting transactions. Fields: id, date, amount, vendor, description, account_name, account_id, transaction_type (income/expense), source (bank_feed/manual), quickbooks_id, categorized_by (ai/manual), categorized_at, raw_data (dict for original QuickBooks payload).
 
 **Acceptance criteria:**
 - `core/models/transaction.py` defines `Transaction` as a Pydantic `BaseModel`
-- Custom validators reject negative amounts (except refunds with explicit flag), empty vendor strings, and future dates beyond reasonable range
-- Model serializes to/from dict for storage adapter compatibility
-- Unit tests cover custom validators only (not Pydantic builtins)
+- `TransactionType` enum: `income`, `expense`
+- `CategorizationSource` enum: `ai`, `manual`, `uncategorized`
+- Validators: amount must be positive (refunds modeled as negative-amount income), date must not be in the future
+- Model serializes to/from dict for Firestore compatibility
+- Unit tests cover validators (not Pydantic builtins)
 
 **Key files:** `core/models/transaction.py`, `tests/unit/test_models/test_transaction.py`
-**Labels:** `epic:models`, `sub-phase:mvp`
-**parallel-group:** `2.models`
+**Labels:** `epic:models`, `sub-phase:foundation`
+**blocks:** `[2.2]`
+
+---
+
+#### Story 2.2: Implement BusinessConfig model
+
+Create the `BusinessConfig` model for single-business configuration. This replaces the multi-client `Client` model — Phase 1 supports one business only.
+
+**Acceptance criteria:**
+- `core/models/business_config.py` defines `BusinessConfig` with fields: entity_type (enum: sole_prop, s_corp, llc), state (str), fiscal_year_start (date), slack_channel_id, quickbooks_company_id, quickbooks_connected (bool), created_at, updated_at
+- `EntityType` enum: `sole_prop`, `s_corp`, `llc`
+- Entity type determines which skills are loaded (e.g., S-corp loads reasonable compensation skill)
+- Unit tests cover entity type validation and fiscal year constraints
+
+**Key files:** `core/models/business_config.py`, `tests/unit/test_models/test_business_config.py`
+**Labels:** `epic:models`, `sub-phase:foundation`
 **blocks:** `[2.3]`
 
 ---
 
-#### Story 2.2: Implement Client model
+#### Story 2.3: Create test factories and conftest
 
-Create the `Client` Pydantic model with fields for id, name, entity_type (enum: s-corp, llc, 501c3, 501c6), state, fiscal_year_start, slack_channel_id, quickbooks_company_id, and configuration dict.
+Implement `tests/factories.py` with factories for Transaction and BusinessConfig. Wire into `tests/conftest.py`.
 
 **Acceptance criteria:**
-- `core/models/client.py` defines `Client` with an `EntityType` enum
-- Entity type constrains which skills are loaded for the client
-- `fiscal_year_start` validates as a date
-- `slack_channel_id` and `quickbooks_company_id` are optional with validation
-- Unit tests cover entity type enum validation and fiscal year constraints
+- `TransactionFactory.create(**overrides)` returns a valid Transaction with sensible defaults (consulting income, recent date, categorized)
+- `BusinessConfigFactory.create(**overrides)` returns a valid BusinessConfig
+- `create_batch(n)` returns `n` instances with unique IDs
+- `tests/conftest.py` provides `transaction_factory` and `config_factory` fixtures
+- `tests/conftest.py` provides `fixtures_dir` path fixture
+- `tests/fixtures/` contains `sample_transactions.json` with representative consulting transactions (income from clients, software subscriptions, meals, travel, office supplies)
 
-**Key files:** `core/models/client.py`, `tests/unit/test_models/test_client.py`
-**Labels:** `epic:models`, `sub-phase:mvp`
-**parallel-group:** `2.models`
-**blocks:** `[2.3]`
+**Key files:** `tests/factories.py`, `tests/conftest.py`, `tests/fixtures/sample_transactions.json`
+**Labels:** `epic:models`, `sub-phase:foundation`
 
 ---
 
-#### Story 2.3: Create test data factories
+### Epic 3: QuickBooks MCP Integration
 
-Implement `tests/factories.py` with `TransactionFactory` and `ClientFactory`. Each factory uses the `Factory.create(**overrides)` pattern with sensible defaults. Include `create_batch(n)` methods and adversarial data variants (`create_adversarial()`).
+> Implement the MCP server that gives Claude AI access to QuickBooks data. This is the bridge between Claude's intelligence and the user's actual financial data.
 
-**Acceptance criteria:**
-- `tests/factories.py` contains `TransactionFactory` and `ClientFactory`
-- `Factory.create()` returns valid Pydantic model instances
-- `Factory.create(**overrides)` applies keyword overrides
-- `Factory.create_batch(n)` returns `n` instances with unique IDs (UUID suffixes)
-- `Factory.create_adversarial()` produces boundary-value and adversarial variants (empty strings, unicode, injection payloads, very large values, negative amounts)
-
-**Key files:** `tests/factories.py`
-**Labels:** `epic:models`, `sub-phase:mvp`
-**parallel-group:** `2.models-seq`
-**blocks:** `[2.4]`
-
----
-
-#### Story 2.4: Wire model fixtures into test conftest
-
-Create root `tests/conftest.py` with factory fixtures and path fixtures. Create `tests/fixtures/` with sample JSON data files.
-
-**Acceptance criteria:**
-- `tests/conftest.py` provides `transaction_factory` and `client_factory` fixtures
-- `tests/conftest.py` provides `skills_dir` and `fixtures_dir` path fixtures
-- `tests/fixtures/sample_transactions.json` and `tests/fixtures/sample_clients.json` contain valid sample data
-- All model unit tests pass when run via `uv run pytest tests/unit/test_models/`
-
-**Key files:** `tests/conftest.py`, `tests/fixtures/sample_transactions.json`, `tests/fixtures/sample_clients.json`, `tests/fixtures/sample_skills.md`
-**Labels:** `epic:models`, `sub-phase:mvp`
-**parallel-group:** `2.models-seq`
-**blocks:** `[]`
-
----
-
-### Epic 3: Adapter Protocols & In-Memory Implementations
-
-> Define the Protocol interfaces that decouple business logic from cloud providers, build reference in-memory implementations, and create conformance test suites that all adapter implementations must pass.
-
-**Sub-phase:** MVP
+**Sub-phase:** Foundation
 **Dependencies:** Epic 1
 
-#### Story 3.1: Define adapter protocol interfaces
+#### Story 3.1: Implement QuickBooks MCP server
 
-Create `core/adapters/base.py` with Python Protocol classes (PEP 544) for `StorageAdapter`, `SecretsAdapter`, `MessagingAdapter`, and `SchedulerAdapter`. All methods are `async`.
+Create the QuickBooks MCP server in `core/integrations/quickbooks_mcp/`. The server exposes tools that Claude can call to read and write QuickBooks data.
+
+**MCP tools to implement:**
+- `list_transactions(start_date, end_date, account_id?, status?)` — List transactions with optional filters
+- `get_transaction(transaction_id)` — Get a single transaction
+- `update_transaction(transaction_id, account_id, memo?)` — Update a transaction's account/category
+- `get_profit_and_loss(start_date, end_date, accounting_method="Cash")` — P&L report
+- `get_chart_of_accounts()` — List accounts for category mapping
+- `get_company_info()` — Basic company details
 
 **Acceptance criteria:**
-- `core/adapters/base.py` defines 4 Protocol classes with all methods from the architecture spec
-- `StorageAdapter`: `get`, `save`, `query`, `batch_write`, `delete`
-- `SecretsAdapter`: `get`, `set`, `delete`, `list`
-- `MessagingAdapter`: `publish`, `subscribe`, `create_topic`, `delete_topic`
-- `SchedulerAdapter`: `create`, `update`, `pause`, `resume`, `delete`, `list`
-- All methods use `async def` signatures
-- Type hints use standard library types (no cloud SDK types)
+- `core/integrations/quickbooks_mcp/server.py` uses the MCP SDK to define tools
+- Each tool translates to the corresponding QuickBooks Online API call
+- All QuickBooks API calls use the `python-quickbooks` library
+- OAuth access token is retrieved from Secret Manager (via injected callback)
+- Token refresh is handled automatically when access token expires
+- All API URLs use HTTPS — reject HTTP
+- Unit tests mock the QuickBooks API and verify: correct API endpoints called, proper query construction, error handling for API failures (rate limit, auth expired, not found)
 
-**Key files:** `core/adapters/base.py`
-**Labels:** `epic:adapters`, `sub-phase:mvp`
-**parallel-group:** `3.protocols`
-**blocks:** `[3.3, 3.4, 3.5, 3.6]`
+**Key files:** `core/integrations/quickbooks_mcp/server.py`, `core/integrations/quickbooks_mcp/tools.py`, `tests/unit/test_quickbooks_mcp/test_server.py`, `tests/unit/test_quickbooks_mcp/test_tools.py`
+**Labels:** `epic:quickbooks`, `sub-phase:foundation`
+**blocks:** `[3.2]`
 
 ---
 
-#### Story 3.2: Define adapter exceptions
+#### Story 3.2: Implement QuickBooks OAuth flow
 
-Create `core/adapters/exceptions.py` with `AdapterError` (base), `NotFoundError`, `ConflictError`, and `ValidationError`. Ensure exception `__repr__` never includes secret values.
+Create the OAuth 2.0 flow for connecting QuickBooks. The flow is initiated from Slack and completed via a browser redirect.
 
 **Acceptance criteria:**
-- `core/adapters/exceptions.py` defines 4 exception classes with clear hierarchy
-- `AdapterError` is the base; `NotFoundError`, `ConflictError`, `ValidationError` extend it
-- `NotFoundError` includes collection and doc_id in message (but not document contents)
-- Exception `__repr__` and `__str__` are tested to not leak sensitive data
-- Unit tests verify exception hierarchy and message formatting
+- `core/integrations/quickbooks_mcp/oauth.py` provides:
+  - `get_authorization_url()` — Generate QuickBooks OAuth URL with state parameter
+  - `exchange_code(code, realm_id)` — Exchange authorization code for tokens
+  - `refresh_access_token(refresh_token)` — Refresh expired access token
+  - `get_valid_token()` — Return a valid access token, refreshing if needed
+- State parameter uses a cryptographic random value to prevent CSRF
+- Tokens are stored/retrieved via an injected secrets callback (for Secret Manager in prod, dict in tests)
+- Access token expiry is tracked; refresh happens before expiry
+- Refresh token expiry (100 days) is tracked with warning
+- Unit tests mock QuickBooks OAuth endpoints and verify: authorization URL generation, code exchange, token refresh, CSRF state validation, error handling
 
-**Key files:** `core/adapters/exceptions.py`, `tests/unit/test_adapters/test_exceptions.py` (optional, can be part of conformance)
-**Labels:** `epic:adapters`, `sub-phase:mvp`
-**parallel-group:** `3.protocols`
-**blocks:** `[3.3, 3.4, 3.5, 3.6]`
+**Key files:** `core/integrations/quickbooks_mcp/oauth.py`, `tests/unit/test_quickbooks_mcp/test_oauth.py`
+**Labels:** `epic:quickbooks`, `sub-phase:foundation`
 
 ---
 
-#### Story 3.3: Implement in-memory StorageAdapter
+#### Story 3.3: Create QuickBooks MCP integration tests
 
-Create `tests/adapters/memory_storage.py` — a dict-backed `StorageAdapter` with collection/document semantics, deep-copy on save/get, `reset()` method, and `seed()` helper.
+Integration tests that verify the MCP server works end-to-end with a mock QuickBooks API. These tests exercise the full MCP tool → QuickBooks API → response pipeline.
 
 **Acceptance criteria:**
-- `tests/adapters/memory_storage.py` implements all `StorageAdapter` Protocol methods
-- `save` and `get` use deep-copy semantics (no shared references)
-- `query` supports filters dict and `order_by`/`limit` parameters
-- `get` on missing document raises `NotFoundError`
-- `reset()` clears all data (for per-test isolation)
-- `seed(collection, docs)` bulk-loads test data
-- All methods are `async`
+- `tests/integration/test_quickbooks_mcp.py` starts the MCP server with mocked QuickBooks API
+- Tests verify: list_transactions returns parsed Transaction-compatible data, update_transaction sends correct payload, get_profit_and_loss returns structured report, token refresh triggers automatically on 401, rate limit handling (retry with backoff)
+- Tests do NOT call the real QuickBooks API
 
-**Key files:** `tests/adapters/memory_storage.py`
-**Labels:** `epic:adapters`, `sub-phase:mvp`
-**parallel-group:** `3.in-memory`
-**blocks:** `[3.7]`
+**Key files:** `tests/integration/test_quickbooks_mcp.py`
+**Labels:** `epic:quickbooks`, `sub-phase:foundation`
 
 ---
 
-#### Story 3.4: Implement in-memory SecretsAdapter
+### Epic 4: CFO Skills & Agent Definition
 
-Create `tests/adapters/memory_secrets.py` — a dict-backed `SecretsAdapter` with version tracking. `__repr__` and `__str__` must never expose stored values.
+> Author the domain knowledge and agent configuration that power the bookkeeper's financial intelligence.
 
-**Acceptance criteria:**
-- `tests/adapters/memory_secrets.py` implements all `SecretsAdapter` Protocol methods
-- `get(name, version)` supports version parameter (defaults to latest)
-- `set` increments version counter
-- `list(prefix)` filters by prefix
-- `get` on missing secret raises `NotFoundError`
-- `repr()` and `str()` do not contain secret values
-- `reset()` clears all data
-
-**Key files:** `tests/adapters/memory_secrets.py`
-**Labels:** `epic:adapters`, `sub-phase:mvp`
-**parallel-group:** `3.in-memory`
-**blocks:** `[3.8]`
-
----
-
-#### Story 3.5: Implement in-memory MessagingAdapter
-
-Create `tests/adapters/memory_messaging.py` — a list-backed `MessagingAdapter` with topic/message capture and a `get_messages(topic)` test helper.
-
-**Acceptance criteria:**
-- `tests/adapters/memory_messaging.py` implements all `MessagingAdapter` Protocol methods
-- `publish` stores messages with topic, payload, and attributes
-- `subscribe` registers handlers that receive published messages
-- `create_topic` / `delete_topic` manage topic state
-- `get_messages(topic)` returns all messages published to a topic (test helper)
-- `reset()` clears all topics and messages
-
-**Key files:** `tests/adapters/memory_messaging.py`
-**Labels:** `epic:adapters`, `sub-phase:mvp`
-**parallel-group:** `3.in-memory`
-**blocks:** `[3.9]`
-
----
-
-#### Story 3.6: Implement in-memory SchedulerAdapter
-
-Create `tests/adapters/memory_scheduler.py` — a dict-backed `SchedulerAdapter` with job state tracking and a `get_jobs()` test helper.
-
-**Acceptance criteria:**
-- `tests/adapters/memory_scheduler.py` implements all `SchedulerAdapter` Protocol methods
-- `create` stores job with name, schedule (cron expression), target, payload, and state (active/paused)
-- `pause` / `resume` toggle job state
-- `delete` removes job; `get` on missing job raises `NotFoundError`
-- `list()` returns all jobs; `get_jobs()` is a test helper for assertions
-- `reset()` clears all jobs
-
-**Key files:** `tests/adapters/memory_scheduler.py`
-**Labels:** `epic:adapters`, `sub-phase:mvp`
-**parallel-group:** `3.in-memory`
-**blocks:** `[3.10]`
-
----
-
-#### Story 3.7: Create StorageAdapter conformance test suite
-
-Create `tests/unit/test_adapters/test_storage_conformance.py` with a `StorageAdapterContract` class defining 15+ behavioral tests. Include CRUD operations, query with filters, batch writes, not-found behavior, collection isolation, and tenant isolation tests.
-
-**Acceptance criteria:**
-- `StorageAdapterContract` defines an `adapter` fixture that subclasses override
-- Tests cover: save/get, get-not-found raises `NotFoundError`, query with filters, query with order_by/limit, batch_write, delete, collection isolation
-- Tenant isolation tests: query across tenant boundary returns empty, get across tenant boundary raises `NotFoundError`, delete scoped to one tenant does not affect another
-- In-memory adapter passes all conformance tests
-- Contract class is importable by cloud adapter test modules
-
-**Key files:** `tests/unit/test_adapters/test_storage_conformance.py`
-**Labels:** `epic:adapters`, `sub-phase:mvp`
-**parallel-group:** `3.conformance`
-**blocks:** `[3.11]`
-
----
-
-#### Story 3.8: Create SecretsAdapter conformance test suite
-
-Create `tests/unit/test_adapters/test_secrets_conformance.py` with a `SecretsAdapterContract` class defining behavioral tests for get/set/delete, version behavior, list with prefix, not-found errors, and repr safety.
-
-**Acceptance criteria:**
-- `SecretsAdapterContract` defines 10+ behavioral tests
-- Tests cover: set/get, get-not-found, version retrieval, list with prefix, delete, repr does not leak values
-- In-memory adapter passes all conformance tests
-- Contract class is importable by cloud adapter test modules
-
-**Key files:** `tests/unit/test_adapters/test_secrets_conformance.py`
-**Labels:** `epic:adapters`, `sub-phase:mvp`
-**parallel-group:** `3.conformance`
-**blocks:** `[3.11]`
-
----
-
-#### Story 3.9: Create MessagingAdapter conformance test suite
-
-Create `tests/unit/test_adapters/test_messaging_conformance.py` with a `MessagingAdapterContract` class defining behavioral tests for publish/subscribe, topic lifecycle, message attributes, and ordering.
-
-**Acceptance criteria:**
-- `MessagingAdapterContract` defines 10+ behavioral tests
-- Tests cover: publish/subscribe round-trip, topic creation/deletion, message attributes preserved, publish to nonexistent topic behavior
-- In-memory adapter passes all conformance tests
-- Contract class is importable by cloud adapter test modules
-
-**Key files:** `tests/unit/test_adapters/test_messaging_conformance.py`
-**Labels:** `epic:adapters`, `sub-phase:mvp`
-**parallel-group:** `3.conformance`
-**blocks:** `[3.11]`
-
----
-
-#### Story 3.10: Create SchedulerAdapter conformance test suite
-
-Create `tests/unit/test_adapters/test_scheduler_conformance.py` with a `SchedulerAdapterContract` class defining behavioral tests for job CRUD, pause/resume, schedule validation, and list filtering.
-
-**Acceptance criteria:**
-- `SchedulerAdapterContract` defines 10+ behavioral tests
-- Tests cover: create/get, update schedule, pause/resume state transitions, delete, list all jobs, create duplicate name behavior
-- In-memory adapter passes all conformance tests
-- Contract class is importable by cloud adapter test modules
-
-**Key files:** `tests/unit/test_adapters/test_scheduler_conformance.py`
-**Labels:** `epic:adapters`, `sub-phase:mvp`
-**parallel-group:** `3.conformance`
-**blocks:** `[3.11]`
-
----
-
-#### Story 3.11: Wire adapter fixtures into test conftest
-
-Update `tests/conftest.py` to provide function-scoped in-memory adapter fixtures with auto-reset. Create `tests/unit/test_adapters/conftest.py` to parameterize conformance tests against the in-memory implementations.
-
-**Acceptance criteria:**
-- `tests/conftest.py` provides `storage`, `secrets`, `messaging`, `scheduler` fixtures (function-scoped)
-- Each fixture creates the in-memory adapter, yields it, then calls `reset()`
-- `tests/unit/test_adapters/conftest.py` wires conformance test classes to in-memory adapters via the `adapter` fixture
-- `uv run pytest tests/unit/test_adapters/` passes all conformance suites
-
-**Key files:** `tests/conftest.py` (updated), `tests/unit/test_adapters/conftest.py`
-**Labels:** `epic:adapters`, `sub-phase:mvp`
-**parallel-group:** `3.wiring`
-**blocks:** `[]`
-
----
-
-### Epic 4: CFO Skills & Agent Definitions
-
-> Author the domain knowledge (skills) and agent configuration (YAML) that power CFOKit's financial intelligence.
-
-**Sub-phase:** MVP
+**Sub-phase:** Foundation
 **Dependencies:** Epic 1
 
-#### Story 4.1: Author S-corp skills
+#### Story 4.1: Author bookkeeper skills for cash-basis consulting
 
-Create markdown skill files for S-corp domain knowledge relevant to bookkeeping: reasonable compensation (informs salary/distribution categorization).
+Create markdown skill files with domain knowledge relevant to categorizing transactions for a cash-basis consulting business.
+
+**Skills to author:**
+- `core/skills/consulting/transaction_categorization.md` — Common consulting expense categories, how to identify them, categorization rules for ambiguous transactions (e.g., is a software subscription an office expense or a cost of goods?)
+- `core/skills/consulting/cash_basis_accounting.md` — Cash basis rules, when to recognize revenue and expenses, differences from accrual
+- `core/skills/federal_tax/meal_deductions.md` — 50% deduction rules, documentation requirements, business meal vs. personal
+- `core/skills/federal_tax/home_office.md` — Home office deduction rules for consultants
+- `core/skills/s_corp/reasonable_compensation.md` — IRS reasonable compensation rules for S-corp owner-employees
 
 **Acceptance criteria:**
-- `core/skills/s_corp/reasonable_compensation.md` covers IRS reasonable compensation rules, factors courts consider, salary-vs-distribution guidelines
-- Each skill starts with `# ` heading, is non-empty, and is under 50KB
-- Skills contain required keyword: "reasonable compensation"
+- Each skill file is well-structured markdown with clear headings
+- Content is accurate and actionable for Claude (not just reference material — includes decision rules)
+- Skills are scoped to consulting/cash-basis context
+- Each skill is under 50KB
 
-**Key files:** `core/skills/s_corp/*.md`
-**Labels:** `epic:skills`, `sub-phase:mvp`
-**parallel-group:** `4.skills`
-**blocks:** `[4.4]`
+**Key files:** `core/skills/consulting/*.md`, `core/skills/federal_tax/*.md`, `core/skills/s_corp/*.md`
+**Labels:** `epic:skills`, `sub-phase:foundation`
+**blocks:** `[4.3]`
 
 ---
 
-#### Story 4.2: Author federal tax and NY state skills
+#### Story 4.2: Create bookkeeper agent YAML definition
 
-Create markdown skill files for bookkeeper-relevant federal tax rules (depreciation, meal deductions) and NY state tax rules (sales tax).
-
-**Acceptance criteria:**
-- `core/skills/federal_tax/depreciation.md` covers Section 179, MACRS, and bonus depreciation rules
-- `core/skills/federal_tax/meal_deductions.md` covers 50% deduction rules, exceptions, and documentation requirements
-- `core/skills/ny_state/sales_tax.md` covers NY sales tax collection and reporting
-- Each skill starts with `# ` heading, is non-empty, and is under 50KB
-
-**Key files:** `core/skills/federal_tax/*.md`, `core/skills/ny_state/*.md`
-**Labels:** `epic:skills`, `sub-phase:mvp`
-**parallel-group:** `4.skills`
-**blocks:** `[4.4]`
-
----
-
-#### Story 4.3: Create bookkeeper agent YAML definition
-
-Create the YAML agent definition file for the bookkeeper agent. The agent definition specifies the agent's name, description, skills, tools, and triggers.
+Create the YAML agent definition for the bookkeeper agent. This defines which skills, tools, and triggers the bookkeeper uses.
 
 **Acceptance criteria:**
-- `core/agents/bookkeeper.yaml` defines skills (transaction categorization, receipt processing), tools (quickbooks-mcp, wave-mcp), and triggers (daily-transaction-review, on-demand)
-- YAML file parses without errors
+- `core/agents/bookkeeper.yaml` defines:
+  - `name`: bookkeeper
+  - `description`: AI bookkeeper for cash-basis consulting businesses
+  - `skills`: list of skill file paths (entity-type-conditional: S-corp skills only loaded for S-corp entities)
+  - `tools`: quickbooks_mcp
+  - `triggers`: on-demand (Slack), daily-summary, weekly-review, monthly-close
+- YAML parses without errors
 
 **Key files:** `core/agents/bookkeeper.yaml`
-**Labels:** `epic:skills`, `sub-phase:mvp`
-**parallel-group:** `4.skills`
-**blocks:** `[4.4]`
+**Labels:** `epic:skills`, `sub-phase:foundation`
+**blocks:** `[4.3]`
 
 ---
 
-#### Story 4.4: Create skill and agent tests
+#### Story 4.3: Create skill and agent tests
 
-Implement tests for skill file structure, content regression, and agent YAML validation. Use parameterized tests that auto-discover skill files via glob.
+Tests for skill structure and agent YAML validation.
 
 **Acceptance criteria:**
-- `tests/unit/test_skills/test_skill_loader.py` parameterizes over all `core/skills/**/*.md` files and verifies: non-empty, starts with `# `, under 50KB
-- `tests/unit/test_skills/test_s_corp_rules.py` verifies S-corp skills contain required keyword ("reasonable compensation")
-- Bookkeeper agent YAML file is tested for valid YAML parse, required fields (name, description, skills, tools), and referential integrity (listed skills exist as files)
-- New skill files are auto-discovered — no test code changes needed when adding skills
+- Parameterized test auto-discovers all `core/skills/**/*.md` files and verifies: non-empty, under 50KB
+- Bookkeeper agent YAML is tested for: valid YAML parse, required fields present, listed skill files exist on disk
+- New skill files are auto-discovered without test code changes
 
-**Key files:** `tests/unit/test_skills/test_skill_loader.py`, `tests/unit/test_skills/test_s_corp_rules.py`
-**Labels:** `epic:skills`, `sub-phase:mvp`
-**parallel-group:** `4.tests`
-**blocks:** `[]`
+**Key files:** `tests/unit/test_skills/test_skill_files.py`, `tests/unit/test_skills/test_agent_yaml.py`
+**Labels:** `epic:skills`, `sub-phase:foundation`
 
 ---
 
 ### Epic 5: Shared Utilities
 
-> Implement the cloud-agnostic utility modules that handlers and agents depend on: Claude API client, skill loader, MCP manager, and Slack client.
+> Implement the cloud-agnostic utilities that handlers and agents depend on.
 
-**Sub-phase:** MVP
+**Sub-phase:** Foundation
 **Dependencies:** Epics 1, 3, 4
 
 #### Story 5.1: Implement Claude API client
 
-Create `core/shared/claude_client.py` wrapping the Anthropic Claude API. User input goes in user role only; skill content goes in system/assistant context only. All calls are async.
+Create `core/shared/claude_client.py` wrapping the Anthropic Claude API. Includes token budget tracking to prevent runaway API costs.
 
 **Acceptance criteria:**
-- `core/shared/claude_client.py` provides async methods for agent invocation
-- User-provided input is placed exclusively in user-role messages
-- Skill content is placed in system context, never in user role
-- Client is injectable (constructor takes API key, not env var directly)
-- Unit tests mock the API and verify: prompt construction safety (user input not in system prompt), skill content not in user role, error handling for API failures
-- Tests use `claude_client_mock` fixture returning predictable responses
+- Async client for Claude API invocation
+- User input goes exclusively in user-role messages
+- Skill content goes in system context only
+- MCP tools are passed through for Claude to use
+- Token budget tracking: configurable daily/monthly token limits, raises `BudgetExceededError` when limit is reached
+- Token usage is logged per invocation (input tokens, output tokens, total)
+- Client is injectable (constructor takes API key and budget config)
+- Unit tests verify: prompt construction safety (user input not in system prompt), skill content not in user role, budget enforcement, error handling for API failures
 
 **Key files:** `core/shared/claude_client.py`, `tests/unit/test_claude_client.py`
-**Labels:** `epic:utilities`, `sub-phase:mvp`
-**parallel-group:** `5.utilities`
-**blocks:** `[]`
+**Labels:** `epic:utilities`, `sub-phase:foundation`
 
 ---
 
 #### Story 5.2: Implement skill loader
 
-Create `core/shared/skill_loader.py` that loads markdown skill files from `core/skills/`. Enforce path traversal protection: reject `..`, absolute paths, and null bytes.
+Create `core/shared/skill_loader.py` that loads markdown skill files. Entity-type-aware: loads different skills based on the business configuration.
 
 **Acceptance criteria:**
-- `core/shared/skill_loader.py` provides `load_skill(name)` that returns skill content as string
-- Rejects path traversal attempts (`../../etc/passwd`), absolute paths (`/etc/passwd`), and null bytes
-- Raises `ValueError` or `PermissionError` on invalid paths
-- Resolves skill names to `core/skills/{name}.md` paths
-- Unit tests cover: valid skill loading, path traversal rejection, absolute path rejection, null byte rejection, nonexistent skill handling
+- `load_skills(agent_name, entity_type?)` loads the skills listed in the agent's YAML definition
+- Entity type filtering: only loads entity-type-specific skills (e.g., S-corp skills) when the entity type matches
+- Path traversal protection: rejects `..`, absolute paths, and null bytes
+- Returns dict mapping skill name → content string
+- Unit tests: valid loading, entity-type filtering, path traversal rejection, nonexistent skill handling
 
-**Key files:** `core/shared/skill_loader.py`, `tests/unit/test_skills/test_skill_loader.py` (extended)
-**Labels:** `epic:utilities`, `sub-phase:mvp`
-**parallel-group:** `5.utilities`
-**blocks:** `[]`
+**Key files:** `core/shared/skill_loader.py`, `tests/unit/test_skill_loader.py`
+**Labels:** `epic:utilities`, `sub-phase:foundation`
 
 ---
 
 #### Story 5.3: Implement MCP manager
 
-Create `core/shared/mcp_manager.py` for MCP server lifecycle management. Enforce HTTPS-only URLs — reject `http://` URLs.
+Create `core/shared/mcp_manager.py` for managing MCP server connections. In Phase 1 this manages the QuickBooks MCP server only.
 
 **Acceptance criteria:**
-- `core/shared/mcp_manager.py` provides `MCPManager` class for server connection lifecycle
-- Constructor rejects `http://` URLs with `ValueError` matching "HTTPS required"
-- Accepts `https://` URLs
-- Manages connection state (connect, disconnect, health check)
-- Unit tests cover: HTTPS enforcement, HTTP rejection, connection lifecycle
+- `MCPManager` handles MCP server lifecycle (start, connect, disconnect)
+- Rejects `http://` URLs with `ValueError` — HTTPS only
+- Provides method to get the MCP tools list for passing to Claude
+- Connection health checking
+- Unit tests: HTTPS enforcement, lifecycle management, tool listing
 
 **Key files:** `core/shared/mcp_manager.py`, `tests/unit/test_mcp_manager.py`
-**Labels:** `epic:utilities`, `sub-phase:mvp`
-**parallel-group:** `5.utilities`
-**blocks:** `[]`
+**Labels:** `epic:utilities`, `sub-phase:foundation`
 
 ---
 
 #### Story 5.4: Implement Slack client
 
-Create `core/shared/slack_client.py` wrapping the Slack API for sending messages, responding to commands, and formatting responses.
+Create `core/shared/slack_client.py` for sending messages and formatting responses for Slack.
 
 **Acceptance criteria:**
-- `core/shared/slack_client.py` provides async methods for sending messages and responding to slash commands
-- Client is injectable (constructor takes bot token)
-- Message formatting supports markdown blocks
-- Unit tests mock the Slack API and verify: message payload structure, channel targeting, error handling
-- No actual Slack API calls in tests
+- Async methods for sending messages and responding to slash commands
+- Message formatting supports Slack markdown blocks (headers, code blocks, bullet lists)
+- Constructor takes bot token (injectable)
+- Unit tests mock Slack API: message payload structure, channel targeting, error handling
 
 **Key files:** `core/shared/slack_client.py`, `tests/unit/test_slack_client.py`
-**Labels:** `epic:utilities`, `sub-phase:mvp`
-**parallel-group:** `5.utilities`
-**blocks:** `[]`
+**Labels:** `epic:utilities`, `sub-phase:foundation`
 
 ---
 
 ### Epic 6: Request Handlers
 
-> Implement the cloud-agnostic request handlers that process user commands. Handlers depend only on adapter Protocol interfaces via constructor injection.
+> Implement the cloud-agnostic request handlers that process user commands. These live in `deploy-cloud/shared/` and depend on injected storage and utilities.
 
-**Sub-phase:** Beta
+**Sub-phase:** Core
 **Dependencies:** Epics 2, 3, 5
 
 #### Story 6.1: Implement base handler
 
-Create `deploy-cloud/shared/handlers/base_handler.py` with a `BaseHandler` class that receives adapters via constructor injection and provides shared functionality: audit logging, error formatting, and tenant context.
+Create `deploy-cloud/shared/handlers/base_handler.py` with shared functionality for all handlers.
 
 **Acceptance criteria:**
-- `BaseHandler.__init__` accepts `storage`, `secrets`, `messaging` adapter parameters
-- `BaseHandler` provides `_emit_audit_event(action, resource_id, tenant, details)` method that writes to `audit_log` collection
-- Audit events include timestamp, actor, action, tenant, resource_id — never include secret values
-- `BaseHandler` provides `_format_error(error)` that returns generic message + correlation ID, never stack traces or file paths
-- Unit tests verify: audit event structure, audit events do not contain secrets, error formatting excludes stack traces
+- `BaseHandler.__init__` accepts storage, secrets, claude_client, mcp_manager, slack_client, skill_loader
+- `_emit_audit_event(action, details)` writes to `audit_events` collection — never includes secret values, tokens, or API keys
+- `_format_error(error)` returns a user-friendly message with correlation ID — never includes stack traces, file paths, or internal details
+- Unit tests verify: audit event structure, audit events do not contain secrets, error formatting excludes sensitive data
 
 **Key files:** `deploy-cloud/shared/handlers/base_handler.py`, `tests/unit/test_handlers/test_base_handler.py`
-**Labels:** `epic:handlers`, `sub-phase:beta`
-**parallel-group:** `6.handlers-base`
+**Labels:** `epic:handlers`, `sub-phase:core`
 **blocks:** `[6.2, 6.3, 6.4, 6.5]`
 
 ---
 
 #### Story 6.2: Implement categorize handler
 
-Create `deploy-cloud/shared/handlers/categorize.py` for transaction categorization. Uses Claude AI (via `claude_client`) to categorize transactions and persists results via `StorageAdapter`.
+The primary handler. Invokes Claude with bookkeeper skills and QuickBooks MCP tools to categorize transactions.
 
 **Acceptance criteria:**
-- `CategorizeHandler` extends `BaseHandler`, receives adapters via constructor
-- `handle(request)` fetches transaction from storage, sends to Claude for categorization, saves result
-- Emits audit event on successful categorization
-- Handles missing transaction (returns error, does not crash)
-- Error responses never contain secret values
-- Unit tests use mocked `claude_client` returning predictable categories; verify both response AND storage side-effects
+- `CategorizeHandler` extends `BaseHandler`
+- `handle(request)` invokes Claude with:
+  - User's message as the user prompt
+  - Loaded bookkeeper skills as system context
+  - QuickBooks MCP tools available for Claude to use
+- Claude autonomously fetches transactions, categorizes them, and updates QuickBooks
+- Handler captures Claude's summary response and sends to Slack
+- Emits audit event with transaction count and categories
+- Handles errors: QuickBooks connection failure, Claude API failure, budget exceeded
+- Unit tests use mocked Claude client and mocked MCP; verify handler orchestration and error paths
 
 **Key files:** `deploy-cloud/shared/handlers/categorize.py`, `tests/unit/test_handlers/test_categorize.py`
-**Labels:** `epic:handlers`, `sub-phase:beta`
-**parallel-group:** `6.handlers`
-**blocks:** `[]`
+**Labels:** `epic:handlers`, `sub-phase:core`
 
 ---
 
 #### Story 6.3: Implement report handler
 
-Create `deploy-cloud/shared/handlers/report.py` for bookkeeper report generation. Generates P&L and transaction summaries.
+Generates financial reports by invoking Claude with QuickBooks MCP tools.
 
 **Acceptance criteria:**
 - `ReportHandler` extends `BaseHandler`
-- `handle(request)` generates report based on report_type parameter
-- Supports report types: monthly_pl, transaction_summary
-- Persists generated reports to storage
+- Supports report types: `monthly_pl`, `transaction_summary`
+- Claude fetches data from QuickBooks and generates analysis
+- Reports are sent to Slack and optionally saved to Firestore
 - Emits audit event
-- Unit tests verify report structure and storage persistence
+- Unit tests verify report request routing and response formatting
 
 **Key files:** `deploy-cloud/shared/handlers/report.py`, `tests/unit/test_handlers/test_report.py`
-**Labels:** `epic:handlers`, `sub-phase:beta`
-**parallel-group:** `6.handlers`
-**blocks:** `[]`
+**Labels:** `epic:handlers`, `sub-phase:core`
 
 ---
 
 #### Story 6.4: Implement setup handler
 
-Create `deploy-cloud/shared/handlers/setup.py` for client onboarding. Guides new clients through entity type selection, QuickBooks connection, and initial configuration.
+Guides business configuration and triggers QuickBooks OAuth connection.
 
 **Acceptance criteria:**
 - `SetupHandler` extends `BaseHandler`
-- `handle(request)` creates or updates client configuration in storage
+- `handle(request)` creates or updates BusinessConfig in storage
 - Validates entity type, state, fiscal year start
-- Stores client configuration via `StorageAdapter`
-- Emits audit event for client creation/update
-- Unit tests verify: client creation, validation errors, duplicate setup handling
+- Generates QuickBooks OAuth authorization URL when user requests connection
+- Emits audit event for configuration changes
+- Unit tests verify: config creation, validation errors, OAuth URL generation
 
 **Key files:** `deploy-cloud/shared/handlers/setup.py`, `tests/unit/test_handlers/test_setup.py`
-**Labels:** `epic:handlers`, `sub-phase:beta`
-**parallel-group:** `6.handlers`
-**blocks:** `[]`
+**Labels:** `epic:handlers`, `sub-phase:core`
 
 ---
 
 #### Story 6.5: Implement help handler
 
-Create `deploy-cloud/shared/handlers/help.py` for usage information and command listing.
+Returns usage information and available commands.
 
 **Acceptance criteria:**
 - `HelpHandler` extends `BaseHandler`
-- `handle(request)` returns available commands, usage examples, and feature descriptions
-- Response is formatted for Slack markdown
-- Does not require storage access (stateless)
+- Returns available commands (categorize, report, setup, help) with usage examples
+- Response formatted for Slack markdown
+- Stateless — no storage access needed
 - Unit test verifies response contains expected command names
 
 **Key files:** `deploy-cloud/shared/handlers/help.py`, `tests/unit/test_handlers/test_help.py`
-**Labels:** `epic:handlers`, `sub-phase:beta`
-**parallel-group:** `6.handlers`
-**blocks:** `[]`
+**Labels:** `epic:handlers`, `sub-phase:core`
 
 ---
 
-#### Story 6.6: Create handler test conftest
+### Epic 7: GCP Storage & Secrets
 
-Create `tests/unit/conftest.py` with handler fixtures pre-wired with mock adapters and mocked `claude_client`. Create `tests/unit/test_handlers/conftest.py` with handler-specific fixtures.
+> Implement the GCP-specific storage and secrets layers. These are direct implementations against GCP services, not Protocol-based abstractions. The adapter pattern will be extracted when adding AWS in Phase 2.
+
+**Sub-phase:** Core
+**Dependencies:** Epic 1
+
+#### Story 7.1: Implement Firestore storage layer
+
+Create `deploy-cloud/gcp/adapters/storage.py` with typed methods for reading and writing domain objects to Firestore.
 
 **Acceptance criteria:**
-- `tests/unit/conftest.py` provides `mocked_claude_client` fixture returning predictable responses
-- Handler fixtures (`categorize_handler`, `report_handler`, `setup_handler`, `help_handler`) inject in-memory adapters and mocked claude_client
-- `tests/unit/test_handlers/conftest.py` provides pre-seeded storage fixtures for handler tests
-- All handler tests pass when run via `uv run pytest tests/unit/test_handlers/`
+- `FirestoreStorage` provides async methods:
+  - `save_transaction(transaction)` / `get_transaction(id)` / `list_transactions(date_from, date_to, account_id?)`
+  - `save_config(config)` / `get_config()`
+  - `save_audit_event(event)`
+  - `query_transactions(filters)` for flexible querying
+- Uses `google-cloud-firestore` async client
+- All data is stored under a single project namespace (no multi-tenant namespacing for Phase 1)
+- Documents are serialized/deserialized to/from Pydantic models
+- Firestore indexes are defined in `deploy-cloud/gcp/firestore-indexes.json`
 
-**Key files:** `tests/unit/conftest.py`, `tests/unit/test_handlers/conftest.py`
-**Labels:** `epic:handlers`, `sub-phase:beta`
-**parallel-group:** `6.handlers-base`
-**blocks:** `[]`
+**Key files:** `deploy-cloud/gcp/adapters/storage.py`, `deploy-cloud/gcp/firestore-indexes.json`
+**Labels:** `epic:gcp`, `sub-phase:core`
+**blocks:** `[7.3]`
 
 ---
 
-### Epic 7: GCP Adapter Implementations
+#### Story 7.2: Implement Secret Manager wrapper
 
-> Implement the GCP-specific adapter classes that fulfill the Protocol interfaces using GCP services: Firestore, Secret Manager, Pub/Sub, and Cloud Scheduler.
-
-**Sub-phase:** Beta
-**Dependencies:** Epic 3 (adapter protocols must exist; starts after MVP completes per Track 2)
-
-#### Story 7.1: Implement Firestore StorageAdapter
-
-Create `deploy-cloud/gcp/adapters/storage.py` implementing `StorageAdapter` using Google Cloud Firestore. Support collection/document semantics, query filters, batch writes, and tenant-namespaced collections.
+Create `deploy-cloud/gcp/adapters/secrets.py` for reading and writing secrets (QuickBooks tokens, API keys).
 
 **Acceptance criteria:**
-- `FirestoreAdapter` implements all `StorageAdapter` Protocol methods
-- Uses Firestore client from `google-cloud-firestore` SDK
-- Collection paths support tenant namespacing (`clients/{tenant}/transactions`)
-- Batch write uses Firestore batch/transaction API
-- Query filters translate to Firestore query operators
-- Raises `NotFoundError` for missing documents
-- Passes `StorageAdapterContract` conformance suite against Firestore emulator
+- `SecretManagerClient` provides async methods:
+  - `get_secret(name)` — Get latest version of a secret
+  - `set_secret(name, value)` — Create or add new version
+- Used by QuickBooks OAuth for token storage/retrieval
+- `__repr__` and `__str__` never expose secret values
+- Unit tests mock Secret Manager API
 
-**Key files:** `deploy-cloud/gcp/adapters/storage.py`, `tests/cloud/test_gcp_adapters.py`
-**Labels:** `epic:gcp`, `sub-phase:beta`
-**parallel-group:** `7.gcp-adapters`
-**blocks:** `[]`
+**Key files:** `deploy-cloud/gcp/adapters/secrets.py`, `tests/unit/test_gcp/test_secrets.py`
+**Labels:** `epic:gcp`, `sub-phase:core`
 
 ---
 
-#### Story 7.2: Implement Secret Manager SecretsAdapter
+#### Story 7.3: Create GCP cloud tests
 
-Create `deploy-cloud/gcp/adapters/secrets.py` implementing `SecretsAdapter` using Google Cloud Secret Manager.
-
-**Acceptance criteria:**
-- `SecretManagerAdapter` implements all `SecretsAdapter` Protocol methods
-- Supports version retrieval (specific version or latest)
-- `list` with prefix filters secrets by name prefix
-- `__repr__` and `__str__` do not expose secret values
-- Raises `NotFoundError` for missing secrets
-- Passes `SecretsAdapterContract` conformance suite
-
-**Key files:** `deploy-cloud/gcp/adapters/secrets.py`, `tests/cloud/test_gcp_adapters.py`
-**Labels:** `epic:gcp`, `sub-phase:beta`
-**parallel-group:** `7.gcp-adapters`
-**blocks:** `[]`
-
----
-
-#### Story 7.3: Implement Pub/Sub MessagingAdapter
-
-Create `deploy-cloud/gcp/adapters/messaging.py` implementing `MessagingAdapter` using Google Cloud Pub/Sub.
+Tests that run against the Firestore emulator to verify the storage layer works with real Firestore behavior.
 
 **Acceptance criteria:**
-- `PubSubAdapter` implements all `MessagingAdapter` Protocol methods
-- Publish includes message attributes
-- Subscribe registers push/pull handlers
-- Topic create/delete manage Pub/Sub topic lifecycle
-- Passes `MessagingAdapterContract` conformance suite
+- `tests/cloud/test_firestore_storage.py` tests all `FirestoreStorage` methods against emulator
+- Tests cover: save/get round-trip, list with date filters, query operations, audit event storage, config persistence
+- Session-scoped emulator fixture, function-scoped data cleanup
+- Tests skip if `FIRESTORE_EMULATOR_HOST` is not set
+- Tests marked with `@pytest.mark.gcp`
 
-**Key files:** `deploy-cloud/gcp/adapters/messaging.py`, `tests/cloud/test_gcp_adapters.py`
-**Labels:** `epic:gcp`, `sub-phase:beta`
-**parallel-group:** `7.gcp-adapters`
-**blocks:** `[]`
-
----
-
-#### Story 7.4: Implement Cloud Scheduler SchedulerAdapter
-
-Create `deploy-cloud/gcp/adapters/scheduler.py` implementing `SchedulerAdapter` using Google Cloud Scheduler.
-
-**Acceptance criteria:**
-- `CloudSchedulerAdapter` implements all `SchedulerAdapter` Protocol methods
-- Cron expressions are passed through to Cloud Scheduler
-- Pause/resume toggle job state
-- Passes `SchedulerAdapterContract` conformance suite
-
-**Key files:** `deploy-cloud/gcp/adapters/scheduler.py`, `tests/cloud/test_gcp_adapters.py`
-**Labels:** `epic:gcp`, `sub-phase:beta`
-**parallel-group:** `7.gcp-adapters`
-**blocks:** `[]`
-
----
-
-#### Story 7.5: Create GCP cloud test conftest and CI integration
-
-Create `tests/cloud/conftest.py` with emulator fixtures (session-scoped setup, function-scoped adapter instances). Wire GCP conformance tests to inherit from contract classes. Update CI to run GCP cloud tests.
-
-**Acceptance criteria:**
-- `tests/cloud/conftest.py` provides session-scoped Firestore emulator fixture
-- Function-scoped fixtures create fresh adapter instances per test
-- Skip markers activate if emulator is not running (`FIRESTORE_EMULATOR_HOST` not set)
-- `tests/cloud/test_gcp_adapters.py` has `TestFirestoreAdapter(StorageAdapterContract)`, `TestSecretManagerAdapter(SecretsAdapterContract)`, etc.
-- All GCP adapter tests are marked with `@pytest.mark.gcp`
-- CI `cloud-gcp` job runs these tests with emulator service container
-
-**Key files:** `tests/cloud/conftest.py`, `tests/cloud/test_gcp_adapters.py`
-**Labels:** `epic:gcp`, `sub-phase:beta`
-**parallel-group:** `7.gcp-wiring`
-**blocks:** `[]`
+**Key files:** `tests/cloud/conftest.py`, `tests/cloud/test_firestore_storage.py`
+**Labels:** `epic:gcp`, `sub-phase:core`
 
 ---
 
 ### Epic 8: FastAPI Application & Security
 
-> Build the FastAPI application that receives Slack webhooks, routes to handlers, and enforces security: signature verification, rate limiting, and secure error responses.
+> Build the FastAPI application with security middleware and wire everything together.
 
-**Sub-phase:** Beta
+**Sub-phase:** Core
 **Dependencies:** Epics 5, 6, 7
 
-#### Story 8.1: Create FastAPI application factory
+#### Story 8.1: Create FastAPI application factory and GCP wiring
 
-Create the `create_app()` factory function that accepts adapter instances and returns a configured FastAPI application with all routes registered.
+Create the app factory and the GCP-specific `app.py` that wires concrete implementations.
 
 **Acceptance criteria:**
-- `deploy-cloud/shared/app_factory.py` provides `create_app(storage, secrets, messaging, scheduler)` returning a FastAPI instance
-- Routes are registered for: `/slack/events` (POST), `/slack/commands` (POST), `/health` (GET)
-- Handler instances are created with injected adapters
-- Application can be instantiated with in-memory adapters for testing
+- `deploy-cloud/shared/app_factory.py` provides `create_app(storage, secrets, claude_client, mcp_manager, slack_client, skill_loader)` returning a FastAPI instance
+- Routes registered: `/slack/events` (POST), `/slack/commands` (POST), `/oauth/quickbooks/callback` (GET), `/health` (GET)
+- `deploy-cloud/gcp/agents/cfo_bot/app.py` imports GCP implementations, instantiates them, and passes to `create_app()`
+- `deploy-cloud/gcp/agents/cfo_bot/Dockerfile` builds a production container
+- Application starts with `uvicorn`
 
-**Key files:** `deploy-cloud/shared/app_factory.py`
-**Labels:** `epic:fastapi`, `sub-phase:beta`
-**parallel-group:** `8.app-base`
-**blocks:** `[8.2, 8.3, 8.4, 8.5, 8.6]`
+**Key files:** `deploy-cloud/shared/app_factory.py`, `deploy-cloud/gcp/agents/cfo_bot/app.py`, `deploy-cloud/gcp/agents/cfo_bot/Dockerfile`
+**Labels:** `epic:fastapi`, `sub-phase:core`
+**blocks:** `[8.2, 8.3, 8.4, 8.5]`
 
 ---
 
 #### Story 8.2: Implement Slack signature verification middleware
 
-Create middleware that verifies Slack request signatures (`X-Slack-Signature`, `X-Slack-Request-Timestamp`). Reject unsigned, forged, and replayed (stale timestamp) requests.
+Verify Slack request signatures on all `/slack/*` endpoints.
 
 **Acceptance criteria:**
 - Middleware validates `X-Slack-Signature` using HMAC-SHA256 with signing secret
-- Requests without signature headers return 401/403
-- Requests with invalid signatures return 401/403
-- Requests with timestamps older than 5 minutes return 401/403 (replay protection)
+- Requests without signature headers return 401
+- Requests with invalid signatures return 401
+- Requests with timestamps older than 5 minutes return 401 (replay protection)
 - Valid signatures pass through to handlers
-- Unit tests cover: missing signature, invalid signature, expired timestamp, valid signature
-- Integration tests verify middleware with FastAPI TestClient
+- Unit tests: missing signature, invalid signature, expired timestamp, valid signature
 
-**Key files:** `deploy-cloud/shared/middleware/slack_auth.py`, `tests/unit/test_slack_auth.py`, `tests/integration/test_fastapi_app.py`
-**Labels:** `epic:fastapi`, `sub-phase:beta`
-**parallel-group:** `8.security`
-**blocks:** `[]`
+**Key files:** `deploy-cloud/shared/middleware/slack_auth.py`, `tests/unit/test_middleware/test_slack_auth.py`
+**Labels:** `epic:fastapi`, `sub-phase:core`
 
 ---
 
-#### Story 8.3: Implement rate limiting middleware
+#### Story 8.3: Implement rate limiting and Claude API budget caps
 
-Create per-tenant rate limiting middleware. One tenant's burst must not block another tenant.
+Rate limiting for Slack requests and budget enforcement for Claude API usage.
 
 **Acceptance criteria:**
-- Rate limiter tracks requests per tenant (identified by Slack workspace/channel)
-- Exceeding threshold returns 429 Too Many Requests
-- Rate limits are scoped per tenant — one tenant exhausting quota does not affect others
-- Configurable threshold and window
-- Unit tests cover: threshold enforcement, per-tenant isolation, window reset
+- Request rate limiter: configurable threshold and window, returns 429 on breach
+- Claude API budget: daily and monthly token limits (configurable via environment variables)
+- Budget state persisted in Firestore (survives restarts)
+- When budget is exceeded, handler returns a friendly "budget limit reached" message to Slack instead of processing the request
+- Unit tests: rate limit enforcement, budget tracking, budget exceeded behavior
 
-**Key files:** `deploy-cloud/shared/middleware/rate_limit.py`, `tests/unit/test_rate_limit.py`
-**Labels:** `epic:fastapi`, `sub-phase:beta`
-**parallel-group:** `8.security`
-**blocks:** `[]`
+**Key files:** `deploy-cloud/shared/middleware/rate_limit.py`, `tests/unit/test_middleware/test_rate_limit.py`
+**Labels:** `epic:fastapi`, `sub-phase:core`
 
 ---
 
-#### Story 8.4: Implement health endpoint
+#### Story 8.4: Implement Slack event routing and health endpoint
 
-Create `/health` endpoint that returns service status without leaking internal details (no version, no internal IPs, no stack info).
-
-**Acceptance criteria:**
-- GET `/health` returns 200 with `{"status": "healthy"}`
-- Response does not include version numbers, internal IP addresses, or stack information
-- Response includes appropriate security headers (HSTS, X-Content-Type-Options, X-Frame-Options)
-- Unit test verifies response body and absence of leaked details
-
-**Key files:** `deploy-cloud/shared/handlers/health.py`, `tests/unit/test_health.py`
-**Labels:** `epic:fastapi`, `sub-phase:beta`
-**parallel-group:** `8.endpoints`
-**blocks:** `[]`
-
----
-
-#### Story 8.5: Implement Slack event routing
-
-Create the `/slack/events` and `/slack/commands` route handlers that parse Slack payloads, extract command intent, and route to the appropriate handler.
+Route incoming Slack events to the appropriate handler. Health endpoint for load balancer probes.
 
 **Acceptance criteria:**
-- `/slack/events` handles Slack event callbacks (URL verification, message events)
+- `/slack/events` handles Slack event callbacks (URL verification challenge, message events)
 - `/slack/commands` handles slash command payloads
 - Command parser extracts intent (categorize, report, setup, help) from message text
 - Unknown commands route to help handler
-- Invalid payloads return appropriate error responses (no stack traces)
-- Integration tests verify routing with TestClient
+- Invalid payloads return appropriate error responses (no stack traces, no internal paths)
+- GET `/health` returns `{"status": "healthy"}` — no version numbers, no internal IPs
+- Health response includes security headers (X-Content-Type-Options, X-Frame-Options)
+- Unit tests and integration tests verify routing logic
 
-**Key files:** `deploy-cloud/shared/routes/slack.py`, `tests/integration/test_fastapi_app.py`
-**Labels:** `epic:fastapi`, `sub-phase:beta`
-**parallel-group:** `8.endpoints`
-**blocks:** `[]`
-
----
-
-#### Story 8.6: Create GCP app.py wiring
-
-Create `deploy-cloud/gcp/agents/cfo_bot/app.py` that imports GCP adapter implementations, instantiates them, and passes them to `create_app()`. Include Dockerfile and requirements.txt.
-
-**Acceptance criteria:**
-- `app.py` imports `FirestoreAdapter`, `SecretManagerAdapter`, `PubSubAdapter`, `CloudSchedulerAdapter`
-- Instantiates each adapter and passes to `create_app()`
-- `Dockerfile` builds a production-ready container image
-- `requirements.txt` pins production dependencies
-- Application starts successfully with `uvicorn`
-
-**Key files:** `deploy-cloud/gcp/agents/cfo_bot/app.py`, `deploy-cloud/gcp/agents/cfo_bot/Dockerfile`, `deploy-cloud/gcp/agents/cfo_bot/requirements.txt`
-**Labels:** `epic:fastapi`, `sub-phase:beta`
-**parallel-group:** `8.gcp-wiring`
-**blocks:** `[]`
+**Key files:** `deploy-cloud/shared/routes/slack.py`, `deploy-cloud/shared/routes/health.py`, `tests/unit/test_routes/test_slack.py`, `tests/integration/test_fastapi_app.py`
+**Labels:** `epic:fastapi`, `sub-phase:core`
 
 ---
 
-#### Story 8.7: Create integration test suite
+#### Story 8.5: Implement QuickBooks OAuth callback endpoint
 
-Create `tests/integration/` test suite using FastAPI TestClient with in-memory adapters wired via `create_app()` factory. Test multi-component flows end-to-end within the process.
+Handle the OAuth redirect after the user authorizes QuickBooks access.
 
 **Acceptance criteria:**
-- `tests/integration/conftest.py` creates TestClient via `create_app()` with in-memory adapters and pre-seeded data
-- `tests/integration/test_fastapi_app.py` tests: Slack signature verification, command routing, handler invocation, response format
-- `tests/integration/test_handler_flows.py` tests multi-step bookkeeper flow (setup → categorize → report)
-- `tests/integration/test_skill_loading.py` tests real skill file loading from disk
+- GET `/oauth/quickbooks/callback` receives authorization code and realm_id from QuickBooks
+- Validates CSRF state parameter against stored state
+- Exchanges code for access + refresh tokens via `quickbooks_oauth.exchange_code()`
+- Stores tokens in Secret Manager
+- Updates BusinessConfig with `quickbooks_connected = True` and `quickbooks_company_id`
+- Redirects to a success page or returns success HTML
+- Error handling: invalid state, expired code, QuickBooks API errors
+- Unit tests mock QuickBooks OAuth and verify token storage
+
+**Key files:** `deploy-cloud/shared/routes/oauth.py`, `tests/unit/test_routes/test_oauth.py`
+**Labels:** `epic:fastapi`, `sub-phase:core`
+
+---
+
+#### Story 8.6: Create integration test suite
+
+Integration tests using FastAPI TestClient with mocked storage and Claude client.
+
+**Acceptance criteria:**
+- `tests/integration/conftest.py` creates TestClient via `create_app()` with in-memory storage mock and mocked Claude/MCP
+- Tests cover: Slack signature verification end-to-end, command routing (categorize/report/setup/help), handler invocation and response format, health endpoint
+- Multi-step flow test: setup → categorize → report
 - All integration tests pass without external services
 
-**Key files:** `tests/integration/conftest.py`, `tests/integration/test_fastapi_app.py`, `tests/integration/test_handler_flows.py`, `tests/integration/test_skill_loading.py`
-**Labels:** `epic:fastapi`, `sub-phase:beta`
-**parallel-group:** `8.integration`
-**blocks:** `[]`
+**Key files:** `tests/integration/conftest.py`, `tests/integration/test_fastapi_app.py`, `tests/integration/test_handler_flows.py`
+**Labels:** `epic:fastapi`, `sub-phase:core`
 
 ---
 
-### Epic 9: GCP Infrastructure & Deployment
+### Epic 9: Scheduled Jobs
 
-> Create Terraform modules for GCP resources and the one-click deploy script.
+> Implement automated scheduled jobs. Business logic lives in `deploy-cloud/shared/jobs/` (cloud-agnostic). The GCP-specific entry point in `deploy-cloud/gcp/` is a thin wrapper.
 
-**Sub-phase:** GA
-**Dependencies:** Epics 7, 8
+**Sub-phase:** Deploy
+**Dependencies:** Epics 5, 6, 7, 8
 
-#### Story 9.1: Create Terraform Cloud Run module
+#### Story 9.1: Implement daily summary job
 
-Create `deploy-cloud/gcp/terraform/modules/cloud_run/` with Terraform configuration for Cloud Run service and Cloud Run Jobs.
-
-**Acceptance criteria:**
-- Module provisions Cloud Run service with configurable image, memory, CPU, concurrency
-- Module provisions Cloud Run Jobs for scheduled tasks
-- Service connects to VPC connector for private networking (optional)
-- Environment variables are injected from Secret Manager references
-- `terraform validate` passes
-
-**Key files:** `deploy-cloud/gcp/terraform/modules/cloud_run/main.tf`, `variables.tf`, `outputs.tf`
-**Labels:** `epic:gcp-infra`, `sub-phase:ga`
-**parallel-group:** `9.terraform-modules`
-**blocks:** `[9.5]`
-
----
-
-#### Story 9.2: Create Terraform Firestore module
-
-Create `deploy-cloud/gcp/terraform/modules/firestore/` with Terraform configuration for Firestore database and indexes.
+Review the previous day's transactions and post a summary to Slack.
 
 **Acceptance criteria:**
-- Module provisions Firestore database in native mode
-- Module creates composite indexes from `firestore-indexes.json`
-- Configurable location (region)
-- `terraform validate` passes
-
-**Key files:** `deploy-cloud/gcp/terraform/modules/firestore/main.tf`, `variables.tf`, `outputs.tf`
-**Labels:** `epic:gcp-infra`, `sub-phase:ga`
-**parallel-group:** `9.terraform-modules`
-**blocks:** `[9.5]`
-
----
-
-#### Story 9.3: Create Terraform Pub/Sub module
-
-Create `deploy-cloud/gcp/terraform/modules/pubsub/` with Terraform configuration for Pub/Sub topics and subscriptions.
-
-**Acceptance criteria:**
-- Module provisions topics and push/pull subscriptions
-- Dead-letter topic configuration for failed messages
-- Configurable acknowledgment deadline and retention
-- `terraform validate` passes
-
-**Key files:** `deploy-cloud/gcp/terraform/modules/pubsub/main.tf`, `variables.tf`, `outputs.tf`
-**Labels:** `epic:gcp-infra`, `sub-phase:ga`
-**parallel-group:** `9.terraform-modules`
-**blocks:** `[9.5]`
-
----
-
-#### Story 9.4: Create Terraform Cloud Scheduler module
-
-Create `deploy-cloud/gcp/terraform/modules/scheduler/` with Terraform configuration for Cloud Scheduler jobs.
-
-**Acceptance criteria:**
-- Module provisions Cloud Scheduler jobs targeting Cloud Run Jobs
-- Cron schedule, timezone, and retry configuration are parameterized
-- HTTP target points to Cloud Run Jobs execution endpoint
-- `terraform validate` passes
-
-**Key files:** `deploy-cloud/gcp/terraform/modules/scheduler/main.tf`, `variables.tf`, `outputs.tf`
-**Labels:** `epic:gcp-infra`, `sub-phase:ga`
-**parallel-group:** `9.terraform-modules`
-**blocks:** `[9.5]`
-
----
-
-#### Story 9.5: Create root Terraform configuration
-
-Create `deploy-cloud/gcp/terraform/main.tf` that composes all modules, plus `variables.tf` and `outputs.tf`. Include project ID, region, and service account configuration.
-
-**Acceptance criteria:**
-- `main.tf` composes cloud_run, firestore, pubsub, and scheduler modules
-- `variables.tf` defines all required variables with descriptions and validation
-- `outputs.tf` exposes Cloud Run service URL, Firestore database name, project ID
-- `terraform validate` passes
-- README documents required variables and usage
-
-**Key files:** `deploy-cloud/gcp/terraform/main.tf`, `variables.tf`, `outputs.tf`, `README.md`
-**Labels:** `epic:gcp-infra`, `sub-phase:ga`
-**parallel-group:** `9.terraform-root`
-**blocks:** `[9.6]`
-
----
-
-#### Story 9.6: Create deploy.sh one-click script
-
-Create `deploy-cloud/gcp/deploy.sh` that automates the full deployment: build container, push to Artifact Registry, apply Terraform, configure secrets.
-
-**Acceptance criteria:**
-- Script checks prerequisites (gcloud, terraform, docker)
-- Builds Docker image and pushes to GCP Artifact Registry
-- Runs `terraform init && terraform apply`
-- Configures secrets in Secret Manager (prompts for values or reads from env)
-- Outputs the Cloud Run service URL
-- Script is idempotent (safe to re-run)
-- Includes `--dry-run` flag for previewing changes
-
-**Key files:** `deploy-cloud/gcp/deploy.sh`
-**Labels:** `epic:gcp-infra`, `sub-phase:ga`
-**parallel-group:** `9.deploy`
-**blocks:** `[]`
-
----
-
-#### Story 9.7: Create GCP configuration files
-
-Create supporting GCP configuration: `cloud-run-service.yaml`, `cloud-run-jobs.yaml`, `firestore-indexes.json`, and Slack app manifest.
-
-**Acceptance criteria:**
-- `cloud-run-service.yaml` defines Cloud Run service configuration (scaling, resources, env)
-- `cloud-run-jobs.yaml` defines Cloud Run Jobs for 3 scheduled tasks (daily summary, weekly review, monthly close)
-- `firestore-indexes.json` defines composite indexes for common queries
-- `deploy-cloud/gcp/slack/app-manifest.yaml` defines Slack app configuration
-- `deploy-cloud/gcp/slack/setup-guide.md` documents Slack app setup steps
-- `deploy-cloud/gcp/slack/oauth-scopes.md` documents required OAuth scopes
-
-**Key files:** `deploy-cloud/gcp/cloud-run-service.yaml`, `deploy-cloud/gcp/cloud-run-jobs.yaml`, `deploy-cloud/gcp/firestore-indexes.json`, `deploy-cloud/gcp/slack/app-manifest.yaml`, `deploy-cloud/gcp/slack/setup-guide.md`, `deploy-cloud/gcp/slack/oauth-scopes.md`
-**Labels:** `epic:gcp-infra`, `sub-phase:ga`
-**parallel-group:** `9.config`
-**blocks:** `[]`
-
----
-
-### Epic 10: Scheduled Jobs
-
-> Implement the scheduled job handlers that run on Cloud Run Jobs: daily summary, weekly review, and monthly close.
-
-**Sub-phase:** GA
-**Dependencies:** Epics 5, 6, 7, 8 (starts after Beta completes per Track 3)
-
-#### Story 10.1: Implement daily summary job
-
-Create `deploy-cloud/gcp/agents/scheduled_jobs/daily_summary.py` that reviews the previous day's transactions, generates a summary, and posts to the client's Slack channel.
-
-**Acceptance criteria:**
-- Job queries transactions from the previous day via `StorageAdapter`
-- Generates categorization summary (counts by category, flagged items)
-- Posts summary to client's Slack channel via `slack_client`
-- Handles multi-tenant: iterates over active clients
+- `deploy-cloud/shared/jobs/daily_summary.py` contains the business logic
+- Invokes Claude with QuickBooks MCP tools to fetch yesterday's transactions
+- Generates summary: transaction count, total income, total expenses, categories breakdown, flagged items
+- Posts formatted summary to configured Slack channel
 - Emits audit event
 - Unit tests verify summary generation and Slack message structure
 
-**Key files:** `deploy-cloud/gcp/agents/scheduled_jobs/daily_summary.py`, `tests/unit/test_scheduled_jobs/test_daily_summary.py`
-**Labels:** `epic:scheduled-jobs`, `sub-phase:ga`
-**parallel-group:** `10.jobs`
-**blocks:** `[]`
+**Key files:** `deploy-cloud/shared/jobs/daily_summary.py`, `tests/unit/test_jobs/test_daily_summary.py`
+**Labels:** `epic:jobs`, `sub-phase:deploy`
 
 ---
 
-#### Story 10.2: Implement weekly review job
+#### Story 9.2: Implement weekly review job
 
-Create `deploy-cloud/gcp/agents/scheduled_jobs/weekly_review.py` that generates a weekly financial summary including cash position, spending trends, and action items.
+Generate a weekly financial summary with trends.
 
 **Acceptance criteria:**
-- Job queries the previous week's transactions and computes weekly metrics
-- Includes cash position, top spending categories, week-over-week trends
-- Posts formatted review to Slack
-- Handles multi-tenant
+- `deploy-cloud/shared/jobs/weekly_review.py` contains the business logic
+- Fetches the week's data via Claude + QuickBooks MCP
+- Includes: total income/expenses, top spending categories, week-over-week comparison, action items
+- Posts to Slack
 - Emits audit event
-- Unit tests verify metrics computation and message format
+- Unit tests verify metrics and message format
 
-**Key files:** `deploy-cloud/gcp/agents/scheduled_jobs/weekly_review.py`, `tests/unit/test_scheduled_jobs/test_weekly_review.py`
-**Labels:** `epic:scheduled-jobs`, `sub-phase:ga`
-**parallel-group:** `10.jobs`
-**blocks:** `[]`
+**Key files:** `deploy-cloud/shared/jobs/weekly_review.py`, `tests/unit/test_jobs/test_weekly_review.py`
+**Labels:** `epic:jobs`, `sub-phase:deploy`
 
 ---
 
-#### Story 10.3: Implement monthly close job
+#### Story 9.3: Implement monthly close job
 
-Create `deploy-cloud/gcp/agents/scheduled_jobs/monthly_close.py` that generates a month-end close package: P&L, reconciliation checklist, and compliance status.
+Generate month-end close package.
 
 **Acceptance criteria:**
-- Job generates month-end financial summary (P&L, expense breakdown)
-- Includes reconciliation checklist items
-- Reports compliance status for the client's entity type
-- Posts close package to Slack and persists to storage
-- Handles multi-tenant
+- `deploy-cloud/shared/jobs/monthly_close.py` contains the business logic
+- Generates: P&L summary, expense breakdown by category, uncategorized transaction alerts, reconciliation checklist
+- Posts close package to Slack and persists to Firestore
 - Emits audit event
-- Unit tests verify close package structure and storage persistence
+- Unit tests verify close package structure
 
-**Key files:** `deploy-cloud/gcp/agents/scheduled_jobs/monthly_close.py`, `tests/unit/test_scheduled_jobs/test_monthly_close.py`
-**Labels:** `epic:scheduled-jobs`, `sub-phase:ga`
-**parallel-group:** `10.jobs`
-**blocks:** `[]`
+**Key files:** `deploy-cloud/shared/jobs/monthly_close.py`, `tests/unit/test_jobs/test_monthly_close.py`
+**Labels:** `epic:jobs`, `sub-phase:deploy`
 
 ---
 
-#### Story 10.4: Create scheduled jobs Dockerfile and entry point
+#### Story 9.4: Create Cloud Run Jobs entry point
 
-Create the Dockerfile and entry point for Cloud Run Jobs that dispatches to the correct job based on environment variable or argument.
+GCP-specific entry point that instantiates dependencies and dispatches to the cloud-agnostic job logic.
 
 **Acceptance criteria:**
-- `deploy-cloud/gcp/agents/scheduled_jobs/Dockerfile` builds a container image with all job modules
-- Entry point accepts job name as argument (`daily_summary`, `weekly_review`, `monthly_close`)
-- `requirements.txt` pins production dependencies
-- Container starts, executes the specified job, and exits
+- `deploy-cloud/gcp/agents/scheduled_jobs/main.py` accepts job name as argument (`daily_summary`, `weekly_review`, `monthly_close`)
+- Instantiates Firestore storage, Secret Manager, Claude client, MCP manager, Slack client
+- Calls the appropriate shared job function
+- `deploy-cloud/gcp/agents/scheduled_jobs/Dockerfile` builds the container
 - Exit code reflects success (0) or failure (non-zero)
 
-**Key files:** `deploy-cloud/gcp/agents/scheduled_jobs/Dockerfile`, `deploy-cloud/gcp/agents/scheduled_jobs/requirements.txt`, `deploy-cloud/gcp/agents/scheduled_jobs/__init__.py`
-**Labels:** `epic:scheduled-jobs`, `sub-phase:ga`
-**parallel-group:** `10.jobs-infra`
-**blocks:** `[]`
+**Key files:** `deploy-cloud/gcp/agents/scheduled_jobs/main.py`, `deploy-cloud/gcp/agents/scheduled_jobs/Dockerfile`
+**Labels:** `epic:jobs`, `sub-phase:deploy`
 
 ---
 
-### Epic 11: Documentation, Examples & CI Hardening
+### Epic 10: GCP Infrastructure & Deployment
 
-> Complete the documentation suite, create example configurations, and harden the CI pipeline for GA.
+> Terraform modules and deployment automation.
 
-**Sub-phase:** GA
-**Dependencies:** All previous epics
+**Sub-phase:** Deploy
+**Dependencies:** Epics 7, 8, 9
 
-#### Story 11.1: Write architecture documentation
+#### Story 10.1: Create Terraform modules
 
-Create `docs/architecture.md` documenting the three-layer architecture, adapter pattern, handler injection, and data flow diagrams.
+Create Terraform modules for all GCP resources.
 
 **Acceptance criteria:**
-- Describes the three layers: platform-agnostic core, cloud-agnostic handlers, cloud-specific adapters
-- Includes data flow diagrams for cloud deployment
-- Documents the adapter Protocol pattern with code examples
-- Documents handler dependency injection pattern
-- References the multi-cloud strategy
+- `deploy-cloud/gcp/terraform/modules/cloud_run/` — Cloud Run service (cfo_bot) and Cloud Run Jobs (scheduled jobs)
+- `deploy-cloud/gcp/terraform/modules/firestore/` — Firestore database and indexes
+- `deploy-cloud/gcp/terraform/modules/scheduler/` — Cloud Scheduler jobs (daily/weekly/monthly triggers)
+- `deploy-cloud/gcp/terraform/modules/secrets/` — Secret Manager secrets (API keys, OAuth tokens)
+- Each module has `main.tf`, `variables.tf`, `outputs.tf`
+- `terraform validate` passes for each module
+- Secret Manager configuration includes IAM bindings (Cloud Run service account can read secrets)
 
-**Key files:** `docs/architecture.md`
-**Labels:** `epic:docs`, `sub-phase:ga`
-**parallel-group:** `11.docs`
-**blocks:** `[]`
+**Key files:** `deploy-cloud/gcp/terraform/modules/*/`
+**Labels:** `epic:infra`, `sub-phase:deploy`
+**blocks:** `[10.2]`
+
+---
+
+#### Story 10.2: Create root Terraform configuration
+
+Compose all modules into a deployable configuration.
+
+**Acceptance criteria:**
+- `deploy-cloud/gcp/terraform/main.tf` composes cloud_run, firestore, scheduler, and secrets modules
+- `variables.tf` defines all required variables with descriptions and validation (project_id, region, slack_channel, etc.)
+- `outputs.tf` exposes Cloud Run service URL, Firestore database name, OAuth callback URL
+- `terraform.tfvars.example` documents all variables
+- `terraform validate` passes
+
+**Key files:** `deploy-cloud/gcp/terraform/main.tf`, `variables.tf`, `outputs.tf`, `terraform.tfvars.example`
+**Labels:** `epic:infra`, `sub-phase:deploy`
+**blocks:** `[10.3]`
+
+---
+
+#### Story 10.3: Create deploy script
+
+One-click deployment script.
+
+**Acceptance criteria:**
+- `deploy-cloud/gcp/deploy.sh` automates: prerequisite checks (gcloud, terraform, docker), Docker image build and push to Artifact Registry, `terraform init && terraform apply`, secret configuration (prompts for values or reads from env), outputs the Cloud Run service URL and OAuth callback URL
+- Script is idempotent (safe to re-run)
+- `--dry-run` flag previews changes without applying
+- Script does not contain hardcoded secrets
+
+**Key files:** `deploy-cloud/gcp/deploy.sh`
+**Labels:** `epic:infra`, `sub-phase:deploy`
+
+---
+
+#### Story 10.4: Create GCP configuration files
+
+Supporting configuration files for the GCP deployment.
+
+**Acceptance criteria:**
+- `deploy-cloud/gcp/slack/app-manifest.yaml` — Slack app configuration (OAuth scopes, event subscriptions, slash commands)
+- `deploy-cloud/gcp/slack/setup-guide.md` — Step-by-step Slack app setup
+- `deploy-cloud/gcp/cloud-run-service.yaml` — Cloud Run service config (scaling, resources, env)
+- `deploy-cloud/gcp/cloud-run-jobs.yaml` — Cloud Run Jobs config for 3 scheduled tasks
+
+**Key files:** `deploy-cloud/gcp/slack/`, `deploy-cloud/gcp/cloud-run-*.yaml`
+**Labels:** `epic:infra`, `sub-phase:deploy`
+
+---
+
+#### Story 10.5: Configure encryption and IAM
+
+Ensure sensitive data is encrypted and access is minimized.
+
+**Acceptance criteria:**
+- Firestore data encrypted at rest (GCP default, documented)
+- All secrets stored in Secret Manager, never in Firestore, environment variables in production, or application logs
+- Cloud Run service account has minimum required IAM roles (Firestore read/write, Secret Manager accessor, Pub/Sub publisher)
+- Scheduled jobs service account is scoped to required permissions only
+- OAuth tokens stored in Secret Manager with restricted access
+- Documented in `deploy-cloud/gcp/terraform/README.md`: IAM roles, encryption configuration, secret rotation procedure
+
+**Key files:** `deploy-cloud/gcp/terraform/README.md`, IAM configuration in Terraform modules
+**Labels:** `epic:infra`, `sub-phase:deploy`
+
+---
+
+### Epic 11: Documentation
+
+> Minimum viable documentation for the open-source release.
+
+**Sub-phase:** Deploy
+**Dependencies:** All previous epics
+
+#### Story 11.1: Write README
+
+The project's front door. Should communicate what CFOKit does, how to get started, and what's coming next.
+
+**Acceptance criteria:**
+- Tagline and value proposition
+- Feature summary (bookkeeper agent, QuickBooks integration, Slack interface, scheduled summaries)
+- Quick start (link to getting started guide)
+- Architecture overview (link to architecture section)
+- Current limitations (single business, GCP only, cash basis only)
+- Roadmap: multi-business, AWS/Azure, OpenClaw, additional agents
+- Contributing section
+- License (MIT)
+
+**Key files:** `README.md`
+**Labels:** `epic:docs`, `sub-phase:deploy`
 
 ---
 
 #### Story 11.2: Write getting started guide
 
-Create `docs/getting-started.md` with prerequisites, installation, GCP deployment, and first-use walkthrough.
+End-to-end guide from zero to working deployment.
 
 **Acceptance criteria:**
-- Lists prerequisites (Python 3.11+, uv, GCP account, Slack workspace, Anthropic API key, QuickBooks account)
-- Step-by-step GCP deployment instructions
-- First-use bookkeeper workflow walkthrough (setup → categorize → weekly review → monthly close)
-- Troubleshooting section for common setup issues
+- Prerequisites: GCP account, Slack workspace, QuickBooks Online account, Anthropic API key
+- Dev container setup (clone, open in Claude Code, automatic environment)
+- GCP deployment walkthrough (deploy.sh)
+- Slack app setup (reference setup-guide.md)
+- QuickBooks connection (OAuth flow walkthrough)
+- First interaction walkthrough (setup → categorize → report)
+- Troubleshooting common issues
 
 **Key files:** `docs/getting-started.md`
-**Labels:** `epic:docs`, `sub-phase:ga`
-**parallel-group:** `11.docs`
-**blocks:** `[]`
+**Labels:** `epic:docs`, `sub-phase:deploy`
 
 ---
 
-#### Story 11.3: Write adapter development guide
+#### Story 11.3: Write GCP deployment guide
 
-Create `docs/adapter-development.md` documenting how to add a new cloud provider: implement Protocol interfaces, inherit conformance tests, create Terraform, and wire into app.py.
-
-**Acceptance criteria:**
-- Step-by-step guide for implementing a new cloud adapter
-- Shows how to inherit conformance test classes for instant test coverage
-- Documents the factory/wiring pattern in `app.py`
-- Includes Terraform module structure expectations
-- References AWS (Phase 2) and Azure (Phase 3) as future examples
-
-**Key files:** `docs/adapter-development.md`
-**Labels:** `epic:docs`, `sub-phase:ga`
-**parallel-group:** `11.docs`
-**blocks:** `[]`
-
----
-
-#### Story 11.4: Write skill development guide
-
-Create `docs/skill-development.md` documenting how to author and test CFO skills.
+Detailed deployment reference beyond the quick start.
 
 **Acceptance criteria:**
-- Documents skill file format (markdown, heading structure, size limit)
-- Shows how to add a new skill and have it auto-discovered by tests
-- Documents content regression testing approach
-- Provides template for new skills
-
-**Key files:** `docs/skill-development.md`
-**Labels:** `epic:docs`, `sub-phase:ga`
-**parallel-group:** `11.docs`
-**blocks:** `[]`
-
----
-
-#### Story 11.5: Write GCP deployment guide
-
-Create `docs/deployment-guide-gcp.md` with detailed GCP deployment instructions, Terraform variable reference, and operational runbook.
-
-**Acceptance criteria:**
-- Complete GCP deployment instructions (beyond quick start)
 - Terraform variable reference table
-- Cost estimation for 1 client and 10 clients
-- Operational runbook: monitoring, scaling, troubleshooting
+- IAM and security configuration
+- Cost estimation for a single business
 - Secret rotation procedures
+- Updating and redeploying
 
 **Key files:** `docs/deployment-guide-gcp.md`
-**Labels:** `epic:docs`, `sub-phase:ga`
-**parallel-group:** `11.docs`
-**blocks:** `[]`
-
----
-
-#### Story 11.6: Create OpenClaw placeholder docs
-
-Create placeholder documentation files for OpenClaw integration (coming in Phase 2).
-
-**Acceptance criteria:**
-- `docs/getting-started-openclaw.md` exists with "Coming in Phase 2" content and brief description of planned OpenClaw integration
-- `docs/deployment-guide-openclaw.md` exists with "Coming in Phase 2" content
-- `deploy-openclaw/README.md` exists with placeholder content describing what will be added in Phase 2
-- Placeholder directories exist: `deploy-openclaw/agents/`, `deploy-openclaw/skills/`, `deploy-openclaw/workflows/`
-
-**Key files:** `docs/getting-started-openclaw.md`, `docs/deployment-guide-openclaw.md`, `deploy-openclaw/README.md`
-**Labels:** `epic:docs`, `sub-phase:ga`
-**parallel-group:** `11.docs`
-**blocks:** `[]`
-
----
-
-#### Story 11.7: Create example configurations
-
-Create example configurations for solo founder (S-corp) and fractional CFO (multi-client) use cases with GCP config files and README documentation. Examples focus on bookkeeping features.
-
-**Acceptance criteria:**
-- `examples/solo-founder-s-corp/README.md` documents the S-corp bookkeeping use case with Slack conversation examples
-- `examples/solo-founder-s-corp/config-gcp.yaml` provides GCP configuration template
-- `examples/fractional-cfo-multi-client/README.md` documents the multi-client bookkeeping use case with client onboarding flow
-- `examples/fractional-cfo-multi-client/config-gcp.yaml` provides GCP multi-client configuration template
-
-**Key files:** `examples/solo-founder-s-corp/`, `examples/fractional-cfo-multi-client/`
-**Labels:** `epic:docs`, `sub-phase:ga`
-**parallel-group:** `11.examples`
-**blocks:** `[]`
-
----
-
-#### Story 11.8: Write full README.md
-
-Replace the abbreviated README from Epic 1 with the full README including feature descriptions, deployment options, use cases, architecture overview, cost comparison, and community links.
-
-**Acceptance criteria:**
-- README covers: tagline, value proposition, deployment options (GCP now, AWS/Azure/OpenClaw coming), features (leading with bookkeeper), quick start, use cases, architecture diagram, cost comparison, contributing, community links
-- Includes badges (license, stars, deploy buttons)
-- References OpenClaw as "coming in Phase 2"
-- Includes "Tax preparer, compliance monitor, and cashflow analyst agents coming in Phase 2" messaging
-- No broken internal links
-
-**Key files:** `README.md`
-**Labels:** `epic:docs`, `sub-phase:ga`
-**parallel-group:** `11.readme`
-**blocks:** `[]`
-
----
-
-#### Story 11.9: Create helper scripts
-
-Create development helper scripts for local setup, test data generation, and skill management.
-
-**Acceptance criteria:**
-- `scripts/local-dev-setup.sh` installs dependencies, starts emulators, seeds test data
-- `scripts/generate-test-data.py` generates sample transactions, clients, and tax forms for development
-- Scripts are executable and include usage instructions in comments
-- Scripts do not contain hardcoded secrets
-
-**Key files:** `scripts/local-dev-setup.sh`, `scripts/generate-test-data.py`
-**Labels:** `epic:docs`, `sub-phase:ga`
-**parallel-group:** `11.scripts`
-**blocks:** `[]`
-
----
-
-#### Story 11.10: Create E2E smoke tests
-
-Create post-deploy smoke tests that verify a running deployment is healthy and secure. These run against staging environments, not in `uv run pytest`.
-
-**Acceptance criteria:**
-- `tests/e2e/test_smoke.py` tests: health endpoint returns 200, health response does not leak version/IPs/stack info, security headers present (HSTS, X-Content-Type-Options, X-Frame-Options), unauthenticated requests rejected, HTTPS enforcement
-- `tests/e2e/test_slack_webhook.py` tests: basic Slack webhook round-trip (send command, receive response)
-- Tests are marked to not run in standard `uv run pytest` (require `--e2e` flag or explicit path)
-- Tests require `STAGING_URL` environment variable
-
-**Key files:** `tests/e2e/test_smoke.py`, `tests/e2e/test_slack_webhook.py`
-**Labels:** `epic:docs`, `sub-phase:ga`
-**parallel-group:** `11.e2e`
-**blocks:** `[]`
+**Labels:** `epic:docs`, `sub-phase:deploy`
 
 ---
 
 ## Epic Dependency Graph
 
 ```
-                    ┌─────────────────────────────────────────────┐
-                    │           Epic 1: Scaffolding               │
-                    │         (no dependencies)                   │
-                    └──────┬──────────┬──────────┬────────────────┘
+                    ┌─────────────────────────────────────┐
+                    │  Epic 1: Scaffolding & Dev Env       │
+                    │        (no dependencies)             │
+                    └──────┬──────────┬──────────┬─────────┘
                            │          │          │
-                    ┌──────▼──┐  ┌────▼────┐  ┌──▼──────────────┐
-                    │ Epic 2  │  │ Epic 3  │  │    Epic 4       │
-                    │ Models  │  │Adapters │  │ Skills/Agents   │
-                    └─────────┘  └────┬────┘  └──┬──────────────┘
-                         │            │          │
-                         │            └─────┬────┘
-                         │                  │
-                         │          ┌───────▼───────┐
-                         │          │   Epic 5      │
-                         │          │  Utilities    │
-                         │          └───┬───────┬───┘
-                         │              │       │
-                    ┌────▼───▼──┐  ┌────▼───────────┐
-                    │  Epic 6   │  │    Epic 7      │
-                    │ Handlers  │  │  GCP Adapters  │
-                    └──────┬────┘  └────┬───────────┘
-                           │            │
-                       ┌───▼────────────▼───┐
-                       │      Epic 8        │
-                       │  FastAPI + Sec     │
-                       └───┬────────────┬───┘
-                           │            │
-                    ┌──────▼──┐  ┌──────▼──────┐
-                    │ Epic 9  │  │  Epic 10    │
-                    │GCP Infra│  │Sched. Jobs  │
-                    └──────┬──┘  └──────┬──────┘
-                           │            │
-                       ┌───▼────────────▼───┐
-                       │     Epic 11        │
-                       │   Docs + CI        │
-                       └────────────────────┘
-
-Notes:
-- Epic 5 depends on Epics 3 and 4 (not Epic 2)
-- Epic 6 depends on Epics 2, 3, and 5
-- Epic 7 depends on Epic 3 (starts after MVP per Track 2)
-- Epic 10 depends on Epics 5, 6, 7, 8 (starts after Beta per Track 3)
+                    ┌──────▼──┐  ┌────▼────┐  ┌──▼──────────┐
+                    │ Epic 2  │  │ Epic 3  │  │   Epic 4    │
+                    │ Models  │  │QuickBooks│  │Skills/Agent │
+                    │         │  │  MCP    │  │             │
+                    └────┬────┘  └────┬────┘  └──────┬──────┘
+                         │            │              │
+                         │            └──────┬───────┘
+                         │                   │
+                         │           ┌───────▼───────┐
+                         │           │   Epic 5      │
+                         │           │  Utilities    │
+                         │           └───────┬───────┘
+                         │                   │
+                    ┌────▼───────────────────▼──┐  ┌──────────────┐
+                    │       Epic 6              │  │   Epic 7     │
+                    │    Request Handlers       │  │  GCP Storage │
+                    └──────────┬────────────────┘  └──────┬───────┘
+                               │                          │
+                           ┌───▼──────────────────────────▼──┐
+                           │         Epic 8                  │
+                           │   FastAPI App + Security        │
+                           └───┬─────────────────────────┬───┘
+                               │                         │
+                        ┌──────▼──────┐          ┌───────▼──────┐
+                        │  Epic 9     │          │   Epic 10    │
+                        │Sched. Jobs  │          │  GCP Infra   │
+                        └──────┬──────┘          └───────┬──────┘
+                               │                         │
+                           ┌───▼─────────────────────────▼──┐
+                           │          Epic 11               │
+                           │       Documentation            │
+                           └────────────────────────────────┘
 ```
 
 ---
 
-## Parallel Agent Tracks
+## Parallel Execution Tracks
 
 ### Track 1: After Epic 1 completes (3 agents in parallel)
 
 ```
-Agent A: Epic 2 (Core Data Models) ──────────────────┐
-Agent B: Epic 3 (Adapter Protocols + In-Memory) ─────┤──> Epic 5 (Shared Utilities)
-Agent C: Epic 4 (CFO Skills + Agent Definitions) ────┘
+Agent A: Epic 2 (Data Models) ─────────────────────┐
+Agent B: Epic 3 (QuickBooks MCP) ──────────────────┤──> Epic 5 (Utilities)
+Agent C: Epic 4 (Skills & Agent Definition) ───────┘
 ```
 
-**Agent A** works on Pydantic models + test factories + conftest (4 stories):
-- Stories 2.1-2.2 (individual models) can run in parallel
-- Story 2.3 (factories) runs after 2.1-2.2 complete
-- Story 2.4 (conftest) runs after 2.3 completes
-
-**Agent B** works on Protocol interfaces + in-memory adapters + conformance suites (11 stories):
-- Stories 3.1-3.2 (protocols/exceptions) run first
-- Stories 3.3-3.6 (4 in-memory implementations) run in parallel after 3.1-3.2
-- Stories 3.7-3.10 (4 conformance suites) run in parallel after corresponding implementation
-- Story 3.11 (conftest wiring) runs last
-
-**Agent C** works on skill markdown files + agent YAML + tests (4 stories):
-- Stories 4.1-4.2 (skills by domain) + 4.3 (agent YAML) run in parallel
-- Story 4.4 (tests) runs after 4.1-4.3 complete
-
-### Track 2: After MVP completes (2 agents in parallel)
+### Track 2: After Foundation completes (2 agents in parallel)
 
 ```
 Agent A: Epic 6 (Request Handlers) ─────┐
                                          ├──> Epic 8 (FastAPI App)
-Agent B: Epic 7 (GCP Adapters) ─────────┘
+Agent B: Epic 7 (GCP Storage & Secrets) ┘
 ```
 
-**Agent A** works on base handler + 4 domain handlers + conftest (6 stories):
-- Story 6.1 (base handler) + 6.6 (conftest) run first
-- Stories 6.2-6.5 (domain handlers) run in parallel after 6.1
-
-**Agent B** works on 4 GCP adapter implementations + cloud test wiring (5 stories):
-- Stories 7.1-7.4 (GCP adapters) run in parallel
-- Story 7.5 (cloud test conftest) runs after 7.1-7.4
-
-### Track 3: After Beta completes (2 agents in parallel)
+### Track 3: After Core completes (2 agents in parallel)
 
 ```
-Agent A: Epic 9 (GCP Infrastructure) ───┐
-                                         ├──> Epic 11 (Docs + CI)
-Agent B: Epic 10 (Scheduled Jobs) ──────┘
+Agent A: Epic 9 (Scheduled Jobs) ──────────┐
+                                            ├──> Epic 11 (Documentation)
+Agent B: Epic 10 (GCP Infrastructure) ─────┘
 ```
-
-**Agent A** works on Terraform modules + deploy script (7 stories):
-- Stories 9.1-9.4 (Terraform modules) run in parallel
-- Story 9.5 (root Terraform) runs after 9.1-9.4
-- Story 9.6 (deploy.sh) runs after 9.5
-- Story 9.7 (config files) runs in parallel with 9.1-9.4
-
-**Agent B** works on 3 scheduled job handlers + Dockerfile (4 stories):
-- Stories 10.1-10.3 (job implementations) run in parallel
-- Story 10.4 (Dockerfile/entry point) runs after 10.1-10.3
-
-### Track 4: After Epics 9 and 10 complete (1 agent)
-
-**Agent A** works on documentation, examples, and CI hardening (9 stories):
-- Stories 11.1-11.6 (docs) run in parallel
-- Story 11.7 (examples) runs in parallel with docs
-- Story 11.8 (README) runs after other docs are available for cross-referencing
-- Story 11.9 (scripts) runs in parallel
 
 ---
 
@@ -1481,21 +1179,21 @@ Agent B: Epic 10 (Scheduled Jobs) ──────┘
 
 The following are explicitly **out of scope** for Phase 1:
 
-- **Tax preparer agent** — deferred to Phase 2
-- **Compliance monitor agent** — deferred to Phase 2
-- **Cashflow analyst agent** — deferred to Phase 2
-- **501(c)(3) and 501(c)(6) skills** — deferred to Phase 2
-- **Quarterly tax prep scheduled job** — deferred to Phase 2
-- **OpenClaw implementation** — Phase 1 creates placeholder directories only; OpenClaw agent configs, skill manifests, workflows, and `install.sh` are deferred to Phase 2
-- **AWS deployment** — AWS adapters (DynamoDB, Secrets Manager, SNS+SQS, EventBridge), Fargate deployment, and AWS Terraform are deferred to Phase 2
-- **Azure deployment** — Azure adapters (Cosmos DB, Key Vault, Service Bus, Logic Apps), Container Apps deployment, and Azure Terraform are deferred to Phase 3
-- **E-filing integration** — IRS e-file, state e-file, EFTPS payment automation are deferred to Phase 4
-- **Web dashboard** — No browser-based UI; all interaction is via Slack
-- **Multi-currency support** — USD only in Phase 1
-- **Wave and Stripe MCP integrations** — QuickBooks MCP integration only in Phase 1; Wave and Stripe MCP servers are placeholder directories
-- **State tax expansion** — NY state only in Phase 1; additional states are deferred
-- **Cash flow forecasting** — Basic cash position and burn rate only; ML-based forecasting is deferred to Phase 3
-- **Board reporting templates** — Basic report generation only; templated board packages are deferred
+- **Multi-business support** — Phase 1 supports a single business only. Multi-business with per-business agent instances is deferred to Phase 2.
+- **Additional agents** — Tax preparer, compliance monitor, and cashflow analyst agents are deferred to Phase 2.
+- **Adapter protocol abstraction** — Phase 1 builds directly against GCP. Protocol-based abstractions will be extracted when adding AWS in Phase 2.
+- **AWS deployment** — Deferred to Phase 2.
+- **Azure deployment** — Deferred to Phase 3.
+- **OpenClaw integration** — Deferred to Phase 2. Placeholder README only.
+- **Accrual basis accounting** — Cash basis only in Phase 1.
+- **Wave and Stripe integrations** — QuickBooks only in Phase 1.
+- **501(c)(3) and 501(c)(6) entity types** — Deferred to Phase 2.
+- **E-filing integration** — Deferred to Phase 4.
+- **Web dashboard** — All interaction is via Slack.
+- **Multi-currency** — USD only.
+- **State tax expansion** — Federal + NY only.
+- **Operational automation** (monitoring, alerting, dashboards) — Belongs in a separate private infrastructure repository, not this open-source project.
+- **CLI interface** — Slack is the primary interface for Phase 1. CLI may be added in Phase 2 for developer convenience.
 
 ---
 
@@ -1503,15 +1201,15 @@ The following are explicitly **out of scope** for Phase 1:
 
 | Sub-phase | Epic | Stories |
 |-----------|------|---------|
-| MVP | 1. Repository Scaffolding & CI Foundation | 5 |
-| MVP | 2. Core Data Models | 4 |
-| MVP | 3. Adapter Protocols & In-Memory Implementations | 11 |
-| MVP | 4. CFO Skills & Agent Definitions | 4 |
-| MVP | 5. Shared Utilities | 4 |
-| Beta | 6. Request Handlers | 6 |
-| Beta | 7. GCP Adapter Implementations | 5 |
-| Beta | 8. FastAPI Application & Security | 7 |
-| GA | 9. GCP Infrastructure & Deployment | 7 |
-| GA | 10. Scheduled Jobs | 4 |
-| GA | 11. Documentation, Examples & CI Hardening | 10 |
-| **Total** | | **67** |
+| Foundation | 1. Repository Scaffolding & Dev Environment | 5 |
+| Foundation | 2. Data Models | 3 |
+| Foundation | 3. QuickBooks MCP Integration | 3 |
+| Foundation | 4. CFO Skills & Agent Definition | 3 |
+| Foundation | 5. Shared Utilities | 4 |
+| Core | 6. Request Handlers | 5 |
+| Core | 7. GCP Storage & Secrets | 3 |
+| Core | 8. FastAPI Application & Security | 6 |
+| Deploy | 9. Scheduled Jobs | 4 |
+| Deploy | 10. GCP Infrastructure & Deployment | 5 |
+| Deploy | 11. Documentation | 3 |
+| **Total** | | **44** |

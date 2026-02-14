@@ -4,171 +4,146 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-CFOKit is an open-source AI CFO toolkit — AI agents that handle bookkeeping, tax preparation, cash flow monitoring, and compliance tracking for small businesses, solo founders, and fractional CFOs. It uses Anthropic Claude AI, Model Context Protocol (MCP), and deploys to GCP, AWS, Azure, or OpenClaw.
+CFOKit is an open-source AI CFO toolkit — an AI bookkeeper agent that categorizes transactions, generates reports, and posts automated financial summaries for a cash-basis consulting business. It uses Anthropic Claude AI, QuickBooks integration via Model Context Protocol (MCP), and deploys to GCP.
 
 **Status:** Greenfield project. `docs/PRD.md` defines the Phase 1 scope, architecture, and all stories. Treat it as the authoritative source of truth for implementation decisions.
 
-## Planned Tech Stack
+**Phase 1 scope:** Single-business bookkeeper on GCP. Multi-business support, additional agents (tax preparer, compliance monitor, cashflow analyst), and additional cloud providers (AWS, Azure, OpenClaw) are deferred to Phase 2+.
+
+## Tech Stack
 
 - **Language:** Python 3.11+
 - **Package manager:** uv (with `pyproject.toml` and `uv.lock`)
 - **AI:** Anthropic Claude API
-- **Integrations:** MCP servers for QuickBooks, Wave, Stripe
-- **Cloud services:** GCP (Phase 1), AWS (Phase 2), Azure (Phase 3) — all serverless
+- **Integrations:** QuickBooks MCP server (QuickBooks Online API via `python-quickbooks`)
+- **Cloud services:** GCP — Firestore, Secret Manager, Cloud Run, Cloud Scheduler
 - **Testing:** pytest, pytest-asyncio
-- **Infrastructure:** Terraform (provider-specific per cloud), Docker Compose (for OpenClaw)
+- **Infrastructure:** Terraform (GCP-specific), Docker
 - **User interface:** Slack bot
+- **Local dev:** Dev containers (Claude Code cloud containers)
 
 ## Architecture
 
-The codebase follows a three-layer architecture: platform-agnostic core, cloud-agnostic handlers, and cloud-specific adapters.
+The codebase follows a three-layer architecture: platform-agnostic core, cloud-agnostic handlers/jobs, and GCP-specific implementations.
 
 ```
 core/                        # Shared business logic (platform-agnostic)
-├── skills/                  # CFO domain knowledge as markdown (S-corp, 501c3, tax rules)
-├── agents/                  # Agent definitions in YAML (bookkeeper, tax_preparer, compliance_monitor, cashflow_analyst)
-├── integrations/            # MCP servers (QuickBooks, Wave, Stripe)
-├── models/                  # Pydantic data models (transaction, client, tax_form, compliance_rule)
-├── adapters/                # Protocol-based cloud abstractions (PEP 544)
-│   ├── base.py              # StorageAdapter, SecretsAdapter, MessagingAdapter, SchedulerAdapter
-│   └── exceptions.py
+├── skills/                  # CFO domain knowledge as markdown
+│   ├── consulting/          # Transaction categorization, cash basis accounting
+│   ├── federal_tax/         # Meal deductions, home office
+│   └── s_corp/              # Reasonable compensation
+├── agents/                  # Agent definitions in YAML (bookkeeper)
+├── integrations/
+│   └── quickbooks_mcp/      # QuickBooks MCP server (tools, OAuth)
+├── models/                  # Pydantic data models (Transaction, BusinessConfig)
 └── shared/                  # Cloud-agnostic utilities
-    ├── claude_client.py
-    ├── skill_loader.py
-    ├── mcp_manager.py
-    └── slack_client.py
+    ├── claude_client.py     # Claude API wrapper with token budget tracking
+    ├── skill_loader.py      # Entity-type-aware skill loading
+    ├── mcp_manager.py       # MCP server lifecycle management
+    └── slack_client.py      # Slack message formatting and sending
 
-deploy-cloud/                # Cloud deployment adapters
-├── shared/                  # Cloud-agnostic request handlers (use adapter interfaces only)
-│   └── handlers/
-│       ├── base_handler.py
-│       ├── categorize.py
-│       ├── cashflow.py
-│       ├── report.py
-│       ├── compliance.py
-│       ├── setup.py
-│       └── help.py
-├── gcp/                     # GCP adapter (Phase 1)
-│   ├── adapters/            # Firestore, Secret Manager, Pub/Sub, Cloud Scheduler
-│   ├── agents/              # Cloud Run service + Cloud Run Jobs
-│   └── terraform/           # GCP-specific Terraform with modules
-├── aws/                     # AWS adapter (Phase 2)
-│   ├── adapters/            # DynamoDB, Secrets Manager, SNS+SQS, EventBridge
-│   ├── agents/              # Fargate + ALB service + scheduled tasks
-│   └── terraform/           # AWS-specific Terraform with modules
-└── azure/                   # Azure adapter (Phase 3)
-    ├── adapters/            # Cosmos DB, Key Vault, Service Bus, Logic Apps
-    ├── agents/              # Container Apps service + scheduled jobs
-    └── terraform/           # Azure-specific Terraform with modules
+deploy-cloud/                # Cloud deployment
+├── shared/                  # Cloud-agnostic request handlers and jobs
+│   ├── handlers/            # base_handler, categorize, report, setup, help
+│   ├── middleware/          # slack_auth, rate_limit
+│   ├── routes/              # slack events, health, oauth callback
+│   ├── jobs/                # daily_summary, weekly_review, monthly_close
+│   └── app_factory.py       # FastAPI app factory
+├── gcp/                     # GCP implementation (Phase 1)
+│   ├── adapters/            # Firestore storage, Secret Manager
+│   ├── agents/
+│   │   ├── cfo_bot/         # Cloud Run service (app.py, Dockerfile)
+│   │   └── scheduled_jobs/  # Cloud Run Jobs entry point
+│   └── terraform/           # GCP Terraform modules
+├── aws/README.md            # Placeholder — Phase 2
+└── azure/README.md          # Placeholder — Phase 3
 
-deploy-openclaw/            # OpenClaw deployment (separate paradigm, not a cloud adapter)
-├── agents/                  # OpenClaw agent configs (YAML)
-├── skills/                  # Skills manifests (YAML)
-└── workflows/               # Scheduled workflow definitions (YAML)
+deploy-openclaw/README.md    # Placeholder — Phase 2
+
+tests/
+├── unit/                    # Unit tests (mocked dependencies)
+├── integration/             # Integration tests (TestClient, in-memory storage)
+├── cloud/                   # GCP emulator tests
+├── e2e/                     # Post-deploy smoke tests
+├── fixtures/                # Sample data files
+├── factories.py             # Test data factories
+└── conftest.py              # Shared fixtures
 ```
 
 **Key design principles:**
-- Skills are universal markdown files that work across all deployment targets
-- Agent definitions are portable YAML
-- Adapter interfaces use Python Protocols (PEP 544) — duck typing, no inheritance required
-- Request handlers depend only on adapter protocols, never on concrete cloud implementations
-- Only `app.py` in each cloud directory wires concrete adapters via a factory
-- OpenClaw is a separate paradigm, not a cloud adapter
+- Skills are universal markdown files containing domain knowledge (tax rules, categorization guidelines)
+- Agent definitions are portable YAML (skills, tools, triggers)
+- Phase 1 builds directly against GCP — no adapter protocol abstraction. Protocols will be extracted when adding AWS in Phase 2.
+- `deploy-cloud/shared/` code must not import cloud-specific SDKs
+- `core/` must remain platform-agnostic — no cloud-provider imports
+- Scheduled job business logic lives in `deploy-cloud/shared/jobs/`, not in GCP-specific code
+- Only `app.py` in the GCP directory wires concrete implementations via the app factory
 
-**Data flow (cloud — all providers):** Slack -> Containerized FastAPI Service -> Claude AI + Skills -> QuickBooks/Wave (via MCP) -> Document DB (via StorageAdapter)
-
-**Data flow (OpenClaw):** Slack -> OpenClaw Agent Router -> Claude AI + Skills -> QuickBooks/Wave (via MCP) -> OpenClaw State
+**Data flow:** Slack -> FastAPI (Cloud Run) -> Claude AI + Skills + QuickBooks MCP -> QuickBooks API -> Firestore (audit events, config)
 
 ## Build & Development Commands
 
-Once the project is scaffolded:
-
 ```bash
-# Install dependencies
-uv sync
+# Dev container handles setup automatically (uv sync, Firestore emulator)
 
-# Run all tests
-uv run pytest
-
-# Run a single test file
-uv run pytest tests/unit/test_categorize.py
-
-# Run a single test function
-uv run pytest tests/unit/test_categorize.py::test_function_name
-
-# Cloud deployment
-cd deploy-cloud/gcp && ./deploy.sh     # GCP (Phase 1)
-cd deploy-cloud/aws && ./deploy.sh     # AWS (Phase 2)
-cd deploy-cloud/azure && ./deploy.sh   # Azure (Phase 3)
-
-# OpenClaw deployment
-cd deploy-openclaw && ./install.sh
-
-# Local dev setup
-./scripts/local-dev-setup.sh
-
-# Run unit tests only (fast, no external deps)
+# Run all unit tests
 uv run pytest tests/unit/ -x
 
-# Run with coverage report
+# Run a single test file
+uv run pytest tests/unit/test_handlers/test_categorize.py
+
+# Run with coverage
 uv run pytest tests/unit/ --cov --cov-report=term-missing
 
-# Run cloud adapter tests (requires emulators running)
+# Run integration tests
+uv run pytest tests/integration/
+
+# Run GCP cloud tests (requires Firestore emulator)
 uv run pytest tests/cloud/ -m gcp
-uv run pytest tests/cloud/ -m aws
-uv run pytest tests/cloud/ -m azure
 
 # Run all tests except cloud
 uv run pytest tests/unit/ tests/integration/
+
+# GCP deployment
+cd deploy-cloud/gcp && ./deploy.sh
 ```
-
-## Multi-Client Architecture
-
-CFOKit supports fractional CFOs managing multiple clients. Each client gets:
-- A dedicated Slack channel
-- Isolated data storage (cloud document DB namespace or OpenClaw namespace)
-- Per-client skills and configuration
-- Independent entity type settings (S-corp, LLC, 501c3, 501c6)
 
 ## Environment Variables
 
 ```
-ANTHROPIC_API_KEY        # Required — Claude API key
-QUICKBOOKS_COMPANY_ID    # Required — QuickBooks company ID
-SLACK_BOT_TOKEN          # Required — Slack bot token
-ENTITY_TYPE              # s-corp | llc | 501c3 | 501c6
-STATE                    # State of incorporation (NY, CA, etc.)
-FISCAL_YEAR_START        # e.g. 2024-01-01
-QUARTERLY_SALARY         # For S-corps — quarterly salary amount
+ANTHROPIC_API_KEY            # Required — Claude API key
+SLACK_BOT_TOKEN              # Required — Slack bot token
+SLACK_SIGNING_SECRET         # Required — Slack request signature verification
+SLACK_CHANNEL_ID             # Required — Channel for bot messages and summaries
+QUICKBOOKS_CLIENT_ID         # Required — QuickBooks OAuth app client ID
+QUICKBOOKS_CLIENT_SECRET     # Required — QuickBooks OAuth app client secret
+QUICKBOOKS_REDIRECT_URI      # Required — OAuth callback URL
+ENTITY_TYPE                  # sole_prop | s_corp | llc (default: sole_prop)
+STATE                        # State of incorporation (default: NY)
+FISCAL_YEAR_START            # e.g. 2026-01-01
+CLAUDE_DAILY_TOKEN_LIMIT     # Daily token budget (default: 1000000)
+CLAUDE_MONTHLY_TOKEN_LIMIT   # Monthly token budget (default: 20000000)
+FIRESTORE_EMULATOR_HOST      # Local dev only — Firestore emulator address
 ```
 
 ## Conventions
 
-- Skills are markdown files containing domain knowledge (tax rules, compliance requirements)
-- Agent definitions are YAML files specifying skills, tools, and triggers
 - Python files use snake_case; classes use PascalCase
-- The `core/` directory must remain platform-agnostic — no cloud-provider or OpenClaw imports
-- `deploy-cloud/shared/handlers/` must use only adapter interfaces — no cloud-provider imports
-- Cloud-specific code belongs exclusively in `deploy-cloud/{gcp,aws,azure}/`
-- OpenClaw-specific code belongs exclusively in `deploy-openclaw/`
-- Adapter interfaces use Python Protocols (PEP 544), not ABCs
-- Terraform is provider-specific per cloud — no shared Terraform abstractions
-- Unit tests use in-memory adapter fixtures — never import cloud SDKs
-- Adapter conformance tests define the behavioral contract; new adapters inherit them
-- `tests/adapters/` contains reference implementations, not production code
+- `core/` must remain platform-agnostic — no cloud-provider imports
+- `deploy-cloud/shared/` must not import GCP SDKs — depends on injected storage/secrets
+- GCP-specific code belongs exclusively in `deploy-cloud/gcp/`
 - `asyncio_mode = "auto"` — no `@pytest.mark.asyncio` needed
 - Test factories in `tests/factories.py` — use `Factory.create(**overrides)` pattern
 - Handler tests verify both return values AND storage side-effects
-- Coverage floor: 85% for unit, 80% combined
+- GitHub Actions pinned to commit SHAs
 
-### Security Testing
+### Security
 
-- Adapter conformance tests must include tenant isolation scenarios (data under tenant A's namespace must not be visible to tenant B)
-- Handler error paths must never expose secrets, stack traces, internal paths, or other-tenant data in responses
-- All internet-facing endpoints must have authentication tests (Slack signature verification, replay protection)
-- `skill_loader.py` must have path traversal tests; `claude_client.py` must have prompt construction safety tests
-- State-changing handlers must emit audit events (tested for presence and for absence of secrets)
-- CI must include `bandit` (SAST), `pip-audit` (dependency vulnerabilities), and `detect-secrets` (committed secrets)
-- GitHub Actions pinned to commit SHAs, Docker service images pinned to digest hashes
+- Handler error paths must never expose secrets, stack traces, or internal paths in responses
+- All `/slack/*` endpoints require Slack signature verification with replay protection
+- `skill_loader.py` must reject path traversal (`..`, absolute paths, null bytes)
+- `claude_client.py` must enforce prompt construction safety (user input in user role only)
+- Audit events must never contain secret values, tokens, or API keys
 - MCP server URLs must enforce HTTPS — reject `http://` URLs
-- Test factories should include adversarial data variants (empty strings, unicode, injection payloads, boundary values)
+- QuickBooks OAuth tokens stored in Secret Manager, never in Firestore or logs
+- Claude API usage tracked with configurable daily/monthly token budget caps
