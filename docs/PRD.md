@@ -11,15 +11,78 @@ Multi-business support, additional agents (tax preparer, compliance monitor, cas
 
 ---
 
+## Categorization Model
+
+CFOKit's primary job is categorizing transactions in QuickBooks. This section defines exactly how it interacts with QBO's existing categorization.
+
+**Categorization policy (Phase 1):**
+- **Override QBO auto-categorization on new transactions.** When the daily job runs, it re-categorizes all new transactions using CFOKit's domain-aware skills, regardless of what QBO's bank rules may have assigned. CFOKit's skills apply tax knowledge (meal deductions, home office, S-corp rules) that QBO's simple pattern-matching cannot.
+- **Chart of accounts is read-only.** CFOKit assigns transactions to existing QBO accounts. It never creates, modifies, or deletes accounts.
+- **No automatic reclassification.** CFOKit only reclassifies a previously-categorized transaction when the user explicitly requests it via Slack (e.g., "@cfokit move the Uber charge from travel to meals").
+- **Flag ambiguous transactions.** When Claude is uncertain about a categorization (e.g., an Amazon charge that could be office supplies or personal), it skips the auto-categorization and posts a specific question to Slack asking the user to confirm.
+
+**Primary flow: daily auto-categorization.** The daily scheduled job is the main interaction — it finds new transactions, categorizes them, posts a summary to Slack with any questions. On-demand "@cfokit categorize" is a secondary fallback for re-runs or ad-hoc requests.
+
+**Phase 2+ direction:** Configurable authority levels per company — from full auto-categorization (CFOKit owns all categorization, overrides QBO) to suggest-only mode (post recommendations to Slack, let user confirm each one) to respect-QBO mode (only touch what QBO left uncategorized). In a greenfield company, CFOKit could also build the chart of accounts in QBO and handle all categorization from the start.
+
+---
+
 ## Interaction Flows
 
 Before defining stories, these sequence diagrams establish how the system actually works. All flows go through Claude AI, which uses QuickBooks MCP tools to read and write financial data.
 
 > **Note on MCP tools:** The Intuit QBO MCP server exposes 50 tools across 11 entity types (CRUD + Search). It has no report endpoints (no P&L, balance sheet, etc.). For reports, Claude searches raw transactions and computes aggregations using skills knowledge. The search tools accept structured criteria with filters, operators, sort, and pagination — not free-text queries. Claude translates natural language requests into the correct structured criteria.
 
-### Transaction Categorization (On-Demand)
+### Daily Auto-Categorization (Scheduled — Primary Flow)
 
-The core interaction. The user asks CFOKit to categorize recent transactions. Claude fetches uncategorized transactions from QuickBooks, applies domain knowledge from skills, categorizes each one, and updates QuickBooks.
+The main interaction. Runs daily via Cloud Scheduler. CFOKit finds new transactions, categorizes them using domain-aware skills (overriding any QBO auto-categorization), and posts a summary to Slack. Ambiguous transactions are flagged with specific questions for the user rather than auto-categorized.
+
+```mermaid
+sequenceDiagram
+    participant Scheduler as Cloud Scheduler
+    participant Job as Cloud Run Job
+    participant Logic as DailySummaryJob
+    participant Claude as Claude AI
+    participant MCP as Intuit QBO MCP Server
+    participant QB as QuickBooks API
+    participant Slack
+
+    Scheduler->>Job: Trigger daily_summary
+    Job->>Logic: run()
+    Logic->>MCP: Start Intuit QBO MCP server subprocess
+    Logic->>Claude: invoke("Categorize and summarize yesterday's transactions", skills, mcp_tools)
+
+    Claude->>MCP: tool: search_purchases(criteria={filters:[{field:"MetaData.CreateTime",value:"2026-02-14",operator:">="}],fetchAll:true})
+    MCP->>QB: GET /v3/company/{id}/query
+    QB-->>MCP: purchases[]
+    MCP-->>Claude: purchases[] (new transactions, may include QBO auto-categorized)
+
+    Claude->>MCP: tool: search_accounts(criteria={filters:[{field:"Active",value:true}]})
+    MCP->>QB: GET /v3/company/{id}/query
+    QB-->>MCP: accounts[]
+    MCP-->>Claude: accounts[] (read-only — used for assignment, never modified)
+
+    loop Each new transaction
+        Claude->>Claude: Apply skills (deduction rules, S-corp, state tax)
+        alt Confident categorization
+            Claude->>MCP: tool: update_purchase(purchase={Id, SyncToken, AccountRef, PrivateNote})
+            MCP->>QB: POST /v3/company/{id}/purchase
+            QB-->>MCP: updated
+            MCP-->>Claude: confirmed
+        else Ambiguous — needs user input
+            Claude->>Claude: Flag for Slack question (skip auto-categorization)
+        end
+    end
+
+    Claude-->>Logic: Summary + flagged items needing confirmation
+    Logic->>Firestore: save_audit_event(daily_summary)
+    Logic->>Slack: Post summary ("Categorized 10 of 12 transactions")
+    Logic->>Slack: Post questions ("Is this $47 Amazon charge office supplies or personal?")
+```
+
+### Transaction Categorization (On-Demand — Secondary)
+
+Fallback for ad-hoc requests. Same categorization logic as the daily job, but triggered by the user. Useful for re-runs or when the user wants to categorize transactions outside the daily window.
 
 ```mermaid
 sequenceDiagram
@@ -48,18 +111,21 @@ sequenceDiagram
     QB-->>MCP: accounts[]
     MCP-->>Claude: accounts[]
 
-    loop Each uncategorized transaction
+    loop Each new transaction
         Claude->>Claude: Apply skills (deduction rules, category mapping)
-        Claude->>MCP: tool: update_purchase(purchase={Id, SyncToken, AccountRef, PrivateNote, ...})
-        MCP->>QB: POST /v3/company/{id}/purchase
-        QB-->>MCP: updated
-        MCP-->>Claude: confirmed
+        alt Confident
+            Claude->>MCP: tool: update_purchase(purchase={Id, SyncToken, AccountRef, PrivateNote})
+            MCP->>QB: POST /v3/company/{id}/purchase
+            QB-->>MCP: updated
+        else Ambiguous
+            Claude->>Claude: Flag for user
+        end
     end
 
-    Claude-->>Handler: "Categorized 12 transactions: 5 consulting revenue, 3 software, 2 meals, 1 travel, 1 office"
-    Handler->>Firestore: save_audit_event(categorize, 12 transactions)
-    Handler->>Slack: formatted summary message
-    Slack-->>User: Summary with categories and any flagged items
+    Claude-->>Handler: Summary + flagged items
+    Handler->>Firestore: save_audit_event(categorize)
+    Handler->>Slack: formatted summary + questions for ambiguous items
+    Slack-->>User: Summary with categories and questions for flagged items
 ```
 
 ### Report Generation
@@ -131,45 +197,9 @@ sequenceDiagram
     Slack-->>User: Confirmation
 ```
 
-### Daily Summary (Scheduled)
+### Transaction Reclassification (On-Demand Only)
 
-Automated daily job. Cloud Scheduler triggers a Cloud Run Job that reviews the previous day's activity.
-
-```mermaid
-sequenceDiagram
-    participant Scheduler as Cloud Scheduler
-    participant Job as Cloud Run Job
-    participant Logic as DailySummaryJob
-    participant Claude as Claude AI
-    participant MCP as Intuit QBO MCP Server
-    participant QB as QuickBooks API
-    participant Slack
-
-    Scheduler->>Job: Trigger daily_summary
-    Job->>Logic: run()
-    Logic->>MCP: Start Intuit QBO MCP server subprocess
-    Logic->>Claude: invoke("Summarize yesterday's transactions", skills, mcp_tools)
-
-    Claude->>MCP: tool: search_purchases(criteria={filters:[{field:"TxnDate",value:"2026-02-14",operator:"="}],fetchAll:true})
-    MCP->>QB: GET /v3/company/{id}/query
-    QB-->>MCP: purchases[]
-    MCP-->>Claude: purchases[]
-
-    Claude->>MCP: tool: search_invoices(criteria={filters:[{field:"TxnDate",value:"2026-02-14",operator:"="}],fetchAll:true})
-    MCP->>QB: GET /v3/company/{id}/query
-    QB-->>MCP: invoices[]
-    MCP-->>Claude: invoices[]
-
-    Claude->>Claude: Compute totals, categorize, generate summary with skills
-    Claude-->>Logic: Summary with categories, totals, flagged items
-
-    Logic->>Firestore: save_audit_event(daily_summary)
-    Logic->>Slack: Post summary to configured channel
-```
-
-### Transaction Reclassification
-
-The user asks to change a transaction's category. Claude finds and updates it.
+The user explicitly asks to change a previously-categorized transaction. This is the only way reclassification happens — CFOKit never automatically reclassifies transactions that have already been categorized.
 
 ```mermaid
 sequenceDiagram
@@ -213,8 +243,10 @@ sequenceDiagram
 
 Phase 1 is **done** when:
 
-- A user can message CFOKit in Slack and get transactions categorized in QuickBooks
+- Daily auto-categorization runs, categorizes new transactions in QuickBooks (overriding QBO bank rules), and posts a summary to Slack with questions for ambiguous items
+- A user can also trigger categorization on-demand via Slack
 - A user can request P&L and transaction summary reports via Slack
+- CFOKit's reports for 2025 can be compared against manually-generated QBO reports for accuracy validation
 - QuickBooks OAuth connect flow works end-to-end
 - Intuit QBO MCP server (50 tools, 11 entity types) reads and writes QuickBooks data via subprocess over stdio
 - Scheduled jobs (daily summary, weekly review, monthly close) run automatically and post to Slack
@@ -739,19 +771,21 @@ Create `deploy-cloud/shared/handlers/base_handler.py` with shared functionality 
 
 #### Story 6.2: Implement categorize handler
 
-The primary handler. Invokes Claude with bookkeeper skills and QuickBooks MCP tools to categorize transactions.
+Invokes Claude with bookkeeper skills and QuickBooks MCP tools to categorize transactions. Used by both the daily auto-categorization job (primary) and on-demand Slack requests (secondary). Same categorization logic in both cases.
 
 **Acceptance criteria:**
 - `CategorizeHandler` extends `BaseHandler`
 - `handle(request)` invokes Claude with:
-  - User's message as the user prompt
+  - User's message (or daily job prompt) as the user prompt
   - Loaded bookkeeper skills as system context
   - QuickBooks MCP tools available for Claude to use
-- Claude autonomously fetches transactions, categorizes them, and updates QuickBooks
-- Handler captures Claude's summary response and sends to Slack
-- Emits audit event with transaction count and categories
+- Claude fetches new transactions, applies skills, and categorizes — overriding any QBO auto-categorization (bank rules)
+- Chart of accounts is read-only: Claude assigns to existing accounts, never creates/modifies/deletes accounts
+- Ambiguous transactions are flagged with specific questions for Slack (e.g., "Is this $47 Amazon charge office supplies or personal?") rather than auto-categorized
+- Handler captures Claude's summary + flagged items and sends to Slack
+- Emits audit event with transaction count, categories, and flagged item count
 - Handles errors: QuickBooks connection failure, Claude API failure, budget exceeded
-- Unit tests use mocked Claude client and mocked MCP; verify handler orchestration and error paths
+- Unit tests use mocked Claude client and mocked MCP; verify handler orchestration, ambiguous-item flagging, and error paths
 
 **Key files:** `deploy-cloud/shared/handlers/categorize.py`, `tests/unit/test_handlers/test_categorize.py`
 **Labels:** `epic:handlers`, `sub-phase:core`
@@ -989,15 +1023,17 @@ Integration tests using FastAPI TestClient with mocked storage and Claude client
 
 #### Story 9.1: Implement daily summary job
 
-Review the previous day's transactions and post a summary to Slack.
+The primary interaction with CFOKit. Runs daily, finds new transactions, auto-categorizes them (overriding QBO bank rules), and posts a summary to Slack with questions for any ambiguous items.
 
 **Acceptance criteria:**
 - `deploy-cloud/shared/jobs/daily_summary.py` contains the business logic
-- Invokes Claude with QuickBooks MCP tools to fetch yesterday's transactions
-- Generates summary: transaction count, total income, total expenses, categories breakdown, flagged items
-- Posts formatted summary to configured Slack channel
+- Uses `CategorizeHandler` (Story 6.2) to categorize new transactions
+- Categorization policy: overrides QBO auto-categorization on all new transactions, skips any previously-categorized transactions
+- Generates summary: transaction count, categorized count, total income, total expenses, categories breakdown
+- Flags ambiguous transactions with specific Slack questions (e.g., "Is this $47 Amazon charge office supplies or personal?")
+- Posts formatted summary + questions to configured Slack channel
 - Emits audit event
-- Unit tests verify summary generation and Slack message structure
+- Unit tests verify: categorization invocation, summary generation, ambiguous-item question formatting, Slack message structure
 
 **Key files:** `deploy-cloud/shared/jobs/daily_summary.py`, `tests/unit/test_jobs/test_daily_summary.py`
 **Labels:** `epic:jobs`, `sub-phase:deploy`
@@ -1279,6 +1315,8 @@ The following are explicitly **out of scope** for Phase 1:
 - **Web dashboard** — All interaction is via Slack.
 - **Multi-currency** — USD only.
 - **State tax expansion** — Federal + Delaware + NY only in Phase 1. Additional states deferred.
+- **Configurable categorization authority** — Phase 1 always overrides QBO auto-categorization on new transactions. Per-company authority levels (full auto, suggest-only, respect QBO) deferred to Phase 2 multi-business support.
+- **Chart of accounts management** — Phase 1 treats the QBO chart of accounts as read-only. Building/managing the chart of accounts for greenfield companies deferred to Phase 2.
 - **Operational automation** (monitoring, alerting, dashboards) — Belongs in a separate private infrastructure repository, not this open-source project.
 - **CLI interface** — Slack is the primary interface for Phase 1. CLI may be added in Phase 2 for developer convenience.
 
