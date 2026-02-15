@@ -15,15 +15,17 @@ Multi-business support, additional agents (tax preparer, compliance monitor, cas
 
 CFOKit's primary job is categorizing transactions in QuickBooks. This section defines exactly how it interacts with QBO's existing categorization.
 
+**Scope (Phase 1): Expense categorization only.** The Intuit QBO MCP server supports Purchases (expenses) but does not expose Payment, Deposit, or Sales Receipt entities. This means CFOKit can categorize expenses but cannot match bank deposits to invoices or categorize income transactions. Income-side data (invoices) is available read-only for reporting. Deposit-to-invoice matching remains a manual step in QBO for Phase 1.
+
 **Categorization policy (Phase 1):**
-- **Override QBO auto-categorization on new transactions.** When the daily job runs, it re-categorizes all new transactions using CFOKit's domain-aware skills, regardless of what QBO's bank rules may have assigned. CFOKit's skills apply tax knowledge (meal deductions, home office, S-corp rules) that QBO's simple pattern-matching cannot.
+- **Override QBO auto-categorization on new purchases.** When the daily job runs, it re-categorizes all new purchase transactions using CFOKit's domain-aware skills, regardless of what QBO's bank rules may have assigned. CFOKit's skills apply tax knowledge (meal deductions, home office, S-corp rules) that QBO's simple pattern-matching cannot.
 - **Chart of accounts is read-only.** CFOKit assigns transactions to existing QBO accounts. It never creates, modifies, or deletes accounts.
 - **No automatic reclassification.** CFOKit only reclassifies a previously-categorized transaction when the user explicitly requests it via Slack (e.g., "@cfokit move the Uber charge from travel to meals").
 - **Flag ambiguous transactions.** When Claude is uncertain about a categorization (e.g., an Amazon charge that could be office supplies or personal), it skips the auto-categorization and posts a specific question to Slack asking the user to confirm.
 
-**Primary flow: daily auto-categorization.** The daily scheduled job is the main interaction — it finds new transactions, categorizes them, posts a summary to Slack with any questions. On-demand "@cfokit categorize" is a secondary fallback for re-runs or ad-hoc requests.
+**Primary flow: daily auto-categorization.** The daily scheduled job is the main interaction — it finds new purchase transactions, categorizes them, posts a summary to Slack with any questions. On-demand "@cfokit categorize" is a secondary fallback for re-runs or ad-hoc requests.
 
-**Phase 2+ direction:** Configurable authority levels per company — from full auto-categorization (CFOKit owns all categorization, overrides QBO) to suggest-only mode (post recommendations to Slack, let user confirm each one) to respect-QBO mode (only touch what QBO left uncategorized). In a greenfield company, CFOKit could also build the chart of accounts in QBO and handle all categorization from the start.
+**Phase 2+ direction:** Configurable authority levels per company — from full auto-categorization (CFOKit owns all categorization, overrides QBO) to suggest-only mode (post recommendations to Slack, let user confirm each one) to respect-QBO mode (only touch what QBO left uncategorized). In a greenfield company, CFOKit could also build the chart of accounts in QBO and handle all categorization from the start. Income-side handling (deposit matching, payment categorization) requires either extending the Intuit MCP server or adding a direct QBO API integration.
 
 ---
 
@@ -31,7 +33,7 @@ CFOKit's primary job is categorizing transactions in QuickBooks. This section de
 
 Before defining stories, these sequence diagrams establish how the system actually works. All flows go through Claude AI, which uses QuickBooks MCP tools to read and write financial data.
 
-> **Note on MCP tools:** The Intuit QBO MCP server exposes 50 tools across 11 entity types (CRUD + Search). It has no report endpoints (no P&L, balance sheet, etc.). For reports, Claude searches raw transactions and computes aggregations using skills knowledge. The search tools accept structured criteria with filters, operators, sort, and pagination — not free-text queries. Claude translates natural language requests into the correct structured criteria.
+> **Note on MCP tools:** The Intuit QBO MCP server exposes 50 tools across 11 entity types (CRUD + Search). Two important gaps: (1) no report endpoints — Claude computes reports from raw transaction searches; (2) no Payment, Deposit, or Sales Receipt entities — CFOKit can categorize expenses (Purchases) but cannot match deposits to invoices or categorize income transactions. The search tools accept structured criteria with filters, operators, sort, and pagination — not free-text queries.
 
 ### Daily Auto-Categorization (Scheduled — Primary Flow)
 
@@ -525,7 +527,7 @@ Implement `tests/factories.py` with factories for Transaction and BusinessConfig
 
 > Integrate Intuit's official QuickBooks Online MCP server ([intuit/quickbooks-online-mcp-server](https://github.com/intuit/quickbooks-online-mcp-server)) so Claude AI can read and write QuickBooks data. We use the official server rather than building our own — it exposes 50 MCP tools across 11 entity types with CRUD and search operations, handles OAuth token refresh internally, and communicates over stdio.
 >
-> **Important limitations:** The server has no report endpoints (no P&L, balance sheet, etc.). For reports, Claude searches raw transactions and computes aggregations. The server also has inconsistent tool naming (some use hyphens like `create-bill`, others use underscores like `create_account`; some use `read_*` instead of `get_*`). Many create/update tools accept loosely-typed parameters (`z.any()`), so Claude must know the correct QBO object shapes. Search tools use structured criteria with filter operators, not free-text queries.
+> **Important limitations:** (1) No report endpoints — Claude computes reports from raw transaction searches. (2) No Payment, Deposit, or Sales Receipt entities — CFOKit can categorize expenses (Purchases) but cannot match bank deposits to invoices or categorize income transactions via MCP. Income-side handling is a Phase 2 goal. (3) Inconsistent tool naming (hyphens vs underscores, `read_*` vs `get_*`). (4) Many create/update tools accept loosely-typed parameters (`z.any()`), so Claude must know the correct QBO object shapes. (5) Search tools use structured criteria with filter operators, not free-text queries.
 
 **Sub-phase:** Foundation
 **Dependencies:** Epic 1
@@ -1315,7 +1317,8 @@ The following are explicitly **out of scope** for Phase 1:
 - **Web dashboard** — All interaction is via Slack.
 - **Multi-currency** — USD only.
 - **State tax expansion** — Federal + Delaware + NY only in Phase 1. Additional states deferred.
-- **Configurable categorization authority** — Phase 1 always overrides QBO auto-categorization on new transactions. Per-company authority levels (full auto, suggest-only, respect QBO) deferred to Phase 2 multi-business support.
+- **Income-side categorization** — The Intuit QBO MCP server does not expose Payment, Deposit, or Sales Receipt entities. Phase 1 categorizes expenses (Purchases) only. Deposit-to-invoice matching and income categorization require either extending the MCP server or a direct QBO API integration, deferred to Phase 2.
+- **Configurable categorization authority** — Phase 1 always overrides QBO auto-categorization on new purchases. Per-company authority levels (full auto, suggest-only, respect QBO) deferred to Phase 2 multi-business support.
 - **Chart of accounts management** — Phase 1 treats the QBO chart of accounts as read-only. Building/managing the chart of accounts for greenfield companies deferred to Phase 2.
 - **Operational automation** (monitoring, alerting, dashboards) — Belongs in a separate private infrastructure repository, not this open-source project.
 - **CLI interface** — Slack is the primary interface for Phase 1. CLI may be added in Phase 2 for developer convenience.
