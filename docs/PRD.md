@@ -210,7 +210,7 @@ Phase 1 is **done** when:
 - Claude API usage is tracked and budget-capped
 - Slack signature verification rejects unsigned/forged/replayed requests
 - Sensitive data (OAuth tokens, API keys) is stored in Secret Manager, never in Firestore or logs
-- GCP infrastructure deploys via `deploy.sh` with Terraform
+- GCP infrastructure (Cloud Run, Firestore, Secret Manager, Cloud Scheduler) deploys via `deploy.sh` with Terraform
 - CI pipeline passes: lint, unit tests, integration tests
 - Local development works in a dev container with zero manual setup
 - Directory structure includes placeholder READMEs for AWS, Azure, and OpenClaw adapters
@@ -221,10 +221,12 @@ Phase 1 is **done** when:
 
 ### Foundation (Weeks 1-3)
 
-Build the repository, dev environment, data models, QuickBooks MCP server, skills, and shared utilities. At exit, a developer can clone the repo, open it in Claude Code or a dev container, and run `uv run pytest` with all tests passing.
+Build the repository, dev environment, and core GCP infrastructure. Provision Cloud Run, Firestore, and Secret Manager via Terraform and deploy a minimal health-check container — proving the deployment pipeline works from day one. Then build data models, QuickBooks MCP integration, skills, and shared utilities. At exit, a developer can clone the repo, open it in Claude Code or a dev container, run `uv run pytest` with all tests passing, and see a live health endpoint on Cloud Run.
 
 **Exit criteria:**
 - Dev container starts with all dependencies, emulators, and tooling pre-installed
+- Health endpoint deployed to Cloud Run via `deploy.sh` and Terraform
+- Cloud Run, Firestore, and Secret Manager provisioned in GCP
 - Transaction and BusinessConfig models pass validation tests
 - Intuit QBO MCP server starts as a subprocess and exposes expected tools
 - Bookkeeper skills exist for consulting/cash-basis categorization
@@ -233,7 +235,7 @@ Build the repository, dev environment, data models, QuickBooks MCP server, skill
 
 ### Core (Weeks 4-6)
 
-Implement request handlers, GCP storage, and the FastAPI application with security. At exit, the application runs locally with the Firestore emulator and handles Slack webhook requests end-to-end.
+Implement request handlers, GCP storage, and the FastAPI application with security. At exit, re-running `deploy.sh` deploys the full bookkeeper to the Cloud Run service provisioned in Foundation. The application handles Slack webhook requests end-to-end against live GCP services.
 
 **Exit criteria:**
 - Categorize, report, setup, and help handlers pass unit tests
@@ -244,15 +246,16 @@ Implement request handlers, GCP storage, and the FastAPI application with securi
 - Rate limiting and Claude API budget caps are enforced
 - QuickBooks OAuth callback endpoint stores tokens in Secret Manager
 - Integration tests pass with TestClient + in-memory storage + mocked Claude
+- Full application deployed to Cloud Run (re-run `deploy.sh`)
 
 ### Deploy (Weeks 7-9)
 
-GCP infrastructure via Terraform, scheduled jobs, and documentation. At exit, `deploy-cloud/gcp/deploy.sh` provisions infrastructure and deploys a working service.
+Scheduled jobs, Cloud Scheduler automation, security hardening, and documentation. Core GCP infrastructure has been running since Foundation. At exit, automated jobs run on schedule and the deployment is production-hardened.
 
 **Exit criteria:**
-- Terraform provisions Cloud Run, Firestore, Cloud Scheduler, and Secret Manager
-- `deploy.sh` performs end-to-end deployment
-- Daily summary, weekly review, and monthly close jobs run on Cloud Run Jobs
+- Cloud Scheduler and Cloud Run Jobs added to Terraform
+- Daily summary, weekly review, and monthly close jobs run automatically on schedule
+- Encryption and IAM hardened (least-privilege service accounts, documented)
 - README, getting started guide, and GCP deployment guide are complete
 - Placeholder READMEs exist for AWS, Azure, and OpenClaw directories
 
@@ -352,6 +355,66 @@ Create `.devcontainer/devcontainer.json` and supporting scripts for zero-frictio
 
 **Key files:** `.devcontainer/devcontainer.json`, `.devcontainer/setup.sh`, `.env.example`
 **Labels:** `epic:scaffolding`, `sub-phase:foundation`
+
+---
+
+### Epic 1B: GCP Infrastructure Bootstrap
+
+> Provision core GCP infrastructure and deploy a minimal health-check container immediately after scaffolding. This follows a deploy-first principle: real cloud resources exist from the start, and every subsequent epic deploys incrementally to a live environment rather than building locally for weeks and doing a big-bang deployment at the end.
+
+**Sub-phase:** Foundation
+**Dependencies:** Epic 1
+
+#### Story 1B.1: Create minimal deployable container
+
+Create a throwaway skeleton FastAPI app with just a health endpoint and a Dockerfile. This exists solely to give us something to deploy to Cloud Run in Story 1B.3. Story 8.1 replaces this entirely with the real app factory and full route wiring.
+
+**Acceptance criteria:**
+- `deploy-cloud/gcp/agents/cfo_bot/app_minimal.py` provides a single-file FastAPI app with `GET /health` → `{"status": "healthy"}`
+- `deploy-cloud/gcp/agents/cfo_bot/Dockerfile` builds a production container running the minimal app with `uvicorn`
+- `docker build` succeeds and the container responds to health checks
+- No dependency on any other `core/` or `deploy-cloud/shared/` code
+
+**Key files:** `deploy-cloud/gcp/agents/cfo_bot/app_minimal.py`, `deploy-cloud/gcp/agents/cfo_bot/Dockerfile`
+**Labels:** `epic:infra`, `sub-phase:foundation`
+**blocks:** `[1B.2]`
+
+---
+
+#### Story 1B.2: Create Terraform modules for core GCP resources
+
+Create Terraform modules for the three core GCP services needed from day one: Cloud Run (for the cfo_bot service), Firestore (for storage), and Secret Manager (for credentials). Compose them into a root configuration.
+
+**Acceptance criteria:**
+- `deploy-cloud/gcp/terraform/modules/cloud_run/` — Cloud Run service for cfo_bot (no Cloud Run Jobs yet — those are added in Story 10.1 when scheduled jobs exist)
+- `deploy-cloud/gcp/terraform/modules/firestore/` — Firestore database and indexes
+- `deploy-cloud/gcp/terraform/modules/secrets/` — Secret Manager secrets with IAM bindings (Cloud Run service account can read secrets)
+- Each module has `main.tf`, `variables.tf`, `outputs.tf`
+- `deploy-cloud/gcp/terraform/main.tf` composes cloud_run, firestore, and secrets modules
+- `deploy-cloud/gcp/terraform/variables.tf` defines required variables with descriptions and validation (project_id, region, etc.)
+- `deploy-cloud/gcp/terraform/outputs.tf` exposes Cloud Run service URL, Firestore database name, OAuth callback URL
+- `deploy-cloud/gcp/terraform/terraform.tfvars.example` documents all variables
+- `terraform validate` passes for each module and the root configuration
+
+**Key files:** `deploy-cloud/gcp/terraform/modules/*/`, `deploy-cloud/gcp/terraform/main.tf`, `deploy-cloud/gcp/terraform/variables.tf`, `deploy-cloud/gcp/terraform/outputs.tf`, `deploy-cloud/gcp/terraform/terraform.tfvars.example`
+**Labels:** `epic:infra`, `sub-phase:foundation`
+**blocks:** `[1B.3]`
+
+---
+
+#### Story 1B.3: Create deploy script and perform first deployment
+
+Create the deploy script and use it to perform the first deployment: a health-check container running on Cloud Run with Firestore and Secret Manager provisioned.
+
+**Acceptance criteria:**
+- `deploy-cloud/gcp/deploy.sh` automates: prerequisite checks (gcloud, terraform, docker), Docker image build and push to Artifact Registry, `terraform init && terraform apply`, secret configuration (prompts for values or reads from env), outputs the Cloud Run service URL and OAuth callback URL
+- Script is idempotent (safe to re-run)
+- `--dry-run` flag previews changes without applying
+- Script does not contain hardcoded secrets
+- First deployment succeeds: health endpoint returns 200 at the Cloud Run service URL
+
+**Key files:** `deploy-cloud/gcp/deploy.sh`
+**Labels:** `epic:infra`, `sub-phase:foundation`
 
 ---
 
@@ -764,13 +827,14 @@ Tests that run against the Firestore emulator to verify the storage layer works 
 
 #### Story 8.1: Create FastAPI application factory and GCP wiring
 
-Create the app factory and the GCP-specific `app.py` that wires concrete implementations.
+Create the app factory and the GCP-specific `app.py` that wires concrete implementations. This replaces the throwaway `app_minimal.py` from Story 1B.1 with the real application. After this story, re-running `deploy.sh` deploys the full bookkeeper to the Cloud Run service provisioned in Foundation.
 
 **Acceptance criteria:**
 - `deploy-cloud/shared/app_factory.py` provides `create_app(storage, secrets, claude_client, mcp_manager, slack_client, skill_loader)` returning a FastAPI instance
 - Routes registered: `/slack/events` (POST), `/slack/commands` (POST), `/oauth/quickbooks/callback` (GET), `/health` (GET)
 - `deploy-cloud/gcp/agents/cfo_bot/app.py` imports GCP implementations, instantiates them, and passes to `create_app()`
-- `deploy-cloud/gcp/agents/cfo_bot/Dockerfile` builds a production container
+- Update `deploy-cloud/gcp/agents/cfo_bot/Dockerfile` (created in Story 1B.1) to run the full app instead of the minimal skeleton
+- `app_minimal.py` is no longer used and can be deleted
 - Application starts with `uvicorn`
 
 **Key files:** `deploy-cloud/shared/app_factory.py`, `deploy-cloud/gcp/agents/cfo_bot/app.py`, `deploy-cloud/gcp/agents/cfo_bot/Dockerfile`
@@ -938,65 +1002,32 @@ GCP-specific entry point that instantiates dependencies and dispatches to the cl
 
 ---
 
-### Epic 10: GCP Infrastructure & Deployment
+### Epic 10: GCP Deployment Completion & Hardening
 
-> Terraform modules and deployment automation.
+> Add Cloud Scheduler for automated jobs and harden the existing GCP deployment with encryption, IAM, and configuration files. Core GCP infrastructure (Cloud Run service, Firestore, Secret Manager) was provisioned in Epic 1B during Foundation and has been running since. This epic completes the deployment by adding scheduled job automation and production-grade security.
 
 **Sub-phase:** Deploy
 **Dependencies:** Epics 7, 8, 9
 
-#### Story 10.1: Create Terraform modules
+#### Story 10.1: Add Cloud Scheduler and Cloud Run Jobs to Terraform
 
-Create Terraform modules for all GCP resources.
+Extend the Terraform configuration (created in Story 1B.2) with Cloud Run Jobs for scheduled tasks and Cloud Scheduler triggers.
 
 **Acceptance criteria:**
-- `deploy-cloud/gcp/terraform/modules/cloud_run/` — Cloud Run service (cfo_bot) and Cloud Run Jobs (scheduled jobs)
-- `deploy-cloud/gcp/terraform/modules/firestore/` — Firestore database and indexes
-- `deploy-cloud/gcp/terraform/modules/scheduler/` — Cloud Scheduler jobs (daily/weekly/monthly triggers)
-- `deploy-cloud/gcp/terraform/modules/secrets/` — Secret Manager secrets (API keys, OAuth tokens)
-- Each module has `main.tf`, `variables.tf`, `outputs.tf`
-- `terraform validate` passes for each module
-- Secret Manager configuration includes IAM bindings (Cloud Run service account can read secrets)
+- `deploy-cloud/gcp/terraform/modules/cloud_run/` updated to include Cloud Run Jobs resources (daily_summary, weekly_review, monthly_close)
+- `deploy-cloud/gcp/terraform/modules/scheduler/` created with Cloud Scheduler jobs: daily (8am), weekly (Monday 8am), monthly (1st of month 8am) — all configurable
+- `deploy-cloud/gcp/terraform/main.tf` updated to compose the scheduler module
+- Scheduled jobs service account is scoped to required permissions only
+- `terraform validate` passes
+- Re-running `deploy.sh` provisions the new resources alongside the existing deployment
 
-**Key files:** `deploy-cloud/gcp/terraform/modules/*/`
+**Key files:** `deploy-cloud/gcp/terraform/modules/cloud_run/`, `deploy-cloud/gcp/terraform/modules/scheduler/`, `deploy-cloud/gcp/terraform/main.tf`
 **Labels:** `epic:infra`, `sub-phase:deploy`
 **blocks:** `[10.2]`
 
 ---
 
-#### Story 10.2: Create root Terraform configuration
-
-Compose all modules into a deployable configuration.
-
-**Acceptance criteria:**
-- `deploy-cloud/gcp/terraform/main.tf` composes cloud_run, firestore, scheduler, and secrets modules
-- `variables.tf` defines all required variables with descriptions and validation (project_id, region, slack_channel, etc.)
-- `outputs.tf` exposes Cloud Run service URL, Firestore database name, OAuth callback URL
-- `terraform.tfvars.example` documents all variables
-- `terraform validate` passes
-
-**Key files:** `deploy-cloud/gcp/terraform/main.tf`, `variables.tf`, `outputs.tf`, `terraform.tfvars.example`
-**Labels:** `epic:infra`, `sub-phase:deploy`
-**blocks:** `[10.3]`
-
----
-
-#### Story 10.3: Create deploy script
-
-One-click deployment script.
-
-**Acceptance criteria:**
-- `deploy-cloud/gcp/deploy.sh` automates: prerequisite checks (gcloud, terraform, docker), Docker image build and push to Artifact Registry, `terraform init && terraform apply`, secret configuration (prompts for values or reads from env), outputs the Cloud Run service URL and OAuth callback URL
-- Script is idempotent (safe to re-run)
-- `--dry-run` flag previews changes without applying
-- Script does not contain hardcoded secrets
-
-**Key files:** `deploy-cloud/gcp/deploy.sh`
-**Labels:** `epic:infra`, `sub-phase:deploy`
-
----
-
-#### Story 10.4: Create GCP configuration files
+#### Story 10.2: Create GCP configuration files
 
 Supporting configuration files for the GCP deployment.
 
@@ -1011,7 +1042,7 @@ Supporting configuration files for the GCP deployment.
 
 ---
 
-#### Story 10.5: Configure encryption and IAM
+#### Story 10.3: Configure encryption and IAM
 
 Ensure sensitive data is encrypted and access is minimized.
 
@@ -1096,6 +1127,13 @@ Detailed deployment reference beyond the quick start.
                     │        (no dependencies)             │
                     └──────┬──────────┬──────────┬─────────┘
                            │          │          │
+                    ┌──────▼──────┐   │          │
+                    │  Epic 1B    │   │          │
+                    │ GCP Infra   │   │          │
+                    │ Bootstrap   │   │          │
+                    │ ★ DEPLOY 1  │   │          │
+                    └──────┬──────┘   │          │
+                           │          │          │
                     ┌──────▼──┐  ┌────▼────┐  ┌──▼──────────┐
                     │ Epic 2  │  │ Epic 3  │  │   Epic 4    │
                     │ Models  │  │QuickBooks│  │Skills/Agent │
@@ -1117,45 +1155,57 @@ Detailed deployment reference beyond the quick start.
                            ┌───▼──────────────────────────▼──┐
                            │         Epic 8                  │
                            │   FastAPI App + Security        │
-                           └───┬─────────────────────────┬───┘
-                               │                         │
-                        ┌──────▼──────┐          ┌───────▼──────┐
-                        │  Epic 9     │          │   Epic 10    │
-                        │Sched. Jobs  │          │  GCP Infra   │
-                        └──────┬──────┘          └───────┬──────┘
-                               │                         │
-                           ┌───▼─────────────────────────▼──┐
-                           │          Epic 11               │
-                           │       Documentation            │
-                           └────────────────────────────────┘
+                           │      ★ DEPLOY 2 (re-run)       │
+                           └───┬─────────────────────────────┘
+                               │
+                        ┌──────▼──────┐
+                        │  Epic 9     │
+                        │Sched. Jobs  │
+                        └──────┬──────┘
+                               │
+                        ┌──────▼──────┐
+                        │  Epic 10    │
+                        │ Scheduler   │
+                        │ + Hardening │
+                        │ ★ DEPLOY 3  │
+                        └──────┬──────┘
+                               │
+                        ┌──────▼──────┐
+                        │  Epic 11    │
+                        │    Docs     │
+                        └─────────────┘
 ```
+
+Three deployment milestones:
+- **DEPLOY 1** (Foundation): Health endpoint on Cloud Run — proves the pipeline
+- **DEPLOY 2** (Core): Full bookkeeper on Cloud Run — Slack commands work against live GCP
+- **DEPLOY 3** (Deploy): Cloud Scheduler + Cloud Run Jobs — automated summaries running
 
 ---
 
 ## Parallel Execution Tracks
 
-### Track 1: After Epic 1 completes (3 agents in parallel)
+### Track 1: After Epic 1 completes (4 agents in parallel)
 
 ```
-Agent A: Epic 2 (Data Models) ─────────────────────┐
-Agent B: Epic 3 (QuickBooks MCP) ──────────────────┤──> Epic 5 (Utilities)
-Agent C: Epic 4 (Skills & Agent Definition) ───────┘
+Agent A: Epic 1B (GCP Infra Bootstrap) ───────────┐
+Agent B: Epic 2 (Data Models) ────────────────────┤
+Agent C: Epic 3 (QuickBooks MCP) ─────────────────┤──> Epic 5 (Utilities)
+Agent D: Epic 4 (Skills & Agent Definition) ──────┘
 ```
 
 ### Track 2: After Foundation completes (2 agents in parallel)
 
 ```
 Agent A: Epic 6 (Request Handlers) ─────┐
-                                         ├──> Epic 8 (FastAPI App)
+                                         ├──> Epic 8 (FastAPI App) ──> ★ DEPLOY 2
 Agent B: Epic 7 (GCP Storage & Secrets) ┘
 ```
 
-### Track 3: After Core completes (2 agents in parallel)
+### Track 3: After Core completes
 
 ```
-Agent A: Epic 9 (Scheduled Jobs) ──────────┐
-                                            ├──> Epic 11 (Documentation)
-Agent B: Epic 10 (GCP Infrastructure) ─────┘
+Epic 9 (Scheduled Jobs) ──> Epic 10 (Scheduler + Hardening) ──> ★ DEPLOY 3 ──> Epic 11 (Docs)
 ```
 
 ---
@@ -1187,6 +1237,7 @@ The following are explicitly **out of scope** for Phase 1:
 | Sub-phase | Epic | Stories |
 |-----------|------|---------|
 | Foundation | 1. Repository Scaffolding & Dev Environment | 5 |
+| Foundation | 1B. GCP Infrastructure Bootstrap | 3 |
 | Foundation | 2. Data Models | 3 |
 | Foundation | 3. QuickBooks MCP Integration | 2 |
 | Foundation | 4. CFO Skills & Agent Definition | 3 |
@@ -1195,6 +1246,6 @@ The following are explicitly **out of scope** for Phase 1:
 | Core | 7. GCP Storage & Secrets | 3 |
 | Core | 8. FastAPI Application & Security | 6 |
 | Deploy | 9. Scheduled Jobs | 4 |
-| Deploy | 10. GCP Infrastructure & Deployment | 5 |
+| Deploy | 10. GCP Deployment Completion & Hardening | 3 |
 | Deploy | 11. Documentation | 3 |
-| **Total** | | **43** |
+| **Total** | | **44** |
