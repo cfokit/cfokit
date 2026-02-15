@@ -15,7 +15,7 @@ CFOKit is an open-source AI CFO toolkit — an AI bookkeeper agent that categori
 - **Language:** Python 3.11+
 - **Package manager:** uv (with `pyproject.toml` and `uv.lock`)
 - **AI:** Anthropic Claude API
-- **Integrations:** QuickBooks MCP server (QuickBooks Online API via `python-quickbooks`)
+- **Integrations:** Intuit's official QuickBooks Online MCP server ([intuit/quickbooks-online-mcp-server](https://github.com/intuit/quickbooks-online-mcp-server)), TypeScript/Node.js, runs as subprocess
 - **Cloud services:** GCP — Firestore, Secret Manager, Cloud Run, Cloud Scheduler
 - **Testing:** pytest, pytest-asyncio
 - **Infrastructure:** Terraform (GCP-specific), Docker
@@ -35,7 +35,7 @@ core/                        # Shared business logic (platform-agnostic)
 │   └── state/               # Delaware franchise tax, NY state obligations
 ├── agents/                  # Agent definitions in YAML (bookkeeper)
 ├── integrations/
-│   └── quickbooks_mcp/      # QuickBooks MCP server (tools, OAuth)
+│   └── quickbooks_mcp/      # Config + OAuth for Intuit's QBO MCP server (external)
 ├── models/                  # Pydantic data models (Transaction, BusinessConfig)
 └── shared/                  # Cloud-agnostic utilities
     ├── claude_client.py     # Claude API wrapper with token budget tracking
@@ -80,7 +80,7 @@ tests/
 - Scheduled job business logic lives in `deploy-cloud/shared/jobs/`, not in GCP-specific code
 - Only `app.py` in the GCP directory wires concrete implementations via the app factory
 
-**Data flow:** Slack -> FastAPI (Cloud Run) -> Claude AI + Skills + QuickBooks MCP -> QuickBooks API -> Firestore (audit events, config)
+**Data flow:** Slack -> FastAPI (Cloud Run) -> Claude AI + Skills + Intuit QBO MCP Server (subprocess) -> QuickBooks API -> Firestore (audit events, config)
 
 ## Build & Development Commands
 

@@ -26,7 +26,7 @@ sequenceDiagram
     participant FastAPI
     participant Handler as CategorizeHandler
     participant Claude as Claude AI
-    participant MCP as QuickBooks MCP
+    participant MCP as Intuit QBO MCP Server
     participant QB as QuickBooks API
 
     User->>Slack: "@cfokit categorize recent transactions"
@@ -36,20 +36,20 @@ sequenceDiagram
     Handler->>Handler: Load bookkeeper skills
     Handler->>Claude: invoke(user_msg, skills, mcp_tools=[quickbooks])
 
-    Claude->>MCP: tool: list_transactions(status="uncategorized", since="2026-02-01")
-    MCP->>QB: GET /v3/company/{id}/query?query=SELECT * FROM Purchase WHERE ...
-    QB-->>MCP: transactions[]
-    MCP-->>Claude: transactions[]
+    Claude->>MCP: tool: search_purchases(query="uncategorized since 2026-02-01")
+    MCP->>QB: GET /v3/company/{id}/query
+    QB-->>MCP: purchases[]
+    MCP-->>Claude: purchases[]
 
-    Claude->>MCP: tool: get_chart_of_accounts()
-    MCP->>QB: GET /v3/company/{id}/query?query=SELECT * FROM Account
+    Claude->>MCP: tool: search_accounts(query="all active")
+    MCP->>QB: GET /v3/company/{id}/query
     QB-->>MCP: accounts[]
     MCP-->>Claude: accounts[]
 
     loop Each uncategorized transaction
         Claude->>Claude: Apply skills (deduction rules, category mapping)
-        Claude->>MCP: tool: update_transaction(id, account_id, memo)
-        MCP->>QB: POST /v3/company/{id}/purchase?operation=update
+        Claude->>MCP: tool: update_purchase(id, account_id, memo)
+        MCP->>QB: POST /v3/company/{id}/purchase
         QB-->>MCP: updated
         MCP-->>Claude: confirmed
     end
@@ -71,7 +71,7 @@ sequenceDiagram
     participant FastAPI
     participant Handler as ReportHandler
     participant Claude as Claude AI
-    participant MCP as QuickBooks MCP
+    participant MCP as Intuit QBO MCP Server
     participant QB as QuickBooks API
 
     User->>Slack: "@cfokit January P&L"
@@ -79,10 +79,13 @@ sequenceDiagram
     FastAPI->>Handler: route("report", request)
     Handler->>Claude: invoke(user_msg, skills, mcp_tools=[quickbooks])
 
-    Claude->>MCP: tool: get_profit_and_loss(start="2026-01-01", end="2026-01-31")
-    MCP->>QB: GET /v3/company/{id}/reports/ProfitAndLoss?...
-    QB-->>MCP: P&L data
-    MCP-->>Claude: P&L data
+    Claude->>MCP: tool: search_purchases(query="Jan 2026")
+    MCP->>QB: GET /v3/company/{id}/query
+    QB-->>MCP: purchases[]
+    Claude->>MCP: tool: search_invoices(query="Jan 2026")
+    MCP->>QB: GET /v3/company/{id}/query
+    QB-->>MCP: invoices[]
+    MCP-->>Claude: financial data
 
     Claude->>Claude: Analyze using skills (tax implications, trends)
     Claude-->>Handler: Formatted P&L with insights
@@ -133,19 +136,19 @@ sequenceDiagram
     participant Job as Cloud Run Job
     participant Logic as DailySummaryJob
     participant Claude as Claude AI
-    participant MCP as QuickBooks MCP
+    participant MCP as Intuit QBO MCP Server
     participant QB as QuickBooks API
     participant Slack
 
     Scheduler->>Job: Trigger daily_summary
     Job->>Logic: run()
-    Logic->>MCP: Start QuickBooks MCP server
+    Logic->>MCP: Start Intuit QBO MCP server subprocess
     Logic->>Claude: invoke("Summarize yesterday's transactions", skills, mcp_tools)
 
-    Claude->>MCP: tool: list_transactions(date=yesterday)
+    Claude->>MCP: tool: search_purchases(query="yesterday")
     MCP->>QB: GET /v3/company/{id}/query
-    QB-->>MCP: transactions[]
-    MCP-->>Claude: transactions[]
+    QB-->>MCP: purchases[]
+    MCP-->>Claude: purchases[]
 
     Claude->>Claude: Generate summary with skills
     Claude-->>Logic: Summary with categories, totals, flagged items
@@ -165,7 +168,7 @@ sequenceDiagram
     participant FastAPI
     participant Handler as CategorizeHandler
     participant Claude as Claude AI
-    participant MCP as QuickBooks MCP
+    participant MCP as Intuit QBO MCP Server
     participant QB as QuickBooks API
 
     User->>Slack: "@cfokit move the Uber charge on Feb 3 from travel to meals"
@@ -173,16 +176,16 @@ sequenceDiagram
     FastAPI->>Handler: route("categorize", request)
     Handler->>Claude: invoke(user_msg, skills, mcp_tools=[quickbooks])
 
-    Claude->>MCP: tool: list_transactions(vendor="Uber", date="2026-02-03")
+    Claude->>MCP: tool: search_purchases(query="Uber Feb 3 2026")
     MCP->>QB: GET /v3/company/{id}/query
-    QB-->>MCP: matching transaction
-    MCP-->>Claude: transaction details
+    QB-->>MCP: matching purchase
+    MCP-->>Claude: purchase details
 
-    Claude->>MCP: tool: get_chart_of_accounts()
+    Claude->>MCP: tool: search_accounts(query="Meals")
     MCP-->>Claude: accounts (finds "Meals & Entertainment")
 
-    Claude->>MCP: tool: update_transaction(id, account_id=meals_account, memo="Reclassified per user request")
-    MCP->>QB: POST /v3/company/{id}/purchase?operation=update
+    Claude->>MCP: tool: update_purchase(id, account_ref=meals_account, memo="Reclassified per user request")
+    MCP->>QB: POST /v3/company/{id}/purchase
     QB-->>MCP: updated
     MCP-->>Claude: confirmed
 
@@ -201,7 +204,7 @@ Phase 1 is **done** when:
 - A user can message CFOKit in Slack and get transactions categorized in QuickBooks
 - A user can request P&L and transaction summary reports via Slack
 - QuickBooks OAuth connect flow works end-to-end
-- QuickBooks MCP server reads and writes transactions via the QuickBooks API
+- Intuit's QuickBooks Online MCP server reads and writes transactions via the QuickBooks API
 - Scheduled jobs (daily summary, weekly review, monthly close) run automatically and post to Slack
 - Business configuration (entity type, state, fiscal year) is persisted in Firestore
 - Claude API usage is tracked and budget-capped
@@ -223,7 +226,7 @@ Build the repository, dev environment, data models, QuickBooks MCP server, skill
 **Exit criteria:**
 - Dev container starts with all dependencies, emulators, and tooling pre-installed
 - Transaction and BusinessConfig models pass validation tests
-- QuickBooks MCP server exposes tools and passes tests against mock API
+- Intuit QBO MCP server starts as a subprocess and exposes expected tools
 - Bookkeeper skills exist for consulting/cash-basis categorization
 - Claude client, skill loader, MCP manager, and Slack client have tests
 - `uv run pytest tests/unit/ -x` passes
@@ -271,7 +274,7 @@ Create the Python project with `uv init`, configure `pyproject.toml` with projec
 **Acceptance criteria:**
 - `pyproject.toml` exists with project name `cfokit`, Python `>=3.11`
 - Dev dependencies: pytest, pytest-asyncio, pytest-cov, pytest-timeout, ruff, mypy
-- Runtime dependencies: anthropic, fastapi, uvicorn, pydantic, slack-sdk, mcp, google-cloud-firestore, google-cloud-secret-manager, httpx, python-quickbooks
+- Runtime dependencies: anthropic, fastapi, uvicorn, pydantic, slack-sdk, mcp, google-cloud-firestore, google-cloud-secret-manager, httpx
 - `uv sync` succeeds and creates `uv.lock`
 - `.python-version` specifies 3.11
 - `pyproject.toml` includes `[tool.pytest.ini_options]` with `asyncio_mode = "auto"`, `timeout = 30`
@@ -288,7 +291,7 @@ Create the Python project with `uv init`, configure `pyproject.toml` with projec
 Create all directories and `__init__.py` files. Include placeholder `README.md` files in future-phase directories (AWS, Azure, OpenClaw) describing what will be added.
 
 **Acceptance criteria:**
-- `core/` tree: `skills/`, `agents/`, `integrations/quickbooks_mcp/`, `models/`, `shared/`
+- `core/` tree: `skills/`, `agents/`, `integrations/quickbooks_mcp/` (config + OAuth only — server is Intuit's), `models/`, `shared/`
 - `deploy-cloud/shared/handlers/`, `deploy-cloud/shared/middleware/`, `deploy-cloud/shared/routes/`, `deploy-cloud/shared/jobs/`
 - `deploy-cloud/gcp/adapters/`, `deploy-cloud/gcp/agents/cfo_bot/`, `deploy-cloud/gcp/agents/scheduled_jobs/`, `deploy-cloud/gcp/terraform/`
 - `deploy-cloud/aws/README.md` — "AWS adapters (DynamoDB, Secrets Manager, SNS+SQS) planned for Phase 2"
@@ -340,7 +343,7 @@ Create `.devcontainer/devcontainer.json` and supporting scripts for zero-frictio
 
 **Acceptance criteria:**
 - `.devcontainer/devcontainer.json` specifies Python 3.11+ base image
-- Container installs `uv`, Google Cloud SDK, and Firestore emulator
+- Container installs `uv`, Node.js (for Intuit QBO MCP server), Google Cloud SDK, and Firestore emulator
 - `postCreateCommand` runs `uv sync` to install all dependencies
 - `postStartCommand` starts Firestore emulator in background
 - Firestore emulator is accessible at `localhost:8080`
@@ -413,33 +416,27 @@ Implement `tests/factories.py` with factories for Transaction and BusinessConfig
 
 ### Epic 3: QuickBooks MCP Integration
 
-> Implement the MCP server that gives Claude AI access to QuickBooks data. This is the bridge between Claude's intelligence and the user's actual financial data.
+> Integrate Intuit's official QuickBooks Online MCP server ([intuit/quickbooks-online-mcp-server](https://github.com/intuit/quickbooks-online-mcp-server)) so Claude AI can read and write QuickBooks data. We use the official server rather than building our own — it supports CRUD on 11 entity types (Accounts, Bills, Customers, Invoices, Purchases, Vendors, etc.), handles OAuth with automatic token refresh, and is maintained by the company that makes QuickBooks.
 
 **Sub-phase:** Foundation
 **Dependencies:** Epic 1
 
-#### Story 3.1: Implement QuickBooks MCP server
+#### Story 3.1: Integrate Intuit QuickBooks MCP server
 
-Create the QuickBooks MCP server in `core/integrations/quickbooks_mcp/`. The server exposes tools that Claude can call to read and write QuickBooks data.
+Configure the Intuit QuickBooks Online MCP server as CFOKit's QuickBooks integration. The server is a TypeScript/Node.js process that CFOKit spawns as a subprocess and connects to over stdio (standard MCP transport).
 
-**MCP tools to implement:**
-- `list_transactions(start_date, end_date, account_id?, status?)` — List transactions with optional filters
-- `get_transaction(transaction_id)` — Get a single transaction
-- `update_transaction(transaction_id, account_id, memo?)` — Update a transaction's account/category
-- `get_profit_and_loss(start_date, end_date, accounting_method="Cash")` — P&L report
-- `get_chart_of_accounts()` — List accounts for category mapping
-- `get_company_info()` — Basic company details
+**Tools available from the Intuit server (no code to write — these come for free):**
+- Create, Read, Update, Delete, Search for: Accounts, Bills, Bill Payments, Customers, Employees, Estimates, Invoices, Items, Journal Entries, Purchases, Vendors
 
 **Acceptance criteria:**
-- `core/integrations/quickbooks_mcp/server.py` uses the MCP SDK to define tools
-- Each tool translates to the corresponding QuickBooks Online API call
-- All QuickBooks API calls use the `python-quickbooks` library
-- OAuth access token is retrieved from Secret Manager (via injected callback)
-- Token refresh is handled automatically when access token expires
-- All API URLs use HTTPS — reject HTTP
-- Unit tests mock the QuickBooks API and verify: correct API endpoints called, proper query construction, error handling for API failures (rate limit, auth expired, not found)
+- `package.json` (or pinned npm dependency) includes `@anthropic/quickbooks-online-mcp-server` or equivalent reference to the Intuit server
+- Dev container installs Node.js and the Intuit MCP server package
+- `core/integrations/quickbooks_mcp/config.py` provides configuration for launching the server (command, args, environment variables for OAuth credentials)
+- MCP manager (Story 5.3) can start the Intuit server as a subprocess and connect over stdio
+- Credentials (client ID, client secret, refresh token, realm ID) are read from Secret Manager and passed to the server via environment variables
+- Smoke test verifies the server starts and exposes expected tools
 
-**Key files:** `core/integrations/quickbooks_mcp/server.py`, `core/integrations/quickbooks_mcp/tools.py`, `tests/unit/test_quickbooks_mcp/test_server.py`, `tests/unit/test_quickbooks_mcp/test_tools.py`
+**Key files:** `core/integrations/quickbooks_mcp/config.py`, `package.json`
 **Labels:** `epic:quickbooks`, `sub-phase:foundation`
 **blocks:** `[3.2]`
 
@@ -447,35 +444,18 @@ Create the QuickBooks MCP server in `core/integrations/quickbooks_mcp/`. The ser
 
 #### Story 3.2: Implement QuickBooks OAuth flow
 
-Create the OAuth 2.0 flow for connecting QuickBooks. The flow is initiated from Slack and completed via a browser redirect.
+Create the OAuth 2.0 flow for the initial QuickBooks connection. The Intuit MCP server handles token refresh automatically once it has a refresh token, but CFOKit needs to handle the initial authorization flow: user clicks a link, authorizes in QuickBooks, and CFOKit captures the tokens.
 
 **Acceptance criteria:**
 - `core/integrations/quickbooks_mcp/oauth.py` provides:
   - `get_authorization_url()` — Generate QuickBooks OAuth URL with state parameter
-  - `exchange_code(code, realm_id)` — Exchange authorization code for tokens
-  - `refresh_access_token(refresh_token)` — Refresh expired access token
-  - `get_valid_token()` — Return a valid access token, refreshing if needed
+  - `exchange_code(code, realm_id)` — Exchange authorization code for access + refresh tokens
 - State parameter uses a cryptographic random value to prevent CSRF
-- Tokens are stored/retrieved via an injected secrets callback (for Secret Manager in prod, dict in tests)
-- Access token expiry is tracked; refresh happens before expiry
-- Refresh token expiry (100 days) is tracked with warning
-- Unit tests mock QuickBooks OAuth endpoints and verify: authorization URL generation, code exchange, token refresh, CSRF state validation, error handling
+- Tokens are stored via an injected secrets callback (Secret Manager in prod, dict in tests)
+- Refresh token and realm ID are the values passed to the Intuit MCP server at startup
+- Unit tests mock QuickBooks OAuth endpoints and verify: authorization URL generation, code exchange, CSRF state validation, error handling
 
 **Key files:** `core/integrations/quickbooks_mcp/oauth.py`, `tests/unit/test_quickbooks_mcp/test_oauth.py`
-**Labels:** `epic:quickbooks`, `sub-phase:foundation`
-
----
-
-#### Story 3.3: Create QuickBooks MCP integration tests
-
-Integration tests that verify the MCP server works end-to-end with a mock QuickBooks API. These tests exercise the full MCP tool → QuickBooks API → response pipeline.
-
-**Acceptance criteria:**
-- `tests/integration/test_quickbooks_mcp.py` starts the MCP server with mocked QuickBooks API
-- Tests verify: list_transactions returns parsed Transaction-compatible data, update_transaction sends correct payload, get_profit_and_loss returns structured report, token refresh triggers automatically on 401, rate limit handling (retry with backoff)
-- Tests do NOT call the real QuickBooks API
-
-**Key files:** `tests/integration/test_quickbooks_mcp.py`
 **Labels:** `epic:quickbooks`, `sub-phase:foundation`
 
 ---
@@ -590,14 +570,15 @@ Create `core/shared/skill_loader.py` that loads markdown skill files. Entity-typ
 
 #### Story 5.3: Implement MCP manager
 
-Create `core/shared/mcp_manager.py` for managing MCP server connections. In Phase 1 this manages the QuickBooks MCP server only.
+Create `core/shared/mcp_manager.py` for managing MCP server connections. In Phase 1 this manages the Intuit QuickBooks Online MCP server, which runs as a Node.js subprocess connected over stdio.
 
 **Acceptance criteria:**
-- `MCPManager` handles MCP server lifecycle (start, connect, disconnect)
-- Rejects `http://` URLs with `ValueError` — HTTPS only
+- `MCPManager` spawns the Intuit QBO MCP server as a subprocess with credentials from Secret Manager passed as environment variables
+- Connects to the server over stdio (standard MCP transport)
 - Provides method to get the MCP tools list for passing to Claude
+- Handles server lifecycle: start, health check, restart on crash, clean shutdown
 - Connection health checking
-- Unit tests: HTTPS enforcement, lifecycle management, tool listing
+- Unit tests: subprocess lifecycle, tool listing, restart behavior, credential passing (verifies secrets are passed as env vars, not logged)
 
 **Key files:** `core/shared/mcp_manager.py`, `tests/unit/test_mcp_manager.py`
 **Labels:** `epic:utilities`, `sub-phase:foundation`
@@ -1207,7 +1188,7 @@ The following are explicitly **out of scope** for Phase 1:
 |-----------|------|---------|
 | Foundation | 1. Repository Scaffolding & Dev Environment | 5 |
 | Foundation | 2. Data Models | 3 |
-| Foundation | 3. QuickBooks MCP Integration | 3 |
+| Foundation | 3. QuickBooks MCP Integration | 2 |
 | Foundation | 4. CFO Skills & Agent Definition | 3 |
 | Foundation | 5. Shared Utilities | 4 |
 | Core | 6. Request Handlers | 5 |
@@ -1216,4 +1197,4 @@ The following are explicitly **out of scope** for Phase 1:
 | Deploy | 9. Scheduled Jobs | 4 |
 | Deploy | 10. GCP Infrastructure & Deployment | 5 |
 | Deploy | 11. Documentation | 3 |
-| **Total** | | **44** |
+| **Total** | | **43** |
