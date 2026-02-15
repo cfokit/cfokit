@@ -7,7 +7,7 @@
 
 CFOKit is an open-source AI CFO toolkit. Phase 1 delivers a working bookkeeper agent for the author's business — a single-member Delaware LLC that elects S-corp taxation, registered in New York, operating on a cash basis as a consulting practice. The bookkeeper handles transaction categorization, report generation, and scheduled summaries — all driven by Claude AI with QuickBooks integration via MCP, deployed to GCP, and operated through Slack.
 
-Multi-business support, additional agents (tax preparer, compliance monitor, cashflow analyst), and additional cloud providers are deferred to Phase 2+. This repository is the open-source project; operational concerns (monitoring, alerting, dashboards) for production deployment belong in a separate private infrastructure repository.
+Multi-business support, additional agents (tax preparer, compliance monitor, cashflow analyst), and additional cloud providers are deferred to Phase 2+. This software is provided "as-is" without warranty of any kind. It is not a substitute for professional accounting, tax, or legal advice. Users are solely responsible for verifying the accuracy of any AI-generated categorizations, reports, or financial summaries before relying on them for tax filings, business decisions, or regulatory compliance. Use at your own risk.
 
 ---
 
