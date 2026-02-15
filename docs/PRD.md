@@ -15,6 +15,8 @@ Multi-business support, additional agents (tax preparer, compliance monitor, cas
 
 Before defining stories, these sequence diagrams establish how the system actually works. All flows go through Claude AI, which uses QuickBooks MCP tools to read and write financial data.
 
+> **Note on MCP tools:** The Intuit QBO MCP server exposes 50 tools across 11 entity types (CRUD + Search). It has no report endpoints (no P&L, balance sheet, etc.). For reports, Claude searches raw transactions and computes aggregations using skills knowledge. The search tools accept structured criteria with filters, operators, sort, and pagination — not free-text queries. Claude translates natural language requests into the correct structured criteria.
+
 ### Transaction Categorization (On-Demand)
 
 The core interaction. The user asks CFOKit to categorize recent transactions. Claude fetches uncategorized transactions from QuickBooks, applies domain knowledge from skills, categorizes each one, and updates QuickBooks.
@@ -36,19 +38,19 @@ sequenceDiagram
     Handler->>Handler: Load bookkeeper skills
     Handler->>Claude: invoke(user_msg, skills, mcp_tools=[quickbooks])
 
-    Claude->>MCP: tool: search_purchases(query="uncategorized since 2026-02-01")
+    Claude->>MCP: tool: search_purchases(criteria={filters:[{field:"MetaData.CreateTime",value:"2026-02-01",operator:">="}]})
     MCP->>QB: GET /v3/company/{id}/query
     QB-->>MCP: purchases[]
     MCP-->>Claude: purchases[]
 
-    Claude->>MCP: tool: search_accounts(query="all active")
+    Claude->>MCP: tool: search_accounts(criteria={filters:[{field:"Active",value:true}]})
     MCP->>QB: GET /v3/company/{id}/query
     QB-->>MCP: accounts[]
     MCP-->>Claude: accounts[]
 
     loop Each uncategorized transaction
         Claude->>Claude: Apply skills (deduction rules, category mapping)
-        Claude->>MCP: tool: update_purchase(id, account_id, memo)
+        Claude->>MCP: tool: update_purchase(purchase={Id, SyncToken, AccountRef, PrivateNote, ...})
         MCP->>QB: POST /v3/company/{id}/purchase
         QB-->>MCP: updated
         MCP-->>Claude: confirmed
@@ -62,7 +64,7 @@ sequenceDiagram
 
 ### Report Generation
 
-The user asks for a financial report. Claude pulls the data from QuickBooks and adds analysis.
+The user asks for a financial report. The Intuit MCP server has no report endpoints, so Claude searches raw transactions (purchases for expenses, invoices for income) and computes the report using skills knowledge. This is the MVP approach — a local accounting engine (e.g., beancount) may be added in Phase 2 for more sophisticated reporting.
 
 ```mermaid
 sequenceDiagram
@@ -79,15 +81,18 @@ sequenceDiagram
     FastAPI->>Handler: route("report", request)
     Handler->>Claude: invoke(user_msg, skills, mcp_tools=[quickbooks])
 
-    Claude->>MCP: tool: search_purchases(query="Jan 2026")
+    Claude->>MCP: tool: search_purchases(criteria={filters:[{field:"TxnDate",value:"2026-01-01",operator:">="},{field:"TxnDate",value:"2026-01-31",operator:"<="}],fetchAll:true})
     MCP->>QB: GET /v3/company/{id}/query
     QB-->>MCP: purchases[]
-    Claude->>MCP: tool: search_invoices(query="Jan 2026")
+    MCP-->>Claude: purchases[] (expenses)
+
+    Claude->>MCP: tool: search_invoices(criteria={filters:[{field:"TxnDate",value:"2026-01-01",operator:">="},{field:"TxnDate",value:"2026-01-31",operator:"<="}],fetchAll:true})
     MCP->>QB: GET /v3/company/{id}/query
     QB-->>MCP: invoices[]
-    MCP-->>Claude: financial data
+    MCP-->>Claude: invoices[] (income)
 
-    Claude->>Claude: Analyze using skills (tax implications, trends)
+    Claude->>Claude: Compute P&L from raw transactions (sum income, sum expenses by category)
+    Claude->>Claude: Analyze using skills (tax implications, trends, deduction opportunities)
     Claude-->>Handler: Formatted P&L with insights
 
     Handler->>Firestore: save_audit_event(report, "january_pl")
@@ -145,12 +150,17 @@ sequenceDiagram
     Logic->>MCP: Start Intuit QBO MCP server subprocess
     Logic->>Claude: invoke("Summarize yesterday's transactions", skills, mcp_tools)
 
-    Claude->>MCP: tool: search_purchases(query="yesterday")
+    Claude->>MCP: tool: search_purchases(criteria={filters:[{field:"TxnDate",value:"2026-02-14",operator:"="}],fetchAll:true})
     MCP->>QB: GET /v3/company/{id}/query
     QB-->>MCP: purchases[]
     MCP-->>Claude: purchases[]
 
-    Claude->>Claude: Generate summary with skills
+    Claude->>MCP: tool: search_invoices(criteria={filters:[{field:"TxnDate",value:"2026-02-14",operator:"="}],fetchAll:true})
+    MCP->>QB: GET /v3/company/{id}/query
+    QB-->>MCP: invoices[]
+    MCP-->>Claude: invoices[]
+
+    Claude->>Claude: Compute totals, categorize, generate summary with skills
     Claude-->>Logic: Summary with categories, totals, flagged items
 
     Logic->>Firestore: save_audit_event(daily_summary)
@@ -176,15 +186,17 @@ sequenceDiagram
     FastAPI->>Handler: route("categorize", request)
     Handler->>Claude: invoke(user_msg, skills, mcp_tools=[quickbooks])
 
-    Claude->>MCP: tool: search_purchases(query="Uber Feb 3 2026")
+    Claude->>MCP: tool: search_purchases(criteria={filters:[{field:"TxnDate",value:"2026-02-03",operator:"="}]})
     MCP->>QB: GET /v3/company/{id}/query
-    QB-->>MCP: matching purchase
-    MCP-->>Claude: purchase details
+    QB-->>MCP: matching purchases
+    MCP-->>Claude: purchases (Claude identifies the Uber charge)
 
-    Claude->>MCP: tool: search_accounts(query="Meals")
+    Claude->>MCP: tool: search_accounts(criteria={filters:[{field:"Name",value:"%Meals%",operator:"LIKE"}]})
+    MCP->>QB: GET /v3/company/{id}/query
+    QB-->>MCP: accounts[]
     MCP-->>Claude: accounts (finds "Meals & Entertainment")
 
-    Claude->>MCP: tool: update_purchase(id, account_ref=meals_account, memo="Reclassified per user request")
+    Claude->>MCP: tool: update_purchase(purchase={Id, SyncToken, AccountRef:{value:meals_id}, PrivateNote:"Reclassified per user request"})
     MCP->>QB: POST /v3/company/{id}/purchase
     QB-->>MCP: updated
     MCP-->>Claude: confirmed
@@ -204,7 +216,7 @@ Phase 1 is **done** when:
 - A user can message CFOKit in Slack and get transactions categorized in QuickBooks
 - A user can request P&L and transaction summary reports via Slack
 - QuickBooks OAuth connect flow works end-to-end
-- Intuit's QuickBooks Online MCP server reads and writes transactions via the QuickBooks API
+- Intuit QBO MCP server (50 tools, 11 entity types) reads and writes QuickBooks data via subprocess over stdio
 - Scheduled jobs (daily summary, weekly review, monthly close) run automatically and post to Slack
 - Business configuration (entity type, state, fiscal year) is persisted in Firestore
 - Claude API usage is tracked and budget-capped
@@ -228,7 +240,7 @@ Build the repository, dev environment, and core GCP infrastructure. Provision Cl
 - Health endpoint deployed to Cloud Run via `deploy.sh` and Terraform
 - Cloud Run, Firestore, and Secret Manager provisioned in GCP
 - Transaction and BusinessConfig models pass validation tests
-- Intuit QBO MCP server starts as a subprocess and exposes expected tools
+- Intuit QBO MCP server starts as a subprocess and lists 50 tools across 11 entity types
 - Bookkeeper skills exist for consulting/cash-basis categorization
 - Claude client, skill loader, MCP manager, and Slack client have tests
 - `uv run pytest tests/unit/ -x` passes
@@ -346,8 +358,8 @@ Create `.devcontainer/devcontainer.json` and supporting scripts for zero-frictio
 
 **Acceptance criteria:**
 - `.devcontainer/devcontainer.json` specifies Python 3.11+ base image
-- Container installs `uv`, Node.js (for Intuit QBO MCP server), Google Cloud SDK, and Firestore emulator
-- `postCreateCommand` runs `uv sync` to install all dependencies
+- Container installs `uv`, Node.js 20+ (for Intuit QBO MCP server), Google Cloud SDK, and Firestore emulator
+- `postCreateCommand` runs `uv sync` to install Python dependencies and `npm install && npm run build` to build the Intuit QBO MCP server from source
 - `postStartCommand` starts Firestore emulator in background
 - Firestore emulator is accessible at `localhost:8080`
 - `.env.example` lists all required environment variables with descriptions and placeholder values
@@ -479,7 +491,9 @@ Implement `tests/factories.py` with factories for Transaction and BusinessConfig
 
 ### Epic 3: QuickBooks MCP Integration
 
-> Integrate Intuit's official QuickBooks Online MCP server ([intuit/quickbooks-online-mcp-server](https://github.com/intuit/quickbooks-online-mcp-server)) so Claude AI can read and write QuickBooks data. We use the official server rather than building our own — it supports CRUD on 11 entity types (Accounts, Bills, Customers, Invoices, Purchases, Vendors, etc.), handles OAuth with automatic token refresh, and is maintained by the company that makes QuickBooks.
+> Integrate Intuit's official QuickBooks Online MCP server ([intuit/quickbooks-online-mcp-server](https://github.com/intuit/quickbooks-online-mcp-server)) so Claude AI can read and write QuickBooks data. We use the official server rather than building our own — it exposes 50 MCP tools across 11 entity types with CRUD and search operations, handles OAuth token refresh internally, and communicates over stdio.
+>
+> **Important limitations:** The server has no report endpoints (no P&L, balance sheet, etc.). For reports, Claude searches raw transactions and computes aggregations. The server also has inconsistent tool naming (some use hyphens like `create-bill`, others use underscores like `create_account`; some use `read_*` instead of `get_*`). Many create/update tools accept loosely-typed parameters (`z.any()`), so Claude must know the correct QBO object shapes. Search tools use structured criteria with filter operators, not free-text queries.
 
 **Sub-phase:** Foundation
 **Dependencies:** Epic 1
@@ -488,16 +502,52 @@ Implement `tests/factories.py` with factories for Transaction and BusinessConfig
 
 Configure the Intuit QuickBooks Online MCP server as CFOKit's QuickBooks integration. The server is a TypeScript/Node.js process that CFOKit spawns as a subprocess and connects to over stdio (standard MCP transport).
 
-**Tools available from the Intuit server (no code to write — these come for free):**
-- Create, Read, Update, Delete, Search for: Accounts, Bills, Bill Payments, Customers, Employees, Estimates, Invoices, Items, Journal Entries, Purchases, Vendors
+**Tools available from the Intuit server (50 tools, no code to write — these come for free):**
+
+| Entity | Create | Read | Update | Delete | Search |
+|--------|--------|------|--------|--------|--------|
+| Account | `create_account` | — | `update_account` | — | `search_accounts` |
+| Bill | `create-bill` | `get-bill` | `update-bill` | `delete-bill` | `search_bills` |
+| Bill Payment | `create_bill_payment` | `get_bill_payment` | `update_bill_payment` | `delete_bill_payment` | `search_bill_payments` |
+| Customer | `create_customer` | `get_customer` | `update_customer` | `delete_customer` | `search_customers` |
+| Employee | `create_employee` | `get_employee` | `update_employee` | — | `search_employees` |
+| Estimate | `create_estimate` | `get_estimate` | `update_estimate` | `delete_estimate` | `search_estimates` |
+| Invoice | `create_invoice` | `read_invoice` | `update_invoice` | — | `search_invoices` |
+| Item | `create_item` | `read_item` | `update_item` | — | `search_items` |
+| Journal Entry | `create_journal_entry` | `get_journal_entry` | `update_journal_entry` | `delete_journal_entry` | `search_journal_entries` |
+| Purchase | `create_purchase` | `get_purchase` | `update_purchase` | `delete_purchase` | `search_purchases` |
+| Vendor | `create-vendor` | `get-vendor` | `update-vendor` | `delete-vendor` | `search_vendors` |
+
+**Search criteria format** (common to all `search_*` tools):
+```
+criteria: {
+  filters: [{ field: "TxnDate", value: "2026-01-01", operator: ">=" }],
+  asc: "TxnDate",      // sort ascending by field
+  desc: "TotalAmt",    // sort descending by field
+  limit: 100,          // max results
+  offset: 0,           // pagination
+  fetchAll: true        // fetch all matching records
+}
+```
+Operators: `=`, `IN`, `<`, `>`, `<=`, `>=`, `LIKE`. Filter fields are entity-specific and validated server-side.
+
+**Environment variables consumed by the Intuit server:**
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `QUICKBOOKS_CLIENT_ID` | Yes | OAuth app client ID from Intuit Developer Portal |
+| `QUICKBOOKS_CLIENT_SECRET` | Yes | OAuth app client secret |
+| `QUICKBOOKS_REFRESH_TOKEN` | Yes | Refresh token (from initial OAuth flow in Story 3.2) |
+| `QUICKBOOKS_REALM_ID` | Yes | QBO Company ID (from initial OAuth flow) |
+| `QUICKBOOKS_ENVIRONMENT` | Yes | `sandbox` or `production` |
 
 **Acceptance criteria:**
-- `package.json` (or pinned npm dependency) includes `@anthropic/quickbooks-online-mcp-server` or equivalent reference to the Intuit server
-- Dev container installs Node.js and the Intuit MCP server package
-- `core/integrations/quickbooks_mcp/config.py` provides configuration for launching the server (command, args, environment variables for OAuth credentials)
+- `package.json` pins the Intuit server via git reference: `"@qboapi/qbo-mcp-server": "github:intuit/quickbooks-online-mcp-server#<commit-sha>"` (package is not published to npm — must reference the git repo and build from source)
+- Dev container installs Node.js (20+) and runs `npm install && npm run build` to compile the TypeScript server
+- `core/integrations/quickbooks_mcp/config.py` provides configuration for launching the server: command (`node`), args (`[path/to/dist/index.js]`), and environment variables
 - MCP manager (Story 5.3) can start the Intuit server as a subprocess and connect over stdio
-- Credentials (client ID, client secret, refresh token, realm ID) are read from Secret Manager and passed to the server via environment variables
-- Smoke test verifies the server starts and exposes expected tools
+- Credentials (client ID, client secret, refresh token, realm ID, environment) are read from Secret Manager and passed to the server process as environment variables — never logged
+- Smoke test verifies the server starts and lists the expected 50 tools
 
 **Key files:** `core/integrations/quickbooks_mcp/config.py`, `package.json`
 **Labels:** `epic:quickbooks`, `sub-phase:foundation`
@@ -507,7 +557,7 @@ Configure the Intuit QuickBooks Online MCP server as CFOKit's QuickBooks integra
 
 #### Story 3.2: Implement QuickBooks OAuth flow
 
-Create the OAuth 2.0 flow for the initial QuickBooks connection. The Intuit MCP server handles token refresh automatically once it has a refresh token, but CFOKit needs to handle the initial authorization flow: user clicks a link, authorizes in QuickBooks, and CFOKit captures the tokens.
+Create the OAuth 2.0 flow for the initial QuickBooks connection. The Intuit MCP server has a built-in interactive OAuth flow (opens a browser, listens on `localhost:8000`), but this doesn't work in Cloud Run. CFOKit implements its own OAuth flow: the user clicks a link from Slack, authorizes in QuickBooks, and CFOKit's `/oauth/quickbooks/callback` endpoint captures the tokens and stores them in Secret Manager. The Intuit server then receives the refresh token and realm ID as environment variables at startup, and handles token refresh internally from that point on.
 
 **Acceptance criteria:**
 - `core/integrations/quickbooks_mcp/oauth.py` provides:
@@ -515,7 +565,7 @@ Create the OAuth 2.0 flow for the initial QuickBooks connection. The Intuit MCP 
   - `exchange_code(code, realm_id)` — Exchange authorization code for access + refresh tokens
 - State parameter uses a cryptographic random value to prevent CSRF
 - Tokens are stored via an injected secrets callback (Secret Manager in prod, dict in tests)
-- Refresh token and realm ID are the values passed to the Intuit MCP server at startup
+- Refresh token and realm ID are the values passed to the Intuit MCP server at startup via `QUICKBOOKS_REFRESH_TOKEN` and `QUICKBOOKS_REALM_ID` environment variables
 - Unit tests mock QuickBooks OAuth endpoints and verify: authorization URL generation, code exchange, CSRF state validation, error handling
 
 **Key files:** `core/integrations/quickbooks_mcp/oauth.py`, `tests/unit/test_quickbooks_mcp/test_oauth.py`
@@ -633,14 +683,15 @@ Create `core/shared/skill_loader.py` that loads markdown skill files. Entity-typ
 
 #### Story 5.3: Implement MCP manager
 
-Create `core/shared/mcp_manager.py` for managing MCP server connections. In Phase 1 this manages the Intuit QuickBooks Online MCP server, which runs as a Node.js subprocess connected over stdio.
+Create `core/shared/mcp_manager.py` for managing MCP server connections. In Phase 1 this manages the Intuit QuickBooks Online MCP server, which runs as a Node.js subprocess connected over stdio. The server is launched with `node dist/index.js` from the built `quickbooks-online-mcp-server` package, with QBO credentials passed as environment variables (`QUICKBOOKS_CLIENT_ID`, `QUICKBOOKS_CLIENT_SECRET`, `QUICKBOOKS_REFRESH_TOKEN`, `QUICKBOOKS_REALM_ID`, `QUICKBOOKS_ENVIRONMENT`).
 
 **Acceptance criteria:**
-- `MCPManager` spawns the Intuit QBO MCP server as a subprocess with credentials from Secret Manager passed as environment variables
-- Connects to the server over stdio (standard MCP transport)
-- Provides method to get the MCP tools list for passing to Claude
+- `MCPManager` uses the config from `core/integrations/quickbooks_mcp/config.py` (Story 3.1) to spawn the server process
+- Spawns the Intuit QBO MCP server as a subprocess: `node <path>/dist/index.js` with credentials from Secret Manager passed as environment variables
+- Connects to the server over stdio using the MCP SDK client
+- Provides method to list available tools (expects 50 tools across 11 entity types) for passing to Claude
 - Handles server lifecycle: start, health check, restart on crash, clean shutdown
-- Connection health checking
+- Connection health checking (detect if subprocess exits unexpectedly)
 - Unit tests: subprocess lifecycle, tool listing, restart behavior, credential passing (verifies secrets are passed as env vars, not logged)
 
 **Key files:** `core/shared/mcp_manager.py`, `tests/unit/test_mcp_manager.py`
@@ -1220,6 +1271,7 @@ The following are explicitly **out of scope** for Phase 1:
 - **AWS deployment** — Deferred to Phase 2.
 - **Azure deployment** — Deferred to Phase 3.
 - **OpenClaw integration** — Deferred to Phase 2. Placeholder README only.
+- **Local accounting engine** (beancount or similar) — Phase 1 reports are computed by Claude from QBO search results. A local ledger for faster/richer reporting may be added in Phase 2.
 - **Accrual basis accounting** — Cash basis only in Phase 1.
 - **Wave and Stripe integrations** — QuickBooks only in Phase 1.
 - **Nonprofit entity types** (501(c)(3), 501(c)(6)) — Deferred to Phase 2. Phase 1 supports sole_prop, s_corp (including LLCs with S-corp election), and llc.

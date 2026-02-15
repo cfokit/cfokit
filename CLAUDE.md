@@ -40,7 +40,7 @@ core/                        # Shared business logic (platform-agnostic)
 └── shared/                  # Cloud-agnostic utilities
     ├── claude_client.py     # Claude API wrapper with token budget tracking
     ├── skill_loader.py      # Entity-type-aware skill loading
-    ├── mcp_manager.py       # MCP server lifecycle management
+    ├── mcp_manager.py       # MCP server lifecycle (spawns Intuit QBO server as Node.js subprocess over stdio)
     └── slack_client.py      # Slack message formatting and sending
 
 deploy-cloud/                # Cloud deployment
