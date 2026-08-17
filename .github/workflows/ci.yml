@@ -1,0 +1,180 @@
+# CFOKit CI — the five gates that define "done" (CLAUDE.md § CI gates).
+#
+# Gate 2 is the load-bearing one: the suite runs against compose.yaml WITHOUT the dev
+# overlay and with no cloud credentials present, because portability is a build gate rather
+# than an aspiration (ADR-0003). Nothing in this file may add cloud credentials to the
+# environment of the portability job.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Keep this in step with requires-python in pyproject.toml.
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  # Gate 1 — ruff, mypy --strict, import-linter layer contracts.
+  lint:
+    name: "Gate 1: lint"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - run: uv python install ${{ env.PYTHON_VERSION }}
+      - run: uv sync --locked
+      - name: ruff, mypy --strict, import-linter
+        run: uv run task lint
+
+  # Gate 4 — no floats touch money, in the schema or in package code (ADR-0004).
+  money:
+    name: "Gate 4: no floats touch money"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - run: uv python install ${{ env.PYTHON_VERSION }}
+      - run: uv sync --locked
+      - run: uv run task check-money
+
+  # Unit and documentation tests. No infrastructure required.
+  test:
+    name: unit and documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - run: uv python install ${{ env.PYTHON_VERSION }}
+      - run: uv sync --locked
+      - run: uv run task test
+
+  # Gate 2 — the full suite against the stack users actually run, with NO cloud
+  # credentials. This job must never be given any (ADR-0003).
+  portability:
+    name: "Gate 2: portability (no cloud credentials)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Assert no cloud credentials are present
+        # The gate is meaningless if a credential leaks in through a shared workflow
+        # variable, so assert rather than assume.
+        run: |
+          leaked=""
+          for name in AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN \
+                      GOOGLE_APPLICATION_CREDENTIALS GCLOUD_SERVICE_KEY GCP_SA_KEY \
+                      AZURE_CLIENT_SECRET AZURE_TENANT_ID; do
+            if [ -n "${!name:-}" ]; then leaked="$leaked $name"; fi
+          done
+          if [ -n "$leaked" ]; then
+            echo "::error::Gate 2 requires no cloud credentials, but found:$leaked"
+            exit 1
+          fi
+          echo "No cloud credentials present."
+
+      - name: Validate the compose stack
+        run: |
+          docker compose -f compose.yaml config -q
+          docker compose -f compose.yaml -f compose.dev.yaml config -q
+
+      - name: Bring up compose.yaml WITHOUT the dev overlay
+        run: docker compose -f compose.yaml up -d --wait --wait-timeout 180
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - run: uv python install ${{ env.PYTHON_VERSION }}
+      - run: uv sync --locked
+
+      - name: Full suite against the local stack
+        run: uv run task test
+
+      # Proves the command exists and is not a startup step. It currently discovers zero
+      # migrations and exits without connecting.
+      #
+      # NOTE for M3: compose.yaml deliberately publishes no database port, so once real
+      # migrations exist this cannot run from the runner. Switch it to the one-shot compose
+      # job that runs inside the network:
+      #   docker compose -f compose.yaml --profile migrate run --rm migrate
+      - name: Migrations run as an explicit command, never at startup
+        env:
+          DATABASE_URL: postgresql://cfokit:cfokit@postgres:5432/cfokit
+        run: uv run task migrate
+
+      - name: Stack diagnostics
+        if: failure()
+        run: docker compose -f compose.yaml ps && docker compose -f compose.yaml logs --tail 200
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f compose.yaml down -v
+
+  # Gate 3 — differential test against the Beancount oracle, every divergence documented
+  # (ADR-0010). Beancount is a CI-only dependency and never ships in the artifact.
+  #
+  # Enabled in M2, when the booking engine exists (docs/roadmap.md).
+  #
+  # oracle:
+  #   name: "Gate 3: Beancount oracle"
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v5
+  #     - uses: astral-sh/setup-uv@v7
+  #     - run: uv sync --locked --group oracle
+  #     - run: uv run pytest -m oracle
+
+  # Gate 5 — generated OpenAPI and MCP tool descriptions match what is committed; a diff
+  # means a contract change and needs review (ADR-0015).
+  #
+  # Enabled in M4, when the adapters exist (docs/roadmap.md).
+  #
+  # contracts:
+  #   name: "Gate 5: published interfaces unchanged"
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v5
+  #     - uses: astral-sh/setup-uv@v7
+  #     - run: uv sync --locked
+  #     - run: uv run task generate-contracts
+  #     - run: git diff --exit-code -- docs/contracts/
+
+  # A single required check, so the branch protection rule does not need editing every time
+  # a gate is added.
+  gates:
+    name: All gates
+    if: always()
+    needs: [lint, money, test, portability]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if any gate failed
+        # Each result is checked individually and compared exactly. Substring-matching the
+        # joined string would pass on "success failure success", and inverted grep is easy
+        # to get subtly wrong, so neither is used here.
+        run: |
+          failed=0
+          for result in ${{ join(needs.*.result, ' ') }}; do
+            echo "gate result: $result"
+            if [ "$result" != "success" ]; then failed=1; fi
+          done
+          if [ "$failed" -ne 0 ]; then
+            echo "::error::One or more CI gates did not succeed."
+            exit 1
+          fi
+          echo "All gates passed."

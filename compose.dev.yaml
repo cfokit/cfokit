@@ -1,0 +1,50 @@
+# CFOKit — development overlay. Applied EXPLICITLY, never automatically (ADR-0018).
+#
+#     uv run task dev
+#     docker compose -f compose.yaml -f compose.dev.yaml up
+#
+# The CI portability gate runs compose.yaml WITHOUT this file, so what CI proves is what
+# users actually run (ADR-0003).
+#
+# What this file may change, and nothing else (ADR-0018):
+#   - source reload
+#   - exposed ports
+#   - log level
+#   - opt-in fixtures, behind a profile
+#
+# What it may NOT change: the image build target's runtime dependencies, the migrations, or
+# the auth path. Auth is where divergence between what we develop against and what users
+# run is least acceptable — a local-only code path would be exercised by nobody who could
+# catch its bugs.
+
+name: cfokit
+
+services:
+  postgres:
+    # Exposed for psql and inspection. Deliberately not in the base file.
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    command: ["postgres", "-c", "log_statement=all"]
+
+  # ledger:
+  #   environment:
+  #     LOG_LEVEL: debug
+  #   volumes:
+  #     # Source reload. Note this mounts source over the image's installed package, which
+  #     # is exactly why CI does not apply this overlay.
+  #     - ./packages/ledger/src:/app/packages/ledger/src:ro
+  #     - ./packages/connectors/src:/app/packages/connectors/src:ro
+
+  # Seed fixtures. Behind a profile so they NEVER run by default: seeding a ledger that
+  # holds real books would corrupt it (ADR-0018).
+  #
+  #     docker compose -f compose.yaml -f compose.dev.yaml --profile seed up seed
+  #
+  # seed:
+  #   profiles: ["seed"]
+  #   build: { context: ., target: runtime }
+  #   command: ["python", "-m", "cfokit.ledger.fixtures"]
+  #   depends_on:
+  #     postgres: { condition: service_healthy }
+  #   environment:
+  #     DATABASE_URL: postgresql://cfokit:${POSTGRES_PASSWORD:-cfokit}@postgres:5432/cfokit

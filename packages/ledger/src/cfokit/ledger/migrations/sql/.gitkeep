@@ -1,0 +1,2 @@
+Migrations live here as NNNN-short-description.sql, applied in lexical order.
+No float storage types — all decimal columns are NUMERIC(28,10) (ADR-0004, CI gate 4).

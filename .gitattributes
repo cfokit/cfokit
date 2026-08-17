@@ -1,0 +1,18 @@
+# Normalize line endings on checkin; check out native.
+* text=auto
+
+*.py   text diff=python
+*.md   text
+*.sql  text
+*.yaml text
+*.yml  text
+*.tf   text
+*.toml text
+
+# Lockfiles are generated — keep them out of diffs and review noise.
+uv.lock              linguist-generated=true -diff
+.terraform.lock.hcl  linguist-generated=true -diff
+
+# Documentation should not skew language stats for the repo.
+docs/**  linguist-documentation=true
+specs/** linguist-documentation=true
