@@ -1,0 +1,137 @@
+[project]
+name = "cfokit"
+version = "0.0.0"
+description = "The open source CFO toolkit"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.uv]
+# The workspace root is not itself a distribution; it carries dev tooling and config.
+package = false
+
+[tool.uv.workspace]
+# Python distributions only. Skills live in skills/ and are not installable (ADR-0020).
+members = ["packages/*"]
+
+[tool.uv.sources]
+cfokit-ledger = { workspace = true }
+cfokit-connectors = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "cfokit-ledger",
+    "cfokit-connectors",
+    "ruff>=0.14",
+    "mypy>=1.18",
+    "pytest>=8.4",
+    "import-linter>=2.3",
+    "taskipy>=1.14",
+]
+
+# ---------------------------------------------------------------------------
+# Commands. These names are documented in CLAUDE.md; keep them in sync.
+# ---------------------------------------------------------------------------
+[tool.taskipy.tasks]
+test = { cmd = "pytest", help = "Run the suite. Pass a path to scope it: task test packages/ledger" }
+lint = { cmd = "ruff check . && ruff format --check . && mypy && lint-imports && python scripts/check_async.py", help = "CI gate 1: ruff, mypy --strict, import-linter, async boundary" }
+migrate = { cmd = "python -m cfokit.ledger.migrations", help = "Apply migrations. Never runs at startup (ADR-0003)" }
+dev = { cmd = "docker compose -f compose.yaml -f compose.dev.yaml up", help = "Local stack with the dev overlay explicitly applied (ADR-0018)" }
+"check-money" = { cmd = "python scripts/check_money.py", help = "CI gate 4: no floats touch money, in schema or code (ADR-0004)" }
+
+# ---------------------------------------------------------------------------
+# ruff
+# ---------------------------------------------------------------------------
+[tool.ruff]
+line-length = 96
+target-version = "py312"
+extend-exclude = [".specify"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",    # pycodestyle
+    "F",         # pyflakes
+    "I",         # isort
+    "UP",        # pyupgrade
+    "B",         # bugbear
+    "S",         # bandit
+    "A",         # builtin shadowing
+    "C4",        # comprehensions
+    "DTZ",       # naive datetimes — dates matter in accounting
+    "T20",       # no print(); use structured logging
+    "RET", "SIM", "PTH", "RUF",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]              # assert is the point of a test
+"packages/*/tests/**" = ["S101"]
+"scripts/**" = ["T201"]            # CI scripts report to stdout
+
+[tool.ruff.lint.isort]
+known-first-party = ["cfokit"]
+
+[tool.ruff.format]
+docstring-code-format = true
+
+# ---------------------------------------------------------------------------
+# mypy — strict is a CI gate, not a preference
+# ---------------------------------------------------------------------------
+[tool.mypy]
+strict = true
+python_version = "3.12"
+files = ["packages", "scripts", "tests"]
+mypy_path = ["packages/ledger/src", "packages/connectors/src", "scripts"]
+namespace_packages = true
+explicit_package_bases = true
+warn_unreachable = true
+enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
+
+# ---------------------------------------------------------------------------
+# pytest
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests", "packages"]
+pythonpath = ["scripts"]
+addopts = "-ra --strict-markers --strict-config"
+markers = [
+    "integration: requires the compose stack (Postgres, issuer)",
+    "oracle: differential test against the Beancount oracle (ADR-0010)",
+]
+
+# ---------------------------------------------------------------------------
+# import-linter — enforces the boundaries CLAUDE.md declares (CI gate 1)
+# ---------------------------------------------------------------------------
+[tool.importlinter]
+root_packages = ["cfokit"]
+
+[[tool.importlinter.contracts]]
+name = "Ledger is layered; the booking engine sits at the bottom (ADR-0008, ADR-0009)"
+type = "layers"
+layers = [
+    "cfokit.ledger.api | cfokit.ledger.mcp",
+    "cfokit.ledger.service",
+    "cfokit.ledger.repository",
+    "cfokit.ledger.engine",
+]
+
+[[tool.importlinter.contracts]]
+name = "Booking engine is pure — no configuration, no I/O, no adapters (ADR-0008)"
+type = "forbidden"
+source_modules = ["cfokit.ledger.engine"]
+forbidden_modules = [
+    "cfokit.ledger.config",
+    "cfokit.ledger.repository",
+    "cfokit.ledger.service",
+    "cfokit.ledger.api",
+    "cfokit.ledger.mcp",
+]
+
+[[tool.importlinter.contracts]]
+name = "Connectors reach the ledger over its public API only, never in-process (ADR-0014)"
+type = "forbidden"
+source_modules = ["cfokit.connectors"]
+forbidden_modules = ["cfokit.ledger"]
+
+# NOTE: a contract forbidding provider SDKs at module scope (ADR-0003) is added when
+# the first provider SDK is introduced — import-linter errors on modules it cannot find.

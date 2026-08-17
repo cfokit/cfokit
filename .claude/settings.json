@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(uv sync)",
+      "Bash(uv sync --locked)",
+      "Bash(uv run task test:*)",
+      "Bash(uv run task lint)",
+      "Bash(uv run task check-money)",
+      "Bash(uv run pytest:*)",
+      "Bash(uv run ruff check:*)",
+      "Bash(uv run ruff format:*)",
+      "Bash(uv run mypy:*)",
+      "Bash(uv run lint-imports:*)",
+      "Bash(uv tree:*)",
+      "Bash(docker compose config:*)",
+      "Bash(docker compose ps:*)",
+      "Bash(docker compose logs:*)",
+      "Bash(specify check)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git branch:*)",
+      "Bash(tofu validate:*)",
+      "Bash(tofu fmt -check:*)",
+      "Bash(tofu plan:*)"
+    ],
+    "ask": [
+      "Bash(uv add:*)",
+      "Bash(uv remove:*)",
+      "Bash(uv run task migrate)",
+      "Bash(docker compose up:*)",
+      "Bash(docker compose down:*)",
+      "Bash(tofu apply:*)",
+      "Bash(git push:*)"
+    ],
+    "deny": [
+      "Bash(uv pip install:*)",
+      "Bash(pip install:*)",
+      "Bash(poetry:*)",
+      "Bash(terraform:*)",
+      "Bash(docker compose down -v:*)",
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./**/*.tfstate)",
+      "Read(./**/*.tfvars)"
+    ]
+  }
+}

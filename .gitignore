@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.eggs/
+
+# uv / virtualenvs
+.venv/
+venv/
+
+# Tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.import_linter_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# Environment — never commit secret values (ADR-0016)
+.env
+.env.*
+!.env.example
+
+# OpenTofu — state contains secrets in plaintext (ADR-0016)
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+# .terraform.lock.hcl is deliberately NOT ignored — provider pins are committed.
+crash.log
+crash.*.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Claude Code local overrides (project settings.json IS committed)
+.claude/settings.local.json
