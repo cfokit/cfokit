@@ -1,7 +1,7 @@
 # CFOKit — Accounting Policy
 
 - **Status:** Draft
-- **Date:** 2026-08-17
+- **Date:** 2026-08-20
 - **Owner:** Geoff
 
 **Audience: you, your accountant, and your auditor.** This document states what CFOKit does to
@@ -44,8 +44,7 @@ cannot be bypassed by a bug in a code path. (REQ-A1, ADR-0005)
 point, anywhere — including in test fixtures. All monetary columns carry ten decimal places.
 Your cents do not drift. (REQ-A3, ADR-0004)
 
-**Cash and accrual basis are both supported. The basis is a property of the entity, not of a
-report.**
+**The accounting basis is a property of the entity, not of a report.**
 
 Each entity declares its accounting basis once, alongside its fiscal year end — both are
 company-level settings, and both are consequential rather than cosmetic. Your declared basis is
@@ -66,6 +65,12 @@ mistaken for the entity's books.
 > run a report, which makes it easy to hand someone a cash-basis statement for an accrual-basis
 > business without either of you noticing. Making the basis a property of the entity means the
 > default is always right and the exception is always visible.
+
+**Accrual reporting is not built yet.** Cash basis is what CFOKit produces today. The ledger
+records the obligation and the settlement as separate related events from the first schema
+version, which is what accrual needs and what cannot be added later — but producing accrual
+statements from those events is not implemented. An entity that must report on an accrual
+basis is not yet supported. (REQ-A8)
 
 **What this requires of the ledger, and why it cannot be retrofitted.** Cash and accrual are not
 two ways of formatting the same data — they need different events. An invoice raised in March and
@@ -91,9 +96,13 @@ start.
 
 ### Draft
 
-Transactions arrive by **ingestion** from a bank, card, or payment-processor feed, with no
-account assigned. Nobody types them in. Assignment then happens through **categorisation and
-matching** — see § 3 — which is the bookkeeper's actual work.
+Most transactions arrive by **ingestion** from a bank, card, or payment-processor feed, with no
+account assigned and nobody keying them in. Two other routes exist and are ordinary: an
+adjusting entry recorded directly by you or your accountant (§ 5), and history imported from a
+system you used previously (§ 12). All three arrive as drafts.
+
+Assignment then happens through **categorisation and matching** — see § 3 — which is the
+bookkeeper's actual work.
 
 While a transaction is a draft it is **freely editable**. Assigning an account, adjusting an
 amount, correcting a date, splitting it across accounts — all ordinary edits, leaving no
@@ -133,16 +142,28 @@ approach differs deliberately from what you may be used to.
 
 **Rules are data. Applying them is deterministic.**
 
-- A rule is a stored, inspectable record: *this payee or pattern, in this amount range, posts to
-  this account*.
+- A rule is a stored, inspectable record: *this pattern, under these conditions, posts to this
+  account*. Conditions can include the payee, an amount range, description text, line-item
+  detail where the feed supplies it, and which account the money moved through.
 - Applying stored rules is ordinary deterministic code, tested like any other booking logic. The
   same transaction against the same rules produces the same assignment, every time.
 - The agent's job is to **propose rules**, never to judge each transaction afresh.
 
-**Why this design.** If a language model decided each transaction independently, assignment would
-be non-deterministic *by construction*: the same merchant could land in two different accounts in
-the same month, and correcting one instance would teach the system nothing. Storing the decision
-as a rule is what makes "it remembers" literally true rather than approximately true.
+**One payee is often not enough to decide.** An Amazon charge might be office supplies one week
+and marketing materials the next. A rule forcing both into a single account would be
+consistently wrong rather than usefully deterministic, so rules match on more than the merchant,
+and anything the rule set cannot resolve is **asked rather than guessed**. CFOKit does not pick
+the likeliest account and move on.
+
+Determinism here is a claim about inputs. The same transaction against the same rule set
+produces the same assignment. It is not a claim that every charge from one payee belongs in one
+account, which is frequently untrue.
+
+**Why this design.** If a language model judged each transaction independently, assignment would
+be non-deterministic *by construction*: identical transactions could land in different accounts
+in the same month for no recorded reason, and correcting one instance would teach the system
+nothing. Storing the decision as a rule is what makes "it remembers" literally true rather than
+approximately true.
 
 **What you experience:**
 
@@ -242,10 +263,13 @@ around. Visibility is the property worth having, not prohibition.
 
 ---
 
-## 6. Cost basis and lot selection — *not yet applicable*
+## 6. Cost basis and lot selection — *not yet implemented*
 
-**No entity currently holds inventory or investments, so this does not apply to your books today.**
-It is documented here so the policy is settled before it is needed, not improvised when it is.
+**This applies to you if you hold inventory or investments, and CFOKit does not implement it
+yet.** An entity that needs lot selection is therefore not yet supported. A retail shop or a
+restaurant needs it from its first stock purchase; a consultancy with a checking account never
+does. The policy is documented here so it is settled before it is built rather than improvised
+once it is needed.
 
 **When it applies.** Lot selection arises only when you hold *fungible units in a pool, acquired at
 different costs, and dispose of some of them*. Inventory is the familiar case, but it is not the
@@ -383,9 +407,79 @@ deployment. (REQ-A2, ADR-0011, ADR-0019)
 
 ---
 
-## 10. What CFOKit does not do
+## 10. Asking questions of your books
 
-- **It does not file.** It prepares figures and schedules; a human files.
+**You are not limited to a fixed menu of reports.** Your books are exposed over a documented
+interface, so questions nobody anticipated can still be answered. Your accountant can ask what a
+return needs. You can ask what you spent on contractors last quarter.
+
+**Where an answer comes from, and where it does not.** Every figure is computed from your
+postings at the moment you ask. Nothing is estimated, inferred from surrounding context, or
+recalled from an earlier conversation. Where the books cannot support an answer, CFOKit says so
+and says why instead of producing a plausible number.
+
+**Entity scope is enforced by the server.** A question cannot reach books you hold no grant for,
+however it is phrased (§ 9). Rephrasing is not a route around authorisation.
+
+**Bounded guidance — *Pending*.** Where nobody holds the CFO seat, CFOKit will answer a limited
+set of questions about runway, margin, and affordability. What it declines matters more than what
+it answers, and that boundary is not yet settled. Anything turning on a tax election, entity
+structure, financing, or jurisdiction is referred to a professional. (REQ-B8, REQ-B9)
+
+---
+
+## 11. Sales tax — *Pending*
+
+**Tax you collect is a liability, never revenue.** Money taken from a customer on behalf of a
+taxing authority is an obligation to that authority, and is reported as what is owed, to whom,
+for which period.
+
+Recording that liability is ordinary double entry. Everything else about sales tax is
+jurisdictional — whether you have nexus, which rate applies to which product at which address,
+and when each authority expects a filing — and how much of it CFOKit owns is undecided. Until it
+is, treat sales tax as unsupported rather than partially supported. (REQ-A10)
+
+---
+
+## 12. Imported history — *Pending*
+
+Books arriving from a system you used previously are books CFOKit did not produce, and that
+distinction matters to anyone relying on them.
+
+**Imported transactions are posted history**, governed by § 2 like anything else: no editing,
+corrections by reversal. What is undecided is how much arrives. An opening trial balance carries
+balances forward and nothing else. A full transaction import carries detail CFOKit cannot
+independently verify, since it was not present when any of it happened. Those give your
+accountant very different things to work with, and the choice is not yet made.
+
+**Imported records are marked as imported, with their source, and a statement covering an
+imported period says so on its face.** You should never have to remember which figures CFOKit
+produced and which it inherited. (REQ-C5)
+
+---
+
+## 13. Independent assurance — *Pending*
+
+**This document describes what the software does. On its own it is not evidence that the hosted
+service operates the way it says.** The distinction matters if you are being asked to rely on
+these books.
+
+The source is public and the claims here are checkable in principle, which is worth something but
+is not how a professional establishes reliance. For the hosted service that comes from an
+independent third-party examination. Which report is not yet chosen: SOC 2 Type II is the widely
+recognised one, and SOC 1, which addresses controls over financial reporting, may be more
+relevant for a system whose output feeds a return.
+
+**Until such a report exists, treat the hosted service as unattested** and read this document as
+a statement of intent rather than of verified fact. A self-hosted deployment is operated by you,
+and no attestation of ours would cover it in any case. (REQ-E8)
+
+---
+
+## 14. What CFOKit does not do
+
+- **It does not file.** It produces the closed year, the schedules, and the supporting detail
+  your preparer works from. A CPA prepares and files.
 - **It does not move money.** It reads financial data and keeps books.
 - **It does not give tax or legal advice.** It reports what the books say and flags what looks
   like it needs a professional.
@@ -403,5 +497,9 @@ Tracked here so nothing is assumed by omission.
 | Whether an issued statement can be superseded | Undecided | REQ-B3 reporting |
 | Jurisdictions and entity types supported for tax work | Undecided | REQ-B4 |
 | Compliance rule extension mechanism | Undecided | REQ-B5 |
+| How much of sales tax CFOKit owns, and how much it delegates | Undecided | REQ-A10 |
+| What fidelity an import promises — opening balance or full history | Undecided | REQ-C5 |
+| What bounded guidance declines to answer | Undecided | REQ-B9 |
+| Which assurance report the hosted service obtains | Undecided | REQ-E8 |
 | Multi-currency revaluation treatment | Not yet raised | — |
 | Whether ledger disposal is ever offered, and how GDPR erasure interacts with an append-only ledger | Undecided | REQ-E7 |
