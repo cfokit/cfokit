@@ -1,7 +1,7 @@
 # CFOKit — Business Requirements
 
 - **Status:** Draft
-- **Date:** 2026-08-17
+- **Date:** 2026-08-20
 - **Owner:** Geoff
 
 Capabilities CFOKit must deliver, derived from [`vision.md`](vision.md). Each has a stable
@@ -39,7 +39,8 @@ to record one that does not.
 ### REQ-A2 — Multi-entity isolation
 **P0 · Accepted.** One deployment holds books for many entities; no operation can read or
 write across an entity boundary without an explicit grant.
-**Serves:** fractional CFOs — this is what makes 10+ clients on one deployment safe.
+**Serves:** fractional CFOs, who carry four to eight clients at once, and any deployment
+holding books for more than one entity.
 **Constraints:** ADR-0002, ADR-0011, ADR-0019.
 
 ### REQ-A3 — Exact decimal arithmetic
@@ -109,7 +110,10 @@ the most-written table in the system.
 (basis equals proceeds); T-bill discount is accreting *interest income*, not capital gain; bond
 funds, ETFs and equities are where real lot selection begins.
 **Serves:** entities holding inventory or investments. **Constraints:** ADR-0007, ADR-0013.
-**Trigger to activate:** an entity acquires inventory, or holds investments in a brokerage account.
+**Trigger to activate:** an entity acquires inventory, or holds investments in a brokerage
+account. Note that `vision.md` names retail, restaurants, and construction as target
+owner-operators, and a retail or restaurant entity holds inventory on day one — so this is a
+foreseeable activation rather than a remote one.
 
 
 ### REQ-A7 — Reporting over arbitrary periods
@@ -165,12 +169,29 @@ someone actually needs to track what they owe.
 **Note:** payment application is the fiddly part, not invoice rendering. Partial payments,
 overpayments and write-offs are each ordinary and each must be right.
 
+### REQ-A10 — Sales tax collected as a liability
+**P2 · Blocked.** Tax collected from a customer is recorded as a liability owed to an
+authority, never as revenue, and the system reports what is owed to whom for which period.
+
+**The ledger half is ordinary double entry.** The hard half is jurisdictional: nexus
+determination, rates that vary by address and by product class, and filing calendars that
+differ per authority. The blocked decision is which of those CFOKit owns and which it
+delegates to a rate provider or to the entity's CPA.
+**Serves:** owner-operators in retail, restaurants, and construction, where this is present
+from the first transaction rather than at some later stage.
+**Constraints:** ADR-0004, ADR-0006, REQ-A9 (an invoice carries tax lines).
+**Trigger to activate:** an entity that collects sales tax.
+**Related:** REQ-B5 has the same shape — jurisdiction-specific content that needs an extension
+mechanism designed before any of the content is written. Solve that once.
+
 
 ---
 
 ## B. Agent capabilities
 
-Each of these is the work "a CFO would do" from the value proposition.
+The bookkeeper and controller work described in [`vision.md`](vision.md), plus the bounded
+guidance offered where nobody holds the CFO seat. A CFO consumes what these produce rather
+than performing any of it.
 
 ### REQ-B1 — Bookkeeping automation
 **P0 · Accepted.** Categorise and book incoming transactions, ask when genuinely ambiguous
@@ -202,7 +223,7 @@ consistent means deterministic rather than usually right.
 
 ### REQ-B2 — Cash flow monitoring
 **P1 · Accepted.** Report position and runway, and surface changes without being asked.
-**Serves:** founders, small business owners.
+**Serves:** founders, and owner-operators deciding whether they can pay themselves.
 
 ### REQ-B3 — Financial reporting
 **P1 · Accepted.** Produce the standard statements on request, in a form a human can hand
@@ -216,22 +237,65 @@ served URL additionally has to answer ADR-0018's rejection of a second authentic
 Do not specify this requirement until that ADR exists.
 
 ### REQ-B4 — Tax preparation support
-**P1 · Blocked.** Assemble the figures and schedules a return needs. **CFOKit does not
-file.** Scope of jurisdictions and entity types is undecided; needs a decision before
-specification.
-**Serves:** solo founders with S-corps and LLCs.
+**P1 · Blocked.** Assemble the figures, schedules, and supporting detail a return needs.
+**CFOKit does not file.** Scope of jurisdictions and entity types is undecided and needs a
+decision before specification.
+
+**The standard is the preparer, not the report.** The measure of this requirement is whether a
+CPA can answer their own questions from the books without emailing the client. That is what
+turns the CPA from an obstacle into the channel `vision.md` identifies, by the mechanism Vanta
+built with SOC 2 auditors: the professional whose work gets faster recommends the thing that
+made it faster, and the company pays.
+**Serves:** every entity, and the CPA who prepares its return.
+**Constraints:** REQ-B8 (the query surface is how a preparer asks), REQ-A8 (the declared basis
+is a tax election rather than a report option), REQ-E5, REQ-A10.
 
 ### REQ-B5 — Compliance tracking
 **P2 · Blocked.** Track recurring obligations and deadlines by entity type. The rules are
 jurisdiction-specific and the vision anticipates these being *contributed*
 ("Contributing S-corp compliance rules"), so the extension mechanism must be designed
 before the content.
-**Serves:** solo founders managing S-corps.
+**Serves:** owner-operators and founders carrying recurring entity obligations.
 
 ### REQ-B6 — Distinct agent roles
 **P2 · Blocked.** Whether the roles above are separate skills or one skill with several
 modes is an open question in `vision.md`, and it determines the layout of `skills/`.
 **Serves:** developers.
+
+### REQ-B8 — Ad hoc query over the books, with a declared refusal boundary
+**P1 · Accepted.** A user can ask questions of their own books that nobody anticipated, over
+MCP or the HTTP interface, and get answers drawn from what is posted.
+
+This follows from where the intelligence lives. The skill runs inside a runtime the user
+already has (ADR-0014), so the surface worth exposing is a complete, well-described data
+interface rather than a fixed menu of reports.
+
+**The refusal boundary is part of the requirement rather than a later refinement.** Answers
+come from postings and never from estimation or recall. Entity scope is enforced server-side
+regardless of what is asked (REQ-A2, REQ-D4). Where the books cannot support an answer, the
+skill says so and says why.
+**Serves:** owners asking what they spent; CPAs assembling a return (REQ-B4); fractional CFOs
+asking considerably harder things.
+**Constraints:** ADR-0009, ADR-0014, ADR-0015, ADR-0011.
+**Rationale — the failure being designed against.** A confident wrong number. An owner-operator
+has no professional in the loop to catch one, and a CPA who catches one stops trusting the
+source entirely, which forfeits the channel `vision.md` depends on.
+
+### REQ-B9 — Bounded financial guidance where there is no CFO
+**P2 · Blocked.** Answer the questions an owner asks when nobody holds the CFO seat: runway,
+margin, whether a hire is affordable, what changed since last month.
+
+**What it declines matters more than what it answers.** Guidance is bounded to what the books
+support in a simple environment. Anything turning on tax election, entity structure,
+financing, or jurisdiction is referred to a professional and named as such.
+
+Blocked on the boundary itself, which is undesigned. It cannot be specified as "be careful" —
+it needs stated categories that a test can hold it to.
+**Serves:** owner-operators, and segment 1 before it engages a fractional CFO.
+**Constraints:** REQ-B8, REQ-A8 (guidance that ignores the declared basis is wrong by
+construction).
+**Rationale:** this audience cannot assess whether an answer is right and has nobody in the
+loop who can. Wrong guidance delivered confidently is worse than declining.
 
 ---
 
@@ -251,11 +315,28 @@ change rather than a fork.
 ### REQ-C3 — Payment processor feeds
 **P2 · Accepted.** Revenue from processors is ingested through the same protocol as bank
 feeds.
-**Serves:** consultants, service businesses.
+**Serves:** owner-operators taking card payments; any entity with revenue arriving through a
+processor rather than a bank.
 
 ### REQ-C4 — Idempotent ingestion
 **P0 · Accepted.** Re-running a sync never double-books.
 **Serves:** all. **Constraints:** ADR-0011.
+
+### REQ-C5 — Migration from an incumbent system
+**P1 · Blocked.** Import an existing chart of accounts, transaction history, and balances from
+the system a company already runs, which is most often QuickBooks.
+
+**Serves:** owner-operators, and segment 1 from the point it has books at all. Nobody adopts a
+ledger by re-keying three years of history, so the displacement claimed in `vision.md` is not
+honest without this.
+**Constraints:** ADR-0006 (imported history is posted history — what arrives is what stays,
+and fixing it later means reversing entries), REQ-A8 (an import carries an accounting basis
+and it must match the entity's declared one), REQ-A1, REQ-C4.
+**Blocked on: what fidelity is promised.** A QuickBooks file holds constructs with no clean
+double-entry equivalent, and an import that silently reinterprets them yields books nobody can
+reconcile against the source. The honest options run from an opening trial balance to full
+transaction history, and they are materially different products with different trust
+implications. Decide before specifying.
 
 ---
 
@@ -264,7 +345,7 @@ feeds.
 ### REQ-D1 — Per-client Slack channels
 **P1 · Accepted.** A fractional CFO manages each client in a dedicated channel, and the
 agent operates in that channel with access scoped to that client's entity.
-**Serves:** fractional CFOs — the "save 15+ hours per client per month" claim rests on this.
+**Serves:** fractional CFOs, and any deployment holding more than one entity.
 **Constraints:** ADR-0022 (unblocked it through the ADR-0012 scope gate), ADR-0011, ADR-0023,
 ADR-0024.
 **The rule that matters:** *channel membership is not authorization.* A request is permitted only
@@ -298,8 +379,10 @@ demo.
 **Constraints:** [ADR-0018](../adr/0018-local-compose-dev-and-production.md), ADR-0003, ADR-0019. **Verified by:** CI gate 2.
 
 ### REQ-E2 — Managed cloud deployment
-**P1 · Accepted.** A hosted tier on one maintained cloud target.
-**Serves:** non-technical audiences. **Constraints:** [ADR-0016](../adr/0016-opentofu-single-cloud-target-iac.md), [ADR-0017](../adr/0017-gcp-initial-cloud-target.md).
+**P1 · Accepted.** A hosted tier on one maintained cloud target, operated under independent
+attestation (REQ-E8).
+**Serves:** every audience above stage 0. **Constraints:** REQ-E8 (the attestation is what this
+tier sells), [ADR-0016](../adr/0016-opentofu-single-cloud-target-iac.md), [ADR-0017](../adr/0017-gcp-initial-cloud-target.md).
 
 ### REQ-E3 — No lock-in to any provider
 **P1 · Accepted.** Configuration is environment variables only; moving deployment targets
@@ -312,14 +395,25 @@ actor, and sensitive values never appear in logs.
 **Serves:** all. **Constraints:** ADR-0011.
 
 ### REQ-E5 — Data export and portability
-**P1 · Accepted.** A user can get their complete books out in a form another system can
-read. Owning your data is only true if you can leave with it.
-**Serves:** self-hosters.
+**P1 · Accepted.** A user can get their complete books out in a form another system can read,
+continuously and without asking. Owning your data is only true if you can leave with it.
+**Serves:** all, and the commercial thesis in `vision.md`, which is not credible if leaving is
+hard.
+**Rationale.** Bench shut down in December 2024 with no notice, locking roughly 12,000
+customers out of their books days before tax season, with no clean export path to QuickBooks
+or Xero. Export is not a courtesy owed at the end; it is the property that makes "the software
+is free" a true statement rather than a slogan.
 
 ### REQ-E6 — Subscription billing and metering
-**P2 · Blocked.** The $15/month price point in `vision.md` implies billing that is
-entirely unspecified, and it must not exist in the self-hosted artifact.
-**Serves:** the managed tier.
+**P2 · Blocked.** The managed tier needs billing and metering, and neither may exist in the
+self-hosted artifact.
+
+The price point is undecided; the cost structure is not. The skill runs inside a runtime the
+user already has, and that runtime supplies its own inference (ADR-0014), so the end user
+carries token cost and the hosted side is ordinary SaaS economics. Metering therefore counts
+entities and hosted-ledger usage. It does not count tokens.
+**Serves:** the managed tier. **Constraints:** ADR-0003 (billing code must not ship in the
+self-hosted build).
 
 ### REQ-E7 — Retention schedule by record class, with audited disposal
 **P1 · Accepted.** Retention is a company policy, **layered by record class rather than a single
@@ -356,24 +450,56 @@ makes an inconsistently applied schedule worse than none, and is why disposal is
 approved, and logged.
 **Open:** whether ledger disposal is ever offered at all, and how a GDPR erasure request interacts
 with an append-only ledger holding payee names.
+
+### REQ-E8 — Independent attestation of the hosted service
+**P1 · Blocked.** The managed deployment is audited by an independent third party, and the
+report is available to customers and to their advisors.
+
+**This is what the commercial tier sells.** Nobody reads source code to decide whether to
+trust a general ledger. Early adopters trust CFOKit because trying it costs nothing and their
+peers run it; every professional downstream — a fractional CFO, a CPA, a lender — trusts the
+attestation instead. It is the one asset a fork cannot copy, which is what makes an MIT
+licence and a commercial business consistent rather than contradictory.
+**Serves:** the managed tier, and every audience beyond a founder running it alone.
+**Constraints:** ADR-0011 and REQ-E4 (an attributable audit trail is the evidence), ADR-0016,
+REQ-E7.
+**Blocked on: which report.** SOC 2 Type II is the recognised one. SOC 1 speaks to controls
+over financial reporting and may matter more for a system of record whose output feeds a
+return. Possibly both, and the answer changes what has to be built.
+**Why this is a requirement and not a procurement task.** Evidence collection, access review,
+change management, and incident handling have to be properties of how the service is operated.
+A control that was not operating cannot be attested retroactively, so the audit period begins
+when the practice begins rather than when an auditor is engaged. Deciding this late costs a
+year.
 ---
 
 ## Traceability
 
 | Vision claim | Requirements |
 |---|---|
-| "Bookkeeping automation" | REQ-B1, REQ-B7, REQ-C1, REQ-C4 |
+| Bookkeeper and controller work against a ledger you own | REQ-A1, REQ-A4, REQ-B1, REQ-B7 |
+| Rules you approve; every posting traces to the rule that made it | REQ-B7 |
+| Feeds arrive without manual entry | REQ-C1, REQ-C3, REQ-C4, REQ-C2 |
+| Periods close on a schedule | REQ-A4, REQ-A8 |
+| Statements a lender, board, or accountant will accept | REQ-B3, REQ-A7 |
+| Questions do not have to be anticipated in advance | REQ-B8, REQ-A7, REQ-D2, REQ-D3 |
+| A CPA can answer their own questions | REQ-B4, REQ-B8, REQ-E5 |
 | Invoicing and getting paid | REQ-A9 |
-| "Tax preparation" | REQ-B4, REQ-A6 |
-| "Cash flow monitoring" | REQ-B2, REQ-A7 |
-| "Compliance tracking" | REQ-B5 |
-| "Financial reporting" | REQ-B3, REQ-A7 |
-| "Deploy once, manage multiple clients through Slack" | REQ-A2, REQ-D1, REQ-E1 |
-| "Save 15+ hours per client per month" | REQ-B1, REQ-C1, REQ-D1 |
-| "Extensible via MCP" | REQ-D2 |
-| "Open source, modular architecture" | REQ-C2, REQ-E3 |
-| "$15/month" | REQ-E6 |
+| Guidance where nobody holds the CFO seat | REQ-B9, REQ-B2 |
+| Displaces QuickBooks plus a bookkeeping service | REQ-C5, REQ-B1, REQ-B7 |
+| Owner-operator complexity: payroll, sales tax, inventory, job costing | REQ-A10, REQ-A6 — **payroll and job costing have no requirement** |
+| Runs on a laptop with no cloud account | REQ-E1, REQ-C2, REQ-E3 |
+| The hosted service is operated under third-party audit | REQ-E2, REQ-E8, REQ-E4 |
+| Leaving is genuinely easy, or the software is not free | REQ-E5 |
+| A client per Slack channel | REQ-A2, REQ-D1 |
+| Extensible over MCP | REQ-D2, REQ-C2 |
 
-**Unblocking work is the critical path.** Six requirements are `Blocked`, and five of the
-ten vision claims depend on at least one of them. REQ-D1 and REQ-B4 block the two audiences
-the positioning leans on hardest.
+**Unblocking work is the critical path.** Eight requirements are `Blocked` — REQ-A10, REQ-B4,
+REQ-B5, REQ-B6, REQ-B9, REQ-C5, REQ-E6, REQ-E8 — and REQ-A6 is deferred. Two of the blocked
+ones sit under the commercial thesis rather than under a feature: REQ-E8 decides what the
+hosted tier sells, and REQ-C5 decides whether anyone with existing books can adopt at all.
+Neither is a late-stage concern.
+
+**Two gaps are named rather than numbered.** Payroll and job costing appear in `vision.md` as
+owner-operator complexity and have no requirement here. That is deliberate until an entity
+needs one, and it is recorded so the omission stays visible.
