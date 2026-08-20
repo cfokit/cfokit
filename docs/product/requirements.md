@@ -181,6 +181,7 @@ delegates to a rate provider or to the entity's CPA.
 from the first transaction rather than at some later stage.
 **Constraints:** ADR-0004, ADR-0006, REQ-A9 (an invoice carries tax lines).
 **Trigger to activate:** an entity that collects sales tax.
+**User-facing statement:** [`accounting-policy.md`](accounting-policy.md) § 11.
 **Related:** REQ-B5 has the same shape — jurisdiction-specific content that needs an extension
 mechanism designed before any of the content is written. Solve that once.
 
@@ -277,6 +278,7 @@ skill says so and says why.
 **Serves:** owners asking what they spent; CPAs assembling a return (REQ-B4); fractional CFOs
 asking considerably harder things.
 **Constraints:** ADR-0009, ADR-0014, ADR-0015, ADR-0011.
+**User-facing statement:** [`accounting-policy.md`](accounting-policy.md) § 10.
 **Rationale — the failure being designed against.** A confident wrong number. An owner-operator
 has no professional in the loop to catch one, and a CPA who catches one stops trusting the
 source entirely, which forfeits the channel `vision.md` depends on.
@@ -294,6 +296,7 @@ it needs stated categories that a test can hold it to.
 **Serves:** owner-operators, and segment 1 before it engages a fractional CFO.
 **Constraints:** REQ-B8, REQ-A8 (guidance that ignores the declared basis is wrong by
 construction).
+**User-facing statement:** [`accounting-policy.md`](accounting-policy.md) § 10.
 **Rationale:** this audience cannot assess whether an answer is right and has nobody in the
 loop who can. Wrong guidance delivered confidently is worse than declining.
 
@@ -332,6 +335,7 @@ honest without this.
 **Constraints:** ADR-0006 (imported history is posted history — what arrives is what stays,
 and fixing it later means reversing entries), REQ-A8 (an import carries an accounting basis
 and it must match the entity's declared one), REQ-A1, REQ-C4.
+**User-facing statement:** [`accounting-policy.md`](accounting-policy.md) § 12.
 **Blocked on: what fidelity is promised.** A QuickBooks file holds constructs with no clean
 double-entry equivalent, and an import that silently reinterprets them yields books nobody can
 reconcile against the source. The honest options run from an opening trial balance to full
@@ -463,6 +467,7 @@ licence and a commercial business consistent rather than contradictory.
 **Serves:** the managed tier, and every audience beyond a founder running it alone.
 **Constraints:** ADR-0011 and REQ-E4 (an attributable audit trail is the evidence), ADR-0016,
 REQ-E7.
+**User-facing statement:** [`accounting-policy.md`](accounting-policy.md) § 13.
 **Blocked on: which report.** SOC 2 Type II is the recognised one. SOC 1 speaks to controls
 over financial reporting and may matter more for a system of record whose output feeds a
 return. Possibly both, and the answer changes what has to be built.
