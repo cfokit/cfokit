@@ -1,7 +1,7 @@
 # CFOKit — Product Vision
 
 - **Status:** Draft
-- **Date:** 2026-08-17
+- **Date:** 2026-08-20
 - **Owner:** Geoff
 
 > **This is the source document for product positioning.** The root `README.md` derives a
@@ -14,56 +14,267 @@
 
 ## Tagline
 
-**Every business needs a CFO. Now every business can have one.**
+**Unwritten.** One constraint on it: it must not describe CFOKit as a substitute for a CFO.
 
 ## Mission
 
-Make CFO-level financial intelligence accessible to every business, regardless of size.
+Give every business a finance function it can afford to run.
 
 ## Identity
 
 | | |
 |---|---|
 | **Name** | CFOKit |
-| **GitHub** | `github.com/cfokit` |
-| **Domain** | cfokit.com |
+| **GitHub** | `github.com/cfokit/cfokit` |
+| **Domain** | cfokit.ai |
 | **Brand** | The open source CFO toolkit |
 | **Licence** | MIT |
 
 ## The problem
 
-CFO-level financial work — bookkeeping, tax preparation, cash flow monitoring, compliance
-tracking, financial reporting — is necessary at every company size but only affordable
-above a certain one. A full-time CFO costs around $200K/year. Below that threshold the
-work does not disappear; it lands on a founder at the end of a quarter, or on a fractional
-CFO absorbing operational bookkeeping across a dozen clients instead of advising.
+### What a CFO actually does
 
-## Value proposition
+A CFO owns capital, cash, and the plan. Raising money and managing the people who supplied
+it, whether that is a board, an investor, or a lender. Treasury, meaning payroll clears,
+working capital does not strangle the business, and someone has a view on when to pay and
+how hard to chase. The operating model and the budget, and the account of why actuals
+diverged from it. Pricing and unit economics. Whether to hire, build, buy, or shut
+something down. Risk, which covers insurance, fraud exposure, contract terms, entity
+structure, and tax strategy.
 
-CFOKit gives you AI agents that handle the work a CFO would do: bookkeeping, tax
-preparation, cash flow monitoring, compliance tracking, and financial reporting. Deploy
-once, manage multiple clients through Slack.
+The role is forward-looking and externally facing, and the person is accountable for
+outcomes rather than for documents. Financial statements are an input to nearly all of it.
+
+Producing those statements is two other jobs. A bookkeeper records and reconciles through
+the month. A controller closes it and stands behind the result. A CPA works from the closed
+year and files against it.
+
+### What small companies actually have
+
+Below a certain size a company has none of those three. The recording and closing still has
+to happen, so it lands on whoever is nearest and gets done late, inconsistently, and under
+deadline pressure. Everything downstream inherits that condition: the forecast, the board
+pack, the loan application, the return.
+
+The name CFOKit describes the shape of the answer. It is a kit of agent skills that serves a
+CFO by doing the work beneath one, so that whoever holds the CFO role — a founder, a
+fractional CFO, or an owner-operator — has something worth working from.
 
 ## Who it serves
 
-| Audience | Situation |
+**The payer is the company, in every case.** This is the same buyer QuickBooks has. Who
+operates the product and who recommends it both vary, and conflating those three roles
+produces bad positioning, so they are kept separate throughout this document.
+
+Two segments arrive at the problem from different directions.
+
+### Segment 1 — The tech company
+
+Delaware C-corp, or an LLC before the first raise. Outside investors and an outside board,
+or an intention to have both. Complexity arrives through scale and through the reporting
+obligations that come with other people's money. This segment moves through stages, and the
+same company walks all of them.
+
+| Stage | Who operates it | What they pay today | Who advocates |
+|---|---|---|---|
+| **0.** Early, no finance help | Founder | QuickBooks, or a spreadsheet | Peers, on Hacker News and Reddit |
+| **1.** Revenue, buys bookkeeping | Founder, plus an opaque service | Bookkeeping on top of QuickBooks | None yet |
+| **2.** Engages a fractional CFO | Fractional CFO and founder | A retainer on top of the above | The fractional CFO |
+| **3.** In-house controller and staff | Controller, staff accountants | Salaries | The controller, internally |
+
+A CPA sits alongside every row of that table, and alongside all of segment 2. That is why the
+CPA channel matters more than any single stage in it.
+
+Stage 0 can last for years. Nothing about the transitions is a churn event for the company,
+so CFOKit either follows it up the sequence or is replaced at one of the boundaries. That is
+why the deferrals in REQ-A6, REQ-A8 and REQ-A9 reserve their data shapes rather than closing
+them off: they are stage-3 requirements sitting inside a stage-0 product.
+
+### Segment 2 — The owner-operator
+
+An LLC or an S-corp that is deliberately not scaling. No outside investors, no board, no
+plan to hire an accounting team. An independent consultancy that may never have full-time
+employees, or a business with a modest number of hourly workers — a restaurant, a retail
+shop, a construction firm.
+
+There is no stage sequence here, because the company is not trying to become something else.
+Their financial questions are about paying themselves, whether they can afford someone, what
+they owe in tax, and whether a particular job or location makes money. The only professional
+in the loop is a CPA, seen once a year.
+
+**Complexity arrives from the opposite direction.** The tech company's complexity is
+structural: accrual, consolidation, equity. The owner-operator's is operational: payroll for
+hourly staff, sales tax, inventory for anyone holding stock, job costing and progress
+billing in construction. Of those, only inventory has a requirement, and it is deferred.
+
+### Advocates, and other people in the room
+
+**Fractional CFOs are advocates, not payers.** They carry four to eight clients at five to
+ten hours per week each, which caps the practice at roughly one person's capacity. A client
+whose ledger is already current and closed does not consume the first month of an engagement
+in reconstruction, which lets the fractional CFO scope to strategy, planning, and compliance,
+and lets them tell the client to drop the bookkeeping service. They only appear in segment 1
+from stage 2 onward, and a company can decline to have one at all, so this channel is real but
+narrow.
+
+**CPAs are the structural channel.** Every company has one, filing is not optional, and the
+deadline is fixed, which makes this the relationship worth building around.
+
+The mechanism is the one Vanta built with SOC 2 auditors. Vanta's audit partners pull evidence
+directly from the platform, which cuts their fieldwork and sometimes their fee, so they
+recommend it to clients — and the audited company pays, never the auditor. A CPA preparing a
+return spends much of the engagement chasing the client for detail that already exists
+somewhere. A CPA who can query the ledger directly, against books closed on a schedule with
+every assignment traceable to a rule, finishes faster and can price accordingly. The client
+gets a cheaper return and the CPA gets a reason to put the next client on CFOKit.
+
+This makes the ad hoc query surface a CPA-facing feature rather than only an owner-facing one,
+and it sets the standard for REQ-B4: the measure is whether a preparer can answer their own
+questions without emailing the client. The persona itself is not developed in detail yet.
+
+**Contributors** are developers who want the system to exist and to extend it. They write the
+connector for their own bank and the compliance rules for their own state, which is what
+REQ-C2's protocol boundary is for. They overlap with segment 1 founders only incidentally.
+
+## Value proposition
+
+CFOKit is a kit of agent skills that does bookkeeper and controller work against a
+double-entry ledger the company owns.
+
+Transactions arrive from bank, card, and payment-processor feeds and are assigned by stored
+rules that run deterministically. The same transaction against the same rule set produces the
+same result, and the rule that produced it stays on the record.
+
+A payee name alone is frequently not enough to decide. An Amazon charge might be office
+supplies one week and marketing materials the next, so rules match on more than the merchant,
+and anything the rule set cannot resolve is asked rather than guessed. Approval is sought for
+the rule, so the same question is not asked twice.
+
+Periods close on a schedule. Corrections are reversing entries rather than edits, so the
+history is complete by construction. Statements come out in a form a lender, a board, or an
+accountant will accept.
+
+The ledger is reachable over MCP and a documented HTTP API, so the questions do not have to be
+anticipated in advance. An owner can ask what they spent on contractors last quarter. A CFO
+can ask something considerably harder. Guardrails live in the skill: entity scope is enforced
+server-side regardless of what is asked, answers come from the books rather than from
+estimation, and the skill declines what the data cannot support.
+
+The software is MIT licensed and runs on a laptop with no cloud account. The hosted service
+is the same software, operated under third-party audit.
+
+### What it displaces
+
+| Today | Monthly |
 |---|---|
-| Solo founders | Managing S-corps and LLCs without finance staff |
-| Small business owners | Cannot justify a full-time CFO hire |
-| Fractional CFOs | Managing 5–15 clients simultaneously |
-| Consultants and service businesses | Tech-savvy, want automation over process |
+| QuickBooks Online, Simple Start through Plus | $38–115 |
+| Outsourced bookkeeping, typical small business | $300–900 |
+| **Combined** | **$340–1,000** |
+
+A fractional CFO retainer of $4,000–8,000 per month is not displaced. It gets re-pointed at
+the work it was engaged for.
+
+> **Figures.** QuickBooks tiers reflect Intuit's May 2026 increase of 15–25%, the largest in
+> the product's history. Bookkeeping and retainer ranges are 2026 market surveys. Sources are
+> listed at the end of this document.
+
+### Why this beats a bookkeeping service
+
+Measurable criteria, not adjectives:
+
+| | Human service | CFOKit |
+|---|---|---|
+| **Latency** | Close lands two to six weeks after month end | Books current to yesterday |
+| **Consistency** | Staff turnover means re-teaching the business | Rules are stored data and outlive any staffing change (REQ-B7) |
+| **Question volume** | The same recurring charge queried monthly | Rules approved once; queries trend to zero |
+| **Traceability** | A finished P&L, no visible reasoning | Every posting names its rule and source transaction |
+
+### What pristine books make possible
+
+The advantage compounds at the moments that matter most, and it accrues to a human rather
+than to the software. An equity event, an acquisition, a legal settlement, an audit, a
+forensic review — each one is an expert asking hard questions of historical data, and what
+determines whether they can answer is the quality of the record they inherit.
+
+A CFO working from books maintained continuously, assigned by traceable rules, and closed on
+schedule can ask things that are unavailable against a ledger reconstructed under deadline
+pressure. A forensic accountant gets a complete append-only history instead of a file with a
+retention-limited audit log behind it.
+
+**The competitor is Intuit, not a bookkeeping firm.** Intuit has put over $2B into AI on the
+platform, and Intuit Assist with "Continuously Clean Books" is shipping into the higher
+tiers now. *"AI does your bookkeeping"* is the incumbent's current roadmap and is not a
+differentiator. Consistency and traceability are, and both are hard to reach from a
+probabilistic categoriser sitting on a retention-limited audit log.
+
+## The commercial thesis
+
+CFOKit is MIT licensed and stays that way. Anyone can run it, fork it, or build on it without
+asking, and the self-hosted build is complete rather than a limited edition.
+
+The commercial product is the hosted service, and what it sells is assurance.
+
+Nobody reads the source to decide whether to trust their general ledger to it. Early
+adopters trust it because trying it costs nothing and because people they recognise are
+already running it. Everyone downstream — a fractional CFO, an accountant, a lender —
+trusts it because an independent auditor has attested to how the hosted service is operated.
+That report is the one asset a fork cannot copy, and the operating history behind it takes
+years to accumulate.
+
+This is the position argued at [kindnessflywheel.org](https://kindnessflywheel.org): as AI
+compresses the cost of building software, the software stops being the defensible part, and
+what remains is trust and the willingness to behave well over a long period. CFOKit both
+applies that hypothesis and tests it.
+
+### Cost structure
+
+CFOKit ships as an agent skill that installs into an agentic runtime the user already has,
+and that runtime supplies its own inference. The end user carries the token cost, the same
+way they carry the cost of the machine the agent runs on.
+
+What CFOKit hosts is the ledger, the MCP surface, the API, and the compliance posture around
+them. That is a conventional SaaS cost structure of Postgres, compute, and storage, and it
+does not move with token prices. Pricing is therefore a question about the value of the stack
+being displaced, decided on ordinary SaaS margins.
+
+This also shapes the product surface. Because the intelligence sits in the user's runtime
+rather than behind our API, the right thing to expose is a complete, well-described data
+interface rather than a fixed menu of canned reports, which is what ADR-0009 and ADR-0015
+already commit to.
+
+### What the thesis constrains
+
+Two things follow, and they bind the product:
+
+- **Leaving has to be genuinely easy**, or the software is not really free. Export is
+  continuous and complete, and the self-hosted build stays at parity with the hosted one.
+  Bench's collapse in December 2024 locked roughly 12,000 customers out of their own books
+  days before tax season, with no clean export path. That is the failure this constraint
+  exists to prevent.
+- **Honesty about ordinary things** — an outage, a slipped date, a price increase — is the
+  only evidence of character available before a crisis, and it is what makes the rest
+  credible.
 
 ## Positioning by audience
 
-**For business owners.** You need CFO-level financial intelligence. You can't afford a
-$200K/year hire. CFOKit gives you an AI CFO team for $15/month.
+**For the founder.** Your books are essential and non-differentiating. You need them and you
+need to trust them, and the return on your own time in them stops the moment they are correct.
+Nothing you do above that threshold makes the business better. CFOKit keeps them current and
+shows you why every transaction landed where it did, so trusting them is not an act of faith.
+It costs nothing to try. Move to the hosted service when you would rather not run your own
+Postgres.
 
-**For fractional CFOs.** Manage 10+ clients without the bookkeeping burden. CFOKit handles
-the operational work in dedicated Slack channels per client. Save 15+ hours per client per
-month.
+**For the owner-operator.** You already pay for QuickBooks and still do the work. CFOKit does
+the work: transactions categorised as they arrive, books that are current rather than
+reconstructed in April, and straight answers about what you can afford.
 
-**For developers.** Open source, modular architecture. Skills-based system. Cloud-native.
-Extensible via MCP. Built with Claude AI.
+**For the fractional CFO.** You were hired for the plan and the capital, and the first month
+of every engagement goes to making an inherited ledger trustworthy. A client on CFOKit
+arrives closed, current, and traceable, so the engagement is the work you sell.
+
+**For the developer.** MIT, no ORM, hand-written SQL, a double-entry engine differentially
+tested against Beancount. Runs under `docker compose up` with no cloud account. Extensible
+over MCP.
 
 ## Community identity
 
@@ -71,9 +282,9 @@ The project succeeds when people describe themselves in these terms unprompted.
 
 **Users say:**
 
-- "I use CFOKit to manage my startup's finances"
-- "As a fractional CFO, CFOKit is my secret weapon"
-- "CFOKit handles the CFO work while I focus on product"
+- "I run my company's books on CFOKit"
+- "As a fractional CFO, I get every client onto CFOKit"
+- "CFOKit keeps my books current so I only think about them once a quarter"
 
 **Contributors say:**
 
@@ -81,38 +292,34 @@ The project succeeds when people describe themselves in these terms unprompted.
 - "I built the CFOKit Stripe integration"
 - "Contributing S-corp compliance rules to CFOKit"
 
-That second list is a design constraint, not an aspiration. A contributor can only say "I
-built the CFOKit Stripe integration" if adding a provider is an additive change behind a
-stable protocol — which is why provider-specific code sits behind one
+That second list is a design constraint rather than an aspiration. A contributor can only say
+"I built the CFOKit Stripe integration" if adding a provider is an additive change behind a
+stable protocol, which is why provider-specific code sits behind one
 ([ADR-0003](../adr/README.md)) and why the connector package is not named after a vendor.
 
 ## Launch messaging
 
-Held here so the eventual marketing README stays consistent with it.
+Held here so the eventual marketing README stays consistent with it. The audience for launch
+is the part of segment 1 at stage 0 that will self-host, the one group whose trust comes from
+the software being free rather than from an audit report.
 
-**Hacker News:** "Show HN: CFOKit – Open source AI agents that act as your CFO team"
+**Hacker News:** "Show HN: CFOKit – Open source double-entry books your AI agent maintains"
 
-**Press angle:** "Former [company] CTO open sources CFOKit, giving every startup an AI CFO"
-
-**Reddit (r/entrepreneur, r/startups):** "I automated my S-corp's CFO work with open
-source AI agents – here's how"
+**Reddit (r/smallbusiness, r/startups):** "I replaced my $500/month bookkeeping service with
+open source agents – here's the ledger design"
 
 **Announcement post:**
 
-> Introducing CFOKit 🎯
+> Introducing CFOKit
 >
-> Every business needs a CFO.
-> Now every business can have one.
+> Open source, agent-maintained books.
 >
-> Open source AI agents for:
-> • Bookkeeping automation
-> • Tax preparation
-> • Cash flow monitoring
-> • Compliance tracking
+> • Bank and card feeds in, categorised by rules you approve once
+> • Real double-entry, append-only, tested against Beancount
+> • Statements a lender or your accountant will accept
+> • MIT licensed, runs on your laptop, no cloud account
 >
-> Perfect for solo founders, small businesses, and fractional CFOs.
->
-> ⭐ github.com/cfokit
+> github.com/cfokit/cfokit
 
 ## Open questions
 
@@ -120,21 +327,42 @@ Tracked here rather than settled, because each needs a decision before it can be
 
 | Question | Why it is open |
 |---|---|
-| The $15/month price point | Implies a managed tier with billing and metering, none of which is specified or decided. |
-| "AI CFO team" as plural agents | Whether the bookkeeper, tax, cash-flow, and compliance roles are separate skills or one skill with several modes is undecided. |
-| How reports and dashboards are rendered | REQ-B3 promises statements "a human can hand to a lender or board", which a chat message is not. Options range from a static generated file to a served report URL. The scope gate (ADR-0012) is now written, so this needs an ADR passing that gate — as Slack did in ADR-0022. A served URL additionally has to answer ADR-0018's rejection of a second authentication path. |
-| Repository naming in launch copy | Announcement copy has referenced `cfokit/core`; the repository is `cfokit/cfokit`. Correct the copy, not the repository. |
+| The price point | The cost structure is settled (see [Cost structure](#cost-structure)); the number is not. It has to sit credibly against a $340–1,000 stack, and it implies a managed tier with billing and metering that is unspecified (REQ-E6). |
+| Scope of the attestation | The commercial thesis rests on third-party audit, and nothing in `requirements.md` covers it. SOC 2 Type II is the obvious candidate; SOC 1 may matter more for a system of record. This needs a requirement and probably an ADR, because evidence collection and access review constrain design long before an auditor arrives. |
+| QuickBooks import | Displacing a stage-1 or owner-operator incumbent means importing their existing books. No requirement exists for it, and if this is the entry motion it is a P0. |
+| Owner-operator complexity | Inventory and sales tax are day-one facts for a restaurant or retail shop. REQ-A6 defers lot tracking on the grounds that no current entity holds inventory, which is true today and stops being true the moment this segment is served. Sales tax has no requirement at all. |
+| "AI CFO team" as plural agents | Whether the bookkeeper, controller, guidance, and compliance roles are separate skills or one skill with several modes is undecided, and it determines the layout of `skills/` (REQ-B6). |
+| How reports and dashboards are rendered | REQ-B3 promises statements "a human can hand to a lender or board", which a chat message is not. Options range from a static generated file to a served report URL. This needs an ADR passing ADR-0012's scope gate, as Slack did in ADR-0022. A served URL additionally has to answer ADR-0018's rejection of a second authentication path. |
+| Guardrails on ad hoc querying | An open MCP and API surface means users ask questions nobody anticipated. Owner-operators in particular cannot assess whether an answer is right and have no professional in the loop to catch it. What the skill declines to answer matters more than what it answers, and the refusal boundary is undesigned. |
 
 ## What CFOKit is not
 
 Drawn from binding scope decisions ([ADR-0012](../adr/README.md)) so positioning cannot
 quietly promise them:
 
-- Not a web application. CFOKit is agents and an API, not a dashboard you log into. Note
-  this is a **gate, not a prohibition** — scope discipline forbids building a web UI or
-  admin console *without an ADR*, and rendered report output is an open question below,
-  not a settled no.
-- Not a bank. It reads financial data and keeps books; it does not move money.
-- Not a filing agent. It prepares tax work; a human files.
-- Not a SaaS-only product. Self-hosting is a product promise
-  ([ADR-0003](../adr/README.md)), which is why the local stack needs no cloud account.
+- **Not a CFO.** It does the bookkeeper and controller work a CFO depends on. Where no CFO
+  exists, the guidance skill answers a bounded set of questions and says so.
+- **Not a web application.** CFOKit is agents and an API rather than a dashboard you log into.
+  This is a **gate, not a prohibition** — scope discipline forbids building a web UI or admin
+  console *without an ADR*, and rendered report output is an open question above rather than
+  a settled no.
+- **Not a bank.** It reads financial data and keeps books; it does not move money.
+- **Not a filing agent.** It produces the closed year, the schedules, and the supporting
+  detail a preparer works from. A CPA prepares and files.
+- **Not a SaaS-only product.** Self-hosting is a product promise
+  ([ADR-0003](../adr/README.md)), which is why the local stack needs no cloud account. The
+  reason is control, cost, and freedom from lock-in. It is not the trust mechanism — that is
+  the attestation on the hosted service.
+
+## Sources
+
+Market figures used above, checked August 2026.
+
+- [Eightx — fractional CFO cost and engagement size, 2026](https://eightx.co/blog/fractional-cfo-cost-pricing-guide)
+- [CFO Advisors — fractional CFO hourly rate benchmarks, 2026](https://cfoadvisors.com/blog/fractional-cfo-hourly-rates-2026-benchmarks)
+- [ProjectionHub — client load and hours per client](https://www.projectionhub.com/post/how-to-become-a-fractional-cfo)
+- [Cocountant — outsourced bookkeeping costs, 2026](https://cocountant.com/blog/bookkeeping/outsourced-bookkeeping-costs-2026-pricing-guide/)
+- [Steph's Books — QuickBooks Online price increase, May 2026](https://stephsbooks.com/news/quickbooks-online-price-increase-2026)
+- [Beancount.io — QuickBooks Online cost breakdown, 2026](https://beancount.io/blog/2026/07/26/quickbooks-online-price-increase-2026-cost-breakdown-guide)
+- [Inc. — Bench customers on the shutdown](https://www.inc.com/brian-contreras/benchs-jilted-customers-say-the-accounting-startups-problems-began-long-before-its-abrupt-shutdown/91102407)
+- [Vanta — auditor partner network](https://www.vanta.com/partners/auditors)
