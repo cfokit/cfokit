@@ -17,7 +17,32 @@ messages and ADRs.
 - **`Constraints` cite the ADRs that bound the solution space**, so a spec author does not
   rediscover them.
 - **`Status`** is `Accepted` (decided, not yet built), `Blocked` (needs a decision first),
-  or `Built`.
+  `Deferred` (accepted in principle, with a stated trigger), or `Built`.
+
+## How this document changes
+
+This document is live, unlike the ADRs. An ADR is immutable because the reasoning at a
+point in time *is* the artifact; a requirement states what the product owes someone now,
+so it is revised whenever that changes. Revise on decisions rather than on a release
+cadence — specs cite these ids continuously, not at release boundaries.
+
+Four kinds of change, handled differently:
+
+| Change | Handling |
+|---|---|
+| **Activation** — a `Deferred` or `Blocked` requirement's trigger fires | Status change only. The id, the text, and everything citing it are untouched. Adding inventory is REQ-A6 activating, not a new requirement. |
+| **Refinement** — the intent is unchanged and the statement gets sharper | Edit in place. |
+| **Reversal** — the requirement was wrong | Strike through, keep it, and write a new id. Never renumber, never delete. |
+| **Redefinition** — the id survives but its meaning moves | **New id, once anything relies on it.** A spec, test, or commit citing REQ-X will silently drift if REQ-X quietly acquires a different scope. The test is whether something already depends on it, not whether the change felt small while writing it. |
+
+**Where the reasoning lives.** An edit overwrites its own history, so the only surviving
+explanation is the commit message. That is adequate when commits are written to carry it
+and worthless when they say "update requirements". A change to what the product owes
+someone wants an ADR rather than a good commit message.
+
+**One coupling to watch.** P1 is defined against the positioning in `vision.md`, so a
+vision change re-prioritises requirements without a word of requirement text changing.
+When positioning moves, re-read the priorities before trusting them.
 
 ## Priority definitions
 
