@@ -1,7 +1,7 @@
 # CFOKit — Product Vision
 
 - **Status:** Draft
-- **Date:** 2026-08-20
+- **Date:** 2026-08-24
 - **Owner:** Geoff
 
 > **This is the source document for product positioning.** The root `README.md` derives a
@@ -51,14 +51,14 @@ The role is forward-looking and externally facing, and the person is accountable
 outcomes rather than for documents. Financial statements are an input to nearly all of it.
 
 Producing those statements is two other jobs. A bookkeeper records and reconciles through
-the month. A controller closes it and stands behind the result. A CPA works from the closed
-year and files against it.
+the month; a controller closes it and stands behind the result. A CPA then works from the
+closed year and files against it.
 
 ### What small companies actually have
 
-Below a certain size a company has none of those three. The recording and closing still has
-to happen, so it lands on whoever is nearest and gets done late, inconsistently, and under
-deadline pressure. Everything downstream inherits that condition: the forecast, the board
+Below a certain size a company has a CPA and neither of the other two. The recording and
+closing still has to happen, so it lands on whoever is nearest and gets done late,
+inconsistently, and under deadline pressure. Everything downstream inherits that condition: the forecast, the board
 pack, the loan application, the return.
 
 The name CFOKit describes the shape of the answer. It is a kit of Agent Skills that serves a
@@ -326,7 +326,8 @@ The project succeeds when people describe themselves in these terms unprompted.
 That second list is a design constraint rather than an aspiration. A contributor can only say
 "I built the CFOKit Stripe integration" if adding a provider is an additive change behind a
 stable protocol, which is why provider-specific code sits behind one
-([ADR-0003](../adr/README.md)) and why the connector package is not named after a vendor.
+([ADR-0003](../adr/0003-portability-as-a-build-gate.md)) and why the connector package is not
+named after a vendor.
 
 ## Launch messaging
 
@@ -354,7 +355,8 @@ open source agents – here's the ledger design"
 
 ## What CFOKit is not
 
-Drawn from binding scope decisions ([ADR-0012](../adr/README.md)) so positioning cannot
+Drawn from binding scope decisions ([ADR-0012](../adr/0012-binding-non-goals-and-scope-discipline.md))
+so positioning cannot
 quietly promise them:
 
 - **Not a CFO.** It does the bookkeeper and controller work a CFO relies on. The role itself is
@@ -368,7 +370,8 @@ quietly promise them:
 - **Not a filing agent.** It produces the closed year, the schedules, and the supporting
   detail a preparer works from. A CPA prepares and files.
 - **Not a SaaS-only product.** Self-hosting is a product promise
-  ([ADR-0003](../adr/README.md)), which is why the local stack needs no cloud account. The
+  ([ADR-0003](../adr/0003-portability-as-a-build-gate.md)), which is why the local stack needs
+  no cloud account. The
   reason is control, cost, and freedom from lock-in. It is not the trust mechanism — that is
   the attestation on the hosted service.
 
