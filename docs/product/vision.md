@@ -71,24 +71,25 @@ Two segments arrive at the problem from different directions.
 ### Segment 1 — The tech company
 
 Delaware C-corp, or an LLC before the first raise. Outside investors and an outside board,
-or an intention to have both. Complexity arrives through scale and through the reporting
-obligations that come with other people's money. This segment moves through stages, and the
-same company walks all of them.
+or an intention to have both. The same company walks all four stages, and each one is defined
+by something that changed at the company rather than by who happens to be doing the books.
 
-| Stage | Who operates it | What they pay today | Who advocates |
+| Stage | What changed | Who operates the books | Who advocates |
 |---|---|---|---|
-| **0.** Early, no finance help | Founder | QuickBooks, or a spreadsheet | Peers, on Hacker News and Reddit |
-| **1.** Revenue, buys bookkeeping | Founder, plus an opaque service | Bookkeeping on top of QuickBooks | None yet |
-| **2.** Engages a fractional CFO | Fractional CFO and founder | A retainer on top of the above | The fractional CFO |
-| **3.** In-house controller and staff | Controller, staff accountants | Salaries | The controller, internally |
+| **0.** Founding | No outside money and no finance help of any kind | Founder | Peers, on Hacker News and Reddit |
+| **1.** Revenue | Enough cash to stop doing the books personally | Founder, plus a bookkeeping service | None yet |
+| **2.** Seed to Series A | Institutional money arrives, and a board and reporting obligations with it | Fractional CFO, alongside the founder | The fractional CFO |
+| **3.** Scaling operations | Headcount and volume outgrow a part-time finance function | Controller and staff accountants | The controller, internally |
 
 A CPA sits alongside every row of that table, and alongside all of segment 2. That is why the
 CPA channel matters more than any single stage in it.
 
 Stage 0 can last for years. Nothing about the transitions is a churn event for the company,
 so CFOKit either follows it up the sequence or is replaced at one of the boundaries. That is
-why the deferrals in REQ-A6, REQ-A8 and REQ-A9 reserve their data shapes rather than closing
-them off: they are stage-3 requirements sitting inside a stage-0 product.
+why REQ-A6, REQ-A8 and REQ-A9 reserve their data shapes well ahead of building the features.
+Each becomes unavoidable at a different moment — accrual when institutional money arrives,
+invoicing the first time anyone bills a customer, lot tracking the moment an entity holds
+stock — and none of those shapes can be added cheaply afterwards.
 
 ### Segment 2 — The owner-operator
 
@@ -102,10 +103,29 @@ Their financial questions are about paying themselves, whether they can afford s
 they owe in tax, and whether a particular job or location makes money. The only professional
 in the loop is a CPA, seen once a year.
 
-**Complexity arrives from the opposite direction.** The tech company's complexity is
-structural: accrual, consolidation, equity. The owner-operator's is operational: payroll for
-hourly staff, sales tax, inventory for anyone holding stock, job costing and progress
-billing in construction. Of those, only inventory has a requirement, and it is deferred.
+### Two kinds of complexity, and which one arrives first
+
+Both segments meet both kinds. What differs is the order they arrive in and what sets them
+off.
+
+**Structural complexity** — accrual reporting, consolidation across entities, equity and the
+cap table — is triggered by obligations to other people. Investors and lenders want accrual
+statements; a second entity forces consolidation. A tech company usually meets this at stage 2,
+because that is when the money arrives and brings the obligations with it. An owner-operator
+meets it too, just from a different cause: a restaurant group running three locations has to
+consolidate them, and an S-corp owner has distributions and basis to keep straight.
+
+**Operational complexity** — payroll for hourly staff, sales tax, inventory, job costing and
+progress billing — is triggered by what the business physically does. An owner-operator often
+meets it on day one, because holding stock or employing hourly workers *is* the business. A
+tech company meets it too: a sales team spread across states creates payroll obligations and
+sales-tax nexus in every one of them, and SaaS is taxable in a growing number of jurisdictions.
+
+So neither list belongs to a segment. The useful question for any entity is which one it hits
+first, and the answer is usually structural for segment 1 and operational for segment 2.
+
+Of the operational items, inventory and sales tax have requirements — REQ-A6, deferred, and
+REQ-A10, blocked. Payroll and job costing have none at all.
 
 ### Advocates, and other people in the room
 
