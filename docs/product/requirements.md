@@ -216,8 +216,9 @@ mechanism designed before any of the content is written. Solve that once.
 ## B. Agent capabilities
 
 The bookkeeper and controller work described in [`vision.md`](vision.md), plus the bounded
-guidance offered where nobody holds the CFO seat. A CFO consumes what these produce rather
-than performing any of it.
+guidance offered where the CFO seat is held by a founder or an owner-operator rather than by a
+professional. Whoever holds that seat consumes what these produce rather than performing any
+of it.
 
 ### REQ-B1 — Bookkeeping automation
 **P0 · Accepted.** Categorise and book incoming transactions, ask when genuinely ambiguous
@@ -308,9 +309,10 @@ asking considerably harder things.
 has no professional in the loop to catch one, and a CPA who catches one stops trusting the
 source entirely, which forfeits the channel `vision.md` depends on.
 
-### REQ-B9 — Bounded financial guidance where there is no CFO
-**P2 · Blocked.** Answer the questions an owner asks when nobody holds the CFO seat: runway,
-margin, whether a hire is affordable, what changed since last month.
+### REQ-B9 — Bounded financial guidance for a non-professional in the CFO seat
+**P2 · Blocked.** The CFO seat is never empty. Where no professional holds it, the founder or
+owner-operator does, on top of running the business. Answer the questions that person asks:
+runway, margin, whether a hire is affordable, what changed since last month.
 
 **What it declines matters more than what it answers.** Guidance is bounded to what the books
 support in a simple environment. Anything turning on tax election, entity structure,
@@ -318,7 +320,8 @@ financing, or jurisdiction is referred to a professional and named as such.
 
 Blocked on the boundary itself, which is undesigned. It cannot be specified as "be careful" —
 it needs stated categories that a test can hold it to.
-**Serves:** owner-operators, and segment 1 before it engages a fractional CFO.
+**Serves:** owner-operators, and founders in segment 1 before institutional money brings a
+fractional CFO with it.
 **Constraints:** REQ-B8, REQ-A8 (guidance that ignores the declared basis is wrong by
 construction).
 **User-facing statement:** [`accounting-policy.md`](accounting-policy.md) § 10.
@@ -515,7 +518,7 @@ year.
 | Questions do not have to be anticipated in advance | REQ-B8, REQ-A7, REQ-D2, REQ-D3 |
 | A CPA can answer their own questions | REQ-B4, REQ-B8, REQ-E5 |
 | Invoicing and getting paid | REQ-A9 |
-| Guidance where nobody holds the CFO seat | REQ-B9, REQ-B2 |
+| Guidance for a non-professional in the CFO seat | REQ-B9, REQ-B2 |
 | Displaces QuickBooks plus a bookkeeping service | REQ-C5, REQ-B1, REQ-B7 |
 | Owner-operator complexity: payroll, sales tax, inventory, job costing | REQ-A10, REQ-A6 — **payroll and job costing have no requirement** |
 | Runs on a laptop with no cloud account | REQ-E1, REQ-C2, REQ-E3 |

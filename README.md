@@ -3,7 +3,7 @@
 **The open source CFO toolkit.**
 
 A CFO owns capital, cash, and the plan. Producing the books they work from is a bookkeeper's
-job and a controller's job. CFOKit does that part, as a kit of agent skills running against a
+job and a controller's job. CFOKit does that part, as a kit of Agent Skills running against a
 double-entry ledger you own.
 
 Transactions arrive from bank, card, and payment-processor feeds and are assigned by stored
@@ -35,7 +35,7 @@ under third-party audit.
 
 ```
 packages/    Python distributions (uv workspace)
-skills/      Shipped agent skills (SKILL.md bundles)
+skills/      Shipped Agent Skills (SKILL.md bundles)
 infra/       OpenTofu for the one maintained cloud target
 specs/       Feature specifications — what we will build
 docs/        Vision, requirements, roadmap, and decision records

@@ -56,7 +56,7 @@ to happen, so it lands on whoever is nearest and gets done late, inconsistently,
 deadline pressure. Everything downstream inherits that condition: the forecast, the board
 pack, the loan application, the return.
 
-The name CFOKit describes the shape of the answer. It is a kit of agent skills that serves a
+The name CFOKit describes the shape of the answer. It is a kit of Agent Skills that serves a
 CFO by doing the work beneath one, so that whoever holds the CFO role — a founder, a
 fractional CFO, or an owner-operator — has something worth working from.
 
@@ -121,8 +121,11 @@ meets it on day one, because holding stock or employing hourly workers *is* the 
 tech company meets it too: a sales team spread across states creates payroll obligations and
 sales-tax nexus in every one of them, and SaaS is taxable in a growing number of jurisdictions.
 
-So neither list belongs to a segment. The useful question for any entity is which one it hits
-first, and the answer is usually structural for segment 1 and operational for segment 2.
+Neither list belongs to a segment, and neither is universal. A solo consultancy may never hold
+stock, never employ an hourly worker, never collect sales tax, and never answer to anyone
+outside the business — none of it ever applies to them. What decides is what an entity actually
+does and who it actually owes, which is why each of these is gated on a trigger rather than on
+a stage number.
 
 Of the operational items, inventory and sales tax have requirements — REQ-A6, deferred, and
 REQ-A10, blocked. Payroll and job costing have none at all.
@@ -158,7 +161,7 @@ REQ-C2's protocol boundary is for. They overlap with segment 1 founders only inc
 
 ## Value proposition
 
-CFOKit is a kit of agent skills that does bookkeeper and controller work against a
+CFOKit is a kit of Agent Skills that does bookkeeper and controller work against a
 double-entry ledger the company owns.
 
 Transactions arrive from bank, card, and payment-processor feeds and are assigned by stored
@@ -179,6 +182,11 @@ anticipated in advance. An owner can ask what they spent on contractors last qua
 can ask something considerably harder. Guardrails live in the skill: entity scope is enforced
 server-side regardless of what is asked, answers come from the books rather than from
 estimation, and the skill declines what the data cannot support.
+
+The CFO seat is never empty. Where no professional holds it, the founder or the owner-operator
+does, on top of running the business, and a guidance skill answers the questions that person
+actually asks about runway, margin, and whether a hire is affordable. It states its limits, and
+sends anything turning on tax election, entity structure, or financing to a professional.
 
 The software is MIT licensed and runs on a laptop with no cloud account. The hosted service
 is the same software, operated under third-party audit.
@@ -248,7 +256,7 @@ applies that hypothesis and tests it.
 
 ### Cost structure
 
-CFOKit ships as an agent skill that installs into an agentic runtime the user already has,
+CFOKit ships as an Agent Skill that installs into an agentic runtime the user already has,
 and that runtime supplies its own inference. The end user carries the token cost, the same
 way they carry the cost of the machine the agent runs on.
 
@@ -360,8 +368,10 @@ Tracked here rather than settled, because each needs a decision before it can be
 Drawn from binding scope decisions ([ADR-0012](../adr/README.md)) so positioning cannot
 quietly promise them:
 
-- **Not a CFO.** It does the bookkeeper and controller work a CFO depends on. Where no CFO
-  exists, the guidance skill answers a bounded set of questions and says so.
+- **Not a CFO.** It does the bookkeeper and controller work a CFO relies on. The role itself is
+  never vacant — a fractional CFO holds it where one is engaged, and otherwise the founder or
+  the owner-operator does. Where that person wants help with the judgement rather than with the
+  books, the guidance skill answers a bounded set of questions and states its limits.
 - **Not a web application.** CFOKit is agents and an API rather than a dashboard you log into.
   This is a **gate, not a prohibition** — scope discipline forbids building a web UI or admin
   console *without an ADR*, and rendered report output is an open question above rather than
