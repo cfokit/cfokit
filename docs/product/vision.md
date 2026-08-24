@@ -11,6 +11,11 @@
 > This document states *why CFOKit exists and who it serves*. It does not describe
 > capabilities — those are in [`requirements.md`](requirements.md) — and it does not make
 > architectural commitments, which live in [the ADRs](../adr/README.md).
+>
+> **It never cites a `REQ-` id.** Requirements are derived from this document, so a citation
+> running the other way would invert the dependency and make the vision read as a summary of
+> the backlog. The mapping between the two lives in the traceability table in
+> `requirements.md`, where it belongs.
 
 ## Tagline
 
@@ -86,10 +91,10 @@ CPA channel matters more than any single stage in it.
 
 Stage 0 can last for years. Nothing about the transitions is a churn event for the company,
 so CFOKit either follows it up the sequence or is replaced at one of the boundaries. That is
-why REQ-A6, REQ-A8 and REQ-A9 reserve their data shapes well ahead of building the features.
-Each becomes unavoidable at a different moment — accrual when institutional money arrives,
-invoicing the first time anyone bills a customer, lot tracking the moment an entity holds
-stock — and none of those shapes can be added cheaply afterwards.
+why the ledger's shape has to anticipate more than the product currently does. Accrual becomes
+unavoidable when institutional money arrives, and it needs the obligation and the settlement
+recorded as separate related events — which is not a formatting choice that can be added
+later.
 
 ### Segment 2 — The owner-operator
 
@@ -127,8 +132,8 @@ outside the business — none of it ever applies to them. What decides is what a
 does and who it actually owes, which is why each of these is gated on a trigger rather than on
 a stage number.
 
-Of the operational items, inventory and sales tax have requirements — REQ-A6, deferred, and
-REQ-A10, blocked. Payroll and job costing have none at all.
+None of these is built, and none is on the near path. They are named here so the positioning
+does not imply otherwise.
 
 ### Advocates, and other people in the room
 
@@ -152,12 +157,13 @@ every assignment traceable to a rule, finishes faster and can price accordingly.
 gets a cheaper return and the CPA gets a reason to put the next client on CFOKit.
 
 This makes the ad hoc query surface a CPA-facing feature rather than only an owner-facing one,
-and it sets the standard for REQ-B4: the measure is whether a preparer can answer their own
+and it sets the standard for tax work: the measure is whether a preparer can answer their own
 questions without emailing the client. The persona itself is not developed in detail yet.
 
 **Contributors** are developers who want the system to exist and to extend it. They write the
 connector for their own bank and the compliance rules for their own state, which is what
-REQ-C2's protocol boundary is for. They overlap with segment 1 founders only incidentally.
+the connector protocol boundary is for. They overlap with segment 1 founders only
+incidentally.
 
 ## Value proposition
 
@@ -213,7 +219,7 @@ Measurable criteria, not adjectives:
 | | Human service | CFOKit |
 |---|---|---|
 | **Latency** | Close lands two to six weeks after month end | Books current to yesterday |
-| **Consistency** | Staff turnover means re-teaching the business | Rules are stored data and outlive any staffing change (REQ-B7) |
+| **Consistency** | Staff turnover means re-teaching the business | Rules are stored data and outlive any staffing change |
 | **Question volume** | The same recurring charge queried monthly | Rules approved once; queries trend to zero |
 | **Traceability** | A finished P&L, no visible reasoning | Every posting names its rule and source transaction |
 
@@ -355,12 +361,12 @@ Tracked here rather than settled, because each needs a decision before it can be
 
 | Question | Why it is open |
 |---|---|
-| The price point | The cost structure is settled (see [Cost structure](#cost-structure)); the number is not. It has to sit credibly against a $340–1,000 stack, and it implies a managed tier with billing and metering that is unspecified (REQ-E6). |
+| The price point | The cost structure is settled (see [Cost structure](#cost-structure)); the number is not. It has to sit credibly against a $340–1,000 stack, and it implies a managed tier with billing and metering that is unspecified. |
 | Scope of the attestation | The commercial thesis rests on third-party audit, and nothing in `requirements.md` covers it. SOC 2 Type II is the obvious candidate; SOC 1 may matter more for a system of record. This needs a requirement and probably an ADR, because evidence collection and access review constrain design long before an auditor arrives. |
 | QuickBooks import | Displacing a stage-1 or owner-operator incumbent means importing their existing books. No requirement exists for it, and if this is the entry motion it is a P0. |
-| Owner-operator complexity | Inventory and sales tax are day-one facts for a restaurant or retail shop. REQ-A6 defers lot tracking on the grounds that no current entity holds inventory, which is true today and stops being true the moment this segment is served. Sales tax has no requirement at all. |
-| "AI CFO team" as plural agents | Whether the bookkeeper, controller, guidance, and compliance roles are separate skills or one skill with several modes is undecided, and it determines the layout of `skills/` (REQ-B6). |
-| How reports and dashboards are rendered | REQ-B3 promises statements "a human can hand to a lender or board", which a chat message is not. Options range from a static generated file to a served report URL. This needs an ADR passing ADR-0012's scope gate, as Slack did in ADR-0022. A served URL additionally has to answer ADR-0018's rejection of a second authentication path. |
+| Which owner-operators are actually served | Inventory and sales tax are day-one facts for a restaurant or a retail shop, and neither is built or planned. Until they are, that part of the segment is aspiration rather than audience. |
+| "AI CFO team" as plural agents | Whether the bookkeeper, controller, guidance, and compliance roles are separate skills or one skill with several modes is undecided, and it determines the layout of `skills/`. |
+| How reports and dashboards are rendered | Statements "a human can hand to a lender or board" are promised above, and a chat message is not that. Options range from a static generated file to a served report URL. This needs an ADR passing ADR-0012's scope gate, as Slack did in ADR-0022. A served URL additionally has to answer ADR-0018's rejection of a second authentication path. |
 | Guardrails on ad hoc querying | An open MCP and API surface means users ask questions nobody anticipated. Owner-operators in particular cannot assess whether an answer is right and have no professional in the loop to catch it. What the skill declines to answer matters more than what it answers, and the refusal boundary is undesigned. |
 
 ## What CFOKit is not
