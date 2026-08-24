@@ -359,8 +359,6 @@ Tracked here rather than settled. Each one changes what CFOKit claims to be, or 
 | Question | Why it is open |
 |---|---|
 | The price point | What CFOKit costs against the stack it displaces. Low enough to be an obvious swap, high enough to read as a system of record rather than a toy, and it has to hold for a solo consultancy and a twelve-client practice at once. |
-| Whether companies with existing books are reachable | Everyone past their first year already keeps books somewhere. If moving them across is painful, the audience narrows to companies starting from nothing, which is far smaller than the one described above. |
-| Which owner-operators the segment includes | A consultancy and a restaurant are both owner-operators and want materially different products. Whether the segment means service businesses or every small business changes who this is written for. |
 | One assistant or several | Whether CFOKit is presented as a bookkeeper, a controller, and a guide, or as one thing that does all three. This shapes what people expect of it more than it shapes what it does. |
 | What a statement looks like when it leaves | Something a lender or a board will accept is promised above, and a chat message is not that. Whether that means a generated file, a served page, or something else is undecided. |
 | What CFOKit declines to answer | An open query surface invites questions it should not answer. Where that line falls is a statement about what CFOKit is, not only about how it behaves. |
