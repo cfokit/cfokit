@@ -286,7 +286,7 @@ before the content.
 
 ### REQ-B6 — Distinct agent roles
 **P2 · Blocked.** Whether the roles above are separate skills or one skill with several
-modes is an open question in `vision.md`, and it determines the layout of `skills/`.
+modes is undecided, and it determines the layout of `skills/`.
 **Serves:** developers.
 
 ### REQ-B8 — Ad hoc query over the books, with a declared refusal boundary

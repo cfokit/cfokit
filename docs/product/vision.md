@@ -352,18 +352,6 @@ open source agents – here's the ledger design"
 >
 > github.com/cfokit/cfokit
 
-## Open questions
-
-Tracked here rather than settled. Each one changes what CFOKit claims to be, or who it is for.
-
-| Question | Why it is open |
-|---|---|
-| The price point | What CFOKit costs against the stack it displaces. Low enough to be an obvious swap, high enough to read as a system of record rather than a toy, and it has to hold for a solo consultancy and a twelve-client practice at once. |
-| One assistant or several | Whether CFOKit is presented as a bookkeeper, a controller, and a guide, or as one thing that does all three. This shapes what people expect of it more than it shapes what it does. |
-| What a statement looks like when it leaves | Something a lender or a board will accept is promised above, and a chat message is not that. Whether that means a generated file, a served page, or something else is undecided. |
-| What CFOKit declines to answer | An open query surface invites questions it should not answer. Where that line falls is a statement about what CFOKit is, not only about how it behaves. |
-| What the attestation covers | The commercial tier sells assurance. The scope of the report decides whether it means anything to a CPA or a lender, or is a badge. |
-
 ## What CFOKit is not
 
 Drawn from binding scope decisions ([ADR-0012](../adr/README.md)) so positioning cannot
@@ -375,8 +363,7 @@ quietly promise them:
   books, the guidance skill answers a bounded set of questions and states its limits.
 - **Not a web application.** CFOKit is agents and an API rather than a dashboard you log into.
   This is a **gate, not a prohibition** — scope discipline forbids building a web UI or admin
-  console *without an ADR*, and rendered report output is an open question above rather than
-  a settled no.
+  console *without an ADR*. Rendered report output has not been decided either way.
 - **Not a bank.** It reads financial data and keeps books; it does not move money.
 - **Not a filing agent.** It produces the closed year, the schedules, and the supporting
   detail a preparer works from. A CPA prepares and files.
