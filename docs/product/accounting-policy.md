@@ -323,8 +323,7 @@ render your books as they stood at any earlier point. Two consequences worth kno
   postings recorded between the two points.
 
 **Issued statements — *Pending*.** The mechanism for marking a statement as final and issued,
-and the form it takes when shared, is still being decided. See the open question in
-[`vision.md`](vision.md).
+and the form it takes when shared, is still being decided.
 
 **Reporting periods are arbitrary.** Trial balance as of any date, profit and loss for any
 period, journal filtered by account, payee, or tag. Nothing is restricted to calendar months.
