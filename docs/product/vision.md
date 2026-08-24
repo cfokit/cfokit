@@ -8,14 +8,9 @@
 > marketing-oriented introduction from it; the two are not maintained independently. When
 > positioning changes, change it here first.
 >
-> This document states *why CFOKit exists and who it serves*. It does not describe
-> capabilities — those are in [`requirements.md`](requirements.md) — and it does not make
-> architectural commitments, which live in [the ADRs](../adr/README.md).
->
-> **It never cites a `REQ-` id.** Requirements are derived from this document, so a citation
-> running the other way would invert the dependency and make the vision read as a summary of
-> the backlog. The mapping between the two lives in the traceability table in
-> `requirements.md`, where it belongs.
+> This document states *why CFOKit exists and who it serves*. Requirements and architecture
+> both derive from it, so it cites neither — a reference running that way would make the
+> vision read as a summary of its own consequences.
 
 ## Tagline
 
@@ -270,8 +265,7 @@ being displaced, decided on ordinary SaaS margins.
 
 This also shapes the product surface. Because the intelligence sits in the user's runtime
 rather than behind our API, the right thing to expose is a complete, well-described data
-interface rather than a fixed menu of canned reports, which is what ADR-0009 and ADR-0015
-already commit to.
+interface rather than a fixed menu of canned reports.
 
 ### What the thesis constrains
 
@@ -303,9 +297,10 @@ reconstructed in April, and straight answers about what you can afford.
 of every engagement goes to making an inherited ledger trustworthy. A client on CFOKit
 arrives closed, current, and traceable, so the engagement is the work you sell.
 
-**For the developer.** MIT, no ORM, hand-written SQL, a double-entry engine differentially
-tested against Beancount. Runs under `docker compose up` with no cloud account. Extensible
-over MCP.
+**For the developer.** MIT licensed, so you can run it, fork it, or build on it without asking
+anyone. It comes up in one command with no cloud account and no signup, the booking engine is
+tested against an independent implementation rather than against its own assumptions, and
+adding a bank or a payment provider is an additive change rather than a fork.
 
 ## Community identity
 
@@ -325,9 +320,8 @@ The project succeeds when people describe themselves in these terms unprompted.
 
 That second list is a design constraint rather than an aspiration. A contributor can only say
 "I built the CFOKit Stripe integration" if adding a provider is an additive change behind a
-stable protocol, which is why provider-specific code sits behind one
-([ADR-0003](../adr/0003-portability-as-a-build-gate.md)) and why the connector package is not
-named after a vendor.
+stable protocol, so provider-specific code has to sit behind one and the connector package
+cannot be named after a vendor.
 
 ## Launch messaging
 
@@ -355,23 +349,20 @@ open source agents – here's the ledger design"
 
 ## What CFOKit is not
 
-Drawn from binding scope decisions ([ADR-0012](../adr/0012-binding-non-goals-and-scope-discipline.md))
-so positioning cannot
-quietly promise them:
+These are decided, and they bound what the positioning may promise:
 
 - **Not a CFO.** It does the bookkeeper and controller work a CFO relies on. The role itself is
   never vacant — a fractional CFO holds it where one is engaged, and otherwise the founder or
   the owner-operator does. Where that person wants help with the judgement rather than with the
   books, the guidance skill answers a bounded set of questions and states its limits.
 - **Not a web application.** CFOKit is agents and an API rather than a dashboard you log into.
-  This is a **gate, not a prohibition** — scope discipline forbids building a web UI or admin
-  console *without an ADR*. Rendered report output has not been decided either way.
+  This is a **gate, not a prohibition**: a web UI or an admin console takes a deliberate
+  decision to reverse, not a drift. Rendered report output has not been decided either way.
 - **Not a bank.** It reads financial data and keeps books; it does not move money.
 - **Not a filing agent.** It produces the closed year, the schedules, and the supporting
   detail a preparer works from. A CPA prepares and files.
-- **Not a SaaS-only product.** Self-hosting is a product promise
-  ([ADR-0003](../adr/0003-portability-as-a-build-gate.md)), which is why the local stack needs
-  no cloud account. The
+- **Not a SaaS-only product.** Self-hosting is a product promise, which is why the local stack
+  needs no cloud account. The
   reason is control, cost, and freedom from lock-in. It is not the trust mechanism — that is
   the attestation on the hosted service.
 
