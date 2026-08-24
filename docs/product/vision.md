@@ -132,9 +132,6 @@ outside the business — none of it ever applies to them. What decides is what a
 does and who it actually owes, which is why each of these is gated on a trigger rather than on
 a stage number.
 
-None of these is built, and none is on the near path. They are named here so the positioning
-does not imply otherwise.
-
 ### Advocates, and other people in the room
 
 **Fractional CFOs are advocates, not payers.** They carry four to eight clients at five to
@@ -357,17 +354,17 @@ open source agents – here's the ledger design"
 
 ## Open questions
 
-Tracked here rather than settled, because each needs a decision before it can be built on.
+Tracked here rather than settled. Each one changes what CFOKit claims to be, or who it is for.
 
 | Question | Why it is open |
 |---|---|
-| The price point | The cost structure is settled (see [Cost structure](#cost-structure)); the number is not. It has to sit credibly against a $340–1,000 stack, and it implies a managed tier with billing and metering that is unspecified. |
-| Scope of the attestation | The commercial thesis rests on third-party audit, and nothing in `requirements.md` covers it. SOC 2 Type II is the obvious candidate; SOC 1 may matter more for a system of record. This needs a requirement and probably an ADR, because evidence collection and access review constrain design long before an auditor arrives. |
-| QuickBooks import | Displacing a stage-1 or owner-operator incumbent means importing their existing books. No requirement exists for it, and if this is the entry motion it is a P0. |
-| Which owner-operators are actually served | Inventory and sales tax are day-one facts for a restaurant or a retail shop, and neither is built or planned. Until they are, that part of the segment is aspiration rather than audience. |
-| "AI CFO team" as plural agents | Whether the bookkeeper, controller, guidance, and compliance roles are separate skills or one skill with several modes is undecided, and it determines the layout of `skills/`. |
-| How reports and dashboards are rendered | Statements "a human can hand to a lender or board" are promised above, and a chat message is not that. Options range from a static generated file to a served report URL. This needs an ADR passing ADR-0012's scope gate, as Slack did in ADR-0022. A served URL additionally has to answer ADR-0018's rejection of a second authentication path. |
-| Guardrails on ad hoc querying | An open MCP and API surface means users ask questions nobody anticipated. Owner-operators in particular cannot assess whether an answer is right and have no professional in the loop to catch it. What the skill declines to answer matters more than what it answers, and the refusal boundary is undesigned. |
+| The price point | What CFOKit costs against the stack it displaces. Low enough to be an obvious swap, high enough to read as a system of record rather than a toy, and it has to hold for a solo consultancy and a twelve-client practice at once. |
+| Whether companies with existing books are reachable | Everyone past their first year already keeps books somewhere. If moving them across is painful, the audience narrows to companies starting from nothing, which is far smaller than the one described above. |
+| Which owner-operators the segment includes | A consultancy and a restaurant are both owner-operators and want materially different products. Whether the segment means service businesses or every small business changes who this is written for. |
+| One assistant or several | Whether CFOKit is presented as a bookkeeper, a controller, and a guide, or as one thing that does all three. This shapes what people expect of it more than it shapes what it does. |
+| What a statement looks like when it leaves | Something a lender or a board will accept is promised above, and a chat message is not that. Whether that means a generated file, a served page, or something else is undecided. |
+| What CFOKit declines to answer | An open query surface invites questions it should not answer. Where that line falls is a statement about what CFOKit is, not only about how it behaves. |
+| What the attestation covers | The commercial tier sells assurance. The scope of the report decides whether it means anything to a CPA or a lender, or is a badge. |
 
 ## What CFOKit is not
 
