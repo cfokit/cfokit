@@ -421,8 +421,9 @@ and says why instead of producing a plausible number.
 **Entity scope is enforced by the server.** A question cannot reach books you hold no grant for,
 however it is phrased (§ 9). Rephrasing is not a route around authorisation.
 
-**Bounded guidance — *Pending*.** Where nobody holds the CFO seat, CFOKit will answer a limited
-set of questions about runway, margin, and affordability. What it declines matters more than what
+**Bounded guidance — *Pending*.** Where the CFO role falls to you rather than to a fractional
+CFO or an employee, CFOKit will answer a limited set of questions about runway, margin, and
+affordability. What it declines matters more than what
 it answers, and that boundary is not yet settled. Anything turning on a tax election, entity
 structure, financing, or jurisdiction is referred to a professional. (REQ-B8, REQ-B9)
 

@@ -4,7 +4,7 @@ Loads when you work in `skills/`. Root `CLAUDE.md` still applies.
 
 ## What lives here
 
-Shipped agent skills, as `SKILL.md` bundles. These are **product artifacts**, not
+Shipped Agent Skills, as `SKILL.md` bundles. These are **product artifacts**, not
 development tooling — tooling for developing this repository lives in `.claude/` and is
 never shipped. (ADR-0020)
 

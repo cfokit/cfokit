@@ -17,7 +17,7 @@ Directories are organised by **artifact kind**, and packages are named for
 | `packages/ledger/` | The double-entry primitive, kept deliberately tiny | Accounts, postings, draft/posted, reversal, close. Knows nothing about customers, invoices, banks, email, or agents. |
 | `packages/<module>/` | In-process modules — siblings of the ledger, same deployable | Depend on the ledger; never on each other; the ledger never depends on them. |
 | `packages/connectors/` | Transaction feed ingestion. **Name is known-wrong and will be renamed** (ADR-0023) | Classification as module or component is not yet settled. |
-| `skills/` | Shipped agent skills, as `SKILL.md` bundles | Talk to the ledger over HTTP only. Never import ledger code. |
+| `skills/` | Shipped Agent Skills, as `SKILL.md` bundles | Talk to the ledger over HTTP only. Never import ledger code. |
 | `infra/` | OpenTofu for the one maintained cloud target, plus the deployment contract | Supplies env vars only. No app coupling. |
 | `specs/` | Feature specifications — what we will build. Churns. | Cites ADRs; never overrides one. |
 | `docs/product/` | Vision, `REQ-`numbered requirements, and accounting policy | The source for positioning; the README derives from it. |
