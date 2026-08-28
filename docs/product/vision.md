@@ -264,8 +264,14 @@ does not move with token prices. Pricing is therefore a question about the value
 being displaced, decided on ordinary SaaS margins.
 
 This also shapes the product surface. Because the intelligence sits in the user's runtime
-rather than behind our API, the right thing to expose is a complete, well-described data
-interface rather than a fixed menu of canned reports.
+rather than behind our API, what we expose has to be a complete, well-described data
+interface and not only a fixed menu of reports.
+
+That is an addition, not a replacement. The standard statements are standard: a profit and
+loss, a balance sheet, a cash flow statement, and a receivables ageing report have settled
+definitions, and CFOKit produces them deterministically rather than composing them afresh
+each time somebody asks. The data interface is what answers the questions nobody wrote a
+report for.
 
 ### What the thesis constrains
 
