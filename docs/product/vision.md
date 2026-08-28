@@ -1,7 +1,6 @@
 # CFOKit — Product Vision
 
 - **Status:** Draft
-- **Date:** 2026-08-24
 - **Owner:** Geoff
 
 > **This is the source document for product positioning.** The root `README.md` derives a
@@ -9,12 +8,11 @@
 > positioning changes, change it here first.
 >
 > This document states *why CFOKit exists and who it serves*. Requirements and architecture
-> both derive from it, so it cites neither — a reference running that way would make the
-> vision read as a summary of its own consequences.
+> both derive from it, so it cites neither.
 
 ## Tagline
 
-**Unwritten.** One constraint on it: it must not describe CFOKit as a substitute for a CFO.
+**TBD.**
 
 ## Mission
 
@@ -267,11 +265,10 @@ This also shapes the product surface. Because the intelligence sits in the user'
 rather than behind our API, what we expose has to be a complete, well-described data
 interface and not only a fixed menu of reports.
 
-That is an addition, not a replacement. The standard statements are standard: a profit and
-loss, a balance sheet, a cash flow statement, and a receivables ageing report have settled
-definitions, and CFOKit produces them deterministically rather than composing them afresh
-each time somebody asks. The data interface is what answers the questions nobody wrote a
-report for.
+The standard statements are standard: a profit and loss, a balance sheet, a cash flow
+statement, and a receivables ageing report have settled definitions, and CFOKit produces them
+deterministically rather than composing them afresh each time somebody asks. The data interface
+is what answers the questions nobody wrote a report for.
 
 ### What the thesis constrains
 
@@ -306,7 +303,7 @@ arrives closed, current, and traceable, so the engagement is the work you sell.
 **For the developer.** MIT licensed, so you can run it, fork it, or build on it without asking
 anyone. It comes up in one command with no cloud account and no signup, the booking engine is
 tested against an independent implementation rather than against its own assumptions, and
-adding a bank or a payment provider is an additive change rather than a fork.
+adding a bank or a payment provider is an additive change against a stable extension point.
 
 ## Community identity
 
@@ -324,16 +321,14 @@ The project succeeds when people describe themselves in these terms unprompted.
 - "I built the CFOKit Stripe integration"
 - "Contributing S-corp compliance rules to CFOKit"
 
-That second list is a design constraint rather than an aspiration. A contributor can only say
-"I built the CFOKit Stripe integration" if adding a provider is an additive change behind a
-stable protocol, so provider-specific code has to sit behind one and the connector package
-cannot be named after a vendor.
+A contributor can only say "I built the CFOKit Stripe integration" if adding a provider is an
+additive change behind a stable protocol, so provider-specific code has to sit behind one and
+the connector package cannot be named after a vendor.
 
 ## Launch messaging
 
-Held here so the eventual marketing README stays consistent with it. The audience for launch
-is the part of segment 1 at stage 0 that will self-host, the one group whose trust comes from
-the software being free rather than from an audit report.
+The audience for launch is the part of segment 1 at stage 0 that will self-host, the one group
+whose trust comes from the software being free rather than from an audit report.
 
 **Hacker News:** "Show HN: CFOKit – Open source double-entry books your AI agent maintains"
 

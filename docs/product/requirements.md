@@ -1,22 +1,13 @@
 # CFOKit — Business Requirements
 
 - **Status:** Draft
-- **Date:** 2026-08-25
 - **Owner:** Geoff
 
 ## 1. Purpose and scope
 
 This document states what CFOKit must do for the people who pay for it and the people who
-depend on its output. It is the authority on *what* the product owes someone. It is not the
-authority on how any of it is built.
-
-**Requirements state what, never how.** A requirement that names a library, a protocol, a
-schema, an endpoint, or a storage engine has stopped being a requirement and has become a
-design decision. Design decisions derive from this document, never the other way round, and
-they are recorded elsewhere. Nothing here cites them.
-
-Every requirement carries a stable identifier. Identifiers are never reused, including for
-requirements that are later withdrawn.
+depend on its output. Requirements state what, never how; design decisions derive from it and
+are recorded elsewhere. Identifiers are stable and are never reused.
 
 ### Reading a requirement
 
@@ -60,7 +51,7 @@ belong in this document.
 | **Lender, board, investor** | Consumes output | Statements in a conventional form, on a stated basis |
 | **Auditor, forensic accountant** | Consumes history | A complete, unaltered history with attribution |
 | **Self-hoster** | Operates their own deployment | A complete build with no cloud account, no signup, and no feature held back |
-| **Contributor** | Extends the system | Extension points that make a new provider or ruleset additive rather than a fork |
+| **Contributor** | Extends the system | Extension points that make a new provider or ruleset an additive change |
 
 ---
 
@@ -95,7 +86,7 @@ These are decided. Each bounds what the product may promise.
 
 ## 5. Assumptions and dependencies
 
-Business conditions this document relies on. None of these is an internal design choice.
+Business conditions this document relies on.
 
 | | Assumption or dependency |
 |---|---|
@@ -111,7 +102,7 @@ Business conditions this document relies on. None of these is an internal design
 
 ## 6. Functional requirements
 
-Organised by module. A module is a coherent area of capability, not a deployment unit.
+Organised by module.
 
 ### 6.1 Ledger — `LED`
 
@@ -335,7 +326,7 @@ stricter target than the global one.
 | **NFR-08** | Interactive queries return quickly enough to be used conversationally, over a realistic volume of history. | Performance | Should | Target open |
 | **NFR-09** | The system depends on no single infrastructure provider. Relocating a deployment is an infrastructure change, not a change to the product. | Portability | Must | No provider dependency in the shipped artifact |
 | **NFR-10** | The complete product runs on one machine, with no cloud account, no signup, and no credentials, holding real books rather than a demonstration. | Deployability | Must | One command |
-| **NFR-11** | A third party can add a financial institution, a payment processor, an email provider, or a jurisdiction's rules as an additive contribution, without forking. | Extensibility | Must | No fork required |
+| **NFR-11** | A third party can add a financial institution, a payment processor, an email provider, or a jurisdiction's rules as an additive contribution against a stable extension point. | Extensibility | Must | No change to the ledger or the modules around it |
 | **NFR-12** | Published interfaces carry stated compatibility obligations, and breaking changes are announced rather than discovered. | Interoperability | Should | No unannounced breaking change |
 | **NFR-13** | Records are retained according to their class, and disposal is a deliberate, authorised, recorded act. | Compliance | Should | No automatic disposal |
 | **NFR-14** | The software is permissively licensed, permanently, and no component imposes an obligation inconsistent with that on anyone who runs, modifies, or forks it. | Licensing | Must | Zero incompatible obligations |
@@ -385,9 +376,6 @@ only make sense once an examination is underway are named in section 8.11 and ex
 examination and costs money forever. A control the system enforces is tested once, plus change
 management. Where both are possible, these requirements choose the system.
 
-Where an existing requirement already carries the load, this section says so rather than
-restating it.
-
 ### 8.1 Agent authority and segregation of duties
 
 Conventional segregation of duties assumes two people: one records, another approves. An agent
@@ -416,11 +404,9 @@ from stored data alone, exactly what the approver was shown before deciding.
 **Acceptance, SOC1-06.** Two runs of the same skill over the same input that reach different
 conclusions are both individually explainable from what was persisted.
 
-> **Cost note.** SOC1-06 is the expensive one. Persisting context, tool calls, and stated
-> reasoning against every agent-touched entry is meaningful storage and a real write-path
-> burden, and the benefit is realised at examination time rather than in daily use. It is also
-> the requirement that makes agent-produced books defensible at all, so the trade is worth
-> making deliberately rather than discovering later.
+> **Cost.** Persisting context, tool calls, and stated reasoning against every agent-touched
+> entry is meaningful storage and a real write-path burden, realised at examination time rather
+> than in daily use.
 
 ### 8.2 Ledger integrity
 
@@ -433,9 +419,8 @@ LED-06 correction by reversal, NFR-02 integrity, NFR-03 idempotency.
 | **SOC1-10** | Every write path accepts an idempotency key, and a repeated key returns the original result rather than posting again. This is an interface contract, not an internal convention. | Must | Approved |
 | **SOC1-11** | Integrity invariants — the trial balance ties, the sequence is intact, control totals reconcile — are verified on a defined cadence, and each verification is persisted as a durable dated artifact rather than displayed and discarded. | Must | Approved |
 
-> **Constrains the interface contract.** SOC1-10 puts the idempotency key in the published
-> surface, so it binds third-party integrators and cannot be added later without a breaking
-> change.
+> **Constrains the interface contract.** The idempotency key is in the published surface, so it
+> binds third-party integrators and cannot be added later without a breaking change.
 
 ### 8.3 Completeness and accuracy of ingested data
 
@@ -448,9 +433,7 @@ Covering transaction feeds, uploaded statements, document capture, and any third
 | **SOC1-14** | Every ledger entry carries lineage to the originating document or feed record, retained for as long as the entry is. | Must | Approved |
 | **SOC1-15** | A coding decision made by an agent is distinguishable from one made by a person **in the data itself**, not only in an audit record, and remains so for the life of the entry. | Must | Approved |
 
-> **Constrains the data model.** SOC1-15 puts actor class on the entry rather than in a side
-> log. Reconstructing it later from audit records is exactly the ad hoc query work this section
-> exists to avoid.
+> **Constrains the data model.** Actor class sits on the entry rather than in a side log.
 
 ### 8.4 Period integrity and cutoff
 
@@ -472,10 +455,8 @@ NFR-18 controls evidenced rather than asserted.
 | **SOC1-21** | Audit records are written to storage the application cannot subsequently modify or delete, by any code path, including administrative ones. | Must | Approved |
 | **SOC1-22** | The complete lineage of a single transaction — source record, agent actions, approvals, resulting entries, and every subsequent correction — is retrievable in one operation. | Must | Approved |
 
-> **Cost note, and why it is worth it.** SOC1-22 looks like a convenience and is not. Examiners
-> work by sampling; if each sampled item needs an engineer writing an ad hoc query, that cost
-> recurs at every examination for the life of the product. Building the lineage retrieval once
-> converts a permanent operating expense into a fixed one.
+> **Cost.** Examiners work by sampling. If each sampled item needs an engineer writing an ad hoc
+> query, that cost recurs at every examination for the life of the product.
 
 ### 8.6 Access control and principal propagation
 
@@ -488,9 +469,9 @@ Carried already: IAM-01 through IAM-12.
 | **SOC1-25** | No access path authorises against a principal different from the one recorded in the audit trail for the same action. | Must | Approved |
 | **SOC1-26** | Whether operator personnel can reach customer financial data at all, and if so under what authorisation, is a product decision. Any such access is logged identically to a customer's own and is subject to the same evidence requirements. | Must | **Proposed** — whether privileged access exists is not decided |
 
-> **The failure this prevents.** SOC1-24 is not redundant with IAM-07. A surface that
-> authenticates as itself and passes the real actor as a parameter still performs
-> authorisation — it just records the intermediary as the actor. The books then attribute
+> **The failure this prevents.** A surface that authenticates as itself and passes the real
+> actor as a parameter still performs authorisation — it just records the intermediary as the
+> actor. The books then attribute
 > every agent action to a single system principal, which silently voids SOC1-01 through
 > SOC1-03 while every individual control appears to pass. **Constrains the interface contract
 > between every surface and the service beneath it.**
@@ -524,8 +505,7 @@ and is excluded in 8.11.
 |---|---|---|---|
 | **SOC1-34** | Where an external provider supplied or processed data, the system records which provider and which version or endpoint, retrievable as part of the lineage in SOC1-22. | Must | Approved |
 
-Anticipated examination treatment. This is a scoping input rather than a requirement, and each
-line is a judgement that has not been made yet.
+Anticipated examination treatment.
 
 | Dependency | Effect on the accuracy of customer financial data | Anticipated treatment | Their report |
 |---|---|---|---|
@@ -535,12 +515,10 @@ line is a judgement that has not been made yet.
 | Document capture and extraction | Accuracy of amounts read from source documents | Carve-out, with human or agent confirmation as the compensating control | Varies |
 | Email delivery | No ICFR effect — delivery is not a financial assertion | Out of SOC 1 scope entirely | n/a |
 
-The inference provider line is the one with no precedent. It is named in the open questions.
-
 ### 8.10 Complementary User Entity Controls
 
 Obligations on the customer, not requirements on CFOKit. Each one narrows examination scope and
-adds customer burden, so the list is deliberately short and defensible rather than maximal.
+adds customer burden.
 
 | | The user entity must |
 |---|---|
@@ -550,12 +528,7 @@ adds customer burden, so the list is deliberately short and defensible rather th
 | **CUEC-4** | Verify opening balances at onboarding, and confirm that migrated history agrees with the system it came from |
 | **CUEC-5** | Set materiality thresholds and autonomy configuration deliberately, rather than accepting defaults without consideration |
 
-CUEC-5 is the one that will be argued about. It shifts to the customer a decision they may not
-be equipped to make, which is an argument for the SOC1-08 defaults being conservative.
-
 ### 8.11 Excluded from this section
-
-Real work, but not requirements on the product.
 
 | Excluded | Why |
 |---|---|
@@ -566,8 +539,6 @@ Real work, but not requirements on the product.
 | Anything touching security, availability, or privacy without touching ICFR | The SOC 2 track, handled separately. |
 
 ### 8.12 Examination scoping questions
-
-Not product decisions, so they are not open issues in section 9. They do need a human.
 
 | | Question |
 |---|---|
@@ -586,9 +557,7 @@ negotiating objectives. A Type II opinion tests **operating effectiveness across
 period**, which is why every requirement below prefers a control that evidences itself
 continuously over one that a person assembles at examination time.
 
-**This section does not restate SOC 1.** Where a control already exists there, it is referenced
-by identifier and only the additional SOC 2 obligation is stated. Section 9.10 holds the shared
-control map.
+Section 9.10 holds the shared control map.
 
 ### 9.1 Category scope
 
@@ -630,10 +599,8 @@ model attempts to comply.
 **Acceptance, SOC2-05.** The stated blast radius is exercised by a test that assumes the model
 is fully compromised and cooperative with the attacker.
 
-> **This is where the product is most exposed and least covered by precedent.** SOC1-04's
-> thresholds and SOC2-03's capability split are doing nearly all of the work. If either is
-> weakened for usability, the bound in SOC2-05 moves with it, and it should move visibly rather
-> than quietly.
+> SOC1-04's thresholds and SOC2-03's capability split carry nearly all of the bound in SOC2-05.
+> Weakening either for usability moves it.
 
 ### 9.3 Inference providers and data flow
 
@@ -645,10 +612,9 @@ is fully compromised and cooperative with the attacker.
 | **SOC2-11** | Where data residency is committed to, inference and extraction routing respects it, and a request that cannot be routed compliantly fails rather than falling back. | Should | **Proposed** — whether we commit to residency at all is undecided |
 | **SOC2-12** | Changing an inference provider, or a model version, is a change to the control environment under SOC1-33, and additionally requires the security review of SOC2-28. | Must | Approved |
 
-> **Constrains infrastructure and the provider abstraction.** SOC2-09 and SOC2-11 mean provider
-> selection is validated configuration rather than a deployment detail. Model provider swaps are
-> frequent and fast; a control that requires a manual review cycle per swap will be bypassed, so
-> the enforcement has to sit in the configuration path.
+> **Constrains the provider abstraction.** Provider selection is validated configuration rather
+> than a deployment detail. Model swaps are frequent, so enforcement sits in the configuration
+> path rather than in a review cycle.
 
 ### 9.4 Confidentiality and data handling
 
@@ -660,11 +626,9 @@ is fully compromised and cooperative with the attacker.
 | **SOC2-16** | Data is classified — financial records, credentials and secrets, personal information, and derived artifacts including embeddings, extracted document text, and agent traces — and handling obligations follow the classification. | Must | Approved |
 | **SOC2-17** | Deleting an entity destroys its derived artifacts as well as its records: embeddings, caches, extracted text, agent traces, and any representation held by a provider under SOC2-09. Deletion that leaves derived data behind does not satisfy PLT-11. | Must | Approved |
 
-> **The failure that ends the product.** SOC2-14 and SOC2-15 are the pair examiners probe
-> hardest, and cross-tenant disclosure is the single most damaging thing a multi-entity
-> accounting system can do. SOC2-15 is the harder of the two, because the isolation boundary now
-> has to hold across artifacts that did not exist in conventional software — an embedding index
-> and a conversation memory are each a cross-tenant leak waiting to be built.
+> SOC2-15 is the harder of the pair: the isolation boundary has to hold across artifacts that
+> did not exist in conventional software. An embedding index and a conversation memory are each
+> a cross-tenant leak waiting to be built.
 
 ### 9.5 Access control and identity
 
@@ -688,9 +652,8 @@ Carried by IAM-01 through IAM-12 and SOC1-23 through SOC1-26. Additional SOC 2 o
 | **SOC2-26** | Agent behaviour is monitored as a security signal, not only an operational one: volume anomalies, unusual account or payee targets, repeated authorisation failures, and clustering of exceptions are detected and alertable. | Must | Approved |
 | **SOC2-27** | The line between an agent error and a reportable security incident is defined in advance. An agent posting an incorrect but non-malicious entry is a processing exception under SOC1-27; an agent acting outside its capability set, or acting on injected instruction, is a security incident. | Must | Approved |
 
-> **SOC2-27 exists because the classification cannot be made under pressure.** Agents will post
-> wrong entries; that is a known property, not an incident. Deciding which is which after the
-> first bad week produces a decision shaped by that week.
+> Agents will post wrong entries; that is a known property, not an incident. Deciding which is
+> which after the first bad week produces a decision shaped by that week.
 
 ### 9.7 Change management — CC8
 
@@ -768,7 +731,7 @@ blocks a business requirement.
 | **OI-5** | Deleting a whole entity is settled. What is not: erasing one named person's data from an entity that survives — a payee, a customer contact — where the history is append-only and the surrounding books must still balance. | PLT-16, NFR-13 | Before the first erasure request arrives |
 | **OI-6** | What is the role taxonomy? This document requires roles and names the three capability classes they must distinguish, but not the roles themselves. Internal staff, a fractional CFO, and a CPA have genuinely different needs, and fixing the set before those are understood would be designing rather than specifying. | IAM-02 | Before access control is specified |
 | **OI-7** | Can one agent reviewing another agent's work constitute segregation of duties? If yes, SOC 1 readiness is reachable for a one-person business. If no, autonomy for that customer is capped by the availability of a second human, which most of segment 2 does not have. | SOC1-08 | Before autonomy defaults are set |
-| **OI-8** | What is the default autonomy posture for a business with no second person available to review? Refusing to act is safe and useless; acting unsupervised is useful and unattestable. | SOC1-08, SOC1-31 | Before first release |
+| **OI-8** | What is the default autonomy posture for a business with no second person available to review? Refusing to act is safe and useless; acting unsupervised is useful and unattestable. CUEC-5 shifts the decision to a customer who may not be equipped to make it, which argues for conservative defaults. | SOC1-08, SOC1-31 | Before first release |
 | **OI-9** | Do operator personnel have any path to customer financial data — break-glass or otherwise? Answering *no* is the strongest position and the hardest to support operationally. | SOC1-26 | Before anyone else's books are held |
 | **OI-10** | Do we accept any autonomous ledger write derived from untrusted content at all? Refusing outright is the strongest security position and removes most of the product's value for receipt and invoice capture. Accepting it makes SOC2-03 and SOC2-05 the only things standing between an attacker and the books. | SOC2-03, SOC2-05 | Before document capture ships |
 | **OI-11** | Does CFOKit handle sales tax, and if so how much of it does it own rather than delegate? The accounting policy currently treats it as unsupported rather than partially supported, and no requirement covers it — but an owner-operator meets it on day one. | Nothing — no requirement exists yet | Before segment 2 is a supported audience |
