@@ -35,6 +35,8 @@ belong in this document.
 | **OBJ-7** | Accept outside contributions the way a healthy open-source project does | Adding a financial institution, a payment processor, or a jurisdiction's rules is an additive change against a stable extension point, submitted and reviewed as an ordinary pull request, and requires no alteration to the ledger or the modules around it |
 | **OBJ-8** | Serve a small business across the whole range its incumbents serve | A company growing within the small-business segment — adding entities, moving from cash to accrual, engaging a fractional CFO — is never forced to migrate away. The segment is the one QuickBooks, Xero, and Zoho Books compete for |
 | **OBJ-9** | Be examinable by an external auditor wherever it runs | The system supplies, from its own records, the access, change, and processing evidence a SOC 1 and a SOC 2 Type II examination require, over a period of operation rather than at a moment |
+| **OBJ-10** | Produce numbers that are right | Booking is exact and demonstrably correct against an independent implementation; no posted record is ever silently altered; a repeated or retried operation never books twice |
+| **OBJ-11** | Let only the people an entity has authorised reach its books | No cross-entity access ever occurs; every access resolves to a person and the role they held at the time |
 
 ---
 
@@ -95,9 +97,10 @@ Business conditions this document relies on.
 | **A-2** | A commercial email delivery service is available on ordinary terms. |
 | **A-3** | The company has, or can obtain, an identity provider. CFOKit does not become one. |
 | **A-4** | A CPA remains in the loop for every company, and is the party who files. |
-| **A-5** | Inference cost is carried by the runtime the user already operates, not by CFOKit. Pricing therefore tracks the value of the displaced stack rather than token prices. |
+| **A-5** | Inference cost is carried by the runtime the user already operates, not by CFOKit. |
 | **A-6** | An independent auditor can be engaged, and the operating history an attestation requires accumulates only from the date the practice begins. |
 | **A-7** | Companies migrating in are most often leaving a small-business accounting package whose export fidelity is outside our control. |
+| **A-8** | A customer will open an invoice from an unauthenticated link, and neither they nor their supplier regards that as a risk. The incumbents work this way and the market has accepted it. |
 
 ---
 
@@ -842,9 +845,9 @@ stated once, in the SOC 1 section, and referenced from SOC 2.
 
 ## 10. Open issues
 
-Business decisions this document is waiting on. Each blocks a `Proposed` or `Deferred`
-requirement from being specified. None of these is a design question; a design question never
-blocks a business requirement.
+Business decisions this document is waiting on. Most block a `Proposed` or `Deferred`
+requirement from being specified; OI-12 blocks a requirement that does not exist yet. None is a
+design question; a design question never blocks a business requirement.
 
 | | Question | Blocks | Needed by |
 |---|---|---|---|
@@ -854,12 +857,12 @@ blocks a business requirement.
 | **OI-4** | Is compliance tracking in scope, and is it reporting at all? It sits under Reporting today for want of a better home, and it is neither a statement nor a query. | RPT-22 | Before it is specified |
 | **OI-5** | Deleting a whole entity is settled. What is not: erasing one named person's data from an entity that survives — a payee, a customer contact — where the history is append-only and the surrounding books must still balance. | PLT-19 | Before the first erasure request arrives |
 | **OI-6** | What is the role taxonomy? This document requires roles and names the three capability classes they must distinguish, but not the roles themselves. Internal staff, a fractional CFO, and a CPA have genuinely different needs, and fixing the set before those are understood would be designing rather than specifying. | IAM-02 | Before access control is specified |
-| **OI-7** | Which compensating controls must an entity have in place before CFOKit will act unsupervised? Segregation is unavailable to a one-person business, so this is what stands in its place, and it has to be specific enough to test. CUEC-5 shifts the choice to a customer who may not be equipped to make it, which argues for conservative defaults. | SOC1-33, IAM-17 | Before first release |
+| **OI-7** | Which compensating controls must an entity have in place before CFOKit will act unsupervised? Segregation is unavailable to a one-person business, so this is what stands in its place, and it has to be specific enough to test. Defaults should be conservative, since a customer inherits whichever ones ship. | SOC1-33, IAM-17 | Before first release |
 | **OI-8** | Do operator personnel have any path to customer financial data — break-glass or otherwise? Answering *no* is the strongest position and the hardest to support operationally. | SOC1-27 | Before anyone else's books are held |
 | **OI-9** | Do we accept any autonomous ledger write derived from untrusted content at all? Refusing outright is the strongest security position and removes most of the product's value for receipt and invoice capture. Accepting it makes SOC2-03 and SOC2-06 the only things standing between an attacker and the books. | SOC2-03, SOC2-06 | Before document capture ships |
 | **OI-10** | Within what period do we commit to notifying a customer of an incident affecting their data or the accuracy of their books? | SOC2-26 | Before the hosted service carries anyone else's books |
 | **OI-11** | How is a statement marked issued, and what form does it take when shared? An issued statement is a record of what was told to whom, which is not the same artifact as a report run on demand. | RPT-17 | Before any statement is handed to a lender or a board |
-| **OI-12** | Does CFOKit handle sales tax, and if so how much of it does it own rather than delegate? The accounting policy currently treats it as unsupported rather than partially supported, and no requirement covers it — but an owner-operator meets it on day one. | Nothing — no requirement exists yet | Before segment 2 is a supported audience |
+| **OI-12** | Does CFOKit handle sales tax, and if so how much of it does it own rather than delegate? No requirement covers it, and treating it as unsupported is cleaner than supporting it partially — but an owner-operator meets it on day one. | Nothing — no requirement exists yet | Before segment 2 is a supported audience |
 
 ---
 
@@ -869,22 +872,29 @@ Terms carrying a specific meaning in this document.
 
 | Term | Meaning |
 |---|---|
+| **Account** | A line in a chart of accounts. Always this sense, throughout. |
+| **Administrator** | An identity holding the role that permits entity lifecycle changes and changes to other identities' access. |
 | **Basis** | Whether an entity recognises revenue and expense when the obligation arises or when cash moves. A property of the entity, not a report option. |
 | **Close** | Marking a period as reviewed. A workflow milestone, distinct from the permanence a posting confers. |
 | **Commodity** | A unit an amount is denominated in. Money in a given currency today; potentially other holdings later. |
+| **Compensating control** | What stands in for segregation of duties where an entity has too few people to segregate — a reconciliation performed, an exception dispositioned, an agent-posted entry reviewed. |
+| **Display scale** | The number of decimal places at which a commodity's amounts are shown. A presentation property; recorded amounts carry more precision and are never rounded. |
 | **Draft** | A candidate transaction, freely editable, not yet part of the books. |
 | **Entity** | A set of books for one legal or reporting unit. The isolation boundary throughout. |
-| **Account** | A line in a chart of accounts. Always this sense, throughout. |
-| **Administrator** | An identity holding the role that permits entity lifecycle changes and changes to other identities' access. |
-| **Grant** | The act of assigning an identity a role in an entity. |
-| **Identity** | A person, authenticated by the organisation's identity provider. Skills act as identities; they are not identities themselves. |
-| **Role** | A named set of capabilities. An identity's access to an entity is exactly the role it holds there, and nothing else. |
+| **Exception** | An item that could not be processed, held in a durable queue until someone or something dispositions it. Never a silent failure. |
+| **Functional currency** | The single currency an entity's books are denominated in, declared when the entity is created. |
+| **Grant** | A role held by an identity in an entity, and the act of assigning one. A grant may lapse. |
+| **Identity** | A person, authenticated by the organisation's identity provider. |
+| **Invitation** | A role granted to someone who has no identity yet. It confers nothing until they authenticate, and binds to their identity when they do. |
 | **Obligation** | A commitment to receive or pay, recorded when it arises, separately from its settlement. |
 | **Posting** | Committing a transaction to the books. Irreversible; the point after which corrections are new entries. |
+| **Principal** | Whatever an action is attributed to. A person is one; a skill is another. An agent action carries both, and its authority is the intersection. |
 | **Reversal** | A new entry that undoes a posted one, leaving both visible. The only form a correction takes. |
+| **Role** | A named set of capabilities. An identity's access to an entity is exactly the role it holds there, and nothing else. |
 | **Rule** | Stored, operator-approved criteria that assign an incoming transaction to an account deterministically. |
 | **Settlement** | The movement of cash against an obligation. |
 | **The CFO seat** | Whoever is accountable for the company's finances — a fractional CFO where one is engaged, and otherwise the founder or owner-operator. Never vacant. |
+| **Untrusted content** | Anything the customer did not author and CFOKit does not control — a feed memo, an uploaded document, text extracted from one. Classified as such on the record and treated accordingly wherever an agent reads it. |
 
 ---
 
@@ -895,12 +905,14 @@ is unserved; a requirement serving no objective does not belong here.
 
 | Objective | Requirements |
 |---|---|
-| **OBJ-1** Displace the incumbent stack | BKP-01–BKP-06, BKP-13, BKP-14, BKP-15, AR-01–AR-12, RPT-01–RPT-09, MIG-01, MIG-02, MIG-03, MIG-08 |
-| **OBJ-2** Current and closed without manual recording | BKP-01, BKP-06, BKP-09, BKP-16, LED-11, LED-12, PLT-14, RPT-15 |
-| **OBJ-3** Every number traceable | BKP-10, LED-08, LED-09, PLT-16, PLT-20, IAM-13, NFR-02, RPT-08, RPT-11, SOC1-14, SOC1-15, SOC1-23 |
-| **OBJ-4** Output professionals accept | RPT-03, RPT-07, RPT-09, RPT-10, RPT-12, RPT-13, RPT-14, RPT-17, RPT-18, LED-02, LED-06, LED-14, LED-17, NFR-01 |
-| **OBJ-5** Own and leave with the data | MIG-09, MIG-10, MIG-11, MIG-12, PLT-11, PLT-13, PLT-21, NFR-07, NFR-17 |
+| **OBJ-1** Displace the incumbent stack | BKP-01–BKP-06, BKP-13–BKP-16, AR-01–AR-19, RPT-01–RPT-09, MIG-01–MIG-08, NFR-19, NFR-20 |
+| **OBJ-2** Current and closed without manual recording | BKP-01, BKP-06, BKP-09, BKP-16, LED-11, LED-12, PLT-07, PLT-12, PLT-14, RPT-15, NFR-15 |
+| **OBJ-3** Every number traceable | BKP-10, LED-08, LED-09, PLT-16, PLT-20, IAM-13, NFR-02, RPT-08, RPT-11, SOC1-14, SOC1-15, SOC1-22, SOC1-23, SOC1-36 |
+| **OBJ-4** Output professionals accept | RPT-03, RPT-07, RPT-09, RPT-10, RPT-12, RPT-13, RPT-14, RPT-16, RPT-17, RPT-18, LED-02, LED-06, LED-14, LED-17, NFR-01, NFR-16 |
+| **OBJ-5** Own and leave with the data | MIG-06, MIG-07, MIG-09–MIG-12, PLT-11, PLT-13, PLT-21, NFR-07, NFR-17 |
 | **OBJ-6** No vendor relationship required | BKP-03, PLT-02, PLT-06, IAM-10, NFR-10, NFR-11, NFR-14, NFR-17 |
-| **OBJ-7** Additive outside contribution | BKP-02, BKP-17, PLT-01, PLT-02, PLT-03, PLT-06, RPT-22, NFR-12, NFR-13 |
-| **OBJ-8** Serves a small business across its range | LED-10, LED-13, LED-14, LED-15, LED-16, LED-17, LED-18, LED-19, RPT-19, RPT-20, RPT-21, IAM-08, IAM-09, PLT-04, PLT-05, PLT-08 |
-| **OBJ-9** Examinable by an external auditor | IAM-13, IAM-14, IAM-15, IAM-16, IAM-17, IAM-18, IAM-19, PLT-15, PLT-16, PLT-17, PLT-18, PLT-19, NFR-04, NFR-05, NFR-18, SOC1-01–SOC1-36, SOC2-01–SOC2-33 |
+| **OBJ-7** Additive outside contribution | BKP-02, BKP-17, BKP-18, PLT-01, PLT-02, PLT-03, PLT-06, RPT-22, NFR-12, NFR-13 |
+| **OBJ-8** Serves a small business across its range | LED-10, LED-13, LED-14, LED-15, LED-16, LED-17, LED-18, LED-19, RPT-19, RPT-20, RPT-21, IAM-08, IAM-09, PLT-04, PLT-05, PLT-08, NFR-08, NFR-09 |
+| **OBJ-9** Examinable by an external auditor | IAM-13–IAM-19, PLT-15–PLT-19, NFR-18, SOC1-01–SOC1-36, SOC2-01–SOC2-33 |
+| **OBJ-10** Numbers that are right | LED-01, LED-03, LED-04, LED-05, LED-07, LED-11, BKP-07, BKP-08, BKP-11, BKP-12, MIG-04, MIG-05, RPT-06, NFR-01, NFR-02, NFR-03 |
+| **OBJ-11** Only authorised people reach the books | IAM-01–IAM-07, IAM-11, IAM-12, IAM-15, PLT-05, PLT-09, PLT-10, AR-08, NFR-04, NFR-05, NFR-06 |
