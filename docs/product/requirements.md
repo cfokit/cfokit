@@ -112,7 +112,7 @@ The double-entry record itself, and the entity settings that govern how it is ke
 |---|---|---|---|
 | **LED-01** | An entity defines its own chart of accounts, organised hierarchically, and can add to it over the life of the books. | Must | Approved |
 | **LED-02** | Every transaction balances. The system refuses to record one that does not, in any commodity it holds. | Must | Approved |
-| **LED-03** | Monetary amounts are recorded and reported exactly. No representation error, no accumulated drift, no tolerance. A balance is the exact sum of its postings, and amounts are presented at the conventional precision for their commodity. | Must | Approved |
+| **LED-03** | Monetary amounts are recorded and reported exactly. No representation error, no accumulated drift, no tolerance. A balance is the exact sum of its postings. | Must | Approved |
 | **LED-04** | Where an amount must be divided and does not divide evenly, the parts sum exactly to the original and the distribution is deterministic. The same division always produces the same parts. | Must | Approved |
 | **LED-05** | A transaction is freely editable while it is a draft, and becomes permanent when it is posted. Posting is the point of no return. | Must | Approved |
 | **LED-06** | A posted transaction is never altered or removed. Corrections are new entries that reverse the original, leaving both visible. | Must | Approved |
@@ -123,6 +123,7 @@ The double-entry record itself, and the entity settings that govern how it is ke
 | **LED-11** | An obligation and its settlement are recorded as two related events rather than one. An invoice raised in one period and paid in another is recoverable as either, depending on the basis in force. | Must | Approved |
 | **LED-12** | The ledger holds positions in things other than money — inventory, or investments held in a brokerage account. | Could | Deferred — activates when an entity acquires inventory or holds investments |
 | **LED-13** | Where an entity holds fungible units acquired at different costs and disposes of some, disposals consume the earliest lots first, exactly rather than approximately. Where a disposal is ambiguous the system refuses rather than selecting a plausible lot. | Could | Deferred — activates with LED-12 |
+| **LED-14** | Recorded amounts are never rounded. Every commodity carries a display scale — the number of decimal places at which its amounts are shown, two for most currencies and zero for some — and rounding occurs only where a figure is presented. | Must | Approved |
 
 **Acceptance, LED-03.** Divide $10.00 three ways: the three resulting postings sum to exactly
 $10.00, with no residual and no drift, and repeating the operation a million times introduces
@@ -222,6 +223,7 @@ Producing statements, and answering questions the books can support.
 | **RPT-13** | Any report can be produced as the books stood at an earlier moment, by the date records were made rather than the date events occurred. Where two runs of the same report differ, the difference is exactly the postings recorded between them. | Must | Approved |
 | **RPT-14** | Statements are produced on the accrual basis from the obligation and settlement events the ledger records. | Should | Deferred — activates when an entity must report on an accrual basis |
 | **RPT-15** | A statement can be marked issued, fixing what was reported, to whom, and when. | Should | Proposed — the mechanism and the form an issued statement takes when shared are undecided |
+| **RPT-16** | A presented figure is rounded half-up to its commodity's display scale. A total is computed from the unrounded values and then rounded, never by summing figures already rounded. | Must | Approved |
 
 **Acceptance, RPT-06.** The same books, queried twice by different callers phrasing the
 request differently, produce identical figures.
@@ -231,6 +233,9 @@ client no questions.
 
 **Acceptance, RPT-13.** The statement handed to a lender in March is reproducible in December,
 unchanged by the corrections posted in between.
+
+**Acceptance, RPT-16.** A column of displayed figures summed by hand may differ from the
+printed total by less than one unit of display scale. The printed total is the correct one.
 
 
 ### 6.6 Access & Identity — `IAM`
@@ -790,7 +795,7 @@ is unserved; a requirement serving no objective does not belong here.
 | **OBJ-1** Displace the incumbent stack | BKP-01, BKP-02, BKP-03, BKP-05, BKP-11, BKP-12, AR-01–AR-12, RPT-01–RPT-06, MIG-01, MIG-02 |
 | **OBJ-2** Current and closed without manual recording | BKP-01, BKP-05, BKP-07, BKP-13, LED-08, PLT-12, RPT-08 |
 | **OBJ-3** Every number traceable | BKP-08, LED-06, LED-07, PLT-13, PLT-17, IAM-09, NFR-02, RPT-13, SOC1-14, SOC1-15, SOC1-22 |
-| **OBJ-4** Output professionals accept | RPT-03, RPT-06, RPT-07, RPT-09, RPT-11, RPT-13, RPT-14, RPT-15, LED-10, LED-11, NFR-01 |
+| **OBJ-4** Output professionals accept | RPT-03, RPT-06, RPT-07, RPT-09, RPT-11, RPT-13, RPT-14, RPT-15, RPT-16, LED-10, LED-11, LED-14, NFR-01 |
 | **OBJ-5** Own and leave with the data | MIG-06, MIG-07, MIG-08, PLT-09, PLT-11, NFR-17 |
 | **OBJ-6** No vendor relationship required | BKP-04, PLT-02, PLT-06, IAM-06, NFR-09, NFR-10, NFR-14, NFR-17 |
 | **OBJ-7** Additive outside contribution | BKP-02, PLT-01, PLT-02, PLT-03, PLT-06, RPT-12, NFR-11, NFR-12 |
