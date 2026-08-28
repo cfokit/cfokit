@@ -26,17 +26,17 @@ belong in this document.
 
 | | Objective | Measure of success |
 |---|---|---|
-| **OBJ-1** | Displace the spend a small company makes on bookkeeping software plus an outsourced bookkeeping service | A company running CFOKit cancels both, at a combined saving of $340–1,000 per month |
-| **OBJ-2** | Keep books current and closed without a person doing the recording | Books current to within one day; period close lands on schedule rather than two to six weeks after month end |
-| **OBJ-3** | Make every number traceable to its origin | Any posting resolves to the source transaction and the rule that assigned it, for the full life of the record |
+| **OBJ-1** | Produce numbers that are right | Booking is exact and demonstrably correct against an independent implementation; no posted record is ever silently altered; a repeated or retried operation never books twice |
+| **OBJ-2** | Make every number traceable to its origin | Any posting resolves to the source transaction and the rule that assigned it, for the full life of the record |
+| **OBJ-3** | Keep books current and closed without a person doing the recording | Books current to within one day; period close lands on schedule rather than two to six weeks after month end |
 | **OBJ-4** | Produce output that outside professionals accept without rework | A CPA answers their own questions from the books without contacting the client; a lender or board accepts the statements as presented |
-| **OBJ-5** | Guarantee the company owns and can leave with its data | A complete, re-importable export is available at any moment, self-service, without contacting anyone |
-| **OBJ-6** | Be adoptable with no vendor relationship of any kind | The software runs with no cloud account, no signup, and no third-party credentials |
-| **OBJ-7** | Accept outside contributions the way a healthy open-source project does | Adding a financial institution, a payment processor, or a jurisdiction's rules is an additive change against a stable extension point, submitted and reviewed as an ordinary pull request, and requires no alteration to the ledger or the modules around it |
-| **OBJ-8** | Serve a small business across the whole range its incumbents serve | A company growing within the small-business segment — adding entities, moving from cash to accrual, engaging a fractional CFO — is never forced to migrate away. The segment is the one QuickBooks, Xero, and Zoho Books compete for |
-| **OBJ-9** | Be examinable by an external auditor wherever it runs | The system supplies, from its own records, the access, change, and processing evidence a SOC 1 and a SOC 2 Type II examination require, over a period of operation rather than at a moment |
-| **OBJ-10** | Produce numbers that are right | Booking is exact and demonstrably correct against an independent implementation; no posted record is ever silently altered; a repeated or retried operation never books twice |
-| **OBJ-11** | Let only the people an entity has authorised reach its books | No cross-entity access ever occurs; every access resolves to a person and the role they held at the time |
+| **OBJ-5** | Displace the spend a small company makes on bookkeeping software plus an outsourced bookkeeping service | A company running CFOKit cancels both, at a combined saving of $340–1,000 per month |
+| **OBJ-6** | Serve a small business across the whole range its incumbents serve | A company growing within the small-business segment — adding entities, moving from cash to accrual, engaging a fractional CFO — is never forced to migrate away. The segment is the one QuickBooks, Xero, and Zoho Books compete for |
+| **OBJ-7** | Let only the people an entity has authorised reach its books | No cross-entity access ever occurs; every access resolves to a person and the role they held at the time |
+| **OBJ-8** | Be examinable by an external auditor wherever it runs | The system supplies, from its own records, the access, change, and processing evidence a SOC 1 and a SOC 2 Type II examination require, over a period of operation rather than at a moment |
+| **OBJ-9** | Guarantee the company owns and can leave with its data | A complete, re-importable export is available at any moment, self-service, without contacting anyone |
+| **OBJ-10** | Be adoptable with no vendor relationship of any kind | The software runs with no cloud account, no signup, and no third-party credentials |
+| **OBJ-11** | Run as an open-source project people contribute to | Outside contributors send pull requests against any part of the system, not only designated extension points; a newcomer builds, tests, and runs the whole thing from a clean checkout without credentials, an account, or private knowledge; maintainers review in the open |
 
 ---
 
@@ -53,7 +53,7 @@ belong in this document.
 | **Lender, board, investor** | Consumes output | Statements in a conventional form, on a stated basis |
 | **Auditor, forensic accountant** | Consumes history | A complete, unaltered history with attribution |
 | **Self-hoster** | Operates their own deployment | A complete build with no cloud account, no signup, and no feature held back |
-| **Contributor** | Extends the system | Extension points that make a new provider or ruleset an additive change |
+| **Contributor** | Works on the system | A codebase they can build, test, and change from a clean checkout, and maintainers who review in the open |
 
 ---
 
@@ -450,6 +450,7 @@ stricter target than the global one.
 | **NFR-18** | Controls are evidenced rather than asserted. For every control these requirements state, the system produces the record showing it operated throughout a stated period. A control that cannot be evidenced does not count as implemented. | Auditability | Must | Every stated control evidenced |
 | **NFR-19** | The product is operable by someone who runs a business rather than someone who keeps books. Where an accounting term is unavoidable it is explained in place, and no ordinary task requires knowing what a contra account is. | Usability | Should | A non-accountant completes onboarding, categorisation, and a month-end close unaided |
 | **NFR-20** | Dates, numbers, and currency are presented in the conventions of the entity's locale, and the interface is available in languages other than English. | Localisation | Could | Deferred — activates when an entity operates outside the initial locale |
+| **NFR-21** | A contributor can build the system, run its full test suite, and exercise it end to end from a clean checkout, with no credentials, no accounts, and no access anyone has to grant them. | Contributability | Must | Clean checkout to passing suite, unaided |
 
 **Two kinds of guardrail, and only one of them is trustworthy.** NFR-16 constrains what the
 product is asked to do, and is therefore a behavioural standard an agent can fail to meet.
@@ -905,14 +906,14 @@ is unserved; a requirement serving no objective does not belong here.
 
 | Objective | Requirements |
 |---|---|
-| **OBJ-1** Displace the incumbent stack | BKP-01–BKP-06, BKP-13–BKP-16, AR-01–AR-19, RPT-01–RPT-09, MIG-01–MIG-08, NFR-19, NFR-20 |
-| **OBJ-2** Current and closed without manual recording | BKP-01, BKP-06, BKP-09, BKP-16, LED-11, LED-12, PLT-07, PLT-12, PLT-14, RPT-15, NFR-15 |
-| **OBJ-3** Every number traceable | BKP-10, LED-08, LED-09, PLT-16, PLT-20, IAM-13, NFR-02, RPT-08, RPT-11, SOC1-14, SOC1-15, SOC1-22, SOC1-23, SOC1-36 |
+| **OBJ-1** Numbers that are right | LED-01, LED-03, LED-04, LED-05, LED-07, LED-11, BKP-07, BKP-08, BKP-11, BKP-12, MIG-04, MIG-05, RPT-06, NFR-01, NFR-02, NFR-03 |
+| **OBJ-2** Every number traceable | BKP-10, LED-08, LED-09, PLT-16, PLT-20, IAM-13, NFR-02, RPT-08, RPT-11, SOC1-14, SOC1-15, SOC1-22, SOC1-23, SOC1-36 |
+| **OBJ-3** Current and closed without manual recording | BKP-01, BKP-06, BKP-09, BKP-16, LED-11, LED-12, PLT-07, PLT-12, PLT-14, RPT-15, NFR-15 |
 | **OBJ-4** Output professionals accept | RPT-03, RPT-07, RPT-09, RPT-10, RPT-12, RPT-13, RPT-14, RPT-16, RPT-17, RPT-18, LED-02, LED-06, LED-14, LED-17, NFR-01, NFR-16 |
-| **OBJ-5** Own and leave with the data | MIG-06, MIG-07, MIG-09–MIG-12, PLT-11, PLT-13, PLT-21, NFR-07, NFR-17 |
-| **OBJ-6** No vendor relationship required | BKP-03, PLT-02, PLT-06, IAM-10, NFR-10, NFR-11, NFR-14, NFR-17 |
-| **OBJ-7** Additive outside contribution | BKP-02, BKP-17, BKP-18, PLT-01, PLT-02, PLT-03, PLT-06, RPT-22, NFR-12, NFR-13 |
-| **OBJ-8** Serves a small business across its range | LED-10, LED-13, LED-14, LED-15, LED-16, LED-17, LED-18, LED-19, RPT-19, RPT-20, RPT-21, IAM-08, IAM-09, PLT-04, PLT-05, PLT-08, NFR-08, NFR-09 |
-| **OBJ-9** Examinable by an external auditor | IAM-13–IAM-19, PLT-15–PLT-19, NFR-18, SOC1-01–SOC1-36, SOC2-01–SOC2-33 |
-| **OBJ-10** Numbers that are right | LED-01, LED-03, LED-04, LED-05, LED-07, LED-11, BKP-07, BKP-08, BKP-11, BKP-12, MIG-04, MIG-05, RPT-06, NFR-01, NFR-02, NFR-03 |
-| **OBJ-11** Only authorised people reach the books | IAM-01–IAM-07, IAM-11, IAM-12, IAM-15, PLT-05, PLT-09, PLT-10, AR-08, NFR-04, NFR-05, NFR-06 |
+| **OBJ-5** Displace the incumbent stack | BKP-01–BKP-06, BKP-13–BKP-16, AR-01–AR-19, RPT-01–RPT-09, MIG-01–MIG-08, NFR-19, NFR-20 |
+| **OBJ-6** Serves a small business across its range | LED-10, LED-13, LED-14, LED-15, LED-16, LED-17, LED-18, LED-19, RPT-19, RPT-20, RPT-21, IAM-08, IAM-09, PLT-04, PLT-05, PLT-08, NFR-08, NFR-09 |
+| **OBJ-7** Only authorised people reach the books | IAM-01–IAM-07, IAM-11, IAM-12, IAM-15, PLT-05, PLT-09, PLT-10, AR-08, NFR-04, NFR-05, NFR-06 |
+| **OBJ-8** Examinable by an external auditor | IAM-13–IAM-19, PLT-15–PLT-19, NFR-18, SOC1-01–SOC1-36, SOC2-01–SOC2-33 |
+| **OBJ-9** Own and leave with the data | MIG-06, MIG-07, MIG-09–MIG-12, PLT-11, PLT-13, PLT-21, NFR-07, NFR-17 |
+| **OBJ-10** No vendor relationship required | BKP-03, PLT-02, PLT-06, IAM-10, NFR-10, NFR-11, NFR-14, NFR-17 |
+| **OBJ-11** An open-source project people contribute to | BKP-02, BKP-17, BKP-18, PLT-01, PLT-02, PLT-03, PLT-06, RPT-22, NFR-11, NFR-12, NFR-13, NFR-14, NFR-21 |
