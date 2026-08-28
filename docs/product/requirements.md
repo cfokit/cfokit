@@ -36,7 +36,7 @@ belong in this document.
 | **OBJ-8** | Be examinable by an external auditor wherever it runs | The system supplies, from its own records, the access, change, and processing evidence a SOC 1 and a SOC 2 Type II examination require, over a period of operation rather than at a moment |
 | **OBJ-9** | Guarantee the company owns and can leave with its data | A complete, re-importable export is available at any moment, self-service, without contacting anyone |
 | **OBJ-10** | Be adoptable with no vendor relationship of any kind | The software runs with no cloud account, no signup, and no third-party credentials |
-| **OBJ-11** | Run as an open-source project people contribute to | Outside contributors send pull requests against any part of the system, not only designated extension points; a newcomer builds, tests, and runs the whole thing from a clean checkout without credentials, an account, or private knowledge; maintainers review in the open |
+| **OBJ-11** | Run as an open-source project people contribute to | Outside contributors send pull requests across the system and they get merged; a newcomer builds, tests, and runs the whole thing from a clean checkout with no credentials and no account |
 
 ---
 
@@ -53,7 +53,7 @@ belong in this document.
 | **Lender, board, investor** | Consumes output | Statements in a conventional form, on a stated basis |
 | **Auditor, forensic accountant** | Consumes history | A complete, unaltered history with attribution |
 | **Self-hoster** | Operates their own deployment | A complete build with no cloud account, no signup, and no feature held back |
-| **Contributor** | Works on the system | A codebase they can build, test, and change from a clean checkout, and maintainers who review in the open |
+| **Contributor** | Works on the system | A codebase they can build, test, and change from a clean checkout |
 
 ---
 
