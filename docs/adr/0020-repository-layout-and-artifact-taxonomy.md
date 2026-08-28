@@ -57,7 +57,6 @@ docs/adr/   Decision records; immutable once Accepted
 docs/product/
   vision.md            Why the product exists
   requirements.md      What it must do — REQ- ids
-  accounting-policy.md What the numbers mean — user- and auditor-facing
 infra/      OpenTofu for the one maintained cloud target
 .claude/    Tooling for developing this repo; never shipped
 ```
@@ -158,9 +157,6 @@ comprehensible directly beside the obligation it satisfies.
   `cfokit.connectors` may not import `cfokit.ledger`.
 - The skills layout is provisional pending the delivery-surface decision and the question of
   whether agent roles split.
-- `docs/product/accounting-policy.md` is maintained as a user-facing document, with every
-  policy citing the ADR behind it. A policy without a citation is unreasoned; an ADR whose
-  outcome users experience and that the policy does not mention is undocumented.
 - The ADR backlog is sequenced by **who has to decide**, not by technical dependency. The
   policy four (0006, 0007, 0012, 0013) need accounting judgement from a human; the
   architecture set (0008, 0009, 0010, 0014, 0015) can be drafted from constraints already

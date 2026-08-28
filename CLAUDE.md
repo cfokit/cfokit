@@ -20,8 +20,7 @@ Directories are organised by **artifact kind**, and packages are named for
 | `skills/` | Shipped Agent Skills, as `SKILL.md` bundles | Talk to the ledger over HTTP only. Never import ledger code. |
 | `infra/` | OpenTofu for the one maintained cloud target, plus the deployment contract | Supplies env vars only. No app coupling. |
 | `specs/` | Feature specifications — what we will build. Churns. | Cites ADRs; never overrides one. |
-| `docs/product/` | Vision, `REQ-`numbered requirements, and accounting policy | The source for positioning; the README derives from it. |
-| `docs/product/accounting-policy.md` | What the numbers mean — written for users, accountants, and auditors | Every policy cites the ADR reasoning it. |
+| `docs/product/` | Vision and numbered requirements | The source for positioning; the README derives from it. |
 | `docs/roadmap.md` | Sequenced work plan | — |
 | `docs/adr/` | Architecture decision records. Immutable once accepted. | Not auto-loaded. Read on demand. |
 | `.claude/` | Tooling for developing *this repo* | Never shipped. Distinct from `skills/`. |

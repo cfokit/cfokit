@@ -117,7 +117,7 @@ Maximum flexibility, and some jurisdictions genuinely differ.
 
 Rejected because two reports over the same data would then disagree, and a reader has no way to know
 which convention produced which figure. If a jurisdiction requires something different, that is a
-policy decision recorded in `accounting-policy.md`, not a per-report option.
+policy decision recorded as a requirement, not a per-report option.
 
 ### Round intermediates to keep numbers tidy
 
@@ -140,8 +140,8 @@ enters. Rounding happens once, at the edge.
   property-testable — the parts must always sum to the whole, for any total and any line count.
 - A divergence-register entry recording that CFOKit requires exact balance where Beancount infers
   tolerance.
-- `accounting-policy.md` states the rounding and allocation rules in user-facing terms, since a
-  reader comparing CFOKit's figures against another system needs to know them.
+- `docs/product/requirements.md` states the rounding and allocation rules, since a reader
+  comparing CFOKit's figures against another system needs to know them.
 - Rounding never appears in `engine`, `repository`, or `service`. If a rounding call is needed below
   the presentation layer, the boundary has been misplaced.
 

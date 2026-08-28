@@ -178,7 +178,7 @@ things *before* they count.
   statement reproducible and is what closes the report-versioning question.
 - Period close needs a representation, and closing writes an `audit_log` row like any other
   state change.
-- User-facing documentation of correction mechanics in `docs/product/accounting-policy.md`.
+- Correction mechanics stated as requirements in `docs/product/requirements.md`.
 - ADR-0013 must settle backdating. A backdated posting into a soft-closed period is
   permissible under this ADR, but it changes an already-issued statement and therefore has to
   be surfaced rather than merely recorded.
