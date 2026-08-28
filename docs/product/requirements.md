@@ -500,6 +500,10 @@ performing both bookkeeper and controller work collapses that separation, and *t
 instructed not to* is not a control. This subsection is the substantial work, and the part an
 examiner will press on first.
 
+Carried already: IAM-16 settles that segregation means the person, not the skill, so two skills
+acting for one person never satisfy it; IAM-17 covers the entity with too few people to
+segregate at all. What follows is what constrains the agent itself.
+
 | | Requirement | Priority | Status |
 |---|---|---|---|
 | **SOC1-01** | Every agent action carries a distinct non-human principal identifying the skill that acted. It is never recorded as the supervising person's own action, and never as a shared service account. | Must | Approved |
@@ -754,7 +758,8 @@ is fully compromised and cooperative with the attacker.
 | **SOC2-17** | Data is classified — financial records, credentials and secrets, personal information, and derived artifacts including embeddings, extracted document text, and agent traces — and handling obligations follow the classification. | Must | Approved |
 | **SOC2-18** | Deleting an entity destroys its derived artifacts as well as its records: embeddings, caches, extracted text, agent traces, and any representation held by a provider under SOC2-10. Deletion that leaves derived data behind does not satisfy PLT-13. | Must | Approved |
 
-> SOC2-16 is the harder of the pair: the isolation boundary has to hold across artifacts that
+> Of SOC2-15 and SOC2-16, the second is harder: the isolation boundary has to hold across
+> artifacts that
 > did not exist in conventional software. An embedding index and a conversation memory are each
 > a cross-tenant leak waiting to be built.
 
