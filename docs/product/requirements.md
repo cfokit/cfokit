@@ -759,9 +759,8 @@ is fully compromised and cooperative with the attacker.
 | **SOC2-18** | Deleting an entity destroys its derived artifacts as well as its records: embeddings, caches, extracted text, agent traces, and any representation held by a provider under SOC2-10. Deletion that leaves derived data behind does not satisfy PLT-13. | Must | Approved |
 
 > Of SOC2-15 and SOC2-16, the second is harder: the isolation boundary has to hold across
-> artifacts that
-> did not exist in conventional software. An embedding index and a conversation memory are each
-> a cross-tenant leak waiting to be built.
+> artifacts that did not exist in conventional software. An embedding index and a conversation
+> memory are each a cross-tenant leak waiting to be built.
 
 ### 9.5 Access control and identity
 
