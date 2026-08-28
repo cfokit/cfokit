@@ -119,9 +119,10 @@ The double-entry record itself, and the entity settings that govern how it is ke
 | **LED-07** | Every transaction carries both the date the event occurred and the date it was recorded. Recording a transaction into an earlier period is permitted and is never silent. | Must | Approved |
 | **LED-08** | A period can be marked closed, signifying it has been reviewed. Once closed, no posting enters the period except through a recorded reopening, and anything so recorded is identifiable as such. | Must | Approved |
 | **LED-09** | One deployment holds the books of many entities. Reaching an entity's records requires an explicit grant to that entity. | Must | Approved |
-| **LED-10** | Each entity declares its accounting basis and its fiscal year end. These are properties of the entity, not options on a report. A change of basis is recorded with the date it takes effect, and never rewrites history. | Must | Approved |
+| **LED-10** | Each entity declares its accounting basis and its fiscal year end when it is created; neither has an undeclared state. These are properties of the entity, not options on a report. A change of basis is recorded with the date it takes effect, and never rewrites history. | Must | Approved |
 | **LED-11** | An obligation and its settlement are recorded as two related events rather than one. An invoice raised in one period and paid in another is recoverable as either, depending on the basis in force. | Must | Approved |
 | **LED-12** | The ledger holds positions in things other than money — inventory, or investments held in a brokerage account. | Could | Deferred — activates when an entity acquires inventory or holds investments |
+| **LED-13** | Where an entity holds fungible units acquired at different costs and disposes of some, disposals consume the earliest lots first, exactly rather than approximately. Where a disposal is ambiguous the system refuses rather than selecting a plausible lot. | Could | Deferred — activates with LED-12 |
 
 **Acceptance, LED-03.** Divide $10.00 three ways: the three resulting postings sum to exactly
 $10.00, with no residual and no drift, and repeating the operation a million times introduces
@@ -218,12 +219,18 @@ Producing statements, and answering questions the books can support.
 | **RPT-10** | In addition to the standard reports, a user can ask a question of their own books that nobody anticipated, and get an answer drawn from what is posted. | Should | Approved |
 | **RPT-11** | Assemble the figures, schedules, and supporting detail a tax return requires, to a standard where a preparer can answer their own questions without contacting the client. CFOKit does not file. | Should | Proposed — jurisdictions and entity types are an open question |
 | **RPT-12** | Track recurring obligations and deadlines by entity type and jurisdiction. | Could | Deferred — scope and placement are an open question |
+| **RPT-13** | Any report can be produced as the books stood at an earlier moment, by the date records were made rather than the date events occurred. Where two runs of the same report differ, the difference is exactly the postings recorded between them. | Must | Approved |
+| **RPT-14** | Statements are produced on the accrual basis from the obligation and settlement events the ledger records. | Should | Deferred — activates when an entity must report on an accrual basis |
+| **RPT-15** | A statement can be marked issued, fixing what was reported, to whom, and when. | Should | Proposed — the mechanism and the form an issued statement takes when shared are undecided |
 
 **Acceptance, RPT-06.** The same books, queried twice by different callers phrasing the
 request differently, produce identical figures.
 
 **Acceptance, RPT-11.** A CPA preparing a return works from the output alone and sends the
 client no questions.
+
+**Acceptance, RPT-13.** The statement handed to a lender in March is reproducible in December,
+unchanged by the corrections posted in between.
 
 
 ### 6.6 Access & Identity — `IAM`
@@ -291,6 +298,15 @@ records about itself.
 | **PLT-14** | Security-relevant events — authentication, refused authorisation, role change, export, and deletion — are recorded and retrievable independently of the books they concern. | Must | Approved |
 | **PLT-15** | For any past period, the system produces the evidence an external examiner requires: who held access, what changed and on whose authority, what the system did unattended, and what was refused. Evidence covers a period of operation rather than a moment. | Must | Approved |
 | **PLT-16** | Records are retained by class rather than under a single period, and disposal is never automatic: candidates are listed, legal hold is evaluated at the time of disposal and overrides the schedule, a named person authorises each batch, and a permanent record captures what was destroyed, when, by whom, and under what authority. | Should | Approved |
+| **PLT-17** | Retention defaults are set per record class as below. An entity configures its own schedule, and these are what it starts from. | Should | Approved |
+
+| Record class | Default |
+|---|---|
+| General ledger, postings, financial statements, chart of accounts | Indefinite |
+| Supporting documents — attachments, receipts, statements, raw ingested feed payloads | 7 years |
+| Fixed asset records | Life of the asset plus 7 years |
+| Audit log | Follows the record it describes |
+| Destruction log | Permanent |
 
 **Acceptance, PLT-05.** A person invited to a client's channel who holds no role for that
 client's entity receives nothing from the books.
@@ -734,7 +750,8 @@ blocks a business requirement.
 | **OI-8** | What is the default autonomy posture for a business with no second person available to review? Refusing to act is safe and useless; acting unsupervised is useful and unattestable. CUEC-5 shifts the decision to a customer who may not be equipped to make it, which argues for conservative defaults. | SOC1-08, SOC1-31 | Before first release |
 | **OI-9** | Do operator personnel have any path to customer financial data — break-glass or otherwise? Answering *no* is the strongest position and the hardest to support operationally. | SOC1-26 | Before anyone else's books are held |
 | **OI-10** | Do we accept any autonomous ledger write derived from untrusted content at all? Refusing outright is the strongest security position and removes most of the product's value for receipt and invoice capture. Accepting it makes SOC2-03 and SOC2-05 the only things standing between an attacker and the books. | SOC2-03, SOC2-05 | Before document capture ships |
-| **OI-11** | Does CFOKit handle sales tax, and if so how much of it does it own rather than delegate? The accounting policy currently treats it as unsupported rather than partially supported, and no requirement covers it — but an owner-operator meets it on day one. | Nothing — no requirement exists yet | Before segment 2 is a supported audience |
+| **OI-11** | How is a statement marked issued, and what form does it take when shared? An issued statement is a record of what was told to whom, which is not the same artifact as a report run on demand. | RPT-15 | Before any statement is handed to a lender or a board |
+| **OI-12** | Does CFOKit handle sales tax, and if so how much of it does it own rather than delegate? The accounting policy currently treats it as unsupported rather than partially supported, and no requirement covers it — but an owner-operator meets it on day one. | Nothing — no requirement exists yet | Before segment 2 is a supported audience |
 
 ---
 
@@ -772,10 +789,10 @@ is unserved; a requirement serving no objective does not belong here.
 |---|---|
 | **OBJ-1** Displace the incumbent stack | BKP-01, BKP-02, BKP-03, BKP-05, BKP-11, BKP-12, AR-01–AR-12, RPT-01–RPT-06, MIG-01, MIG-02 |
 | **OBJ-2** Current and closed without manual recording | BKP-01, BKP-05, BKP-07, BKP-13, LED-08, PLT-12, RPT-08 |
-| **OBJ-3** Every number traceable | BKP-08, LED-06, LED-07, PLT-13, IAM-09, NFR-02, SOC1-14, SOC1-15, SOC1-22 |
-| **OBJ-4** Output professionals accept | RPT-03, RPT-06, RPT-07, RPT-09, RPT-11, LED-10, LED-11, NFR-01 |
+| **OBJ-3** Every number traceable | BKP-08, LED-06, LED-07, PLT-13, PLT-17, IAM-09, NFR-02, RPT-13, SOC1-14, SOC1-15, SOC1-22 |
+| **OBJ-4** Output professionals accept | RPT-03, RPT-06, RPT-07, RPT-09, RPT-11, RPT-13, RPT-14, RPT-15, LED-10, LED-11, NFR-01 |
 | **OBJ-5** Own and leave with the data | MIG-06, MIG-07, MIG-08, PLT-09, PLT-11, NFR-17 |
 | **OBJ-6** No vendor relationship required | BKP-04, PLT-02, PLT-06, IAM-06, NFR-09, NFR-10, NFR-14, NFR-17 |
 | **OBJ-7** Additive outside contribution | BKP-02, PLT-01, PLT-02, PLT-03, PLT-06, RPT-12, NFR-11, NFR-12 |
-| **OBJ-8** Serves a small business across its range | LED-09, LED-10, LED-11, LED-12, IAM-05, PLT-04, PLT-05, RPT-11 |
+| **OBJ-8** Serves a small business across its range | LED-09, LED-10, LED-11, LED-12, LED-13, RPT-14, IAM-05, PLT-04, PLT-05, RPT-11 |
 | **OBJ-9** Examinable by an external auditor | IAM-09, IAM-10, IAM-11, IAM-12, IAM-13, IAM-14, PLT-13, PLT-14, PLT-15, PLT-16, NFR-04, NFR-05, NFR-18, SOC1-01–SOC1-34, SOC2-01–SOC2-33 |
