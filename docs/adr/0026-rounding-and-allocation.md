@@ -141,7 +141,7 @@ enters. Rounding happens once, at the edge.
 - A divergence-register entry recording that CFOKit requires exact balance where Beancount infers
   tolerance.
 - `docs/product/requirements.md` states the rounding and allocation rules, since a reader
-  comparing CFOKit's figures against another system needs to know them. Not yet satisfied.
+  comparing CFOKit's figures against another system needs to know them.
 - Rounding never appears in `engine`, `repository`, or `service`. If a rounding call is needed below
   the presentation layer, the boundary has been misplaced.
 
