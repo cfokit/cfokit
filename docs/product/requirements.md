@@ -13,7 +13,7 @@ are recorded elsewhere. Identifiers are stable and are never reused.
 
 | Field | Meaning |
 |---|---|
-| **Priority** | `Must` — a release lacking it is incomplete. `Should` — required for a stated buyer to adopt. `Could` — genuinely wanted; waits on a stated trigger. |
+| **Priority** | `Must` — a release lacking it is incomplete. `Should` — required for a stated audience to adopt. `Could` — genuinely wanted; waits on a stated trigger. |
 | **Status** | `Approved` — agreed and specifiable now. `Proposed` — agreed in intent, but an open business question must be settled before it can be specified. `Deferred` — agreed, waiting on a named trigger. |
 | **Acceptance** | The observable outcome that settles whether it is met. |
 
@@ -29,7 +29,7 @@ belong in this document.
 | **OBJ-1** | Produce numbers that are right | Booking is exact and demonstrably correct against an independent implementation; no posted record is ever silently altered; a repeated or retried operation never books twice |
 | **OBJ-2** | Make every number traceable to its origin | Any posting resolves to the source transaction and the rule that assigned it, for the full life of the record |
 | **OBJ-3** | Keep books current and closed without a person doing the recording | Books current to within one day; period close lands on schedule rather than two to six weeks after month end |
-| **OBJ-4** | Produce output that outside professionals accept without rework | A CPA answers their own questions from the books without contacting the client; a lender or board accepts the statements as presented |
+| **OBJ-4** | Produce output that outside professionals accept without rework | A preparer answers their own questions from the books without contacting the client; a lender or board accepts the statements as presented |
 | **OBJ-5** | Displace the spend a small company makes on bookkeeping software plus an outsourced bookkeeping service | A company running CFOKit cancels both, at a combined saving of $340–1,000 per month |
 | **OBJ-6** | Serve a small business across the whole range its incumbents serve | A company growing within the small-business segment — adding entities, moving from cash to accrual, engaging a fractional CFO — is never forced to migrate away. The segment is the one QuickBooks, Xero, and Zoho Books compete for |
 | **OBJ-7** | Let only the people an entity has authorised reach its books | No cross-entity access ever occurs; every access resolves to a person and the role they held at the time |
@@ -44,7 +44,7 @@ belong in this document.
 
 | Stakeholder | Relationship | What they need from CFOKit |
 |---|---|---|
-| **The company** | Pays, in every case | Books it can trust, at a cost proportionate to its size |
+| **The company** | Owns and administers its books, in every case | Books it can trust, and control over who else can reach them |
 | **Founder** | Operates; often holds the CFO seat | Correct books without spending time on them; straight answers about runway and affordability |
 | **Owner-operator** | Operates; holds the CFO seat | Categorisation as transactions arrive; answers about pay, tax, and whether a job or location makes money |
 | **Fractional CFO** | Operates across four to eight clients; advocates | Each client arriving current, closed, and traceable, so the engagement is strategy rather than reconstruction |
@@ -96,7 +96,7 @@ Business conditions this document relies on.
 | **A-1** | The company's financial institutions are reachable through at least one commercial aggregation service, and that service's coverage is adequate for the target segments. |
 | **A-2** | A commercial email delivery service is available on ordinary terms. |
 | **A-3** | The company has, or can obtain, an identity provider. CFOKit does not become one. |
-| **A-4** | A CPA remains in the loop for every company, and is the party who files. |
+| **A-4** | Where a company uses a tax preparer, that preparer works from what CFOKit produces. Many owner-operators prepare and file their own returns. |
 | **A-5** | Inference cost is carried by the runtime the user already operates, not by CFOKit. |
 | **A-6** | An independent auditor can be engaged, and the operating history an attestation requires accumulates only from the date the practice begins. |
 | **A-7** | Companies migrating in are most often leaving a small-business accounting package whose export fidelity is outside our control. |
@@ -300,8 +300,8 @@ unchanged by the corrections posted in between.
 **Acceptance, RPT-12.** A column of displayed figures summed by hand may differ from the
 printed total by less than one unit of display scale. The printed total is the correct one.
 
-**Acceptance, RPT-18.** A CPA preparing a return works from the output alone and sends the
-client no questions.
+**Acceptance, RPT-18.** A preparer works from the output alone and needs to ask the company
+nothing.
 
 ### 6.6 Access & Identity — `IAM`
 
@@ -675,7 +675,7 @@ adds customer burden.
 |---|---|
 | **ES-1** | What is the target audit period, and therefore the date from which controls must demonstrably be operating? A Type 2 opinion covers a period, so this date is the real deadline, not the engagement date. |
 | **ES-2** | Do we pursue a Type 1 opinion first? It is cheaper and faster and attests only to design at a point in time, which may be enough to unblock a specific deal while the Type 2 period accrues. |
-| **ES-3** | Which customer segment is actually driving SOC 1 demand? A one-person business will never ask. If the demand is coming from fractional CFOs and CPAs acting for clients, the requirement is theirs rather than the payer's, and that changes what has to be ready and when. |
+| **ES-3** | Which customer segment is actually driving SOC 1 demand? A one-person business will never ask. If the demand is coming from fractional CFOs and CPAs acting for clients, the requirement is theirs rather than the company's, and that changes what has to be ready and when. |
 | **ES-4** | How is an inference provider treated in the examination? It is not ordinary infrastructure — its output reaches the books — and there is little precedent to follow. |
 
 ---
@@ -697,7 +697,7 @@ Section 9.10 holds the shared control map.
 | Category | Position | Rationale |
 |---|---|---|
 | **Security** (CC1–CC9) | In scope | Mandatory. Not elective for any SOC 2 report. |
-| **Confidentiality** | In scope | Customer financial data is the core asset, and it is what a buyer is actually worried about. Declining this category invites the question of why. |
+| **Confidentiality** | In scope | Customer financial data is the core asset, and it is what a customer is actually worried about. Declining this category invites the question of why. |
 | **Availability** | **Undecided** | The criteria test against *our own stated commitments*, so this category costs what we choose to promise. Making no commitment and excluding the category is defensible; making one and excluding it is not. |
 | **Processing Integrity** | **Recommended in scope** | Completeness and accuracy of processing is the substance of section 8. If those controls are built, this category is close to free — and it is the one a buyer most associates with an accounting product. |
 | **Privacy** | **Out unless triggered** | Business contact data alone does not trigger it. Payroll, contractor 1099 data, and employee expense reimbursement each pull personal information in. Each is out of scope today; adding any one of them makes this category unavoidable. |
