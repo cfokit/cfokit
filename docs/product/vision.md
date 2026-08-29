@@ -49,7 +49,7 @@ closed year and files against it.
 
 ### What small companies actually have
 
-Below a certain size a company has a CPA and neither of the other two. The recording and
+Below a certain size a company has neither of the other two, and a CPA only if it engages one. The recording and
 closing still has to happen, so it lands on whoever is nearest and gets done late,
 inconsistently, and under deadline pressure. Everything downstream inherits that condition: the forecast, the board
 pack, the loan application, the return.
@@ -60,9 +60,11 @@ fractional CFO, or an owner-operator — has something worth working from.
 
 ## Who it serves
 
-**The payer is the company, in every case.** This is the same buyer QuickBooks has. Who
-operates the product and who recommends it both vary, and conflating those three roles
-produces bad positioning, so they are kept separate throughout this document.
+**The company owns its books, in every case.** Whether CFOKit runs on the company's own
+machine or is hosted for it, the account belongs to the company — never to its accountant or
+its fractional CFO, who work inside it at the company's invitation. Who operates the product
+and who recommends it both vary, and conflating those three roles produces bad positioning, so
+they are kept separate throughout this document.
 
 Two segments arrive at the problem from different directions.
 
@@ -79,7 +81,7 @@ by something that changed at the company rather than by who happens to be doing 
 | **2.** Seed to Series A | Institutional money arrives, and a board and reporting obligations with it | Fractional CFO, alongside the founder | The fractional CFO |
 | **3.** Scaling operations | Headcount and volume outgrow a part-time finance function | Controller and staff accountants | The controller, internally |
 
-A CPA sits alongside every row of that table, and alongside all of segment 2. That is why the
+A CPA sits alongside most rows of that table, and alongside much of segment 2. That is why the
 CPA channel matters more than any single stage in it.
 
 Stage 0 can last for years. Nothing about the transitions is a churn event for the company,
@@ -99,7 +101,7 @@ shop, a construction firm.
 There is no stage sequence here, because the company is not trying to become something else.
 Their financial questions are about paying themselves, whether they can afford someone, what
 they owe in tax, and whether a particular job or location makes money. The only professional
-in the loop is a CPA, seen once a year.
+in the loop, where there is one at all, is a CPA seen once a year.
 
 ### Two kinds of complexity, and which one arrives first
 
@@ -127,7 +129,7 @@ a stage number.
 
 ### Advocates, and other people in the room
 
-**Fractional CFOs are advocates, not payers.** They carry four to eight clients at five to
+**Fractional CFOs are advocates, not account owners.** They carry four to eight clients at five to
 ten hours per week each, which caps the practice at roughly one person's capacity. A client
 whose ledger is already current and closed does not consume the first month of an engagement
 in reconstruction, which lets the fractional CFO scope to strategy, planning, and compliance,
@@ -135,8 +137,11 @@ and lets them tell the client to drop the bookkeeping service. They only appear 
 from stage 2 onward, and a company can decline to have one at all, so this channel is real but
 narrow.
 
-**CPAs are the structural channel.** Every company has one, filing is not optional, and the
-deadline is fixed, which makes this the relationship worth building around.
+**CPAs are the structural channel.** Filing is not optional and the deadline is fixed, and most
+companies past the simplest returns engage someone to prepare theirs — which makes this the
+relationship worth building around. It is not universal: plenty of owner-operators prepare and
+file their own returns, and nothing about CFOKit assumes otherwise. The channel is broad rather
+than total.
 
 The mechanism is the one Vanta built with SOC 2 auditors. Vanta's audit partners pull evidence
 directly from the platform, which cuts their fieldwork and sometimes their fee, so they
@@ -361,7 +366,7 @@ These are decided, and they bound what the positioning may promise:
   decision to reverse, not a drift. Rendered report output has not been decided either way.
 - **Not a bank.** It reads financial data and keeps books; it does not move money.
 - **Not a filing agent.** It produces the closed year, the schedules, and the supporting
-  detail a preparer works from. A CPA prepares and files.
+  detail a preparer works from. Whoever prepares the return files it.
 - **Not a SaaS-only product.** Self-hosting is a product promise, which is why the local stack
   needs no cloud account. The
   reason is control, cost, and freedom from lock-in. It is not the trust mechanism — that is
