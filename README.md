@@ -1,6 +1,6 @@
 # CFOKit
 
-**The open source CFO toolkit.**
+**Open source books your agent keeps.**
 
 A CFO owns capital, cash, and the plan. Producing the books they work from is a bookkeeper's
 job and a controller's job. CFOKit does that part, as a kit of Agent Skills running against a
