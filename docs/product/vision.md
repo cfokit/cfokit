@@ -241,19 +241,37 @@ probabilistic categoriser sitting on a retention-limited audit log.
 What success looks like, each with the measure that settles it. An objective without a measure is
 a slogan; these are the statements CFOKit can be held to.
 
+**The books.**
+
 | | Objective | Measure of success |
 |---|---|---|
-| **OBJ-1** | Produce numbers that are right | Booking is exact and demonstrably correct against an independent implementation; no posted record is ever silently altered; a repeated or retried operation never books twice |
-| **OBJ-2** | Make every number traceable to its origin | Any posting resolves to the source transaction and the rule that assigned it, for the full life of the record |
-| **OBJ-3** | Keep books current and closed without a person doing the recording | Books current to within one day; period close lands on schedule rather than two to six weeks after month end |
-| **OBJ-4** | Produce output that outside professionals accept without rework | A preparer answers their own questions from the books without contacting the client; a lender or board accepts the statements as presented |
-| **OBJ-5** | Displace the spend a small company makes on bookkeeping software plus an outsourced bookkeeping service | A company running CFOKit cancels both, at a combined saving of $340–1,000 per month |
-| **OBJ-6** | Serve a small business across the whole range its incumbents serve | A company growing within the small-business segment — adding entities, moving from cash to accrual, engaging a fractional CFO — is never forced to migrate away. The segment is the one QuickBooks, Xero, and Zoho Books compete for |
-| **OBJ-7** | Let only the people an entity has authorised reach its books | No cross-entity access ever occurs; every access resolves to a person and the role they held at the time |
-| **OBJ-8** | Be examinable by an external auditor wherever it runs | The system supplies, from its own records, the access, change, and processing evidence a SOC 1 and a SOC 2 Type II examination require, over a period of operation rather than at a moment |
-| **OBJ-9** | Guarantee the company owns and can leave with its data | A complete, re-importable export is available at any moment, self-service, without contacting anyone |
-| **OBJ-10** | Be adoptable with no vendor relationship of any kind | The software runs with no cloud account, no signup, and no third-party credentials |
-| **OBJ-11** | Run as an open-source project people contribute to | Outside contributors send pull requests across the system and they get merged; a newcomer builds, tests, and runs the whole thing from a clean checkout with no credentials and no account |
+| **OBJ-1** | The company's books are kept without the company keeping them | Transactions are recorded, classified, and reconciled with no person performing the recording. A person is involved only to answer what the stored rules cannot resolve, and to approve the rule that settles it; an approved pattern is not asked about again |
+| **OBJ-2** | The books are current, and a close is never waiting on CFOKit | A transaction is recorded within one day of reaching the system, rather than of its transaction date. Anything the rules cannot resolve is asked as it arrives, not discovered at period end. A period is ready to close on the day the entity scheduled, with nothing left to decide; where it is not, an unanswered question is the only permissible cause, and what is outstanding and how long it has waited are visible throughout |
+| **OBJ-3** | The numbers are exact, and nothing posted changes afterwards | Every amount is recorded exactly: no representation error, no accumulated drift, a balance that is the exact sum of its postings. Booking agrees with an independent implementation of double-entry, with every divergence documented. A posted record is never altered or deleted — a correction is a new entry, and both remain visible. An operation repeated or retried books once |
+| **OBJ-4** | Every number explains itself | Any posting resolves to what caused it and what decided it — the source transaction and the rule that assigned it, the person who entered it, the entry it reverses, or the migration that carried it in — and that attribution survives for the life of the record |
+
+**What they are worth.**
+
+| | Objective | Measure of success |
+|---|---|---|
+| **OBJ-5** | The recurring cost of keeping the books goes away, in whichever form the company pays it | A company paying for an accounting subscription and a bookkeeping service cancels both. An owner who kept the books personally stops spending the hours. Which of these applies depends on what the company did before; that at least one is removed in full does not |
+| **OBJ-6** | The people the company answers to accept its output as it stands | Statements are produced in a conventional form, on the entity's declared basis, and every line resolves to the detail supporting it without leaving the system. A preparer, a lender, or a board works from what CFOKit produces without asking the company to reconstruct anything |
+| **OBJ-7** | A company is never forced off CFOKit by growing | The books absorb what growth brings — a second entity, a change of basis, more people holding distinct roles, an advisor working across clients, payroll, sales tax, obligations to lenders and boards — as changes to existing books rather than as reasons to leave. A company that genuinely outgrows CFOKit has left the small-business segment, not exceeded the product |
+
+**Control and assurance.**
+
+| | Objective | Measure of success |
+|---|---|---|
+| **OBJ-8** | Only the people an entity has authorised reach its books | Cross-entity access does not occur, and is prevented at the data layer rather than by convention. Every access resolves to the principal that made it — the person, and the skill acting for them where one did — and to the role held at the time. Authority is determined server-side, whatever the caller asserts |
+| **OBJ-9** | The company can prove all of this to an examiner | The system supplies, from its own records, the access, change, and processing evidence a SOC 1 and a SOC 2 Type II examination require, over a period of operation rather than at a moment. What the software cannot evidence — the operator's own controls — is stated rather than implied |
+
+**Independence.**
+
+| | Objective | Measure of success |
+|---|---|---|
+| **OBJ-10** | The company can leave with everything, at any time | Two exports, both self-service and available in any entity state short of deletion: one another accounting system can read, and one that reproduces the entity's books, their history, and their attribution in another CFOKit deployment |
+| **OBJ-11** | The system runs with no vendor relationship | The books can be kept end to end — in, classified, posted, reconciled, closed, reported — with no cloud account, no signup, and no third-party credential. Every external service is optional and additive, and what is lost without each one is stated |
+| **OBJ-12** | It is a project outsiders can work on | A newcomer builds, tests, and runs the whole system from a clean checkout, with the full suite passing, no credentials, and no account. Adding a feed provider, a delivery channel, or a rule set is an additive change against a stable boundary rather than a fork |
 
 ## The commercial thesis
 
