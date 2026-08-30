@@ -1,8 +1,5 @@
 # CFOKit — Business Requirements
 
-- **Status:** Draft
-- **Owner:** Geoff
-
 ## 1. Purpose and scope
 
 This document states what CFOKit must do for the people who pay for it and the people who
