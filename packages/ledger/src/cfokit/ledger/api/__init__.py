@@ -1,14 +1,14 @@
-"""REST adapter — one of two protocol adapters over one service layer (ADR-0009).
+"""REST adapter — one of two protocol adapters over one service layer (ADR-0010).
 
 A published interface with stability obligations; the generated OpenAPI document is
-committed and a diff means a contract change requiring review (ADR-0015).
+committed and a diff means a contract change requiring review (ADR-0016).
 
-**Handlers are synchronous `def`, never `async def`** (ADR-0025). FastAPI is used for its
+**Handlers are synchronous `def`, never `async def`** (ADR-0026). FastAPI is used for its
 OpenAPI generation and validation; the event loop lives in the server, not in this code.
 `scripts/check_async.py` fails the build if that slips.
 
 Adapters stay thin. Logic here is a defect, because it is then present in one protocol and
-absent from the other (ADR-0008).
+absent from the other (ADR-0009).
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ def create_app(settings: Settings) -> FastAPI:
     """Build the REST application.
 
     Takes settings as an argument rather than reading the environment, so the app is
-    constructible in a test without one (ADR-0003 keeps `config` the only reader).
+    constructible in a test without one (ADR-0004 keeps `config` the only reader).
     """
     app = FastAPI(
         title="CFOKit Ledger",

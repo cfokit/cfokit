@@ -1,7 +1,7 @@
-"""Schema migrations, applied by an explicit command and never at startup (ADR-0003).
+"""Schema migrations, applied by an explicit command and never at startup (ADR-0004).
 
 Migrations ship inside the package so the same files are available in the container, on
-a laptop, and in CI. They are plain SQL, in keeping with the no-ORM decision (ADR-0008).
+a laptop, and in CI. They are plain SQL, in keeping with the no-ORM decision (ADR-0009).
 
 Naming: ``NNNN-short-description.sql``, applied in lexical order, never renumbered.
 """
@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS schema_migration (
 """
 
 # Serialises concurrent migration runs. Two instances starting at once is exactly the
-# race that made migrations-at-startup unacceptable (ADR-0003); the explicit command
+# race that made migrations-at-startup unacceptable (ADR-0004); the explicit command
 # does not get to have the same bug.
 MIGRATION_LOCK_KEY = 8_474_021_100_001
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""CI gate 4: no floats touch money — in the schema or in the code (ADR-0004).
+"""CI gate 4: no floats touch money — in the schema or in the code (ADR-0005).
 
-Two checks, because ADR-0004 covers both and CLAUDE.md restates it as "use `decimal.Decimal`
+Two checks, because ADR-0005 covers both and CLAUDE.md restates it as "use `decimal.Decimal`
 everywhere; never `float`, including in tests and fixtures":
 
 1. **Schema.** No `REAL`, `DOUBLE PRECISION`, `FLOAT`, or `MONEY` column types. A float
@@ -82,7 +82,7 @@ def main() -> int:
     sql_files = sorted(REPO_ROOT.glob("packages/*/src/cfokit/*/migrations/sql/*.sql"))
     for path in sql_files:
         for number, text in offending_lines(path.read_text(encoding="utf-8")):
-            _report(path, number, text, "float storage type — use NUMERIC(28,10) (ADR-0004)")
+            _report(path, number, text, "float storage type — use NUMERIC(28,10) (ADR-0005)")
             failures += 1
 
     py_files = sorted(
@@ -90,7 +90,7 @@ def main() -> int:
     )
     for path in py_files:
         for number, text in offending_python_lines(path.read_text(encoding="utf-8")):
-            _report(path, number, text, "float in package code — use Decimal (ADR-0004)")
+            _report(path, number, text, "float in package code — use Decimal (ADR-0005)")
             failures += 1
 
     if failures:
