@@ -46,6 +46,12 @@ producing financial statements and answering questions against the books; migrat
 an incumbent system and out to any other; and supplying, from the system's own records, the
 evidence an external examination of its controls requires.
 
+**Payroll and sales tax are in scope and unspecified.** Both arrive in the ordinary course of
+the business CFOKit serves — an owner-operator meets sales tax on day one — and OBJ-7 commits
+to absorbing them rather than losing the company at that boundary. Neither carries requirements
+yet, because nothing CFOKit serves today needs them. That records what has been built, not what
+CFOKit is for.
+
 ### Out of scope
 
 These are decided. Each bounds what the product may promise.
@@ -59,7 +65,6 @@ These are decided. Each bounds what the product may promise.
 | Being hosted-only | Self-hosting is a product promise, not a trial edition. |
 | Any commercial service built on CFOKit | Its existence, pricing, billing, subscriptions, and operating policies — including disclosure practice — are business decisions, not product requirements. The product must not presume a commercial operator exists. |
 | Accounts payable, purchase orders, quotes, estimates | Not included until a stated need arrives. |
-| Payroll | Not included. |
 | SOX compliance | Sarbanes-Oxley applies to public companies and their auditors. CFOKit does not serve public companies and is not built to. Out of scope until it deliberately is. Note that individual SOX provisions on record destruction reach private companies; those are retention obligations and are handled under PLT-19 and PLT-20, not as SOX scope. |
 | Statutory localisation | Jurisdiction-specific tax regimes and their return formats, statutory charts of accounts, and e-invoicing mandates. The incumbents ship separate regional editions rather than configure one product, because these differences are too deep to configure. Out of scope until a jurisdiction is chosen deliberately. |
 | Enterprise-scale accounting | Consolidation across dozens of entities, multi-currency treasury, statutory reporting regimes, and the volumes that come with them. The target is the small-business segment the incumbents serve. Revisit only once that segment is won. |
@@ -679,7 +684,7 @@ Section 8.10 holds the shared control map.
 | **Confidentiality** | In scope | Customer financial data is the core asset, and it is what a customer is actually worried about. Declining this category invites the question of why. |
 | **Availability** | **Undecided** | The criteria test against *our own stated commitments*, so this category costs what we choose to promise. Making no commitment and excluding the category is defensible; making one and excluding it is not. |
 | **Processing Integrity** | **Recommended in scope** | Completeness and accuracy of processing is the substance of section 7. If those controls are built, this category is close to free — and it is the one a buyer most associates with an accounting product. |
-| **Privacy** | **Out unless triggered** | Business contact data alone does not trigger it. Payroll, contractor 1099 data, and employee expense reimbursement each pull personal information in. Each is out of scope today; adding any one of them makes this category unavoidable. |
+| **Privacy** | **Out unless triggered** | Business contact data alone does not trigger it. Payroll, contractor 1099 data, and employee expense reimbursement each pull personal information in. None is built today; the first one that ships makes this category unavoidable, whatever the scope says. |
 
 ### 8.2 Untrusted content and agent manipulation
 
@@ -822,7 +827,7 @@ stated once, in the SOC 1 section, and referenced from SOC 2.
 |---|---|
 | **ES-5** | Which Trust Services categories do we commit to? Security is not elective; the other four are, and each one taken is scope we carry at every examination for the life of the report. |
 | **ES-6** | What availability commitment are we prepared to be measured against? The category costs what we promise, so this is a pricing and positioning decision before it is an engineering one. |
-| **ES-7** | Does the roadmap trigger Privacy? Payroll, contractor 1099 handling, and employee expense reimbursement each do. None is in scope today, and the first one that arrives makes the category unavoidable. |
+| **ES-7** | Does the roadmap trigger Privacy? Payroll, contractor 1099 handling, and employee expense reimbursement each do. None is built today, and the first one to ship makes the category unavoidable. Scoping one does not; handling the data does. |
 | **ES-8** | Are the controls in 9.2 and 9.3 sufficient? No established audit practice covers agent manipulation through untrusted content. We are describing controls an examiner has no template for, which means we may be over-building, under-building, or building the wrong shape — and the framework will not tell us which. |
 
 ---
@@ -830,8 +835,8 @@ stated once, in the SOC 1 section, and referenced from SOC 2.
 ## 9. Open issues
 
 Business decisions this document is waiting on. Most block a `Proposed` or `Deferred`
-requirement from being specified; OI-12 blocks a requirement that does not exist yet. None is a
-design question; a design question never blocks a business requirement.
+requirement from being specified; the rest qualify one already approved. None is a design
+question; a design question never blocks a business requirement.
 
 | | Question | Blocks | Needed by |
 |---|---|---|---|
@@ -846,7 +851,6 @@ design question; a design question never blocks a business requirement.
 | **OI-9** | Do we accept any autonomous ledger write derived from untrusted content at all? Refusing outright is the strongest security position and removes most of the product's value for receipt and invoice capture. Accepting it makes SOC2-03 and SOC2-06 the only things standing between an attacker and the books. | SOC2-03, SOC2-06 | Before document capture ships |
 | **OI-10** | Within what period do we commit to notifying a customer of an incident affecting their data or the accuracy of their books? | SOC2-26 | Before the hosted service carries anyone else's books |
 | **OI-11** | How is a statement marked issued, and what form does it take when shared? An issued statement is a record of what was told to whom, which is not the same artifact as a report run on demand. | RPT-17 | Before any statement is handed to a lender or a board |
-| **OI-12** | Does CFOKit handle sales tax, and if so how much of it does it own rather than delegate? No requirement covers it, and treating it as unsupported is cleaner than supporting it partially — but an owner-operator meets it on day one. | Nothing — no requirement exists yet | Before segment 2 is a supported audience |
 
 ---
 
