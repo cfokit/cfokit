@@ -87,7 +87,7 @@ Business conditions this document relies on.
 
 Organised by module.
 
-### 6.1 Ledger — `LED`
+### 5.1 Ledger — `LED`
 
 The double-entry record itself, and the entity settings that govern how it is kept.
 
@@ -126,7 +126,7 @@ and expense account at zero, and retained earnings changed by exactly the prior 
 **Acceptance, LED-15.** An amount presented in a currency other than the entity's functional
 currency is refused, with a reason, rather than accepted and converted.
 
-### 6.2 Data Migration — `MIG`
+### 5.2 Data Migration — `MIG`
 
 Getting an existing company's books in, and any company's books out. Two exports serve
 different purposes and are not interchangeable: one hands the books to another accounting
@@ -168,7 +168,7 @@ part of this requirement.
 period, and an audit trail that resolves every posting to the same rule, source record, and
 actor as the sending one.
 
-### 6.3 Bookkeeping — `BKP`
+### 5.3 Bookkeeping — `BKP`
 
 Getting transactions in, deciding where they belong, and agreeing that the books match reality.
 
@@ -202,7 +202,7 @@ run, and the operator can see which rule won and why before approving either.
 **Acceptance, BKP-14.** A transfer between two feed-connected accounts of the same entity
 leaves total income and total expense unchanged.
 
-### 6.4 Accounts Receivable — `AR`
+### 5.4 Accounts Receivable — `AR`
 
 Billing customers, collecting from them, and knowing who owes what.
 
@@ -237,7 +237,7 @@ not send a customer the same reminder twice.
 **Acceptance, AR-19.** An invoice CFOKit did not send never reports a send date, and one
 opened through a link pasted into a third-party application does report that it was opened.
 
-### 6.5 Reporting — `RPT`
+### 5.5 Reporting — `RPT`
 
 Producing statements, and answering questions the books can support.
 
@@ -282,7 +282,7 @@ printed total by less than one unit of display scale. The printed total is the c
 **Acceptance, RPT-18.** A preparer works from the output alone and needs to ask the company
 nothing.
 
-### 6.6 Access & Identity — `IAM`
+### 5.6 Access & Identity — `IAM`
 
 Who may reach an entity, what they may do there, and how that is evidenced.
 
@@ -328,7 +328,7 @@ sequence proceeds.
 told they lack a second approver. An examination of their books is still answerable, from the
 reconciliation, exception, and review records ordinary use produced.
 
-### 6.7 Platform — `PLT`
+### 5.7 Platform — `PLT`
 
 How the books are reached, how work happens without a person present, and what the system
 records about itself.
@@ -402,10 +402,10 @@ statement it produced before the upgrade is reproducible after it.
 ## 6. Non-functional requirements — `NFR`
 
 These constrain how well the system does what section 5 says it does. Each is stated once,
-globally, with a priority and a target. Section 7.2 records where a module is held to a
+globally, with a priority and a target. Section 6.2 records where a module is held to a
 stricter target than the global one.
 
-### 7.1 Global
+### 6.1 Global
 
 | | Requirement | Category | Priority | Target |
 |---|---|---|---|---|
@@ -438,7 +438,7 @@ even when the agent misbehaves or is deliberately manipulated. Anything that act
 belongs in the second category. A guardrail stated only as NFR-16 is a preference, not a
 control.
 
-### 7.2 Module-specific targets
+### 6.2 Module-specific targets
 
 Where a module is held to something stricter than the global statement. A module absent from
 a row inherits the global target unchanged.
@@ -472,7 +472,7 @@ only make sense once an examination is underway are named in section 7.11 and ex
 examination and costs money forever. A control the system enforces is tested once, plus change
 management. Where both are possible, these requirements choose the system.
 
-### 8.1 Agent authority and segregation of duties
+### 7.1 Agent authority and segregation of duties
 
 Conventional segregation of duties assumes two people: one records, another approves. An agent
 performing both bookkeeper and controller work collapses that separation, and *the model is
@@ -507,7 +507,7 @@ conclusions are both individually explainable from what was persisted.
 > entry is meaningful storage and a real write-path burden, realised at examination time rather
 > than in daily use.
 
-### 8.2 Ledger integrity
+### 7.2 Ledger integrity
 
 Mostly carried already: LED-03 balance enforcement, LED-07 the draft-to-posted boundary,
 LED-08 correction by reversal, NFR-02 integrity, NFR-03 idempotency.
@@ -521,7 +521,7 @@ LED-08 correction by reversal, NFR-02 integrity, NFR-03 idempotency.
 > **Constrains the interface contract.** The idempotency key is in the published surface, so it
 > binds third-party integrators and cannot be added later without a breaking change.
 
-### 8.3 Completeness and accuracy of ingested data
+### 7.3 Completeness and accuracy of ingested data
 
 Covering transaction feeds, uploaded statements, document capture, and any third-party sync.
 
@@ -535,7 +535,7 @@ Covering transaction feeds, uploaded statements, document capture, and any third
 
 > **Constrains the data model.** Actor class sits on the entry rather than in a side log.
 
-### 8.4 Period integrity and cutoff
+### 7.4 Period integrity and cutoff
 
 Carried already: LED-11 closes a period and admits nothing afterwards except through a recorded
 reopening; PLT-08 fixes the time zone period boundaries are determined in.
@@ -554,7 +554,7 @@ falls in that period, whatever the deployment's clock reads.
 **Acceptance, SOC1-20.** An examiner given a statement issued in April and a reopening in June
 can see, without reconstruction, that the April figures were superseded and by what.
 
-### 8.5 Audit trail and evidence retrieval
+### 7.5 Audit trail and evidence retrieval
 
 Carried already: PLT-16 the change record, PLT-17 security events, PLT-18 period evidence,
 NFR-18 controls evidenced rather than asserted.
@@ -568,7 +568,7 @@ NFR-18 controls evidenced rather than asserted.
 > **Cost.** Examiners work by sampling. If each sampled item needs an engineer writing an ad hoc
 > query, that cost recurs at every examination for the life of the product.
 
-### 8.6 Access control and principal propagation
+### 7.6 Access control and principal propagation
 
 Carried already: IAM-01 through IAM-19.
 
@@ -586,7 +586,7 @@ Carried already: IAM-01 through IAM-19.
 > SOC1-03 while every individual control appears to pass. **Constrains the interface contract
 > between every surface and the service beneath it.**
 
-### 8.7 Exception handling
+### 7.7 Exception handling
 
 What happens when processing fails is the second thing an examiner asks.
 
@@ -599,7 +599,7 @@ What happens when processing fails is the second thing an examiner asks.
 | **SOC1-32** | Exceptions are reportable for any period — what arrived, what was dispositioned and how, and what remains open — as a durable artifact rather than a transient view. This is the report a reviewer reviews and an examiner samples. | Must | Approved |
 | **SOC1-33** | Which exception classes an agent may resolve autonomously, and which must escalate to a person, is configured through the same mechanism as SOC1-04. | Must | **Proposed** — the split is not decided |
 
-### 8.8 Change management of agent artifacts
+### 7.8 Change management of agent artifacts
 
 Only the part that is a property of the system belongs here. The rest is engineering practice
 and is excluded in 8.11.
@@ -609,7 +609,7 @@ and is excluded in 8.11.
 | **SOC1-34** | Skills, their prompts, and their tool definitions are versioned artifacts. Every entry an agent produces records the versions in force when it was produced. A prompt edit that changes how transactions are categorised is a change to a financial control and is treated as one. | Must | Approved |
 | **SOC1-35** | A change of model identifier or model version is recorded as a change to the control environment, with the date it took effect and the entries produced on either side of it distinguishable. | Must | Approved |
 
-### 8.9 Subservice organizations
+### 7.9 Subservice organizations
 
 | | Requirement | Priority | Status |
 |---|---|---|---|
@@ -625,7 +625,7 @@ Anticipated examination treatment.
 | Document capture and extraction | Accuracy of amounts read from source documents | Carve-out, with human or agent confirmation as the compensating control | Varies |
 | Email delivery | No ICFR effect — delivery is not a financial assertion | Out of SOC 1 scope entirely | n/a |
 
-### 8.10 Complementary User Entity Controls
+### 7.10 Complementary User Entity Controls
 
 Obligations on the customer, not requirements on CFOKit. Each one narrows examination scope and
 adds customer burden.
@@ -638,7 +638,7 @@ adds customer burden.
 | **CUEC-4** | Verify opening balances at onboarding, and confirm that migrated history agrees with the system it came from |
 | **CUEC-5** | Own the materiality thresholds and autonomy configuration in force, whether it set them or accepted the defaults, and be able to say why they are appropriate to the business |
 
-### 8.11 Excluded from this section
+### 7.11 Excluded from this section
 
 | Excluded | Why |
 |---|---|
@@ -648,7 +648,7 @@ adds customer burden.
 | Personnel screening, onboarding, and security training | Operating process. |
 | Anything touching security, availability, or privacy without touching ICFR | The SOC 2 track, handled separately. |
 
-### 8.12 Examination scoping questions
+### 7.12 Examination scoping questions
 
 | | Question |
 |---|---|
@@ -667,9 +667,9 @@ negotiating objectives. A Type II opinion tests **operating effectiveness across
 period**, which is why every requirement below prefers a control that evidences itself
 continuously over one that a person assembles at examination time.
 
-Section 9.10 holds the shared control map.
+Section 8.10 holds the shared control map.
 
-### 9.1 Category scope
+### 8.1 Category scope
 
 **Status: Proposed.** The whole of this subsection is a business decision not yet made.
 
@@ -681,7 +681,7 @@ Section 9.10 holds the shared control map.
 | **Processing Integrity** | **Recommended in scope** | Completeness and accuracy of processing is the substance of section 7. If those controls are built, this category is close to free — and it is the one a buyer most associates with an accounting product. |
 | **Privacy** | **Out unless triggered** | Business contact data alone does not trigger it. Payroll, contractor 1099 data, and employee expense reimbursement each pull personal information in. Each is out of scope today; adding any one of them makes this category unavoidable. |
 
-### 9.2 Untrusted content and agent manipulation
+### 8.2 Untrusted content and agent manipulation
 
 CFOKit's agents read content the customer did not author and we do not control: uploaded
 receipts and invoices, feed transaction memos, vendor email, extracted document text. An agent
@@ -713,7 +713,7 @@ is fully compromised and cooperative with the attacker.
 > SOC1-04's thresholds and SOC2-03's capability split carry nearly all of the bound in SOC2-06.
 > Weakening either for usability moves it.
 
-### 9.3 Inference providers and data flow
+### 8.3 Inference providers and data flow
 
 | | Requirement | Priority | Status |
 |---|---|---|---|
@@ -727,7 +727,7 @@ is fully compromised and cooperative with the attacker.
 > than a deployment detail. Model swaps are frequent, so enforcement sits in the configuration
 > path rather than in a review cycle.
 
-### 9.4 Confidentiality and data handling
+### 8.4 Confidentiality and data handling
 
 | | Requirement | Priority | Status |
 |---|---|---|---|
@@ -741,7 +741,7 @@ is fully compromised and cooperative with the attacker.
 > artifacts that did not exist in conventional software. An embedding index and a conversation
 > memory are each a cross-tenant leak waiting to be built.
 
-### 9.5 Access control and identity
+### 8.5 Access control and identity
 
 Carried by IAM-01 through IAM-19 and SOC1-24 through SOC1-27. Additional SOC 2 obligations only:
 
@@ -753,7 +753,7 @@ Carried by IAM-01 through IAM-19 and SOC1-24 through SOC1-27. Additional SOC 2 o
 | **SOC2-22** | The access review of IAM-14 produces its evidence automatically, on a defined cadence, as a persisted artifact. A review that requires someone to assemble screenshots is sampled at every examination and costs money forever. | Must | Approved |
 | **SOC2-23** | Where privileged operator access to customer data exists under SOC1-27, it is time-bounded, individually authorised, logged identically to customer access, and visible to the affected customer. | Must | **Proposed** — dependent on the SOC1-27 decision |
 
-### 9.6 System operations and monitoring — CC7
+### 8.6 System operations and monitoring — CC7
 
 | | Requirement | Priority | Status |
 |---|---|---|---|
@@ -768,7 +768,7 @@ Carried by IAM-01 through IAM-19 and SOC1-24 through SOC1-27. Additional SOC 2 o
 > Agents will post wrong entries; that is a known property, not an incident. Deciding which is
 > which after the first bad week produces a decision shaped by that week.
 
-### 9.7 Change management — CC8
+### 8.7 Change management — CC8
 
 Carried by SOC1-34 and SOC1-35, which cover skills, prompts, tool definitions, and model version
 pins. Stated once there rather than twice.
@@ -778,7 +778,7 @@ pins. Stated once there rather than twice.
 | **SOC2-31** | A change affecting authentication, authorisation, isolation, or data handling requires security review before it takes effect, and the review is recorded against the change. | Must | Approved |
 | **SOC2-32** | Infrastructure and configuration changes are governed identically to application code. A change to a deployment's configuration is a change. | Must | Approved |
 
-### 9.8 Availability
+### 8.8 Availability
 
 Applies only if the Availability category is taken in 9.1. Durability, restore verification,
 degradation behaviour, and resumability are unconditional and sit in NFR-07, SOC2-29, and
@@ -788,14 +788,14 @@ SOC2-30. What is left here is what the category alone adds.
 |---|---|---|---|
 | **SOC2-33** | Recovery time and recovery point objectives are stated as numbers a deployment can be measured against. | Should | **Proposed** — the numbers are not set |
 
-### 9.9 Governance and control environment — CC1–CC5
+### 8.9 Governance and control environment — CC1–CC5
 
 Satisfied outside this document. The policy set, security training, background checks, risk
 assessment process, and vendor due diligence are organisational deliverables, not properties of
 the system. The one part that *is* a system property — that security ownership is named and
 demonstrable rather than asserted — is IAM-18 and IAM-19.
 
-### 9.10 Shared controls — SOC 1 and SOC 2
+### 8.10 Shared controls — SOC 1 and SOC 2
 
 Maintained deliberately so the overlap does not drift. Where a row lists both, the requirement is
 stated once, in the SOC 1 section, and referenced from SOC 2.
@@ -816,7 +816,7 @@ stated once, in the SOC 1 section, and referenced from SOC 2.
 | Deployment-scoped roles and named security ownership | IAM-18, IAM-19 | CC1, CC6 | None; written for CC1 |
 | Controls evidenced rather than asserted | NFR-18 | CC4 | None; it was written for both |
 
-### 9.11 Examination scoping questions
+### 8.11 Examination scoping questions
 
 | | Question |
 |---|---|
