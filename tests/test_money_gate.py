@@ -1,4 +1,4 @@
-"""The CI gate that keeps floats away from money must actually catch one (ADR-0004).
+"""The CI gate that keeps floats away from money must actually catch one (ADR-0005).
 
 A gate nobody has seen fail has not been verified.
 """
@@ -69,7 +69,7 @@ def test_float_inside_a_generic_is_caught() -> None:
 
 def test_prose_mentioning_float_is_not_flagged() -> None:
     """The gate must not flag documentation of its own rule — an earlier version did."""
-    source = '"""Money is `decimal.Decimal`, never `float` (ADR-0004)."""\n'
+    source = '"""Money is `decimal.Decimal`, never `float` (ADR-0005)."""\n'
     assert offending_python_lines(source) == []
 
 

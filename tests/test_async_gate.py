@@ -1,4 +1,4 @@
-"""The gate confining async to the MCP module must actually catch a violation (ADR-0025).
+"""The gate confining async to the MCP module must actually catch a violation (ADR-0026).
 
 A gate nobody has seen fail has not been verified.
 """
@@ -68,6 +68,6 @@ def test_service_layer_is_not_allowed() -> None:
 
 
 def test_rest_adapter_is_not_allowed() -> None:
-    """REST has no async requirement and is deliberately outside the allowlist (ADR-0025)."""
+    """REST has no async requirement and is deliberately outside the allowlist (ADR-0026)."""
     api = REPO_ROOT / "packages/ledger/src/cfokit/ledger/api/__init__.py"
     assert not is_allowed(api)

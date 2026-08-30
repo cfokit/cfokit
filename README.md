@@ -41,4 +41,4 @@ docs/        Vision, requirements, and decision records
 ## License
 
 MIT. No copyleft component ships in the distributed artifact — see
-[ADR-0020](docs/decisions/0020-identity-provider-conformance-contract.md).
+[ADR-0021](docs/decisions/0020-identity-provider-conformance-contract.md).

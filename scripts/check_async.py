@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Async is permitted only inside the MCP adapter module (ADR-0025).
+"""Async is permitted only inside the MCP adapter module (ADR-0026).
 
 The MCP Python SDK is async, and that is the sole reason async exists in this codebase. It is
 therefore confined to one module rather than granted to the adapter layer generally: `engine`,
@@ -22,7 +22,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-# Only these module paths may contain async constructs. Adding an entry is an ADR-0025 change.
+# Only these module paths may contain async constructs. Adding an entry is an ADR-0026 change.
 ALLOWED_PREFIXES = ("packages/ledger/src/cfokit/ledger/mcp/",)
 
 ASYNC_MODULES = frozenset({"asyncio", "anyio", "trio"})
@@ -71,13 +71,13 @@ def main() -> int:
         for number, what in offending_nodes(source):
             text = lines[number - 1].strip() if number <= len(lines) else ""
             rel = path.relative_to(REPO_ROOT)
-            print(f"{rel}:{number}: {what} outside the MCP module (ADR-0025)")
+            print(f"{rel}:{number}: {what} outside the MCP module (ADR-0026)")
             print(f"    {text}")
             failures += 1
 
     if failures:
         print(f"\nAsync boundary violated: {failures} occurrence(s).")
-        print("Async is confined to cfokit.ledger.mcp. Widening it is an ADR-0025 change.")
+        print("Async is confined to cfokit.ledger.mcp. Widening it is an ADR-0026 change.")
         return 1
 
     print(f"Async boundary holds: {checked} file(s) outside the MCP module, none async.")

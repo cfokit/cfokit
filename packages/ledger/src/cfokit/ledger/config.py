@@ -1,11 +1,11 @@
-"""Configuration — environment variables only (ADR-0003).
+"""Configuration — environment variables only (ADR-0004).
 
 No cloud metadata lookups. No provider SDK imports at module scope. Self-hosting is a
 product promise, so the entire coupling between the application and its deployment is
 the variables read here.
 
 Adding a variable to this surface requires an ADR — ``infra/README.md`` is the
-portability contract (ADR-0016).
+portability contract (ADR-0017).
 """
 
 from __future__ import annotations
@@ -21,18 +21,18 @@ class Settings:
     """The complete configuration surface of the ledger service."""
 
     database_url: str
-    """Postgres connection string. The only storage backend (ADR-0002)."""
+    """Postgres connection string. The only storage backend (ADR-0003)."""
 
     public_base_url: str
     """Authoritative for anything the service says about itself. Behind a proxy or
-    tunnel, request headers lie — never derive external URLs from them (ADR-0003)."""
+    tunnel, request headers lie — never derive external URLs from them (ADR-0004)."""
 
     auth_issuer_url: str
     """OAuth 2.1 issuer. The issuer is swappable; no issuer-specific code exists
-    anywhere in the codebase (ADR-0019)."""
+    anywhere in the codebase (ADR-0020)."""
 
     auth_audience: str
-    """Audience validation is mandatory on every request (ADR-0011, ADR-0019)."""
+    """Audience validation is mandatory on every request (ADR-0012, ADR-0020)."""
 
     port: int = 8080
     """Listen port. Optional; the platform usually supplies it."""

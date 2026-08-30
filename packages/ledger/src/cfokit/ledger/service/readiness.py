@@ -2,7 +2,7 @@
 
 Lives in the service layer rather than the adapter so the REST and MCP surfaces answer
 the same question the same way, and so no adapter reaches past `service` into the
-database (ADR-0008).
+database (ADR-0009).
 
 `/healthz` deliberately does not call any of this. Liveness must not depend on the
 database, or a database blip restarts healthy containers.
@@ -37,7 +37,7 @@ def check_readiness(database_url: str) -> Readiness:
     Migrations are checked because an instance running against a schema older than its
     code is not ready — it is wrong, and it would fail on the first request that used a
     column the migration adds. Reporting it as unready is what stops a rollout from
-    proceeding past a missed migration (ADR-0003).
+    proceeding past a missed migration (ADR-0004).
     """
     try:
         with psycopg.connect(database_url, connect_timeout=5) as conn:
