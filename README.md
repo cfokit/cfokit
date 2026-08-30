@@ -15,10 +15,6 @@ questions do not have to be anticipated in advance.
 It runs on a laptop with no cloud account. The hosted service is the same software, operated
 under third-party audit.
 
-> **Status: pre-implementation.** The repository holds decisions, requirements, and the test
-> gates that enforce them. There is nothing to install yet. Positioning here is derived from
-> [`docs/product/vision.md`](docs/product/vision.md); change it there first.
-
 ## Start here
 
 | If you want to | Read |
