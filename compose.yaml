@@ -1,8 +1,8 @@
-# CFOKit — production-shaped local deployment (ADR-0018).
+# CFOKit — production-shaped local deployment (ADR-0019).
 #
 # `docker compose up` gives you a real deployment holding real books, not a demo. Self
 # hosting on a laptop is a product promise, and it requires no cloud account: the OAuth
-# issuer runs here too (ADR-0019).
+# issuer runs here too (ADR-0020).
 #
 # Development differences live in compose.dev.yaml and are applied EXPLICITLY:
 #
@@ -10,7 +10,7 @@
 #
 # There is deliberately no docker-compose.override.yml. It auto-applies, which would mean
 # `docker compose up` silently hands you bind mounts, debug logging, and an exposed
-# database. For a financial application, explicit beats idiomatic (ADR-0018).
+# database. For a financial application, explicit beats idiomatic (ADR-0019).
 #
 # Data lives in the named volume `ledger-data`. `docker compose down -v` DESTROYS IT.
 
@@ -24,7 +24,7 @@ services:
       POSTGRES_DB: cfokit
       POSTGRES_USER: cfokit
       # Local-only credential. Managed deployments inject this from a secret store; IaC
-      # creates secret containers, never values (ADR-0016).
+      # creates secret containers, never values (ADR-0017).
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cfokit}
     volumes:
       - ledger-data:/var/lib/postgresql/data
@@ -39,7 +39,7 @@ services:
 
   # OAuth 2.1 issuer. A default, not a coupling — the application reads AUTH_ISSUER_URL
   # and AUTH_AUDIENCE and nothing else, and any issuer meeting the conformance contract in
-  # infra/README.md can replace this (ADR-0019). Apache 2.0; no copyleft in the shipped
+  # infra/README.md can replace this (ADR-0020). Apache 2.0; no copyleft in the shipped
   # stack.
   hydra:
     image: oryd/hydra:v2.3.0
@@ -50,7 +50,7 @@ services:
       URLS_SELF_ISSUER: ${AUTH_ISSUER_URL:-http://localhost:4444}
       # `--dev` serves plain HTTP, which is why same-machine access over localhost needs
       # no TLS. Cross-device access requires a tunnel and PUBLIC_BASE_URL set to the
-      # public hostname (ADR-0018).
+      # public hostname (ADR-0019).
     ports:
       - "4444:4444"   # public: token, authorize, discovery, JWKS
       - "4445:4445"   # admin: client registration
@@ -61,7 +61,7 @@ services:
       retries: 10
       start_period: 10s
 
-  # The ledger service (ADR-0024: one image, many entrypoints — this one runs the
+  # The ledger service (ADR-0025: one image, many entrypoints — this one runs the
   # REST adapter). Migrations are NOT applied here; run the migrate profile below.
   ledger:
     build:
@@ -75,7 +75,7 @@ services:
         condition: service_healthy
     environment:
       # The complete configuration surface. Adding to it requires an ADR, because
-      # infra/README.md is the portability contract (ADR-0016).
+      # infra/README.md is the portability contract (ADR-0017).
       DATABASE_URL: postgresql://cfokit:${POSTGRES_PASSWORD:-cfokit}@postgres:5432/cfokit
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
       AUTH_ISSUER_URL: ${AUTH_ISSUER_URL:-http://hydra:4444}
@@ -85,14 +85,14 @@ services:
       - "${PORT:-8080}:8080"
     healthcheck:
       # Liveness only — /readyz would restart the container whenever the database
-      # blipped or a migration was outstanding (ADR-0003).
+      # blipped or a migration was outstanding (ADR-0004).
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8080/healthz')"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 15s
 
-  # Migrations are an explicit command, never a startup step (ADR-0003). Behind a
+  # Migrations are an explicit command, never a startup step (ADR-0004). Behind a
   # profile so `docker compose up` never applies them:
   #
   #   docker compose --profile migrate run --rm migrate

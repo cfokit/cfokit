@@ -1,12 +1,12 @@
-# CFOKit — development overlay. Applied EXPLICITLY, never automatically (ADR-0018).
+# CFOKit — development overlay. Applied EXPLICITLY, never automatically (ADR-0019).
 #
 #     uv run task dev
 #     docker compose -f compose.yaml -f compose.dev.yaml up
 #
 # The CI portability gate runs compose.yaml WITHOUT this file, so what CI proves is what
-# users actually run (ADR-0003).
+# users actually run (ADR-0004).
 #
-# What this file may change, and nothing else (ADR-0018):
+# What this file may change, and nothing else (ADR-0019):
 #   - source reload
 #   - exposed ports
 #   - log level
@@ -36,7 +36,7 @@ services:
   #     - ./packages/connectors/src:/app/packages/connectors/src:ro
 
   # Seed fixtures. Behind a profile so they NEVER run by default: seeding a ledger that
-  # holds real books would corrupt it (ADR-0018).
+  # holds real books would corrupt it (ADR-0019).
   #
   #     docker compose -f compose.yaml -f compose.dev.yaml --profile seed up seed
   #

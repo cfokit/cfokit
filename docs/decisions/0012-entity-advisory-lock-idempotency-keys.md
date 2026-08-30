@@ -32,7 +32,7 @@ idempotency does not order concurrent writes.
   depend on caller judgement.
 * Retry logic must not proliferate into every write path.
 * Both protocol surfaces must be protected, including MCP, which never passes through HTTP
-  (ADR-0009).
+  (ADR-0010).
 
 ## Considered Options
 
@@ -146,7 +146,7 @@ documented fallback should the backend change.
 
 * Good, because it is standard, and it is where the header belongs.
 * Bad, as *sufficient* rather than as a mechanism. MCP calls the service layer in-process and never
-  passes through HTTP (ADR-0009), so an HTTP-layer implementation would leave the primary consumer
+  passes through HTTP (ADR-0010), so an HTTP-layer implementation would leave the primary consumer
   surface unprotected. The requirement belongs in the service layer, where both adapters reach it.
 
 ## More Information

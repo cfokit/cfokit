@@ -159,7 +159,7 @@ append-only ledger already provides the history dimension without a second mecha
 - Every report accepts an optional "as known at" watermark; omitted means now.
 - Close-crossing writes carry a distinguishable `audit_log` marker, so "what changed in a closed
   period" is a query rather than an investigation.
-- A stable error `code` for a close-crossing attempted without acknowledgement (ADR-0015).
+- A stable error `code` for a close-crossing attempted without acknowledgement (ADR-0016).
 - The bookkeeper skill surfaces close-crossings to the user rather than acknowledging on their
   behalf. An agent that auto-acknowledges defeats the rule (REQ-B1).
 - **Revisit this record when lot tracking activates** (REQ-A6). Reintroducing lots reintroduces the
