@@ -21,16 +21,16 @@ def test_first_migration_is_discovered() -> None:
 
 
 def test_first_migration_declares_the_invariants() -> None:
-    """The guarantees live in SQL, not only in the service layer (ADR-0005, ADR-0006)."""
+    """The guarantees live in SQL, not only in the service layer (ADR-0006, ADR-0007)."""
     sql = discover()[0].sql
-    assert "DEFERRABLE INITIALLY DEFERRED" in sql, "zero-sum must be deferred (ADR-0005)"
+    assert "DEFERRABLE INITIALLY DEFERRED" in sql, "zero-sum must be deferred (ADR-0006)"
     assert "assert_posted_transaction_balanced" in sql
     assert "append_only_violated" in sql
-    assert "ENABLE ROW LEVEL SECURITY" in sql, "entity isolation is two-layer (ADR-0002)"
+    assert "ENABLE ROW LEVEL SECURITY" in sql, "entity isolation is two-layer (ADR-0003)"
 
 
 def test_every_decimal_column_is_numeric_28_10() -> None:
-    """ADR-0004 fixes the scale; CI gate 4 catches float types, this catches the scale."""
+    """ADR-0005 fixes the scale; CI gate 4 catches float types, this catches the scale."""
     sql = discover()[0].sql
     assert sql.count("numeric(") == sql.count("numeric(28,10)"), (
         "every decimal column must be NUMERIC(28,10)"
@@ -38,7 +38,7 @@ def test_every_decimal_column_is_numeric_28_10() -> None:
 
 
 def test_transaction_carries_both_dates() -> None:
-    """ADR-0013: recorded_at cannot be retrofitted, so it ships in the first migration."""
+    """ADR-0014: recorded_at cannot be retrofitted, so it ships in the first migration."""
     sql = discover()[0].sql
     assert "transaction_date" in sql
     assert "recorded_at" in sql

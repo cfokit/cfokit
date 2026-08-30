@@ -7,7 +7,7 @@ license = "MIT"
 requires-python = ">=3.12"
 
 # Deliberately does not depend on cfokit-ledger. Connectors reach the ledger over its
-# public API, and import-linter enforces it (ADR-0014).
+# public API, and import-linter enforces it (ADR-0015).
 dependencies = []
 
 [build-system]

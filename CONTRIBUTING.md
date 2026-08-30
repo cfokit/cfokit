@@ -6,7 +6,7 @@ financial position. The rules below exist for that reason.
 ## Before you write code
 
 Read [`CLAUDE.md`](CLAUDE.md). It is the project's constitution and it is binding for
-humans and agents alike. Each rule cites the [ADR](docs/adr/README.md) holding its
+humans and agents alike. Each rule cites the [ADR](docs/decisions/README.md) holding its
 reasoning; read the cited ADR before proposing a change to a rule.
 
 If a task appears to require breaking a rule, **stop and ask** rather than working around
@@ -25,28 +25,16 @@ uv run task dev          # compose with the development overlay applied
 
 ## The workflow
 
-Specifications come before implementation. We use
-[Spec Kit](https://github.com/github/spec-kit), pinned — see
-[`docs/roadmap.md`](docs/roadmap.md) for the version.
+`CLAUDE.md` plus the decision records are the constitution. A second rules document becomes a
+second source of truth.
 
-```bash
-uv tool install specify-cli --from git+https://github.com/github/spec-kit.git@v0.16.4
-```
+Requirements carry stable domain-prefixed ids ([`docs/product/requirements.md`](docs/product/requirements.md)).
+Cite them in commit messages. Derivation runs vision → requirements → decision records → the
+rules in `CLAUDE.md`; requirements never cite a decision record.
 
-Then, in your agent: `/speckit-specify` → `/speckit-plan` → `/speckit-tasks` →
-`/speckit-implement`. Specs land in [`specs/`](specs/).
-
-Two local conventions differ from stock Spec Kit:
-
-1. **We do not use `/speckit-constitution`.** `CLAUDE.md` plus the ADRs are the
-   constitution. A second rules document becomes a second source of truth.
-2. **Every spec opens with a "Decisions relied on" block** citing ADR numbers. Stock Spec
-   Kit starts each feature from empty context and will happily re-argue a settled question;
-   this block is what prevents that. Our overridden templates in
-   `.specify/templates/overrides/` enforce it.
-
-Requirements carry `REQ-` ids ([`docs/product/requirements.md`](docs/product/requirements.md)).
-Cite them in specs and commit messages.
+There is no roadmap file and no specifications directory. Work sequencing lives in GitHub
+Milestones and Projects. Whether the project adopts a specification workflow is undecided
+([ADR-0001](docs/decisions/0001-documentation-structure.md)).
 
 ## What "done" means
 
@@ -91,7 +79,7 @@ expect a discussion.
 ## Architecture decisions
 
 If you make a decision future work should be bound by, propose an ADR rather than burying it
-in a code comment. Copy [`docs/adr/0000-template.md`](docs/adr/0000-template.md) to the next
+in a code comment. Copy [`docs/decisions/adr-template.md`](docs/decisions/adr-template.md) to the next
 free number.
 
 The **Alternatives rejected** section is mandatory and is the most important part of the

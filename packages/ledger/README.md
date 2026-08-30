@@ -6,11 +6,11 @@ service.
 Publishes a tool contract and knows nothing about any consumer. The bookkeeper skill and
 this package are separate systems with separate dependency graphs that share that
 contract — there is no code dependency between them in either direction
-([ADR-0014](../../docs/adr/README.md)).
+([ADR-0015](../../docs/decisions/README.md)).
 
 ## Layering
 
-Enforced by import-linter, not by convention ([ADR-0008](../../docs/adr/README.md)):
+Enforced by import-linter, not by convention ([ADR-0009](../../docs/decisions/README.md)):
 
 | Layer | Responsibility |
 |---|---|
@@ -21,17 +21,17 @@ Enforced by import-linter, not by convention ([ADR-0008](../../docs/adr/README.m
 
 `config.py` is the complete configuration surface. Adding to it requires an ADR, because
 `infra/README.md` is the portability contract
-([ADR-0016](../../docs/adr/0016-opentofu-single-cloud-target-iac.md)).
+([ADR-0017](../../docs/decisions/0017-opentofu-single-cloud-target-iac.md)).
 
 ## Non-negotiables
 
 - Money is `decimal.Decimal`; all decimal columns are `NUMERIC(28,10)`. No floats
   anywhere, including tests and fixtures
-  ([ADR-0004](../../docs/adr/README.md)).
+  ([ADR-0005](../../docs/decisions/README.md)).
 - Financial records are append-only. Corrections are reversing entries
-  ([ADR-0006](../../docs/adr/README.md)).
+  ([ADR-0007](../../docs/decisions/README.md)).
 - Postgres is the only storage backend
-  ([ADR-0002](../../docs/adr/0002-postgres-as-sole-storage-backend.md)).
+  ([ADR-0003](../../docs/decisions/0003-postgres-as-sole-storage-backend.md)).
 - Every state-changing service call writes exactly one `audit_log` row.
 
 ## Migrations

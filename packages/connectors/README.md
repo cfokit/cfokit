@@ -4,14 +4,14 @@ Transaction feed ingestion — bank accounts, cards, and payment processors.
 
 Produces transactions through the ledger's **public API**. It does not import ledger
 code, and import-linter fails the build if it starts to
-([ADR-0014](../../docs/adr/README.md)).
+([ADR-0015](../../docs/decisions/README.md)).
 
 ## Why it isn't named after a vendor
 
 The earlier working name was `plaid-sync`. Naming a package after one provider makes that
 provider structural, which contradicts the rule that provider-specific code sits behind a
 protocol with a local default requiring no cloud account
-([ADR-0003](../../docs/adr/README.md)). Plaid is a provider. So is Stripe. Neither is the
+([ADR-0004](../../docs/decisions/README.md)). Plaid is a provider. So is Stripe. Neither is the
 package.
 
 ## Provider rules

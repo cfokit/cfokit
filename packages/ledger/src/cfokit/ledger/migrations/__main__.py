@@ -1,6 +1,6 @@
 """``uv run task migrate`` — apply pending migrations.
 
-Runs only when invoked. Never on container startup, never on import (ADR-0003).
+Runs only when invoked. Never on container startup, never on import (ADR-0004).
 
 Each migration is applied in its own transaction and recorded in ``schema_migration``
 within that same transaction, so a failure leaves the database at a known version rather

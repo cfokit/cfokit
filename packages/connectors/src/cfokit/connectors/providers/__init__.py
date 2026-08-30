@@ -1,4 +1,4 @@
-"""Provider implementations, one module each, all behind the same protocol (ADR-0003).
+"""Provider implementations, one module each, all behind the same protocol (ADR-0004).
 
 Exactly one provider must work with no cloud account. That local default is not a test
 fixture — it is what the CI portability gate exercises and what a self-hoster gets

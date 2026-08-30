@@ -1,8 +1,5 @@
 # CFOKit — Product Vision
 
-- **Status:** Draft
-- **Owner:** Geoff
-
 > **This is the source document for product positioning.** The root `README.md` derives a
 > marketing-oriented introduction from it; the two are not maintained independently. When
 > positioning changes, change it here first.
@@ -12,7 +9,7 @@
 
 ## Tagline
 
-**TBD.**
+**Open source books your agent keeps.**
 
 ## Mission
 
@@ -49,7 +46,7 @@ closed year and files against it.
 
 ### What small companies actually have
 
-Below a certain size a company has a CPA and neither of the other two. The recording and
+Below a certain size a company has neither of the other two, and a CPA only if it engages one. The recording and
 closing still has to happen, so it lands on whoever is nearest and gets done late,
 inconsistently, and under deadline pressure. Everything downstream inherits that condition: the forecast, the board
 pack, the loan application, the return.
@@ -60,9 +57,11 @@ fractional CFO, or an owner-operator — has something worth working from.
 
 ## Who it serves
 
-**The payer is the company, in every case.** This is the same buyer QuickBooks has. Who
-operates the product and who recommends it both vary, and conflating those three roles
-produces bad positioning, so they are kept separate throughout this document.
+**The company owns its books, in every case.** Whether CFOKit runs on the company's own
+machine or is hosted for it, the account belongs to the company — never to its accountant or
+its fractional CFO, who work inside it at the company's invitation. Who operates the product
+and who recommends it both vary, and conflating those three roles produces bad positioning, so
+they are kept separate throughout this document.
 
 Two segments arrive at the problem from different directions.
 
@@ -79,7 +78,7 @@ by something that changed at the company rather than by who happens to be doing 
 | **2.** Seed to Series A | Institutional money arrives, and a board and reporting obligations with it | Fractional CFO, alongside the founder | The fractional CFO |
 | **3.** Scaling operations | Headcount and volume outgrow a part-time finance function | Controller and staff accountants | The controller, internally |
 
-A CPA sits alongside every row of that table, and alongside all of segment 2. That is why the
+A CPA sits alongside most rows of that table, and alongside much of segment 2. That is why the
 CPA channel matters more than any single stage in it.
 
 Stage 0 can last for years. Nothing about the transitions is a churn event for the company,
@@ -99,7 +98,7 @@ shop, a construction firm.
 There is no stage sequence here, because the company is not trying to become something else.
 Their financial questions are about paying themselves, whether they can afford someone, what
 they owe in tax, and whether a particular job or location makes money. The only professional
-in the loop is a CPA, seen once a year.
+in the loop, where there is one at all, is a CPA seen once a year.
 
 ### Two kinds of complexity, and which one arrives first
 
@@ -127,7 +126,7 @@ a stage number.
 
 ### Advocates, and other people in the room
 
-**Fractional CFOs are advocates, not payers.** They carry four to eight clients at five to
+**Fractional CFOs are advocates, not account owners.** They carry four to eight clients at five to
 ten hours per week each, which caps the practice at roughly one person's capacity. A client
 whose ledger is already current and closed does not consume the first month of an engagement
 in reconstruction, which lets the fractional CFO scope to strategy, planning, and compliance,
@@ -135,8 +134,11 @@ and lets them tell the client to drop the bookkeeping service. They only appear 
 from stage 2 onward, and a company can decline to have one at all, so this channel is real but
 narrow.
 
-**CPAs are the structural channel.** Every company has one, filing is not optional, and the
-deadline is fixed, which makes this the relationship worth building around.
+**CPAs are the structural channel.** Filing is not optional and the deadline is fixed, and most
+companies past the simplest returns engage someone to prepare theirs — which makes this the
+relationship worth building around. It is not universal: plenty of owner-operators prepare and
+file their own returns, and nothing about CFOKit assumes otherwise. The channel is broad rather
+than total.
 
 The mechanism is the one Vanta built with SOC 2 auditors. Vanta's audit partners pull evidence
 directly from the platform, which cuts their fieldwork and sometimes their fee, so they
@@ -230,6 +232,43 @@ platform, and Intuit Assist with "Continuously Clean Books" is shipping into the
 tiers now. *"AI does your bookkeeping"* is the incumbent's current roadmap and is not a
 differentiator. Consistency and traceability are, and both are hard to reach from a
 probabilistic categoriser sitting on a retention-limited audit log.
+
+## Objectives
+
+What success looks like, each with the measure that settles it. An objective without a measure is
+a slogan; these are the statements CFOKit can be held to.
+
+**The books.**
+
+| | Objective | Measure of success |
+|---|---|---|
+| **OBJ-1** | The company's books are kept without the company keeping them | Transactions are recorded, classified, and reconciled with no person performing the recording. A person is involved only to answer what the stored rules cannot resolve, and to approve the rule that settles it; an approved pattern is not asked about again |
+| **OBJ-2** | The books are current, and a close is never waiting on CFOKit | A transaction is recorded within one day of reaching the system, rather than of its transaction date. Anything the rules cannot resolve is asked as it arrives, not discovered at period end. A period is ready to close on the day the entity scheduled, with nothing left to decide; where it is not, an unanswered question is the only permissible cause, and what is outstanding and how long it has waited are visible throughout |
+| **OBJ-3** | The numbers are exact, and nothing posted changes afterwards | Every amount is recorded exactly: no representation error, no accumulated drift, a balance that is the exact sum of its postings. Booking agrees with an independent implementation of double-entry, with every divergence documented. A posted record is never altered or deleted — a correction is a new entry, and both remain visible. An operation repeated or retried books once |
+| **OBJ-4** | Every number explains itself | Any posting resolves to what caused it and what decided it — the source transaction and the rule that assigned it, the person who entered it, the entry it reverses, or the migration that carried it in — and that attribution survives for the life of the record |
+
+**What they are worth.**
+
+| | Objective | Measure of success |
+|---|---|---|
+| **OBJ-5** | The recurring cost of keeping the books goes away, in whichever form the company pays it | A company paying for an accounting subscription and a bookkeeping service cancels both. An owner who kept the books personally stops spending the hours. Which of these applies depends on what the company did before; that at least one is removed in full does not |
+| **OBJ-6** | The people the company answers to accept its output as it stands | Statements are produced in a conventional form, on the entity's declared basis, and every line resolves to the detail supporting it without leaving the system. A preparer, a lender, or a board works from what CFOKit produces without asking the company to reconstruct anything |
+| **OBJ-7** | A company is never forced off CFOKit by growing | The books absorb what growth brings — a second entity, a change of basis, more people holding distinct roles, an advisor working across clients, payroll, sales tax, obligations to lenders and boards — as changes to existing books rather than as reasons to leave. A company that genuinely outgrows CFOKit has left the small-business segment, not exceeded the product |
+
+**Control and assurance.**
+
+| | Objective | Measure of success |
+|---|---|---|
+| **OBJ-8** | Only the people an entity has authorised reach its books | Cross-entity access does not occur, and is prevented at the data layer rather than by convention. Every access resolves to the principal that made it — the person, and the skill acting for them where one did — and to the role held at the time. Authority is determined server-side, whatever the caller asserts |
+| **OBJ-9** | The company can prove all of this to an examiner | The system supplies, from its own records, the access, change, and processing evidence a SOC 1 and a SOC 2 Type II examination require, over a period of operation rather than at a moment. What the software cannot evidence — the operator's own controls — is stated rather than implied |
+
+**Independence.**
+
+| | Objective | Measure of success |
+|---|---|---|
+| **OBJ-10** | The company can leave with everything, at any time | Two exports, both self-service and available in any entity state short of deletion: one another accounting system can read, and one that reproduces the entity's books, their history, and their attribution in another CFOKit deployment |
+| **OBJ-11** | The system runs with no vendor relationship | The books can be kept end to end — in, classified, posted, reconciled, closed, reported — with no cloud account, no signup, and no third-party credential. Every external service is optional and additive, and what is lost without each one is stated |
+| **OBJ-12** | It is a project outsiders can work on | A newcomer builds, tests, and runs the whole system from a clean checkout, with the full suite passing, no credentials, and no account. Adding a feed provider, a delivery channel, or a rule set is an additive change against a stable boundary rather than a fork |
 
 ## The commercial thesis
 
@@ -361,7 +400,7 @@ These are decided, and they bound what the positioning may promise:
   decision to reverse, not a drift. Rendered report output has not been decided either way.
 - **Not a bank.** It reads financial data and keeps books; it does not move money.
 - **Not a filing agent.** It produces the closed year, the schedules, and the supporting
-  detail a preparer works from. A CPA prepares and files.
+  detail a preparer works from. Whoever prepares the return files it.
 - **Not a SaaS-only product.** Self-hosting is a product promise, which is why the local stack
   needs no cloud account. The
   reason is control, cost, and freedom from lock-in. It is not the trust mechanism — that is

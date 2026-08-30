@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-ADR_DIR = REPO_ROOT / "docs" / "adr"
+ADR_DIR = REPO_ROOT / "docs" / "decisions"
 
 # Inline markdown links, excluding images.
 LINK = re.compile(r"(?<!!)\[[^\]]*\]\(([^)]+)\)")
@@ -26,7 +26,7 @@ def markdown_files() -> list[Path]:
     Skipping every dot-directory keeps collection deterministic. `.pytest_cache/README.md`
     is a cache artifact that appears only after the first run, so globbing it made the test
     count depend on whether a cache existed. It also excludes vendored `.claude/` and
-    `.specify/` content, whose links are not ours to fix.
+    vendored `.claude/` content, whose links are not ours to fix.
     """
     return sorted(
         path
@@ -56,10 +56,10 @@ def test_relative_links_resolve(source: Path) -> None:
 
 
 def test_adr_index_lives_with_the_adrs() -> None:
-    """CLAUDE.md cites docs/adr/README.md as the index; it must actually be there."""
+    """CLAUDE.md cites docs/decisions/README.md as the index; it must actually be there."""
     index = ADR_DIR / "README.md"
     assert index.is_file(), "the ADR index must live alongside the ADRs it links to"
-    assert "# Architecture Decision Records" in index.read_text(encoding="utf-8")
+    assert "# Decision records" in index.read_text(encoding="utf-8")
 
 
 def test_every_cited_adr_is_accepted_or_backlogged() -> None:

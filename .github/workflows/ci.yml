@@ -2,7 +2,7 @@
 #
 # Gate 2 is the load-bearing one: the suite runs against compose.yaml WITHOUT the dev
 # overlay and with no cloud credentials present, because portability is a build gate rather
-# than an aspiration (ADR-0003). Nothing in this file may add cloud credentials to the
+# than an aspiration (ADR-0004). Nothing in this file may add cloud credentials to the
 # environment of the portability job.
 
 name: CI
@@ -39,7 +39,7 @@ jobs:
       - name: ruff, mypy --strict, import-linter
         run: uv run task lint
 
-  # Gate 4 — no floats touch money, in the schema or in package code (ADR-0004).
+  # Gate 4 — no floats touch money, in the schema or in package code (ADR-0005).
   money:
     name: "Gate 4: no floats touch money"
     runs-on: ubuntu-latest
@@ -66,7 +66,7 @@ jobs:
       - run: uv run task test
 
   # Gate 2 — the full suite against the stack users actually run, with NO cloud
-  # credentials. This job must never be given any (ADR-0003).
+  # credentials. This job must never be given any (ADR-0004).
   portability:
     name: "Gate 2: portability (no cloud credentials)"
     runs-on: ubuntu-latest
@@ -106,7 +106,7 @@ jobs:
       - name: Full suite against the local stack
         run: uv run task test
 
-      # Proves the command exists and is not a startup step (ADR-0003). It runs inside the
+      # Proves the command exists and is not a startup step (ADR-0004). It runs inside the
       # compose network via the migrate profile, because compose.yaml deliberately
       # publishes no database port and the entrypoint connects before it looks for pending
       # work. `docker compose up` above never triggers this — the profile keeps it out of
@@ -123,9 +123,9 @@ jobs:
         run: docker compose -f compose.yaml down -v
 
   # Gate 3 — differential test against the Beancount oracle, every divergence documented
-  # (ADR-0010). Beancount is a CI-only dependency and never ships in the artifact.
+  # (ADR-0011). Beancount is a CI-only dependency and never ships in the artifact.
   #
-  # Enabled in M2, when the booking engine exists (docs/roadmap.md).
+  # Enabled in M2, when the booking engine exists.
   #
   # oracle:
   #   name: "Gate 3: Beancount oracle"
@@ -137,9 +137,9 @@ jobs:
   #     - run: uv run pytest -m oracle
 
   # Gate 5 — generated OpenAPI and MCP tool descriptions match what is committed; a diff
-  # means a contract change and needs review (ADR-0015).
+  # means a contract change and needs review (ADR-0016).
   #
-  # Enabled in M4, when the adapters exist (docs/roadmap.md).
+  # Enabled in M4, when the adapters exist.
   #
   # contracts:
   #   name: "Gate 5: published interfaces unchanged"

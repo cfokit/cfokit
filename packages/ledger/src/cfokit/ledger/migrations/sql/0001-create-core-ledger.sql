@@ -3,17 +3,17 @@
 -- Establishes entities, the chart of accounts, transactions, and postings, together with
 -- the invariants that make them correct. The invariants are in the database rather than
 -- only in application code because a check that lives on one code path is only as reliable
--- as every future code path (ADR-0005).
+-- as every future code path (ADR-0006).
 --
 -- The migration runner wraps each file in a transaction; there is no BEGIN/COMMIT here.
 --
 -- Decisions relied on:
---   ADR-0002  Postgres only; row-level security keyed on entity_id
---   ADR-0004  Decimal everywhere; every decimal column is NUMERIC(28,10)
---   ADR-0005  Zero-sum enforced by a deferred constraint trigger, at posting
---   ADR-0006  Immutable at posting; corrections are reversing entries
---   ADR-0011  Idempotency keys; one audit_log row per state change
---   ADR-0013  Two dates per transaction, so backdating is self-identifying
+--   ADR-0003  Postgres only; row-level security keyed on entity_id
+--   ADR-0005  Decimal everywhere; every decimal column is NUMERIC(28,10)
+--   ADR-0006  Zero-sum enforced by a deferred constraint trigger, at posting
+--   ADR-0007  Immutable at posting; corrections are reversing entries
+--   ADR-0012  Idempotency keys; one audit_log row per state change
+--   ADR-0014  Two dates per transaction, so backdating is self-identifying
 --   REQ-A6    Lots deferred, but the shape is reserved
 --   REQ-A8    Accounting basis and fiscal year are entity properties
 
@@ -66,9 +66,9 @@ CREATE INDEX account_entity_idx ON account (entity_id);
 CREATE TABLE ledger_transaction (
     id               uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
     entity_id        uuid        NOT NULL REFERENCES entity (id),
-    -- ADR-0006: posting is the point of no return. Drafts are freely editable.
+    -- ADR-0007: posting is the point of no return. Drafts are freely editable.
     status           text        NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'posted')),
-    -- ADR-0013: two dates. transaction_date is when it economically occurred;
+    -- ADR-0014: two dates. transaction_date is when it economically occurred;
     -- recorded_at is when it entered the books. Backdating is these diverging, which
     -- makes every backdated entry self-identifying with no flag required. recorded_at
     -- is also what makes "the books as we knew them at T" a plain WHERE clause.
@@ -76,18 +76,18 @@ CREATE TABLE ledger_transaction (
     recorded_at      timestamptz NOT NULL DEFAULT now(),
     posted_at        timestamptz,
     description      text,
-    -- ADR-0006: corrections are reversing entries, and a reversal says what it reverses.
+    -- ADR-0007: corrections are reversing entries, and a reversal says what it reverses.
     reverses_id      uuid        REFERENCES ledger_transaction (id),
     CONSTRAINT posted_at_iff_posted CHECK ((status = 'posted') = (posted_at IS NOT NULL))
 );
 
 CREATE INDEX ledger_transaction_entity_date_idx
     ON ledger_transaction (entity_id, transaction_date);
--- Supports "as known at T" reporting (ADR-0013).
+-- Supports "as known at T" reporting (ADR-0014).
 CREATE INDEX ledger_transaction_recorded_idx ON ledger_transaction (entity_id, recorded_at);
 
 -- ---------------------------------------------------------------------------
--- Postings. Every decimal column is NUMERIC(28,10) (ADR-0004).
+-- Postings. Every decimal column is NUMERIC(28,10) (ADR-0005).
 -- ---------------------------------------------------------------------------
 CREATE TABLE posting (
     id             uuid           PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -97,7 +97,7 @@ CREATE TABLE posting (
     amount         numeric(28,10) NOT NULL,
     commodity      text           NOT NULL,
     -- REQ-A6: lot tracking is deferred until an entity holds inventory or investments.
-    -- The shape is reserved from the first migration because ADR-0002 already presumes
+    -- The shape is reserved from the first migration because ADR-0003 already presumes
     -- lot state, and adding these later is a migration on the most-written table.
     -- Nothing populates them yet.
     cost_amount    numeric(28,10),
@@ -111,7 +111,7 @@ CREATE INDEX posting_transaction_idx ON posting (transaction_id);
 CREATE INDEX posting_account_idx ON posting (entity_id, account_id);
 
 -- ---------------------------------------------------------------------------
--- Audit trail. Exactly one row per state-changing service call (ADR-0011).
+-- Audit trail. Exactly one row per state-changing service call (ADR-0012).
 -- ---------------------------------------------------------------------------
 CREATE TABLE audit_log (
     id           uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -132,7 +132,7 @@ CREATE INDEX audit_log_subject_idx ON audit_log (subject_type, subject_id);
 
 -- ---------------------------------------------------------------------------
 -- Idempotency. Mandatory on writes; a replay returns the original result rather
--- than applying the operation again (ADR-0011).
+-- than applying the operation again (ADR-0012).
 -- ---------------------------------------------------------------------------
 CREATE TABLE idempotency_key (
     entity_id    uuid        NOT NULL REFERENCES entity (id),
@@ -144,7 +144,7 @@ CREATE TABLE idempotency_key (
 );
 
 -- ---------------------------------------------------------------------------
--- Zero-sum, enforced at COMMIT by a deferred constraint trigger (ADR-0005).
+-- Zero-sum, enforced at COMMIT by a deferred constraint trigger (ADR-0006).
 --
 -- Deferred because postings are inserted one row at a time, so a transaction is
 -- legitimately unbalanced between the first insert and the last. Checked per
@@ -200,7 +200,7 @@ CREATE CONSTRAINT TRIGGER ledger_transaction_zero_sum
     FOR EACH ROW EXECUTE FUNCTION assert_posted_transaction_balanced();
 
 -- ---------------------------------------------------------------------------
--- Append-only from posting (ADR-0006). Enforced here rather than in the service
+-- Append-only from posting (ADR-0007). Enforced here rather than in the service
 -- layer because the guarantee is the product; a rule only the application honours
 -- is a rule the next bulk-import script will not.
 -- ---------------------------------------------------------------------------
@@ -272,7 +272,7 @@ CREATE TRIGGER audit_log_append_only
     FOR EACH ROW EXECUTE FUNCTION audit_log_append_only();
 
 -- ---------------------------------------------------------------------------
--- Row-level security keyed on entity_id (ADR-0002).
+-- Row-level security keyed on entity_id (ADR-0003).
 --
 -- NOTE: RLS does not apply to the table owner. The application must connect as a
 -- non-owner role and set cfokit.entity_id per transaction, or these policies are
