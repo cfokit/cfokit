@@ -37,9 +37,9 @@ have opposite lifecycles: ADRs are immutable once accepted, while specs churn un
 feature ships.
 
 **A fourth artifact kind then surfaced during review.** Auditing the ADR backlog showed that
-four entries — 0006 append-only, 0007 lot selection, 0012 scope, 0013 backdating — are not
+four entries — 0007 append-only, 0008 lot selection, 0013 scope, 0014 backdating — are not
 architecture at all. They are **accounting or product policy**: decisions users experience
-directly and that an auditor may need to read. Four more (0003, 0004, 0005, 0011) bundle a
+directly and that an auditor may need to read. Four more (0004, 0005, 0006, 0012) bundle a
 requirement together with the mechanism implementing it; their titles show the seam, as in
 "zero-sum **enforced by** deferred constraint trigger".
 
@@ -137,7 +137,7 @@ question an auditor asks and CFOKit must answer in a document written for them.
 
 ### Split the bundled ADRs into pure requirements and pure ADRs
 
-Tempting for taxonomic cleanliness: move the obligation half of 0003, 0004, 0005, and 0011
+Tempting for taxonomic cleanliness: move the obligation half of 0004, 0005, 0006, and 0012
 into requirements and leave only the mechanism in the ADR. Rejected as churn for its own sake.
 The requirement halves already exist (REQ-A1, REQ-A3, REQ-C4, REQ-E1, REQ-E3) and cross-
 reference the ADRs; splitting the ADRs as well would double the documents and create two
@@ -161,8 +161,8 @@ comprehensible directly beside the obligation it satisfies.
 - The skills layout is provisional pending the delivery-surface decision and the question of
   whether agent roles split.
 - The ADR backlog is sequenced by **who has to decide**, not by technical dependency. The
-  policy four (0006, 0007, 0012, 0013) need accounting judgement from a human; the
-  architecture set (0008, 0009, 0010, 0014, 0015) can be drafted from constraints already
+  policy four (0007, 0008, 0013, 0014) need accounting judgement from a human; the
+  architecture set (0009, 0010, 0011, 0015, 0016) can be drafted from constraints already
   accepted.
 
 **Reversal cost.** Low for the directory moves — they are renames plus a `CLAUDE.md` edit,

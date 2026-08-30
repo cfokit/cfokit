@@ -106,7 +106,9 @@ Every other record is `kind: requirement-driven` and must cite at least one requ
 
 ADR-0001 is the only record written to the current standard. Records 0002 to 0013 carry their
 original reasoning in MADR form; 0014 to 0027 have MADR frontmatter but the previous section
-structure.
+structure — no `Decision Drivers`, no flat `Considered Options` list, and no `Confirmation`.
+Their `Alternatives rejected` sections do give each rejected option its own subsection, which
+carries the substance of `Pros and Cons of the Options` without the heading.
 
 **No requirement-driven record currently has a valid trace.** Two separate faults:
 
@@ -117,10 +119,35 @@ structure.
   contains no `REQ-` id at all. Every `REQ-` citation in the corpus is dangling: `REQ-A1`, `A2`,
   `A3`, `A6`, `A8`, `A9`, `B1`, `B3`, `B7`, `C1`, `C2`, `C4`, `D1`, `E1`, `E3`, `E7`.
 
+Two substrate records — 0013 and 0021 — also carry dangling `REQ-` ids in prose. They are not
+required to cite a requirement, but the links are broken all the same. ADR-0013's gate still
+instructs a proposer to name "the `REQ-` id it serves", which is a live rule pointing at a dead
+scheme.
+
 Re-tracing every record to live requirement ids is part of the re-derivation.
 
 None of 0002 to 0027 has been re-derived against the current vision and requirements, and none is
 presumed correct until it has been. `kind` values are a first classification and are part of what
-the re-derivation checks. Numbers in `CLAUDE.md`, `CONTRIBUTING.md`, package READMEs and source
-docstrings still refer to the pre-renumbering scheme and are off by one; they are rebuilt as part
-of that work.
+the re-derivation checks — 0026 in particular reads as substrate rather than requirement-driven.
+
+**Renumbering debris: resolved.** An earlier renumbering shifted every record up by one and left
+citations behind in files the documentation test does not read. `compose.yaml`, `compose.dev.yaml`,
+`.github/workflows/ci.yml`, the first migration and its `sql/.gitkeep` have been corrected, as has
+a mislabelled link in the root `README.md`. Three records cited each other wrongly and are fixed:
+0012 cited ADR-0009 twice for ADR-0010's in-process rule, 0014 cited ADR-0015 for ADR-0016's error
+codes, and 0021 carried five bare backlog numbers in the pre-renumbering scheme. `CLAUDE.md`,
+`CONTRIBUTING.md`, `infra/README.md`, `pyproject.toml`, the package `CLAUDE.md` and `README.md`
+files, `scripts/` and `packages/ledger/src/` were already correct.
+
+`tests/test_documentation.py` checks that a cited number **exists**, not that it is the **right**
+one, and it reads only markdown outside this directory — which is why the drift survived. Both
+gaps are worth closing.
+
+**Known conflicts, not yet resolved.**
+
+| Conflict | Where |
+|---|---|
+| Period close is advisory and backdating into a closed period needs only acknowledgement — but `LED-11` now requires a recorded reopening, which is the alternative ADR-0014 rejected by name | ADR-0007, ADR-0014 |
+| Licence is "deliberately left open", yet `LICENSE`, `pyproject.toml`, `README.md` and ADR-0017's rejection of Terraform all rely on MIT, and `NFR-14` makes permissive licensing a Must | ADR-0002, ADR-0017 |
+| Prescribes `specs/`, `REQ-` ids and an accounting-policy artifact kind, all three since retired | ADR-0021 |
+| Status is `deprecated`; ADR-0001 replaced its decision, so `superseded by ADR-0001` is the accurate status under rule 2 | ADR-0022 |
