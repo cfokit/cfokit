@@ -1,8 +1,5 @@
 # CFOKit — Product Vision
 
-- **Status:** Draft
-- **Owner:** Geoff
-
 > **This is the source document for product positioning.** The root `README.md` derives a
 > marketing-oriented introduction from it; the two are not maintained independently. When
 > positioning changes, change it here first.
@@ -12,7 +9,7 @@
 
 ## Tagline
 
-**TBD.**
+**Open source books your agent keeps.**
 
 ## Mission
 
