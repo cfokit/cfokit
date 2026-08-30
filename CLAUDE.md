@@ -4,7 +4,7 @@ Loaded into every session. Package-specific rules live in `packages/*/CLAUDE.md`
 load when you work in those directories.
 
 Rules are binding. Each cites the ADR holding its reasoning — read it before proposing
-a change. Index: `docs/adr/README.md`. If a task appears to require breaking a rule,
+a change. Index: `docs/decisions/README.md`. If a task appears to require breaking a rule,
 stop and ask rather than working around it.
 
 ## Repository map
@@ -19,10 +19,8 @@ Directories are organised by **artifact kind**, and packages are named for
 | `packages/connectors/` | Transaction feed ingestion. **Name is known-wrong and will be renamed** (ADR-0023) | Classification as module or component is not yet settled. |
 | `skills/` | Shipped Agent Skills, as `SKILL.md` bundles | Talk to the ledger over HTTP only. Never import ledger code. |
 | `infra/` | OpenTofu for the one maintained cloud target, plus the deployment contract | Supplies env vars only. No app coupling. |
-| `specs/` | Feature specifications — what we will build. Churns. | Cites ADRs; never overrides one. |
 | `docs/product/` | Vision and numbered requirements | The source for positioning; the README derives from it. |
-| `docs/roadmap.md` | Sequenced work plan | — |
-| `docs/adr/` | Architecture decision records. Immutable once accepted. | Not auto-loaded. Read on demand. |
+| `docs/decisions/` | Decision records, MADR 4.0.0. Immutable once accepted. | Not auto-loaded. Read on demand. |
 | `.claude/` | Tooling for developing *this repo* | Never shipped. Distinct from `skills/`. |
 
 `packages/` holds Python distributions **only** — its members are globbed into the `uv`
@@ -50,23 +48,21 @@ fail the build on a layer violation, and on any import from `cfokit.connectors` 
 
 Shared code between packages requires an ADR. Default to duplication.
 
-## Specifications
+## Documentation
 
-Specifications come before implementation, via Spec Kit — pinned; version in
-`docs/roadmap.md`. (ADR-0021)
+`docs/decisions/` holds decision records in [MADR 4.0.0](https://adr.github.io/madr/).
+`CLAUDE.md` files hold the rules; the records hold the reasoning. Read the cited record
+before proposing a change to a rule. (ADR-0001)
 
-`/speckit-specify` → `/speckit-plan` → `/speckit-tasks` → `/speckit-implement`.
+**`CLAUDE.md` plus the decision records are the constitution.** A second rules document is a
+second source of truth, and it diverges silently.
 
-Two local rules:
+Requirements carry stable domain-prefixed ids in `docs/product/requirements.md`. Derivation runs vision →
+requirements → decision records → these rules, and citation never runs against it. (ADR-0001)
 
-- **`CLAUDE.md` plus the ADRs are the constitution.** Do not run
-  `/speckit-constitution`; `.specify/memory/constitution.md` is a pointer and stays one.
-  A second rules document is a second source of truth, and it diverges silently.
-- **Every spec and plan opens with a "Decisions relied on" block** citing ADR numbers.
-  Templates in `.specify/templates/overrides/` enforce it. If a feature appears to
-  require contradicting a cited ADR, stop and escalate — do not design around it.
-
-Specs cite `REQ-` ids from `docs/product/requirements.md`.
+There is no roadmap file and no specifications directory. Work sequencing lives in GitHub
+Milestones and Projects. Whether CFOKit adopts a specification workflow is undecided and
+needs its own record. (ADR-0001)
 
 ## Commands
 

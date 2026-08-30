@@ -46,7 +46,7 @@ dev = { cmd = "docker compose -f compose.yaml -f compose.dev.yaml up", help = "L
 [tool.ruff]
 line-length = 96
 target-version = "py312"
-extend-exclude = [".specify"]
+extend-exclude = []
 
 [tool.ruff.lint]
 select = [
