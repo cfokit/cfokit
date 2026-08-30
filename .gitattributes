@@ -15,4 +15,3 @@ uv.lock              linguist-generated=true -diff
 
 # Documentation should not skew language stats for the repo.
 docs/**  linguist-documentation=true
-specs/** linguist-documentation=true

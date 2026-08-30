@@ -236,6 +236,25 @@ tiers now. *"AI does your bookkeeping"* is the incumbent's current roadmap and i
 differentiator. Consistency and traceability are, and both are hard to reach from a
 probabilistic categoriser sitting on a retention-limited audit log.
 
+## Objectives
+
+What success looks like, each with the measure that settles it. An objective without a measure is
+a slogan; these are the statements CFOKit can be held to.
+
+| | Objective | Measure of success |
+|---|---|---|
+| **OBJ-1** | Produce numbers that are right | Booking is exact and demonstrably correct against an independent implementation; no posted record is ever silently altered; a repeated or retried operation never books twice |
+| **OBJ-2** | Make every number traceable to its origin | Any posting resolves to the source transaction and the rule that assigned it, for the full life of the record |
+| **OBJ-3** | Keep books current and closed without a person doing the recording | Books current to within one day; period close lands on schedule rather than two to six weeks after month end |
+| **OBJ-4** | Produce output that outside professionals accept without rework | A preparer answers their own questions from the books without contacting the client; a lender or board accepts the statements as presented |
+| **OBJ-5** | Displace the spend a small company makes on bookkeeping software plus an outsourced bookkeeping service | A company running CFOKit cancels both, at a combined saving of $340–1,000 per month |
+| **OBJ-6** | Serve a small business across the whole range its incumbents serve | A company growing within the small-business segment — adding entities, moving from cash to accrual, engaging a fractional CFO — is never forced to migrate away. The segment is the one QuickBooks, Xero, and Zoho Books compete for |
+| **OBJ-7** | Let only the people an entity has authorised reach its books | No cross-entity access ever occurs; every access resolves to a person and the role they held at the time |
+| **OBJ-8** | Be examinable by an external auditor wherever it runs | The system supplies, from its own records, the access, change, and processing evidence a SOC 1 and a SOC 2 Type II examination require, over a period of operation rather than at a moment |
+| **OBJ-9** | Guarantee the company owns and can leave with its data | A complete, re-importable export is available at any moment, self-service, without contacting anyone |
+| **OBJ-10** | Be adoptable with no vendor relationship of any kind | The software runs with no cloud account, no signup, and no third-party credentials |
+| **OBJ-11** | Run as an open-source project people contribute to | Outside contributors send pull requests across the system and they get merged; a newcomer builds, tests, and runs the whole thing from a clean checkout with no credentials and no account |
+
 ## The commercial thesis
 
 CFOKit is MIT licensed and stays that way. Anyone can run it, fork it, or build on it without

@@ -19,28 +19,7 @@ are recorded elsewhere. Identifiers are stable and are never reused.
 
 ---
 
-## 2. Business objectives
-
-Each objective carries a measure. A requirement that serves no objective below does not
-belong in this document.
-
-| | Objective | Measure of success |
-|---|---|---|
-| **OBJ-1** | Produce numbers that are right | Booking is exact and demonstrably correct against an independent implementation; no posted record is ever silently altered; a repeated or retried operation never books twice |
-| **OBJ-2** | Make every number traceable to its origin | Any posting resolves to the source transaction and the rule that assigned it, for the full life of the record |
-| **OBJ-3** | Keep books current and closed without a person doing the recording | Books current to within one day; period close lands on schedule rather than two to six weeks after month end |
-| **OBJ-4** | Produce output that outside professionals accept without rework | A preparer answers their own questions from the books without contacting the client; a lender or board accepts the statements as presented |
-| **OBJ-5** | Displace the spend a small company makes on bookkeeping software plus an outsourced bookkeeping service | A company running CFOKit cancels both, at a combined saving of $340–1,000 per month |
-| **OBJ-6** | Serve a small business across the whole range its incumbents serve | A company growing within the small-business segment — adding entities, moving from cash to accrual, engaging a fractional CFO — is never forced to migrate away. The segment is the one QuickBooks, Xero, and Zoho Books compete for |
-| **OBJ-7** | Let only the people an entity has authorised reach its books | No cross-entity access ever occurs; every access resolves to a person and the role they held at the time |
-| **OBJ-8** | Be examinable by an external auditor wherever it runs | The system supplies, from its own records, the access, change, and processing evidence a SOC 1 and a SOC 2 Type II examination require, over a period of operation rather than at a moment |
-| **OBJ-9** | Guarantee the company owns and can leave with its data | A complete, re-importable export is available at any moment, self-service, without contacting anyone |
-| **OBJ-10** | Be adoptable with no vendor relationship of any kind | The software runs with no cloud account, no signup, and no third-party credentials |
-| **OBJ-11** | Run as an open-source project people contribute to | Outside contributors send pull requests across the system and they get merged; a newcomer builds, tests, and runs the whole thing from a clean checkout with no credentials and no account |
-
----
-
-## 3. Stakeholders
+## 2. Stakeholders
 
 | Stakeholder | Relationship | What they need from CFOKit |
 |---|---|---|
@@ -57,7 +36,7 @@ belong in this document.
 
 ---
 
-## 4. Scope
+## 3. Scope
 
 ### In scope
 
@@ -87,7 +66,7 @@ These are decided. Each bounds what the product may promise.
 
 ---
 
-## 5. Assumptions and dependencies
+## 4. Assumptions and dependencies
 
 Business conditions this document relies on.
 
@@ -104,7 +83,7 @@ Business conditions this document relies on.
 
 ---
 
-## 6. Functional requirements
+## 5. Functional requirements
 
 Organised by module.
 
@@ -420,9 +399,9 @@ statement it produced before the upgrade is reproducible after it.
 
 ---
 
-## 7. Non-functional requirements — `NFR`
+## 6. Non-functional requirements — `NFR`
 
-These constrain how well the system does what section 6 says it does. Each is stated once,
+These constrain how well the system does what section 5 says it does. Each is stated once,
 globally, with a priority and a target. Section 7.2 records where a module is held to a
 stricter target than the global one.
 
@@ -476,7 +455,7 @@ a row inherits the global target unchanged.
 
 ---
 
-## 8. SOC 1 readiness — `SOC1`
+## 7. SOC 1 readiness — `SOC1`
 
 Whoever operates CFOKit is a **service organization** under SSAE 18, and the businesses whose
 books it keeps are user entities whose financial statements depend on what this system and its
@@ -487,7 +466,7 @@ here.
 
 **The goal is Type 2 readiness, not an audit.** These requirements exist to make a future
 examination cheap and to avoid design decisions we would have to reverse. Requirements that
-only make sense once an examination is underway are named in section 8.11 and excluded.
+only make sense once an examination is underway are named in section 7.11 and excluded.
 
 **Automated in preference to procedural.** A control a person performs is sampled at every
 examination and costs money forever. A control the system enforces is tested once, plus change
@@ -680,7 +659,7 @@ adds customer burden.
 
 ---
 
-## 9. SOC 2 Type II readiness — `SOC2`
+## 8. SOC 2 Type II readiness — `SOC2`
 
 Unlike SOC 1, the criteria are fixed. We do not define control objectives; we map controls to
 the AICPA Trust Services Criteria, and scope is chosen by selecting categories rather than by
@@ -699,7 +678,7 @@ Section 9.10 holds the shared control map.
 | **Security** (CC1–CC9) | In scope | Mandatory. Not elective for any SOC 2 report. |
 | **Confidentiality** | In scope | Customer financial data is the core asset, and it is what a customer is actually worried about. Declining this category invites the question of why. |
 | **Availability** | **Undecided** | The criteria test against *our own stated commitments*, so this category costs what we choose to promise. Making no commitment and excluding the category is defensible; making one and excluding it is not. |
-| **Processing Integrity** | **Recommended in scope** | Completeness and accuracy of processing is the substance of section 8. If those controls are built, this category is close to free — and it is the one a buyer most associates with an accounting product. |
+| **Processing Integrity** | **Recommended in scope** | Completeness and accuracy of processing is the substance of section 7. If those controls are built, this category is close to free — and it is the one a buyer most associates with an accounting product. |
 | **Privacy** | **Out unless triggered** | Business contact data alone does not trigger it. Payroll, contractor 1099 data, and employee expense reimbursement each pull personal information in. Each is out of scope today; adding any one of them makes this category unavoidable. |
 
 ### 9.2 Untrusted content and agent manipulation
@@ -848,7 +827,7 @@ stated once, in the SOC 1 section, and referenced from SOC 2.
 
 ---
 
-## 10. Open issues
+## 9. Open issues
 
 Business decisions this document is waiting on. Most block a `Proposed` or `Deferred`
 requirement from being specified; OI-12 blocks a requirement that does not exist yet. None is a
@@ -871,7 +850,7 @@ design question; a design question never blocks a business requirement.
 
 ---
 
-## 11. Glossary
+## 10. Glossary
 
 Terms carrying a specific meaning in this document.
 
@@ -903,10 +882,11 @@ Terms carrying a specific meaning in this document.
 
 ---
 
-## 12. Traceability
+## 11. Traceability
 
-Every requirement traces to at least one business objective. An objective with no requirement
-is unserved; a requirement serving no objective does not belong here.
+Objectives live in [`vision.md`](vision.md); requirements derive from them. Every requirement
+traces to at least one objective. An objective with no requirement is unserved; a requirement
+serving no objective does not belong here.
 
 | Objective | Requirements |
 |---|---|
