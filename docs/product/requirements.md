@@ -890,14 +890,15 @@ serving no objective does not belong here.
 
 | Objective | Requirements |
 |---|---|
-| **OBJ-1** Numbers that are right | LED-03, LED-04, LED-05, LED-06, LED-07, LED-08, BKP-07, BKP-08, BKP-11, BKP-12, BKP-14, MIG-05, MIG-08, RPT-09, RPT-12, NFR-01, NFR-02, NFR-03 |
-| **OBJ-2** Every number traceable | LED-08, LED-09, BKP-10, MIG-04, IAM-13, PLT-16, PLT-20, RPT-08, RPT-11, NFR-02, SOC1-14, SOC1-15, SOC1-22, SOC1-23, SOC1-36 |
-| **OBJ-3** Current and closed without manual recording | BKP-01, BKP-06, BKP-09, BKP-16, LED-11, LED-12, PLT-07, PLT-14, RPT-15, NFR-15 |
-| **OBJ-4** Output professionals accept | LED-01, LED-02, LED-14, LED-17, RPT-01–RPT-05, RPT-07, RPT-09, RPT-10, RPT-12, RPT-13, RPT-14, RPT-16, RPT-17, RPT-18, RPT-19, NFR-01, NFR-16 |
-| **OBJ-5** Displace the incumbent stack | BKP-01–BKP-06, BKP-13–BKP-18, AR-01–AR-19, RPT-01–RPT-09, MIG-01–MIG-08, NFR-19, NFR-20 |
-| **OBJ-6** Serves a small business across its range | LED-10, LED-13, LED-14, LED-15, LED-16, LED-17, LED-18, LED-19, RPT-19, RPT-20, RPT-21, RPT-22, IAM-08, IAM-09, PLT-04, PLT-08, NFR-08, NFR-09 |
-| **OBJ-7** Only authorised people reach the books | IAM-01–IAM-07, IAM-11, IAM-12, IAM-15, IAM-16, IAM-17, AR-08, PLT-05, NFR-04, NFR-05, NFR-06 |
-| **OBJ-8** Examinable by an external auditor | IAM-13, IAM-14, IAM-18, IAM-19, PLT-15–PLT-19, NFR-18, SOC1-01–SOC1-36, SOC2-01–SOC2-33 |
-| **OBJ-9** Own and leave with the data | MIG-09–MIG-12, PLT-09, PLT-10, PLT-11, PLT-12, PLT-13, PLT-21, NFR-07, NFR-17 |
-| **OBJ-10** No vendor relationship required | BKP-03, IAM-10, PLT-01, PLT-02, PLT-03, PLT-06, NFR-10, NFR-11, NFR-14, NFR-17 |
-| **OBJ-11** An open-source project people contribute to | NFR-11, NFR-12, NFR-13, NFR-14, NFR-21 |
+| **OBJ-1** Kept without the company keeping them | BKP-01, BKP-06, BKP-09, BKP-12, RPT-15 |
+| **OBJ-2** Current, and a close never waiting on us | BKP-16, LED-11, LED-12, PLT-07, PLT-14, NFR-15 |
+| **OBJ-3** Exact, and unchanged once posted | LED-03, LED-04, LED-05, LED-06, LED-07, LED-08, BKP-07, BKP-08, BKP-11, BKP-12, BKP-14, MIG-05, MIG-08, RPT-09, RPT-12, NFR-01, NFR-02, NFR-03 |
+| **OBJ-4** Every number explains itself | LED-08, LED-09, BKP-10, MIG-04, IAM-13, PLT-16, PLT-20, RPT-08, RPT-11, NFR-02, SOC1-14, SOC1-15, SOC1-22, SOC1-23, SOC1-36 |
+| **OBJ-5** The recurring cost goes away | BKP-01–BKP-06, BKP-13–BKP-18, AR-01–AR-19, RPT-01–RPT-09, MIG-01–MIG-08, NFR-19, NFR-20 |
+| **OBJ-6** Output accepted as it stands | LED-01, LED-02, LED-14, LED-17, RPT-01–RPT-05, RPT-07, RPT-09, RPT-10, RPT-12, RPT-13, RPT-14, RPT-16, RPT-17, RPT-18, RPT-19, NFR-01, NFR-16 |
+| **OBJ-7** Never forced off by growing | LED-10, LED-13, LED-14, LED-15, LED-16, LED-17, LED-18, LED-19, RPT-19, RPT-20, RPT-21, RPT-22, IAM-08, IAM-09, PLT-04, PLT-08, NFR-08, NFR-09 |
+| **OBJ-8** Only authorised people reach the books | IAM-01–IAM-07, IAM-11, IAM-12, IAM-15, IAM-16, IAM-17, AR-08, PLT-05, NFR-04, NFR-05, NFR-06 |
+| **OBJ-9** Provable to an examiner | IAM-13, IAM-14, IAM-18, IAM-19, PLT-15–PLT-19, NFR-18, SOC1-01–SOC1-36, SOC2-01–SOC2-33 |
+| **OBJ-10** Leave with everything, at any time | MIG-09–MIG-12, PLT-09, PLT-10, PLT-11, PLT-12, PLT-13, PLT-21, NFR-07, NFR-17 |
+| **OBJ-11** Runs with no vendor relationship | BKP-03, IAM-10, PLT-01, PLT-02, PLT-03, PLT-06, NFR-10, NFR-11, NFR-14, NFR-17 |
+| **OBJ-12** Outsiders can work on it | NFR-11, NFR-12, NFR-13, NFR-14, NFR-21 |
