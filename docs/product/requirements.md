@@ -142,7 +142,7 @@ system, the other moves an entity between CFOKit deployments intact.
 | | Requirement | Priority | Status |
 |---|---|---|---|
 | **MIG-01** | Import an existing chart of accounts from the system a company already runs. | Should | Approved |
-| **MIG-02** | Import transaction history and opening balances from that system. | Should | Proposed — the fidelity promised is an open question |
+| **MIG-02** | Import opening balances from the system a company already runs, and transaction history to the extent that system's export carries it. An import declares which of the two it delivered. | Should | Approved |
 | **MIG-03** | Import the customers and the categorisation rules the company already has, so a migrated entity does not arrive with an empty receivables ledger and no rules. | Should | Approved |
 | **MIG-04** | Every imported record is identifiable as imported and names the system it came from. | Should | Approved |
 | **MIG-05** | An import is validated before anything is posted. The operator sees what will be created, and what will not, and can abandon it. | Should | Approved |
@@ -264,8 +264,8 @@ Producing statements, and answering questions the books can support.
 | **RPT-14** | Every report is printable, laid out so a printed copy carries the same figures, headings, and basis statement as the screen. | Should | Approved |
 | **RPT-15** | Cash position and runway are reported, and material changes are surfaced without being asked for. | Should | Approved |
 | **RPT-16** | In addition to the standard reports, a user can ask a question of their own books that nobody anticipated, and get an answer drawn from what is posted. | Should | Approved |
-| **RPT-17** | A statement can be marked issued, fixing what was reported, to whom, and when. | Should | Proposed — the mechanism and the form an issued statement takes when shared are undecided |
-| **RPT-18** | Assemble the figures, schedules, and supporting detail a tax return requires, to a standard where a preparer can answer their own questions without contacting the client. CFOKit does not file. | Should | Proposed — jurisdictions and entity types are an open question |
+| **RPT-17** | A statement can be marked issued, fixing what was reported, to whom, and when. | Should | Approved |
+| **RPT-18** | Assemble the figures, schedules, and supporting detail a tax return requires, to a standard where a preparer can answer their own questions without contacting the client. CFOKit does not file. | Should | Approved |
 | **RPT-19** | Statements are produced on the accrual basis from the obligation and settlement events the ledger records, and an entity on either basis can be shown the alternate view, labelled as such. | Should | Deferred — activates when an entity must report on an accrual basis. Not built before then |
 | **RPT-20** | Budgets are recorded per account and period, and any period report can be produced against budget with the variance. | Could | Deferred — activates when an entity budgets |
 | **RPT-21** | Statements are produced for a group of entities together, eliminating balances between them. | Could | Deferred — activates when one owner's entities must report as a group |
@@ -582,7 +582,7 @@ Carried already: IAM-01 through IAM-19.
 | **SOC1-24** | Authorisation is enforced at the data layer. Interface-level concealment of an operation is never the mechanism by which it is denied. | Must | Approved |
 | **SOC1-25** | The acting principal propagates unmodified from the entry point through to authorisation and to the audit record. Where one surface calls another on a principal's behalf, the principal's own credential flows through and authorisation is evaluated against it — never against a shared credential with the real actor passed as a parameter. | Must | Approved |
 | **SOC1-26** | No access path authorises against a principal different from the one recorded in the audit trail for the same action. | Must | Approved |
-| **SOC1-27** | Whether operator personnel can reach customer financial data at all, and if so under what authorisation, is a product decision. Any such access is logged identically to a customer's own and is subject to the same evidence requirements. | Must | **Proposed** — whether privileged access exists is not decided |
+| **SOC1-27** | Operator personnel hold no standing access to customer financial data. Such access exists only as break-glass: individually authorised, time-bounded, and logged identically to a customer's own, under the same evidence requirements. | Must | Approved |
 
 > **The failure this prevents.** A surface that authenticates as itself and passes the real
 > actor as a parameter still performs authorisation — it just records the intermediary as the
@@ -602,12 +602,12 @@ What happens when processing fails is the second thing an examiner asks.
 | **SOC1-30** | Reprocessing an exception is safe against duplication, under the same guarantee as any other write. | Must | Approved |
 | **SOC1-31** | Unresolved exceptions age visibly and escalate on a schedule the entity sets. | Should | Approved |
 | **SOC1-32** | Exceptions are reportable for any period — what arrived, what was dispositioned and how, and what remains open — as a durable artifact rather than a transient view. This is the report a reviewer reviews and an examiner samples. | Must | Approved |
-| **SOC1-33** | Which exception classes an agent may resolve autonomously, and which must escalate to a person, is configured through the same mechanism as SOC1-04. | Must | **Proposed** — the split is not decided |
+| **SOC1-33** | Which exception classes an agent may resolve autonomously, and which must escalate to a person, is configured through the same mechanism as SOC1-04. | Must | Approved |
 
 ### 7.8 Change management of agent artifacts
 
 Only the part that is a property of the system belongs here. The rest is engineering practice
-and is excluded in 8.11.
+and is excluded in 7.11.
 
 | | Requirement | Priority | Status |
 |---|---|---|---|
@@ -706,7 +706,7 @@ template, so we should be able to describe our controls before we are asked.
 | **SOC2-05** | On detection, the turn stops and the content is quarantined rather than processed further. The item becomes an exception under SOC1-28 for a person to disposition. Detection that only records is telemetry, not a control. | Must | Approved |
 | **SOC2-06** | The maximum damage a fully successful injection can cause is stated, bounded by the materiality thresholds and human authorisation gates of SOC1-04, and demonstrable by test. The bound is a property of the capability model, never of model behaviour. | Must | Approved |
 | **SOC2-07** | Changing where a customer is told to send money, or the identity a customer is told they are paying, requires human authorisation in every case, at any amount, regardless of the agent's stated confidence. This covers the payment details an invoice carries and the customer record behind it. CFOKit moves no money, so this — not a payment instruction — is where revenue can be redirected, and it carries no autonomous path. | Must | Approved |
-| **SOC2-08** | The detection approach for injection attempts is a stated, versioned artifact under SOC1-34, so that a change to it is a change to a security control. | Must | **Proposed** — the approach is not decided |
+| **SOC2-08** | The detection approach for injection attempts is a stated, versioned artifact under SOC1-34, so that a change to it is a change to a security control. | Must | Approved |
 
 **Acceptance, SOC2-03.** An agent given a document containing an instruction to post an entry
 cannot post one within that turn, irrespective of how the instruction is phrased or whether the
@@ -725,8 +725,8 @@ is fully compromised and cooperative with the attacker.
 | **SOC2-09** | Every third party that receives customer financial data during agent operation — inference, document extraction, embedding or vector storage — is enumerated in a registry the system maintains, not in a document maintained beside it. | Must | Approved |
 | **SOC2-10** | A provider that does not contractually offer zero data retention and no training on submitted data cannot be configured to receive customer data. This is a constraint the system enforces on configuration, not a procurement preference. | Must | Approved |
 | **SOC2-11** | What is sent to a provider is the minimum the task requires. Whether raw financial records leave the system, or redacted or tokenised representations, is recorded per provider and per operation. | Must | Approved |
-| **SOC2-12** | Where data residency is committed to, inference and extraction routing respects it, and a request that cannot be routed compliantly fails rather than falling back. | Should | **Proposed** — whether we commit to residency at all is undecided |
-| **SOC2-13** | Changing an inference provider, or a model version, is a change to the control environment under SOC1-35, and additionally requires the security review of SOC2-31. | Must | Approved |
+| **SOC2-12** | Where data residency is committed to, inference and extraction routing respects it, and a request that cannot be routed compliantly fails rather than falling back. | Should | Approved |
+| **SOC2-13** | Changing an inference provider, or a model version, is a change to the control environment under SOC1-35. | Must | Approved |
 
 > **Constrains the provider abstraction.** Provider selection is validated configuration rather
 > than a deployment detail. Model swaps are frequent, so enforcement sits in the configuration
@@ -756,15 +756,13 @@ Carried by IAM-01 through IAM-19 and SOC1-24 through SOC1-27. Additional SOC 2 o
 | **SOC2-20** | Sessions have a bounded lifetime and can be revoked centrally, taking effect everywhere including for skills acting under IAM-11. | Must | Approved |
 | **SOC2-21** | Programmatic credentials and tokens have a defined lifecycle — issuance, scope, expiry, rotation, and revocation — and a token's scope is never broader than the role of the identity it was issued to. | Must | Approved |
 | **SOC2-22** | The access review of IAM-14 produces its evidence automatically, on a defined cadence, as a persisted artifact. A review that requires someone to assemble screenshots is sampled at every examination and costs money forever. | Must | Approved |
-| **SOC2-23** | Where privileged operator access to customer data exists under SOC1-27, it is time-bounded, individually authorised, logged identically to customer access, and visible to the affected customer. | Must | **Proposed** — dependent on the SOC1-27 decision |
+| **SOC2-23** | Where privileged operator access to customer data exists under SOC1-27, it is time-bounded, individually authorised, logged identically to customer access, and visible to the affected customer. | Must | Approved |
 
 ### 8.6 System operations and monitoring — CC7
 
 | | Requirement | Priority | Status |
 |---|---|---|---|
 | **SOC2-24** | Security events under PLT-17 are retained for the full review period plus lookback, and alerting is defined per event class rather than left to inspection. | Must | Approved |
-| **SOC2-25** | Dependencies are monitored for known vulnerabilities on a defined cadence, and remediation targets are stated by severity. Supply-chain provenance of dependencies is part of this, not separate from it. | Must | Approved |
-| **SOC2-26** | Incidents are detected, classified by severity, escalated, and — where customer data or the accuracy of customer books is affected — notified to the customer within a committed period. | Must | **Proposed** — the period is not set |
 | **SOC2-27** | Agent behaviour is monitored as a security signal, not only an operational one: volume anomalies, unusual account or payee targets, repeated authorisation failures, and clustering of exceptions are detected and alertable. | Must | Approved |
 | **SOC2-28** | The line between an agent error and a reportable security incident is defined in advance. An agent posting an incorrect but non-malicious entry is a processing exception under SOC1-28; an agent acting outside its capability set, or acting on injected instruction, is a security incident. | Must | Approved |
 | **SOC2-29** | Behaviour under degradation is defined, including what happens when an inference or extraction provider is unavailable partway through a workflow. Partial completion never leaves the books in a state no one can account for. | Must | Approved |
@@ -776,22 +774,15 @@ Carried by IAM-01 through IAM-19 and SOC1-24 through SOC1-27. Additional SOC 2 o
 ### 8.7 Change management — CC8
 
 Carried by SOC1-34 and SOC1-35, which cover skills, prompts, tool definitions, and model version
-pins. Stated once there rather than twice.
-
-| | Requirement | Priority | Status |
-|---|---|---|---|
-| **SOC2-31** | A change affecting authentication, authorisation, isolation, or data handling requires security review before it takes effect, and the review is recorded against the change. | Must | Approved |
-| **SOC2-32** | Infrastructure and configuration changes are governed identically to application code. A change to a deployment's configuration is a change. | Must | Approved |
+pins. Stated once there rather than twice. The rest of what CC8 asks for is engineering practice
+and is excluded in 8.11, on the same grounds 7.8 gives.
 
 ### 8.8 Availability
 
-Applies only if the Availability category is taken in 9.1. Durability, restore verification,
+Applies only if the Availability category is taken in 8.1. Durability, restore verification,
 degradation behaviour, and resumability are unconditional and sit in NFR-07, SOC2-29, and
-SOC2-30. What is left here is what the category alone adds.
-
-| | Requirement | Priority | Status |
-|---|---|---|---|
-| **SOC2-33** | Recovery time and recovery point objectives are stated as numbers a deployment can be measured against. | Should | **Proposed** — the numbers are not set |
+SOC2-30. What the category alone adds is a recovery commitment stated as numbers, which is an
+operating property of a deployment rather than of the software. It is excluded in 8.11.
 
 ### 8.9 Governance and control environment — CC1–CC5
 
@@ -814,14 +805,27 @@ stated once, in the SOC 1 section, and referenced from SOC 2.
 | Principal propagation | SOC1-25 | CC6 | Session revocation reaches skills — SOC2-20 |
 | Privileged operator access | SOC1-27 | CC6 | Time bounds, customer visibility — SOC2-23 |
 | Exception queue and disposition | SOC1-28, SOC1-29 | CC7 | Error-versus-incident line — SOC2-28 |
-| Skills, prompts, tool definitions versioned | SOC1-34 | CC8 | Security review — SOC2-31 |
+| Skills, prompts, tool definitions versioned | SOC1-34 | CC8 | None |
 | Model version as control-environment change | SOC1-35 | CC8, CC9 | Provider review — SOC2-13 |
 | Idempotent write paths | SOC1-09 | Processing Integrity | Workflow resumability — SOC2-30 |
 | Role-based access and review | IAM-01…IAM-15 | CC6 | MFA, sessions, tokens, automatic review evidence — SOC2-19…SOC2-22 |
 | Deployment-scoped roles and named security ownership | IAM-18, IAM-19 | CC1, CC6 | None; written for CC1 |
 | Controls evidenced rather than asserted | NFR-18 | CC4 | None; it was written for both |
 
-### 8.11 Examination scoping questions
+### 8.11 Excluded from this section
+
+| Excluded | Why |
+|---|---|
+| Dependency vulnerability monitoring, remediation targets by severity, supply-chain provenance | Engineering practice. The class 7.11 already excludes for SOC 1. |
+| Incident detection, classification, escalation, and notification to a customer | Operating process. It also presumes a commercial operator, which section 3 forbids the product to do. |
+| Security review before a change to authentication, authorisation, isolation, or data handling takes effect | Engineering practice, as 7.8 already says of its own section. |
+| Governing infrastructure and configuration changes identically to application code | Engineering practice. |
+| Recovery time and recovery point objectives | An operating commitment about a deployment rather than a property of the software. Whoever operates a deployment sets them; a self-hoster's obligations sit in 7.10. |
+
+Five requirements were removed here. Their identifiers — SOC2-25, SOC2-26, SOC2-31, SOC2-32,
+and SOC2-33 — are retired rather than reused, so the numbering carries gaps.
+
+### 8.12 Examination scoping questions
 
 | | Question |
 |---|---|
@@ -834,23 +838,19 @@ stated once, in the SOC 1 section, and referenced from SOC 2.
 
 ## 9. Open issues
 
-Business decisions this document is waiting on. Most block a `Proposed` or `Deferred`
-requirement from being specified; the rest qualify one already approved. None is a design
-question; a design question never blocks a business requirement.
+Business decisions this document is waiting on. One blocks a `Deferred` requirement from being
+specified; the rest qualify a requirement already approved, or set a target it leaves open. None
+is a design question; a design question never blocks a business requirement.
 
 | | Question | Blocks | Needed by |
 |---|---|---|---|
-| **OI-1** | What migration fidelity do we promise? An opening trial balance and a full transaction history are materially different products with different trust implications. | MIG-02 | Before any company with existing books can adopt |
 | **OI-2** | Which jurisdictions and entity types does tax support cover? | RPT-18 | Before the first tax season we support |
 | **OI-3** | What availability, interactive latency, and history volume do we commit to? A latency target without a volume is untestable. | NFR-08, NFR-09 | Before a deployment carries anyone's real books |
 | **OI-4** | Is compliance tracking in scope, and is it reporting at all? It sits under Reporting today for want of a better home, and it is neither a statement nor a query. | RPT-22 | Before it is specified |
 | **OI-5** | Deleting a whole entity is settled. What is not: erasing one named person's data from an entity that survives — a payee, a customer contact — where the history is append-only and the surrounding books must still balance. | PLT-19 | Before the first erasure request arrives |
 | **OI-6** | What is the role taxonomy? This document requires roles and names the three capability classes they must distinguish, but not the roles themselves. Internal staff, a fractional CFO, and a CPA have genuinely different needs, and fixing the set before those are understood would be designing rather than specifying. | IAM-02 | Before access control is specified |
 | **OI-7** | Which compensating controls must an entity have in place before CFOKit will act unsupervised? Segregation is unavailable to a one-person business, so this is what stands in its place, and it has to be specific enough to test. Defaults should be conservative, since a customer inherits whichever ones ship. | SOC1-33, IAM-17 | Before first release |
-| **OI-8** | Do operator personnel have any path to customer financial data — break-glass or otherwise? Answering *no* is the strongest position and the hardest to support operationally. | SOC1-27 | Before anyone else's books are held |
 | **OI-9** | Do we accept any autonomous ledger write derived from untrusted content at all? Refusing outright is the strongest security position and removes most of the product's value for receipt and invoice capture. Accepting it makes SOC2-03 and SOC2-06 the only things standing between an attacker and the books. | SOC2-03, SOC2-06 | Before document capture ships |
-| **OI-10** | Within what period do we commit to notifying a customer of an incident affecting their data or the accuracy of their books? | SOC2-26 | Before the hosted service carries anyone else's books |
-| **OI-11** | How is a statement marked issued, and what form does it take when shared? An issued statement is a record of what was told to whom, which is not the same artifact as a report run on demand. | RPT-17 | Before any statement is handed to a lender or a board |
 
 ---
 
@@ -902,7 +902,7 @@ serving no objective does not belong here.
 | **OBJ-6** Output accepted as it stands | LED-01, LED-02, LED-14, LED-17, RPT-01–RPT-05, RPT-07, RPT-09, RPT-10, RPT-12, RPT-13, RPT-14, RPT-16, RPT-17, RPT-18, RPT-19, NFR-01, NFR-16 |
 | **OBJ-7** Never forced off by growing | LED-10, LED-13, LED-14, LED-15, LED-16, LED-17, LED-18, LED-19, RPT-19, RPT-20, RPT-21, RPT-22, IAM-08, IAM-09, PLT-04, PLT-08, NFR-08, NFR-09 |
 | **OBJ-8** Only authorised people reach the books | IAM-01–IAM-07, IAM-11, IAM-12, IAM-15, IAM-16, IAM-17, AR-08, PLT-05, NFR-04, NFR-05, NFR-06 |
-| **OBJ-9** Provable to an examiner | IAM-13, IAM-14, IAM-18, IAM-19, PLT-15–PLT-19, NFR-18, SOC1-01–SOC1-36, SOC2-01–SOC2-33 |
+| **OBJ-9** Provable to an examiner | IAM-13, IAM-14, IAM-18, IAM-19, PLT-15–PLT-19, NFR-18, SOC1-01–SOC1-36, SOC2-01–SOC2-24, SOC2-27–SOC2-30 |
 | **OBJ-10** Leave with everything, at any time | MIG-09–MIG-12, PLT-09, PLT-10, PLT-11, PLT-12, PLT-13, PLT-21, NFR-07, NFR-17 |
 | **OBJ-11** Runs with no vendor relationship | BKP-03, IAM-10, PLT-01, PLT-02, PLT-03, PLT-06, NFR-10, NFR-11, NFR-14, NFR-17 |
 | **OBJ-12** Outsiders can work on it | NFR-11, NFR-12, NFR-13, NFR-14, NFR-21 |
