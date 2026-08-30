@@ -67,6 +67,7 @@ These are decided. Each bounds what the product may promise.
 | Accounts payable, purchase orders, quotes, estimates | Not included until a stated need arrives. |
 | SOX compliance | Sarbanes-Oxley applies to public companies and their auditors. CFOKit does not serve public companies and is not built to. Out of scope until it deliberately is. Note that individual SOX provisions on record destruction reach private companies; those are retention obligations and are handled under PLT-19 and PLT-20, not as SOX scope. |
 | Statutory localisation | Jurisdiction-specific tax regimes and their return formats, statutory charts of accounts, and e-invoicing mandates. The incumbents ship separate regional editions rather than configure one product, because these differences are too deep to configure. Out of scope until a jurisdiction is chosen deliberately. |
+| Compliance obligation tracking | Recurring obligations and deadlines are jurisdiction-specific, which statutory localisation already excludes, and tracking them is neither a statement nor a query. Revisit only if a jurisdiction is chosen deliberately. |
 | Enterprise-scale accounting | Consolidation across dozens of entities, multi-currency treasury, statutory reporting regimes, and the volumes that come with them. The target is the small-business segment the incumbents serve. Revisit only once that segment is won. |
 
 ---
@@ -269,7 +270,6 @@ Producing statements, and answering questions the books can support.
 | **RPT-19** | Statements are produced on the accrual basis from the obligation and settlement events the ledger records, and an entity on either basis can be shown the alternate view, labelled as such. | Should | Deferred — activates when an entity must report on an accrual basis. Not built before then |
 | **RPT-20** | Budgets are recorded per account and period, and any period report can be produced against budget with the variance. | Could | Deferred — activates when an entity budgets |
 | **RPT-21** | Statements are produced for a group of entities together, eliminating balances between them. | Could | Deferred — activates when one owner's entities must report as a group |
-| **RPT-22** | Track recurring obligations and deadlines by entity type and jurisdiction. | Could | Deferred — scope and placement are an open question |
 
 **Acceptance, RPT-08.** From a profit and loss line, a reader reaches the postings behind it,
 and from any one of them the source transaction and the rule that assigned it, without
@@ -373,6 +373,7 @@ records about itself.
 | **PLT-19** | Records are retained by class rather than under a single period, and disposal is never automatic: candidates are listed, legal hold is evaluated at the time of disposal and overrides the schedule, a named person authorises each batch, and a permanent record captures what was destroyed, when, by whom, and under what authority. | Should | Approved |
 | **PLT-20** | The retention schedule is set per record class at deployment scope, applies to every entity the deployment holds, and starts from the defaults below. | Should | Approved |
 | **PLT-21** | A deployment can be moved to a later version of CFOKit in place, keeping its books, its history, and its configuration. An upgrade that cannot complete leaves the deployment on the version it started from rather than partway between two. | Must | Approved |
+| **PLT-22** | A person may ask an entity to erase what it holds about them. The request is answered per record rather than per person: anything carrying no retention obligation is erased on the request, and anything carrying one is retained, restricted to the purpose that compels it, and becomes a disposal candidate under PLT-19. Each retained record's period runs from the event that created the obligation, never from the request and never from the person's later activity. The requester is told what was erased, what was retained, on what ground, and until when. | Should | Approved |
 
 | Record class | Default |
 |---|---|
@@ -421,8 +422,7 @@ stricter target than the global one.
 | **NFR-05** | Amounts, account numbers, payee names, and credentials never appear in logs, telemetry, or error output. | Confidentiality | Must | Zero occurrences |
 | **NFR-06** | Every request is validated as intended for this deployment and this entity before it is served. A request meant for somewhere else is refused rather than interpreted. | Security | Must | Every request, no exemptions |
 | **NFR-07** | Committed financial records survive the loss of any single machine or storage device. A deployment can be restored to a known point, and the restore is exercised rather than assumed. | Durability | Must | No committed record lost to a single failure |
-| **NFR-08** | A deployment is available to the people who depend on it. | Availability | Should | Target open |
-| **NFR-09** | Interactive queries return quickly enough to be used conversationally, against a stated volume of history that a target customer would actually accumulate. Both the latency and the volume are numbers, or neither means anything. | Performance | Should | Targets open |
+| **NFR-09** | Interactive queries return quickly enough to be used conversationally, against a stated volume of history that a target customer would actually accumulate. Both the latency and the volume are numbers, or neither means anything. Under one second at the 95th percentile, against five years of history for an entity posting a thousand transactions a month. | Performance | Should | Approved |
 | **NFR-10** | The system depends on no single infrastructure provider. Relocating a deployment is an infrastructure change, not a change to the product. | Portability | Must | No provider dependency in the shipped artifact |
 | **NFR-11** | The complete product runs on one machine, with no cloud account, no signup, and no credentials, holding real books rather than a demonstration. | Deployability | Must | One command |
 | **NFR-12** | A third party can add a financial institution, a payment processor, an email provider, or a jurisdiction's rules as an additive contribution against a stable extension point. | Extensibility | Must | No change to the ledger or the modules around it |
@@ -493,7 +493,7 @@ segregate at all. What follows is what constrains the agent itself.
 | **SOC1-01** | Every agent action carries a distinct non-human principal identifying the skill that acted. It is never recorded as the supervising person's own action, and never as a shared service account. | Must | Approved |
 | **SOC1-02** | Each skill has an explicit, enumerable set of permitted operations, enforced at the interface and at the data layer. A `bookkeeper` skill performing a `controller` approval is impossible, not discouraged, and no prompt or instruction participates in the enforcement. | Must | Approved |
 | **SOC1-03** | An agent's effective authority is the intersection of its skill's permitted operations and the role of the person it acts for. Neither widens the other, and no combination of the two exceeds either. | Must | Approved |
-| **SOC1-04** | Each class of action is configured as either autonomously completable by an agent or requiring human authorisation before it posts. The configuration is per entity, versioned, and carries a full change history. | Must | Approved |
+| **SOC1-04** | Each class of action is configured as either autonomously completable by an agent or requiring human authorisation before it posts. The configuration is per entity, versioned, and carries a full change history. It ships split by provenance: an agent may complete a transaction assigned by an approved rule, and anything derived from untrusted content requires human authorisation before it posts. | Must | Approved |
 | **SOC1-05** | Where a person authorises agent work, the record captures what was presented to them, what the agent proposed and on what stated basis, what alternatives were offered, who decided, when, and what they decided. An approval recording only the decision is not evidence and does not satisfy this. | Must | Approved |
 | **SOC1-06** | A posted entry can be explained after the fact without re-running a model. The system persists, against the entry: the model identifier and version, the skill version, the inputs and context supplied, the tool calls made, and the agent's stated basis for the conclusion. | Must | Approved |
 | **SOC1-07** | No agent holds any capability to mutate or delete a posted record, under any configuration. Agent-originated errors are corrected through the ordinary correction path and no other. | Must | Approved |
@@ -838,19 +838,12 @@ and SOC2-33 — are retired rather than reused, so the numbering carries gaps.
 
 ## 9. Open issues
 
-Business decisions this document is waiting on. One blocks a `Deferred` requirement from being
-specified; the rest qualify a requirement already approved, or set a target it leaves open. None
-is a design question; a design question never blocks a business requirement.
+Business decisions this document is waiting on. **None are outstanding.** Every requirement below
+is `Approved` or `Deferred` against a stated trigger, and nothing here waits on a decision.
 
-| | Question | Blocks | Needed by |
-|---|---|---|---|
-| **OI-2** | Which jurisdictions and entity types does tax support cover? | RPT-18 | Before the first tax season we support |
-| **OI-3** | What availability, interactive latency, and history volume do we commit to? A latency target without a volume is untestable. | NFR-08, NFR-09 | Before a deployment carries anyone's real books |
-| **OI-4** | Is compliance tracking in scope, and is it reporting at all? It sits under Reporting today for want of a better home, and it is neither a statement nor a query. | RPT-22 | Before it is specified |
-| **OI-5** | Deleting a whole entity is settled. What is not: erasing one named person's data from an entity that survives — a payee, a customer contact — where the history is append-only and the surrounding books must still balance. | PLT-19 | Before the first erasure request arrives |
-| **OI-6** | What is the role taxonomy? This document requires roles and names the three capability classes they must distinguish, but not the roles themselves. Internal staff, a fractional CFO, and a CPA have genuinely different needs, and fixing the set before those are understood would be designing rather than specifying. | IAM-02 | Before access control is specified |
-| **OI-7** | Which compensating controls must an entity have in place before CFOKit will act unsupervised? Segregation is unavailable to a one-person business, so this is what stands in its place, and it has to be specific enough to test. Defaults should be conservative, since a customer inherits whichever ones ship. | SOC1-33, IAM-17 | Before first release |
-| **OI-9** | Do we accept any autonomous ledger write derived from untrusted content at all? Refusing outright is the strongest security position and removes most of the product's value for receipt and invoice capture. Accepting it makes SOC2-03 and SOC2-06 the only things standing between an attacker and the books. | SOC2-03, SOC2-06 | Before document capture ships |
+A question earns a place in this section only if it is a business decision. A design question
+never blocks a business requirement, and an operating commitment is not a requirement at all —
+7.11 and 8.11 say what that excludes.
 
 ---
 
@@ -900,9 +893,9 @@ serving no objective does not belong here.
 | **OBJ-4** Every number explains itself | LED-08, LED-09, BKP-10, MIG-04, IAM-13, PLT-16, PLT-20, RPT-08, RPT-11, NFR-02, SOC1-14, SOC1-15, SOC1-22, SOC1-23, SOC1-36 |
 | **OBJ-5** The recurring cost goes away | BKP-01–BKP-06, BKP-13–BKP-18, AR-01–AR-19, RPT-01–RPT-09, MIG-01–MIG-08, NFR-19, NFR-20 |
 | **OBJ-6** Output accepted as it stands | LED-01, LED-02, LED-14, LED-17, RPT-01–RPT-05, RPT-07, RPT-09, RPT-10, RPT-12, RPT-13, RPT-14, RPT-16, RPT-17, RPT-18, RPT-19, NFR-01, NFR-16 |
-| **OBJ-7** Never forced off by growing | LED-10, LED-13, LED-14, LED-15, LED-16, LED-17, LED-18, LED-19, RPT-19, RPT-20, RPT-21, RPT-22, IAM-08, IAM-09, PLT-04, PLT-08, NFR-08, NFR-09 |
+| **OBJ-7** Never forced off by growing | LED-10, LED-13, LED-14, LED-15, LED-16, LED-17, LED-18, LED-19, RPT-19, RPT-20, RPT-21, IAM-08, IAM-09, PLT-04, PLT-08, NFR-09 |
 | **OBJ-8** Only authorised people reach the books | IAM-01–IAM-07, IAM-11, IAM-12, IAM-15, IAM-16, IAM-17, AR-08, PLT-05, NFR-04, NFR-05, NFR-06 |
-| **OBJ-9** Provable to an examiner | IAM-13, IAM-14, IAM-18, IAM-19, PLT-15–PLT-19, NFR-18, SOC1-01–SOC1-36, SOC2-01–SOC2-24, SOC2-27–SOC2-30 |
+| **OBJ-9** Provable to an examiner | IAM-13, IAM-14, IAM-18, IAM-19, PLT-15–PLT-19, PLT-22, NFR-18, SOC1-01–SOC1-36, SOC2-01–SOC2-24, SOC2-27–SOC2-30 |
 | **OBJ-10** Leave with everything, at any time | MIG-09–MIG-12, PLT-09, PLT-10, PLT-11, PLT-12, PLT-13, PLT-21, NFR-07, NFR-17 |
 | **OBJ-11** Runs with no vendor relationship | BKP-03, IAM-10, PLT-01, PLT-02, PLT-03, PLT-06, NFR-10, NFR-11, NFR-14, NFR-17 |
 | **OBJ-12** Outsiders can work on it | NFR-11, NFR-12, NFR-13, NFR-14, NFR-21 |
