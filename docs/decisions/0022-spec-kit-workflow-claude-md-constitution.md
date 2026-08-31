@@ -1,5 +1,5 @@
 ---
-status: "deprecated"
+status: "superseded by ADR-0001"
 kind: "substrate"
 date: 2026-08-17
 decision-makers: [Geoff]
@@ -7,8 +7,11 @@ decision-makers: [Geoff]
 
 # ADR-0022: Spec Kit is the specification workflow; CLAUDE.md remains the sole constitution
 
-> Spec Kit and `.specify/` are removed from the repository. Documentation
-> structure is settled by ADR-0001.
+> **Superseded by [ADR-0001](0001-documentation-structure.md).** Spec Kit and `.specify/` are
+> removed from the repository, and the specification layer this record created no longer exists.
+> ADR-0001 settles the documentation structure and leaves open whether CFOKit adopts a
+> specification workflow at all — so this is a decision replaced, not merely a tool dropped.
+> The rejected alternatives below are why it is kept rather than deleted.
 
 ## Context
 

@@ -62,7 +62,7 @@ cost the same context as inlining, while diluting adherence to the rules that ma
 | [0019](0019-local-compose-dev-and-production.md) | One compose stack for local development and local production | Accepted |
 | [0020](0020-identity-provider-conformance-contract.md) | Identity provider as a swappable dependency behind a conformance contract | Accepted |
 | [0021](0021-repository-layout-and-artifact-taxonomy.md) | Repository layout separates artifact kinds; packages named for capabilities | Accepted |
-| [0022](0022-spec-kit-workflow-claude-md-constitution.md) | Spec Kit as the specification workflow; CLAUDE.md the sole constitution | **Deprecated** |
+| [0022](0022-spec-kit-workflow-claude-md-constitution.md) | Spec Kit as the specification workflow; CLAUDE.md the sole constitution | **Superseded by ADR-0001** |
 | [0023](0023-slack-as-a-delivery-surface.md) | Slack is a delivery surface, built as a separate component over HTTP events | Accepted |
 | [0024](0024-tiny-ledger-modules-and-components.md) | The ledger stays tiny; everything else is an in-process module or a separate component | Accepted |
 | [0025](0025-component-deployment-and-authentication.md) | Components ship as one image with many entrypoints; authenticate as OAuth clients | Accepted |
@@ -82,7 +82,7 @@ before then would be designing a boundary around a guess (ADR-0013).
 
 | Question | Where |
 |---|---|
-| Whether CFOKit uses a specification workflow, and which one | ADR-0001 leaves this open; ADR-0022 predates that record and is due for re-derivation |
+| Whether CFOKit uses a specification workflow, and which one | ADR-0001 leaves this open; ADR-0022 is superseded and its `specs/` layer removed |
 | How rendered report output works | RPT-13 — needs a record through the ADR-0013 scope gate, as ADR-0023 took for Slack |
 | Project licence | ADR-0002, deliberately left open and not load-bearing there |
 
@@ -98,7 +98,7 @@ this shape, and they cite no requirement (ADR-0001).
 | 0017 | OpenTofu, one cloud target |
 | 0018 | GCP as the initial target |
 | 0021 | Repository layout |
-| 0022 | Spec Kit *(deprecated)* |
+| 0022 | Spec Kit *(superseded by ADR-0001)* |
 
 Every other record is `kind: requirement-driven` and must cite at least one requirement id.
 
@@ -137,5 +137,3 @@ and the guarantees come from ADR-0006 and ADR-0012.
 |---|---|
 | Period close is advisory and backdating into a closed period needs only acknowledgement — but `LED-11` requires a recorded reopening, which is the alternative ADR-0014 rejected by name | ADR-0007, ADR-0014 |
 | Licence is "deliberately left open", yet `LICENSE`, `pyproject.toml`, `README.md` and ADR-0017's rejection of Terraform all rely on MIT, and `NFR-14` makes permissive licensing a Must | ADR-0002, ADR-0017 |
-| Prescribes `specs/` and an accounting-policy artifact kind, both since retired | ADR-0021 |
-| Status is `deprecated`; ADR-0001 replaced its decision, so `superseded by ADR-0001` is the accurate status under rule 2 | ADR-0022 |

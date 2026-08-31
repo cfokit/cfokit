@@ -7,6 +7,14 @@ decision-makers: [Geoff]
 
 # ADR-0021: Repository layout separates artifact kinds, and packages are named for capabilities
 
+> **Two clauses are superseded by [ADR-0001](0001-documentation-structure.md).** The `specs/`
+> directory does not exist — ADR-0001 settled the documentation structure without one, and whether
+> CFOKit adopts a specification workflow at all is an open question there. The accounting-policy
+> artifact kind does not exist either; the document was dissolved into `requirements.md`, which
+> ADR-0001 makes the single document serving auditor and contributor alike. Both are marked below.
+> Everything else in this record stands: `packages/` holds distributions only, `skills/` is plural
+> and outside the workspace, and packages are named for capabilities.
+
 ## Context
 
 The repository was set up for agentic development while it was still nearly empty:
@@ -55,7 +63,6 @@ not vendors**.
 ```
 packages/   Python distributions; the uv workspace, and nothing else
 skills/     Shipped SKILL.md bundles; plural
-specs/      Feature specifications; churns
 docs/decisions/   Decision records; immutable once Accepted
 docs/product/
   vision.md            Why the product exists
@@ -64,23 +71,22 @@ infra/      OpenTofu for the one maintained cloud target
 .claude/    Tooling for developing this repo; never shipped
 ```
 
-**Four artifact kinds, distinguished by audience and by what makes them authoritative:**
+**Artifact kinds, distinguished by audience and by what makes them authoritative:**
 
 | Kind | Answers | Read by | Authority |
 |---|---|---|---|
-| Requirement | What must it do | Product, contributors | Traceable to the vision |
-| Accounting policy | What do the numbers mean | **Users, accountants, auditors** | Cites the ADR that reasoned it |
+| Requirement | What must it do | Product, contributors, auditors | Traceable to the vision |
 | ADR | Why did we decide | Contributors, future maintainers | Rejected alternatives |
-| Spec | How does this feature work | Implementers | Cites REQs and ADRs |
+| ~~Accounting policy~~ | ~~What do the numbers mean~~ | — | **Superseded by ADR-0001** |
+| ~~Spec~~ | ~~How does this feature work~~ | — | **Superseded by ADR-0001** |
 
-Accounting policy does **not** replace the ADRs behind it. An ADR's value is its
-rejected-alternatives section, and requirements and policy documents conventionally carry no
-such section — so anything with re-litigation risk keeps an ADR regardless of who else needs
-to read it. The policy document states *what the software does*; the ADR holds *why*.
+*This record proposed four kinds. Two survive.* The accounting-policy document was written and then
+dissolved: it restated settled requirements in a second voice, and the two drifted, which is the
+failure ADR-0001 names when it makes `requirements.md` serve the auditor and the contributor alike.
+The specification layer went with Spec Kit (ADR-0022); whether one returns is open in ADR-0001.
 
 - `packages/skill` becomes `skills/bookkeeper/`.
 - `packages/plaid-sync` becomes `packages/connectors`, with Plaid and Stripe as providers.
-- `specs/` and `docs/` are **siblings**, not nested.
 - Distributions are `cfokit-<capability>`, importing as `cfokit.<capability>` through PEP
   420 implicit namespace packages.
 - The ADR index moves to `docs/decisions/README.md`, where `CLAUDE.md` already said it was and
@@ -130,10 +136,19 @@ that does not become a fourth package.
 
 ### Everything is an ADR; no accounting-policy document
 
+**This alternative was rejected here and later prevailed.** Recorded rather than quietly corrected,
+because the reason it won is the useful part.
+
 The status quo, and it has a real argument: one place to look, and every decision keeps its
 rejected alternatives. Rejected because it leaves four decisions that users and auditors need
 readable only as decision records aimed at maintainers. "What is your cost basis method?" is a
 question an auditor asks and CFOKit must answer in a document written for them.
+
+What that reasoning missed is that the auditor's document already existed. `requirements.md` states
+what the numbers mean, in the register an auditor reads, with stable ids — so the policy document
+duplicated it rather than serving an unserved audience, and a second document restating settled
+decisions in different words is a second thing to keep correct. It was dissolved into
+`requirements.md`, and ADR-0001 records that as the structure.
 
 ### Split the bundled ADRs into pure requirements and pure ADRs
 
