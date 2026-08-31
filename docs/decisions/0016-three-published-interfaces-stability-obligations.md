@@ -17,6 +17,8 @@ decision-makers: [Geoff]
 > This was reconstruction rather than recollection, and it is recorded as such. If the original
 > intent differs, that is a superseding ADR, not an edit.
 
+**Requirements served:** `PLT-03`, `NFR-13`.
+
 ## Context
 
 CFOKit publishes interfaces that other people build against: third-party integrators write against

@@ -7,6 +7,8 @@ decision-makers: [Geoff]
 
 # ADR-0009: Four layers with a pure booking engine, and hand-written SQL rather than an ORM
 
+**Requirements served:** `NFR-01`, `RPT-08`, `PLT-16`.
+
 ## Context and Problem Statement
 
 CFOKit's claim is that the books are correct. Two consequences follow for internal structure.

@@ -100,7 +100,7 @@ needs grow beyond that.
   a spec contradicting a cited ADR is a defect in the spec, not in the ADR.
 - `/speckit-constitution` is not run. If a future contributor runs it, the generated
   constitution is reduced back to a pointer.
-- Specs cite `REQ-` ids from `docs/product/requirements.md` so requirements stay traceable.
+- Specs cite requirement ids from `docs/product/requirements.md` so requirements stay traceable.
 
 **Reversal cost.** Low. Specs are markdown in `specs/`; abandoning the tooling leaves the
 documents intact and costs only the slash commands.

@@ -7,6 +7,8 @@ decision-makers: [Geoff]
 
 # ADR-0005: `Decimal` in the application, `NUMERIC(28,10)` in the database, floats nowhere
 
+**Requirements served:** `LED-04`, `LED-06`.
+
 ## Context and Problem Statement
 
 CFOKit's claim is that the books are correct. Monetary representation is where that claim is

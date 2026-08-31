@@ -7,6 +7,8 @@ decision-makers: [Geoff]
 
 # ADR-0003: Use Postgres as the sole storage backend
 
+**Requirements served:** `LED-03`, `LED-13`, `RPT-06`, `NFR-11`.
+
 ## Context and Problem Statement
 
 CFOKit Ledger is a multi-tenant double-entry accounting engine serving an agent skill

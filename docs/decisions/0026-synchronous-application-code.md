@@ -1,6 +1,6 @@
 ---
 status: "accepted"
-kind: "requirement-driven"
+kind: "substrate"
 date: 2026-08-19
 decision-makers: [Geoff]
 ---

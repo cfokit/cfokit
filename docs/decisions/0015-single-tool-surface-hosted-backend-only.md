@@ -7,6 +7,8 @@ decision-makers: [Geoff]
 
 # ADR-0015: One tool surface; skills target the hosted backend and never import ledger code
 
+**Requirements served:** `PLT-01`, `PLT-02`, `NFR-17`.
+
 ## Context
 
 CFOKit ships two things that look like one product: a ledger service, and agent skills that do

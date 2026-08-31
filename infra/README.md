@@ -135,7 +135,7 @@ tier. (ADR-0017)
 **GCP — Cloud Run plus Cloud SQL for PostgreSQL.** The first and only maintained cloud
 target. (ADR-0018)
 
-Configuration is not yet written; it arrives with REQ-E2 and will live
+Configuration is not yet written; it arrives with the first managed deployment and will live
 in `infra/gcp/`. There is no placeholder directory, deliberately: module sets nobody runs and
 CI never exercises rot silently, and the first user to try an unmaintained module concludes
 the project is abandoned. That is worse than shipping nothing for a cloud. (ADR-0017)

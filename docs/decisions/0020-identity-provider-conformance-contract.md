@@ -7,6 +7,8 @@ decision-makers: [Geoff]
 
 # ADR-0020: Identity provider is a swappable dependency behind a conformance contract
 
+**Requirements served:** `IAM-10`, `NFR-06`, `NFR-14`.
+
 ## Context
 
 ADR-0019 requires an OAuth 2.1 issuer that runs in the local compose stack with no cloud

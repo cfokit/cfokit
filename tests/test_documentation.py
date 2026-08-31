@@ -53,6 +53,9 @@ ADR_LINK = re.compile(r"\[ADR-(\d{4})\]\(([^)]+)\)")
 ADR_HEADING = re.compile(r"^# ADR-(\d{4})\b", re.MULTILINE)
 # An index row pointing at a record file.
 INDEX_ENTRY = re.compile(r"\((\d{4}-[a-z0-9-]+\.md)\)")
+# Domain-prefixed requirement ids. The `REQ-` scheme they replaced is retired.
+REQUIREMENT_ID = re.compile(r"\b(?:LED|BKP|IAM|PLT|RPT|MIG|AR|NFR|SOC1|SOC2)-\d+\b")
+ADR_KIND = re.compile(r'^kind: "([^"]+)"', re.MULTILINE)
 
 
 def _walk() -> list[Path]:
@@ -185,3 +188,49 @@ def test_index_and_records_agree() -> None:
 
     assert not (on_disk - linked), f"records missing from the index: {sorted(on_disk - linked)}"
     assert not (linked - on_disk), f"index rows with no record: {sorted(linked - on_disk)}"
+
+
+def defined_requirement_ids() -> set[str]:
+    text = (REPO_ROOT / "docs" / "product" / "requirements.md").read_text(encoding="utf-8")
+    return set(REQUIREMENT_ID.findall(text))
+
+
+@pytest.mark.parametrize("source", citing_files(), ids=_identify)
+def test_cited_requirement_ids_exist(source: Path) -> None:
+    """Every requirement id cited anywhere resolves to one in requirements.md.
+
+    The retired `REQ-` scheme left every citation in the corpus dangling for a while, and
+    nothing noticed, because no test read requirements.md at all.
+    """
+    defined = defined_requirement_ids()
+    try:
+        text = source.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        pytest.skip("not text")
+    if source == REPO_ROOT / "docs" / "product" / "requirements.md":
+        pytest.skip("the source of truth defines them")
+
+    dangling = sorted({i for i in REQUIREMENT_ID.findall(text) if i not in defined})
+    assert not dangling, (
+        f"{source.relative_to(REPO_ROOT)} cites requirement ids that do not exist: {dangling}"
+    )
+
+
+@pytest.mark.parametrize("source", adr_files(), ids=_identify)
+def test_requirement_driven_records_cite_a_requirement(source: Path) -> None:
+    """`kind: requirement-driven` obliges a record to name what it serves.
+
+    ADR-0001 makes this unconditional: a record answering a question the product forces
+    cites the requirement ids it serves, always, at least one. A record that cannot name
+    one is substrate that has been misfiled, and inventing a citation to satisfy the rule
+    is worse than either.
+    """
+    text = source.read_text(encoding="utf-8")
+    kind = ADR_KIND.search(text)
+    assert kind, f"{source.name} declares no kind"
+    if kind.group(1) != "requirement-driven":
+        pytest.skip("substrate cites no requirement")
+
+    assert REQUIREMENT_ID.search(text), (
+        f"{source.name} is requirement-driven but cites no requirement id"
+    )

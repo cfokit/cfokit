@@ -12,6 +12,8 @@ decision-makers: [Geoff]
 > about to propose is below, with the specific reason it was not chosen. If none of them match your
 > reasoning, that is new information and worth a new record.
 
+**Requirements served:** `LED-13`, `LED-08`, `AR-02`, `NFR-01`.
+
 ## Context and Problem Statement
 
 CFOKit's differentiator is agents that do CFO work. The ledger is infrastructure beneath them. The
@@ -56,16 +58,16 @@ deferrals already recorded, the ledger is:
 | In scope | Out of scope |
 |---|---|
 | Chart of accounts with account types | Inventory and cost of goods sold |
-| Transactions with balanced postings, `Decimal` | Cost basis, lots, FIFO disposal (REQ-A6, deferred) |
+| Transactions with balanced postings, `Decimal` | Cost basis, lots, FIFO disposal (LED-18, LED-19, deferred) |
 | Draft to posted state machine (ADR-0007) | Payroll |
 | Reversing corrections | Fixed asset depreciation |
 | Entity isolation and per-entity grants | Multi-currency revaluation |
 | Audit log, idempotency keys, entity locking | Manufacturing, CRM, HR, projects |
-| Cash basis now, accrual representable (REQ-A8) | Anything on the ADR-0013 non-goals list |
+| Cash basis now, accrual representable (LED-14, LED-17) | Anything on the ADR-0013 non-goals list |
 | Trial balance, P&L, balance sheet, journal queries | Purchase orders, quotes, estimates |
-| Deterministic categorisation rules (REQ-B7) | Accounts payable — until a requirement exists |
+| Deterministic categorisation rules (BKP-06, BKP-08) | Accounts payable — until a requirement exists |
 | Advisory period close | |
-| **Invoicing and accounts receivable (REQ-A9)** | |
+| **Invoicing and accounts receivable (AR-01–AR-19)** | |
 
 **Invoicing and AR are the largest single item here, and they shape the rest.** Invoicing brings
 customers as first-class records, invoices as documents with line items, receipt of payment,
@@ -73,7 +75,7 @@ customers as first-class records, invoices as documents with line items, receipt
 genuinely fiddly part: partial payments, overpayments, and write-offs are each ordinary and each has
 to be right.
 
-It also **pulls accrual much closer than REQ-A8 anticipated**. An invoice raised is an obligation and
+It also **pulls accrual much closer than LED-14 anticipated**. An invoice raised is an obligation and
 a payment received is a settlement, so recording both — which invoicing requires regardless — is
 exactly the dual-event model that accrual reporting needs. A cash-basis entity still invoices and
 still wants to know who owes it money; it simply recognises revenue on settlement. So accrual stops
@@ -99,7 +101,7 @@ untouched.
   else is adopted or delegated.
 * **Where the risk actually sits.** Effort should be spent on uncertain work, not on the
   best-specified component in the project.
-* **REQ-A2: many entities in one deployment.** A fractional CFO with fifteen clients must not mean
+* **LED-13: many entities in one deployment.** A fractional CFO with fifteen clients must not mean
   fifteen deployments.
 * **Ledger semantics must be enforceable in the schema** — append-only (ADR-0007), zero-sum
   (ADR-0006), `NUMERIC(28,10)` money (ADR-0005), Postgres-only (ADR-0003).
@@ -161,7 +163,7 @@ tenancy model genuinely fits, it is not bloated, and **its licence is not an obj
 
 * Good, because it is genuinely headless, accounting-focused rather than an ERP, self-hostable, with
   Plaid and Stripe already integrated.
-* Good, because database-per-tenant tenancy fits REQ-A2 — documented use of 30+ clients on one
+* Good, because database-per-tenant tenancy fits LED-13 — documented use of 30+ clients on one
   instance.
 * Good, because `accounts_transactions` already carries both `date` and `created_at`, so most of
   ADR-0014's two-date model is present.
@@ -189,7 +191,7 @@ rejection now rests on.
   cases handled.
 * Good, because Odoo Community's LGPL-3 is the most permissive real option available.
 * Bad, because tenancy is scoped per site or per database, so fifteen clients means fifteen
-  deployments to migrate, back up and upgrade — REQ-A2 requires many entities in one deployment.
+  deployments to migrate, back up and upgrade — LED-13 requires many entities in one deployment.
 * Bad, because using the general ledger means deploying, securing and upgrading HR, CRM,
   manufacturing and a web UI, an enormous surface for a project whose non-goals exclude a web UI
   outright (ADR-0013).

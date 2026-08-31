@@ -92,7 +92,7 @@ new ADR that supersedes the old one.
 ## Commits and pull requests
 
 - One logical change per commit; imperative subject line.
-- Cite the `REQ-` or `ADR-` id when the change implements or follows one.
+- Cite the requirement or `ADR-` id when the change implements or follows one.
 - State in the PR which CI gates you ran locally, and flag anything you could not verify.
 - If part of the work is incomplete or blocked, say so explicitly. Scaling work down is a
   maintainer's call.

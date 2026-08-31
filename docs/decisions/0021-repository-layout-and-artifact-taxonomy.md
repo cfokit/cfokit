@@ -59,7 +59,7 @@ specs/      Feature specifications; churns
 docs/decisions/   Decision records; immutable once Accepted
 docs/product/
   vision.md            Why the product exists
-  requirements.md      What it must do — REQ- ids
+  requirements.md      What it must do — domain-prefixed ids
 infra/      OpenTofu for the one maintained cloud target
 .claude/    Tooling for developing this repo; never shipped
 ```
@@ -139,7 +139,7 @@ question an auditor asks and CFOKit must answer in a document written for them.
 
 Tempting for taxonomic cleanliness: move the obligation half of 0004, 0005, 0006, and 0012
 into requirements and leave only the mechanism in the ADR. Rejected as churn for its own sake.
-The requirement halves already exist (REQ-A1, REQ-A3, REQ-C4, REQ-E1, REQ-E3) and cross-
+The requirement halves already exist (NFR-10, NFR-11, LED-04, LED-03, NFR-03) and cross-
 reference the ADRs; splitting the ADRs as well would double the documents and create two
 places to keep in sync, while the bundled form reads naturally — the mechanism is most
 comprehensible directly beside the obligation it satisfies.

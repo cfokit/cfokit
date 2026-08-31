@@ -73,7 +73,7 @@ cost the same context as inlining, while diluting adherence to the rules that ma
 
 | ADR | Title | Activation trigger |
 |---|---|---|
-| 0008 | STRICT and FIFO booking only | An entity acquires inventory, or holds investments in a brokerage account (REQ-A6) |
+| 0008 | STRICT and FIFO booking only | An entity acquires inventory, or holds investments in a brokerage account (LED-18, LED-19) |
 
 This is the only unwritten number, and it waits on a real need rather than on a decision. Writing it
 before then would be designing a boundary around a guess (ADR-0013).
@@ -83,7 +83,7 @@ before then would be designing a boundary around a guess (ADR-0013).
 | Question | Where |
 |---|---|
 | Whether CFOKit uses a specification workflow, and which one | ADR-0001 leaves this open; ADR-0022 predates that record and is due for re-derivation |
-| How rendered report output works | REQ-B3 — needs a record through the ADR-0013 scope gate, as ADR-0023 took for Slack |
+| How rendered report output works | RPT-13 — needs a record through the ADR-0013 scope gate, as ADR-0023 took for Slack |
 | Project licence | ADR-0002, deliberately left open and not load-bearing there |
 
 ## Substrate records
@@ -110,44 +110,30 @@ structure — no `Decision Drivers`, no flat `Considered Options` list, and no `
 Their `Alternatives rejected` sections do give each rejected option its own subsection, which
 carries the substance of `Pros and Cons of the Options` without the heading.
 
-**No requirement-driven record currently has a valid trace.** Two separate faults:
+**Bringing those fourteen to the template means writing reasoning that was never written**, which
+rule 1 forbids. Either the template applies prospectively and this stays documented, or the
+records are re-derived rather than reformatted. That is undecided.
 
-* Eleven cite no requirement at all — 0003, 0005, 0006, 0009, 0010, 0011, 0015, 0016, 0019, 0020
-  and 0026.
-* The other nine cite ids from a retired scheme. `docs/product/requirements.md` uses domain
-  prefixes — `LED-`, `BKP-`, `IAM-`, `PLT-`, `RPT-`, `MIG-`, `AR-`, `NFR-`, `SOC1-`, `SOC2-` — and
-  contains no `REQ-` id at all. Every `REQ-` citation in the corpus is dangling: `REQ-A1`, `A2`,
-  `A3`, `A6`, `A8`, `A9`, `B1`, `B3`, `B7`, `C1`, `C2`, `C4`, `D1`, `E1`, `E3`, `E7`.
+**Every requirement-driven record now traces.** Each carries a `Requirements served:` line naming
+live domain-prefixed ids, and the retired `REQ-` scheme is gone from the repository entirely —
+records, rules, skills, infrastructure notes, migration SQL and tests. `tests/test_documentation.py`
+holds both halves: every cited requirement id must resolve to one in `requirements.md`, and a
+record declaring `kind: requirement-driven` must name at least one.
 
-Two substrate records — 0013 and 0021 — also carry dangling `REQ-` ids in prose. They are not
-required to cite a requirement, but the links are broken all the same. ADR-0013's gate still
-instructs a proposer to name "the `REQ-` id it serves", which is a live rule pointing at a dead
-scheme.
+The traces are a first mapping and are part of what re-derivation checks. Two things they do not
+yet establish: whether each record still serves the requirement it names, and whether any
+requirement needing a record lacks one. `RPT-13` is the known instance of the second.
 
-Re-tracing every record to live requirement ids is part of the re-derivation.
-
-None of 0002 to 0027 has been re-derived against the current vision and requirements, and none is
-presumed correct until it has been. `kind` values are a first classification and are part of what
-the re-derivation checks — 0026 in particular reads as substrate rather than requirement-driven.
-
-**Renumbering debris: resolved.** An earlier renumbering shifted every record up by one and left
-citations behind in files the documentation test does not read. `compose.yaml`, `compose.dev.yaml`,
-`.github/workflows/ci.yml`, the first migration and its `sql/.gitkeep` have been corrected, as has
-a mislabelled link in the root `README.md`. Three records cited each other wrongly and are fixed:
-0012 cited ADR-0009 twice for ADR-0010's in-process rule, 0014 cited ADR-0015 for ADR-0016's error
-codes, and 0021 carried five bare backlog numbers in the pre-renumbering scheme. `CLAUDE.md`,
-`CONTRIBUTING.md`, `infra/README.md`, `pyproject.toml`, the package `CLAUDE.md` and `README.md`
-files, `scripts/` and `packages/ledger/src/` were already correct.
-
-`tests/test_documentation.py` checks that a cited number **exists**, not that it is the **right**
-one, and it reads only markdown outside this directory — which is why the drift survived. Both
-gaps are worth closing.
+ADR-0026 is reclassified `substrate`. Nothing in the requirements forces the synchronous choice;
+its reasoning rests on workload and on the MCP SDK, and a different product of this shape would
+face the same question. Its scope is separately in doubt — see below.
 
 **Known conflicts, not yet resolved.**
 
 | Conflict | Where |
 |---|---|
-| Period close is advisory and backdating into a closed period needs only acknowledgement — but `LED-11` now requires a recorded reopening, which is the alternative ADR-0014 rejected by name | ADR-0007, ADR-0014 |
+| Period close is advisory and backdating into a closed period needs only acknowledgement — but `LED-11` requires a recorded reopening, which is the alternative ADR-0014 rejected by name | ADR-0007, ADR-0014 |
+| Async is confined to `cfokit.ledger.mcp`, and `scripts/check_async.py` enforces that across all of `packages/`. Ingestion, delivery and AR are I/O-bound and will want async; components are separate runtimes where it costs the ledger nothing. The boundary is probably the ledger, not the MCP module | ADR-0026 |
 | Licence is "deliberately left open", yet `LICENSE`, `pyproject.toml`, `README.md` and ADR-0017's rejection of Terraform all rely on MIT, and `NFR-14` makes permissive licensing a Must | ADR-0002, ADR-0017 |
-| Prescribes `specs/`, `REQ-` ids and an accounting-policy artifact kind, all three since retired | ADR-0021 |
+| Prescribes `specs/` and an accounting-policy artifact kind, both since retired | ADR-0021 |
 | Status is `deprecated`; ADR-0001 replaced its decision, so `superseded by ADR-0001` is the accurate status under rule 2 | ADR-0022 |

@@ -7,6 +7,8 @@ decision-makers: [Geoff]
 
 # ADR-0012: Per-entity advisory lock on writes, and mandatory idempotency keys
 
+**Requirements served:** `NFR-03`, `LED-13`, `PLT-20`.
+
 ## Context and Problem Statement
 
 Two concurrency problems, with different shapes.
@@ -27,7 +29,7 @@ idempotency does not order concurrent writes.
 
 ## Decision Drivers
 
-* Writes across entities must never contend, or multi-tenant hosting stops being viable (REQ-A2).
+* Writes across entities must never contend, or multi-tenant hosting stops being viable (LED-13).
 * A duplicated write is permanent under append-only semantics (ADR-0007), so prevention must not
   depend on caller judgement.
 * Retry logic must not proliferate into every write path.
@@ -73,7 +75,7 @@ independent of both mechanisms — it is authorisation, not concurrency, and is 
 * Bad, because callers must generate and manage idempotency keys, and this must be documented on
   both published surfaces (ADR-0016).
 * Bad, because idempotency records need storage and a retention policy of their own — long enough
-  to outlive any plausible retry, short enough not to accumulate indefinitely (REQ-E7).
+  to outlive any plausible retry, short enough not to accumulate indefinitely (PLT-20).
 
 ### Confirmation
 
@@ -118,7 +120,7 @@ documented fallback should the backend change.
 
 * Good, because it is simplest to reason about and trivially correct.
 * Bad, because it serialises writes across all entities, which destroys the high-parallelism
-  property that makes one deployment viable for a fractional CFO with many clients (REQ-A2). It
+  property that makes one deployment viable for a fractional CFO with many clients (LED-13). It
   would turn an idle-heavy multi-tenant workload into a single-writer system.
 
 ### `SERIALIZABLE` isolation instead of explicit locking

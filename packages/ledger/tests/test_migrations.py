@@ -45,7 +45,7 @@ def test_transaction_carries_both_dates() -> None:
 
 
 def test_lot_shape_is_reserved_though_deferred() -> None:
-    """REQ-A6 defers lots but reserves the columns, to avoid a later migration."""
+    """LED-18 defers lots but reserves the columns, to avoid a later migration."""
     sql = discover()[0].sql
     assert "cost_amount" in sql
     assert "lot_id" in sql

@@ -49,7 +49,7 @@ skills/
 ```
 
 One directory per skill. Whether the tax, cash-flow, and compliance roles become separate
-skills or modes of one is undecided (REQ-B6) — do not pre-emptively split them.
+skills or modes of one is undecided (ADR-0021) — do not pre-emptively split them.
 
 ## Review
 

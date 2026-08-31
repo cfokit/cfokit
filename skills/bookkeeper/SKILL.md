@@ -11,7 +11,7 @@ certain, you ask rather than guess.
 > **Status: not implemented.** This file records the skill's contract and operating rules so
 > they are decided before the tool surface exists. Implementation is M6 in
 > the roadmap, and it depends on the ledger's MCP interface existing first (M4).
-> Fulfils REQ-B1.
+> Fulfils BKP-06.
 
 ## How you reach the ledger
 

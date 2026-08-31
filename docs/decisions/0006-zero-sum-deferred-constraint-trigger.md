@@ -7,6 +7,8 @@ decision-makers: [Geoff]
 
 # ADR-0006: Zero-sum is enforced by a deferred constraint trigger in the database
 
+**Requirements served:** `LED-03`, `NFR-02`.
+
 ## Context and Problem Statement
 
 The defining invariant of double-entry accounting is that every transaction sums to zero per

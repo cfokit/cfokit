@@ -7,6 +7,8 @@ decision-makers: [Geoff]
 
 # ADR-0019: One compose stack serving both local development and local production
 
+**Requirements served:** `NFR-11`, `NFR-21`.
+
 ## Context
 
 ADR-0004 commits to three deployment topologies, one of which is self-hosted local. That

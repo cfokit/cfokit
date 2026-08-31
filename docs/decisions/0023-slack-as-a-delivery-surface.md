@@ -7,11 +7,13 @@ decision-makers: [Geoff]
 
 # ADR-0023: Slack is a delivery surface, built as a separate component over HTTP events
 
+**Requirements served:** `PLT-04`, `PLT-05`.
+
 ## Context
 
 The product vision depends on Slack. *"Deploy once, manage multiple clients through Slack"* is the
 value proposition for fractional CFOs, and the "save 15+ hours per client per month" claim rests on
-per-client channels (REQ-D1). It is currently the only `Blocked` P1 requirement.
+per-client channels (PLT-04, PLT-05). It is currently the only `Blocked` P1 requirement.
 
 It is blocked because scope discipline gates adjacent surfaces
 ([ADR-0013](0013-binding-non-goals-and-scope-discipline.md)). Slack is not literally on the
@@ -96,7 +98,7 @@ is part of why building it this way keeps those interfaces honest.
 
 ### 6. Deliberately not decided here
 
-**How an agent is invoked and executed.** REQ-D1 says the agent operates in the channel, but the
+**How an agent is invoked and executed.** PLT-04 says the agent operates in the channel, but the
 agent runtime — where a skill runs, how it is scheduled, how conversation state is held — is a
 separate concern with its own decisions to make. This record covers the delivery surface: receiving
 a verified message, resolving identity and entity, and calling the API. What produces the reply is
@@ -190,7 +192,6 @@ component chosen here.
 - Never post posting amounts, account numbers, or payee names into a channel that is not bound to
   that entity — and treat message content as untrusted input throughout.
 - ADR-0013's non-goals list is updated to record that this item passed the gate, and when.
-- REQ-D1 moves from `Blocked` to `Accepted`.
 - `infra/README.md` documents the Slack component's variables and its public-ingress requirement.
 
 **Reversal cost. Moderate.** The component is separable and the ledger knows nothing about Slack, so

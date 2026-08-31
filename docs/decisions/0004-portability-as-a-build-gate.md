@@ -7,6 +7,8 @@ decision-makers: [Geoff]
 
 # ADR-0004: Portability is a build gate, and configuration is environment variables only
 
+**Requirements served:** `NFR-10`, `NFR-11`, `NFR-17`.
+
 ## Context and Problem Statement
 
 Self-hosting is a product promise, not a convenience. CFOKit must run in three topologies —
@@ -68,7 +70,7 @@ The complete variable surface is documented in `infra/README.md`, and adding to 
 * Bad, because secrets pass through the environment in the managed tier rather than being fetched
   directly.
 * Bad, because the connector layer must ship a credential-free default provider so the gate can
-  run — work that exists solely to keep the promise true (REQ-C2).
+  run — work that exists solely to keep the promise true (BKP-03).
 * Bad, because adding a variable is deliberately slow, requiring an ADR.
 
 ### Confirmation

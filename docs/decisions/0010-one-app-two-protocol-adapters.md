@@ -7,6 +7,8 @@ decision-makers: [Geoff]
 
 # ADR-0010: One application, two protocol adapters, with MCP calling the service in-process
 
+**Requirements served:** `PLT-01`, `PLT-03`.
+
 ## Context and Problem Statement
 
 The ledger has two consumers with different expectations. Agents — the bookkeeper skill, and any

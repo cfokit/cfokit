@@ -65,7 +65,7 @@ of these is a legitimate outcome, not a violation.
 
 **What an ADR must establish** to lift the gate:
 
-1. The `REQ-` id it serves, and why that requirement cannot be met with the existing surfaces.
+1. The requirement id it serves, and why that requirement cannot be met with the existing surfaces.
 2. What the smallest version looks like, and where its boundary sits.
 3. Its ongoing cost: security surface, operational burden, and whether it becomes a published
    interface with stability obligations (ADR-0016).
@@ -124,7 +124,7 @@ The usual approach, and it works in teams with shared context and a habit of say
 ### Hard prohibitions instead of a gate
 
 * Good, because it is cleaner and more enforceable: these things are never built, full stop.
-* Bad, because it is already false. The product vision depends on a Slack surface, and REQ-B3
+* Bad, because it is already false. The product vision depends on a Slack surface, and RPT-13
   requires statements in a form a human can hand to a lender — which is rendered output. A ban
   would either be violated within months, teaching everyone that the list is advisory, or would
   block the product. A gate that is respected is worth more than a ban that is not.
@@ -161,7 +161,7 @@ They are product boundaries, so arguably they belong with the vision rather than
 - `vision.md` states the outward-facing version, and must not overstate it as a prohibition.
   **Already in place.**
 - An ADR that lifts the gate for an item updates the list to record that it passed, and when.
-- Slack has passed (ADR-0023). Rendered report output, which REQ-B3 requires, is still queued.
+- Slack has passed (ADR-0023). Rendered report output, which RPT-13 requires, is still queued.
 
 **Reversal cost. Low.** The list is a rule, not an architecture. Removing it costs nothing
 mechanically and costs the forcing function entirely.

@@ -7,6 +7,8 @@ decision-makers: [Geoff]
 
 # ADR-0025: Components ship as one image with many entrypoints, and authenticate as OAuth clients
 
+**Requirements served:** `NFR-10`, `NFR-11`, `IAM-11`.
+
 ## Context
 
 [ADR-0024](0024-tiny-ledger-modules-and-components.md) established that anything which is not the
@@ -194,7 +196,7 @@ belongs.
   same discipline applied to seeding in ADR-0019.
 - A component started without credentials **fails immediately with a stable error code**, rather than
   hanging or retrying. CI gate 2 runs with no credentials present and must not hang.
-- Because the local default ingestion provider requires no cloud account (REQ-C2), ingestion is
+- Because the local default ingestion provider requires no cloud account (BKP-03), ingestion is
   exercisable locally and in CI without any third-party credential.
 
 **Reversal cost. Low.** Splitting images is a Dockerfile change with no application impact. Changing

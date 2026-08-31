@@ -7,6 +7,8 @@ decision-makers: [Geoff]
 
 # ADR-0007: Records become immutable at posting; corrections are reversing entries
 
+**Requirements served:** `LED-07`, `LED-08`, `NFR-02`.
+
 ## Context and Problem Statement
 
 CFOKit's value proposition is that the books are correct and defensible. That makes the
@@ -44,7 +46,7 @@ to fix a typo. Fractional CFOs arrive with ERP expectations and want immutabilit
 
 1. **Ingestion produces uncategorised candidates.** Bank and card feeds deliver transactions
    with no account assigned, and categorising them is the single most common operation in the
-   product (REQ-B1, REQ-C1). The account a posting hits is unambiguously a financial field, so
+   product (BKP-01, BKP-12). The account a posting hits is unambiguously a financial field, so
    a rule of "no `UPDATE` on financial fields" applied from arrival makes routine
    categorisation a three-line reversing entry.
 2. **The bookkeeper is an agent, not a person.** Neither QuickBooks nor NetSuite was designed

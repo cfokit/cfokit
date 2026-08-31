@@ -7,6 +7,8 @@ decision-makers: [Geoff]
 
 # ADR-0027: The ledger never rounds; presentation rounds half-up, allocation uses largest remainder
 
+**Requirements served:** `LED-05`, `LED-06`, `RPT-12`.
+
 ## Context
 
 [ADR-0005](0005-decimal-throughout-numeric-28-10.md) fixed how money is *represented* —
@@ -24,7 +26,7 @@ money that does not add up:
 3. **What happens when a total must be split** across lines that cannot divide evenly — £100 across
    three lines is 33.33 three times, which is a penny short of the total.
 
-The third is not hypothetical. Invoicing and AR (REQ-A9) allocate constantly: tax across line items,
+The third is not hypothetical. Invoicing and AR (AR-12) allocate constantly: tax across line items,
 a payment across several invoices, a discount across a basket.
 
 ## Decision

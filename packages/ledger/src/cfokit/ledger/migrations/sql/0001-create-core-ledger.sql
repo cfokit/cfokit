@@ -14,8 +14,8 @@
 --   ADR-0007  Immutable at posting; corrections are reversing entries
 --   ADR-0012  Idempotency keys; one audit_log row per state change
 --   ADR-0014  Two dates per transaction, so backdating is self-identifying
---   REQ-A6    Lots deferred, but the shape is reserved
---   REQ-A8    Accounting basis and fiscal year are entity properties
+--   LED-18    Lots deferred, but the shape is reserved
+--   LED-14    Accounting basis and fiscal year are entity properties
 
 -- ---------------------------------------------------------------------------
 -- Migration bookkeeping. The runner creates this if absent, but declaring it
@@ -29,13 +29,13 @@ CREATE TABLE IF NOT EXISTS schema_migration (
 
 -- ---------------------------------------------------------------------------
 -- Entities. One deployment holds books for many; nothing crosses the boundary
--- without an explicit grant (REQ-A2).
+-- without an explicit grant (LED-13).
 -- ---------------------------------------------------------------------------
 CREATE TABLE entity (
     id                    uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
     slug                  text        NOT NULL UNIQUE,
     name                  text        NOT NULL,
-    -- REQ-A8: a property of the entity, not a per-report option. Changing it is a
+    -- LED-14: a property of the entity, not a per-report option. Changing it is a
     -- significant event, not a preference.
     accounting_basis      text        NOT NULL CHECK (accounting_basis IN ('cash', 'accrual')),
     fiscal_year_end_month smallint    NOT NULL CHECK (fiscal_year_end_month BETWEEN 1 AND 12),
@@ -96,7 +96,7 @@ CREATE TABLE posting (
     account_id     uuid           NOT NULL REFERENCES account (id),
     amount         numeric(28,10) NOT NULL,
     commodity      text           NOT NULL,
-    -- REQ-A6: lot tracking is deferred until an entity holds inventory or investments.
+    -- LED-18: lot tracking is deferred until an entity holds inventory or investments.
     -- The shape is reserved from the first migration because ADR-0003 already presumes
     -- lot state, and adding these later is a migration on the most-written table.
     -- Nothing populates them yet.

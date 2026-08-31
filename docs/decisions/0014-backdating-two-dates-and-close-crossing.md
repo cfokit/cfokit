@@ -7,6 +7,8 @@ decision-makers: [Geoff]
 
 # ADR-0014: Every transaction carries two dates; backdating is permitted but never silent
 
+**Requirements served:** `LED-09`, `RPT-11`.
+
 ## Context
 
 Backdating is recording a transaction dated earlier than today, often earlier than a period already
@@ -21,7 +23,7 @@ It is also the mechanism by which a figure someone has already relied on changes
 
 **Two things have made this decision much smaller than it was when the backlog was written.**
 
-First, **lot tracking is deferred** (REQ-A6). The severe case was a backdated *acquisition* landing
+First, **lot tracking is deferred** (LED-18, LED-19). The severe case was a backdated *acquisition* landing
 earlier in the FIFO queue and retroactively changing which lot every later disposal consumed —
 invalidating every subsequent gain calculation, which is what ADR-0003 meant by "backdated entries
 can invalidate the cost basis of every later disposal". With no lots, nothing cascades. A backdated
@@ -98,7 +100,7 @@ Simplest rule, and it makes every period final the moment it closes.
 
 Rejected because it forbids standard accounting practice. Year-end adjusting entries are dated to
 the year they adjust and posted afterwards; that is how accrual accounting works, and CFOKit will
-need accrual (REQ-A8). A ledger that cannot express an adjusting entry is not a ledger.
+need accrual (LED-17, RPT-19). A ledger that cannot express an adjusting entry is not a ledger.
 
 ### Permit it freely, with no distinction for closed periods
 
@@ -124,7 +126,7 @@ Avoids a second column: the audit trail already records when the row was written
 Rejected because it makes a routine property expensive to query. "Show every entry backdated into a
 closed period" becomes a join against the audit log for every report, rather than a comparison of
 two columns on the row itself. It also couples reporting correctness to audit-log retention
-(REQ-E7), and a retention policy should never be able to change what a report says.
+(PLT-20), and a retention policy should never be able to change what a report says.
 
 ### Snapshot each issued statement rather than reconstructing it
 
@@ -151,7 +153,7 @@ append-only ledger already provides the history dimension without a second mecha
 - The reversal-dating default will occasionally be wrong for a user's intent, so it must be
   overridable — and overriding it is itself a close-crossing.
 - "Statement affected by later activity" needs a representation, which depends on the issued-report
-  decision that is still open (REQ-B3).
+  decision that is still open (RPT-13, RPT-17).
 
 **Follow-on obligations.**
 - `transaction_date` and `recorded_at` on every transaction from the first schema version.
@@ -161,8 +163,8 @@ append-only ledger already provides the history dimension without a second mecha
   period" is a query rather than an investigation.
 - A stable error `code` for a close-crossing attempted without acknowledgement (ADR-0016).
 - The bookkeeper skill surfaces close-crossings to the user rather than acknowledging on their
-  behalf. An agent that auto-acknowledges defeats the rule (REQ-B1).
-- **Revisit this record when lot tracking activates** (REQ-A6). Reintroducing lots reintroduces the
+  behalf. An agent that auto-acknowledges defeats the rule (BKP-12).
+- **Revisit this record when lot tracking activates** (LED-18). Reintroducing lots reintroduces the
   cascade, and rule 3 alone will not be sufficient — a backdated acquisition would then need
   downstream basis recalculation, which is the `rebook` operation currently deferred.
 

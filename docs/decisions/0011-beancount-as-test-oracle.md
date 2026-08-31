@@ -7,6 +7,8 @@ decision-makers: [Geoff]
 
 # ADR-0011: Beancount is a differential test oracle, never a runtime dependency
 
+**Requirements served:** `NFR-01`.
+
 ## Context and Problem Statement
 
 CFOKit's value proposition is that the books are correct. The hardest class of bug to defend
