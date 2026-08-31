@@ -1,5 +1,5 @@
 ---
-status: "accepted"
+status: "draft"
 kind: "requirement-driven"
 date: 2026-08-17
 decision-makers: [Geoff]
@@ -156,7 +156,7 @@ Check continuously in code, and sweep for violations nightly.
 - The check applies per commodity, not to a summed total across commodities.
 - It fires at posting. The draft/posted boundary must therefore exist in the schema before this
   trigger is meaningful (ADR-0007).
-- Application-layer validation produces a stable error `code` (ADR-0016) so callers can distinguish
+- Application-layer validation produces a stable error `code` (ADR-0015) so callers can distinguish
   an unbalanced transaction from other failures.
 - Any future backfill or repair tooling runs through the same constraint. There is no bypass, and
   none should be added.

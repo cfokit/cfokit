@@ -1,17 +1,17 @@
 ---
-status: "accepted"
+status: "draft"
 kind: "requirement-driven"
 date: 2026-08-17
 decision-makers: [Geoff]
 ---
 
-# ADR-0016: Three published interfaces, each with a committed artifact and a diff gate
+# ADR-0015: Three published interfaces, each with a committed artifact and a diff gate
 
 > **Note on provenance.** The backlog title was "Three published interfaces and their stability
 > obligations", but *which* three was never recorded. They are derived here from the rules that cite
 > this ADR: `CLAUDE.md`'s CI gate 5 names OpenAPI and MCP tool descriptions, and its observability
-> section attributes stable machine-readable error codes to ADR-0016. The environment-variable
-> surface was the other candidate and was ruled out because ADR-0017 already owns it as the
+> section attributes stable machine-readable error codes to ADR-0015. The environment-variable
+> surface was the other candidate and was ruled out because ADR-0016 already owns it as the
 > deployment contract.
 >
 > This was reconstruction rather than recollection, and it is recorded as such. If the original
@@ -24,7 +24,7 @@ decision-makers: [Geoff]
 CFOKit publishes interfaces that other people build against: third-party integrators write against
 the REST API, MCP clients and the bookkeeper skill call the tool surface, and callers of both branch
 on error codes. Skills reach the ledger only through that published surface and never through code
-(ADR-0015), which makes the contract load-bearing internally as well as externally.
+(ADR-0014), which makes the contract load-bearing internally as well as externally.
 
 The failure mode to prevent is specific and mundane: **a breaking change that nobody noticed
 making.** Renaming a field, tightening a validation, reordering an enum, or rewording an error
@@ -82,7 +82,7 @@ last one. The generated file in the diff *is* the mechanism.
 The design-first approach, and genuinely good practice in many projects: the contract cannot drift
 because it is authored deliberately.
 
-Rejected here because it inverts a dependency that ADR-0010 deliberately set. The service layer is
+Rejected here because it inverts a dependency that ADR-0009 deliberately set. The service layer is
 the single definition of behaviour, with two thin adapters over it; a hand-written contract would
 become a third definition, able to disagree with both adapters. Generating from the implementation
 and gating on the diff keeps one source of truth while still making changes visible.
@@ -93,7 +93,7 @@ Tempting because MCP is consumed mainly by our own skill, so it feels like an im
 
 Rejected as untrue in a way that would eventually embarrass us. The tool surface is documented for
 MCP clients generally, third-party agents are an explicit audience, and skills are forbidden from any
-other route (ADR-0015). Shipping an interface while calling it internal means breaking it without
+other route (ADR-0014). Shipping an interface while calling it internal means breaking it without
 notice, which is worse than not offering it.
 
 ### Free-text error messages, no codes

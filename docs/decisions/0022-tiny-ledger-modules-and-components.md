@@ -1,17 +1,17 @@
 ---
-status: "accepted"
+status: "draft"
 kind: "requirement-driven"
 date: 2026-08-18
 decision-makers: [Geoff]
 ---
 
-# ADR-0024: The ledger stays tiny; everything else is an in-process module or a separate component
+# ADR-0022: The ledger stays tiny; everything else is an in-process module or a separate component
 
 **Requirements served:** `AR-03`, `NFR-01`, `NFR-12`.
 
 ## Context
 
-[ADR-0009](0009-layered-architecture-pure-engine-no-orm.md) specifies **layers** — a pure engine
+[ADR-0008](0008-layered-architecture-pure-engine-no-orm.md) specifies **layers** — a pure engine
 beneath hand-written SQL, beneath orchestration, beneath protocol adapters. That is horizontal
 stratification, and it is settled.
 
@@ -21,7 +21,7 @@ domain — customers, invoices, line items, payment application, ageing — with
 Absorbing it into the ledger would roughly double what "the ledger" means.
 
 There is a reason specific to this project to resist that. The differential oracle
-([ADR-0011](0011-beancount-as-test-oracle.md)) compares CFOKit's booking against Beancount, and that
+([ADR-0010](0010-beancount-as-test-oracle.md)) compares CFOKit's booking against Beancount, and that
 comparison is meaningful only while the thing being compared is *about* double-entry. Once invoice
 concepts are inside the booking engine, the oracle is comparing two different systems and the
 strongest correctness evidence available quietly degrades.
@@ -137,7 +137,7 @@ correctness of the write path.
 
 Would settle the architecture in one pass and avoid re-opening it repeatedly.
 
-Rejected as speculative abstraction, which ADR-0013 forbids. Naming modules before the domains exist
+Rejected as speculative abstraction, which ADR-0012 forbids. Naming modules before the domains exist
 means designing boundaries around guesses, and a wrong boundary written down is harder to move than
 one never drawn. The criteria are the durable artifact; the list is the perishable one.
 

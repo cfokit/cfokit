@@ -1,5 +1,5 @@
 ---
-status: "accepted"
+status: "draft"
 kind: "requirement-driven"
 date: 2026-08-17
 decision-makers: [Geoff]
@@ -92,7 +92,7 @@ forbidden, in the schema and in the repository layer, not merely by convention.
 **Period close is a second and deliberately weaker boundary.** It is advisory: it marks a
 period as reviewed and is a workflow signal, not the mechanism that guarantees auditability.
 Append-only posting already provides that guarantee, which is precisely why close does not
-need to be hard. See ADR-0014 for whether backdating into a closed period is permitted.
+need to be hard. See ADR-0013 for whether backdating into a closed period is permitted.
 
 **Agent postings are drafts by default.** The agent proposes; confirmation posts. This keeps
 the trust property without filling the ledger with the agent's corrected guesses.
@@ -218,7 +218,7 @@ Genuinely tempting, because it matches the audience split exactly.
 - Period close needs a representation, and closing writes an `audit_log` row like any other
   state change.
 - Correction mechanics stated as requirements in `docs/product/requirements.md`.
-- ADR-0014 must settle backdating. A backdated posting into a soft-closed period is permissible
+- ADR-0013 must settle backdating. A backdated posting into a soft-closed period is permissible
   under this ADR, but it changes an already-issued statement and therefore has to be surfaced
   rather than merely recorded.
 

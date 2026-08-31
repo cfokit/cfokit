@@ -1,20 +1,20 @@
 ---
-status: "accepted"
+status: "draft"
 kind: "substrate"
 date: 2026-08-16
 decision-makers: [Geoff]
 ---
 
-# ADR-0018: GCP (Cloud Run + Cloud SQL) as the initial cloud target
+# ADR-0017: GCP (Cloud Run + Cloud SQL) as the initial cloud target
 
 ## Context
 
-ADR-0017 commits to one maintained cloud target at a time. This ADR picks it.
+ADR-0016 commits to one maintained cloud target at a time. This ADR picks it.
 
 The service is a single container: HTTPS ingress, stateless, synchronous, backed by
 Postgres (ADR-0003). Traffic is low and bursty — thousands of mostly-idle entities with
 agent-driven writes. One long-running operation exists: `rebook`, which holds an entity
-lock and can run for minutes on a large ledger (ADR-0012).
+lock and can run for minutes on a large ledger (ADR-0011).
 
 ## Decision
 
@@ -62,7 +62,7 @@ money, and the amount is small relative to a single customer.
 - `rebook` runs on a compute path without a request timeout — a Cloud Run job, not the
   request path.
 - Secrets live in Secret Manager. IaC creates the secret containers; values are
-  populated out of band and never appear in IaC state (ADR-0017).
+  populated out of band and never appear in IaC state (ADR-0016).
 - Nothing GCP-specific enters application code. The IaC supplies environment variables
   and that is the entire coupling (ADR-0004).
 

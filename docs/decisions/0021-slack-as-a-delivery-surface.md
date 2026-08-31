@@ -1,11 +1,11 @@
 ---
-status: "accepted"
+status: "draft"
 kind: "requirement-driven"
 date: 2026-08-18
 decision-makers: [Geoff]
 ---
 
-# ADR-0023: Slack is a delivery surface, built as a separate component over HTTP events
+# ADR-0021: Slack is a delivery surface, built as a separate component over HTTP events
 
 **Requirements served:** `PLT-04`, `PLT-05`.
 
@@ -16,7 +16,7 @@ value proposition for fractional CFOs, and the "save 15+ hours per client per mo
 per-client channels (PLT-04, PLT-05). It is currently the only `Blocked` P1 requirement.
 
 It is blocked because scope discipline gates adjacent surfaces
-([ADR-0013](0013-binding-non-goals-and-scope-discipline.md)). Slack is not literally on the
+([ADR-0012](0012-binding-non-goals-and-scope-discipline.md)). Slack is not literally on the
 non-goals list, but two of the ways one might build it are:
 
 - **Socket Mode** is a websocket connection, and websockets are a binding non-goal.
@@ -35,7 +35,7 @@ company's financial position.
 
 ### 1. Slack is a separate component, not a module
 
-Applying the criteria in [ADR-0024](0024-tiny-ledger-modules-and-components.md) section 3:
+Applying the criteria in [ADR-0022](0022-tiny-ledger-modules-and-components.md) section 3:
 
 | Question | Answer |
 |---|---|
@@ -44,9 +44,9 @@ Applying the criteria in [ADR-0024](0024-tiny-ledger-modules-and-components.md) 
 | Could a third party plausibly build it against the published API? | **Yes**, and some will |
 
 Two criteria point the same way, so it is a component. It authenticates with the client credentials
-grant and reads `CFOKIT_API_URL` like any other ([ADR-0025](0025-component-deployment-and-authentication.md)).
+grant and reads `CFOKIT_API_URL` like any other ([ADR-0023](0023-component-deployment-and-authentication.md)).
 
-This is the first real test of ADR-0024's criteria, and they resolved it without argument.
+This is the first real test of ADR-0022's criteria, and they resolved it without argument.
 
 ### 2. HTTP Events API, not Socket Mode
 
@@ -54,12 +54,12 @@ Slack delivers events by signed HTTP POST to a public endpoint. Every request is
 the signing secret with a timestamp freshness window, and unverified requests are rejected before
 any work is done.
 
-The component is a **service** in the sense of ADR-0025 — request-serving, scale-to-zero, no
+The component is a **service** in the sense of ADR-0023 — request-serving, scale-to-zero, no
 long-running connection.
 
 **This means the Slack surface requires public ingress**, which core self-hosting does not. A
 self-hoster who wants Slack needs a tunnel and `PUBLIC_BASE_URL` set to the public hostname — a
-requirement ADR-0019 already documents for cross-device access. **Self-hosting without Slack is
+requirement ADR-0018 already documents for cross-device access. **Self-hosting without Slack is
 unaffected**, and that is the honest framing: this is a limitation of one surface, not a change to
 the self-hosting promise.
 
@@ -86,12 +86,12 @@ The effective permission is the **intersection**. An unlinked user in a bound ch
 nothing, and a linked user cannot exceed their own grants by being invited somewhere.
 
 Entity grants are validated server-side regardless of what the component asserts
-([ADR-0012](0012-entity-advisory-lock-idempotency-keys.md)). The component is a **trusted delegate**
+([ADR-0011](0011-entity-advisory-lock-idempotency-keys.md)). The component is a **trusted delegate**
 — it asserts which linked user is acting, and the ledger enforces what that user may do.
 
 ### 5. Slack is a surface, not a published interface
 
-It does not become a fourth entry in [ADR-0016](0016-three-published-interfaces-stability-obligations.md).
+It does not become a fourth entry in [ADR-0015](0015-three-published-interfaces-stability-obligations.md).
 Slack users interact with a product surface; nobody writes software against it. The published
 interfaces remain REST, MCP tools, and error codes — and this component is a *consumer* of them, which
 is part of why building it this way keeps those interfaces honest.
@@ -113,9 +113,9 @@ public ingress at all**, so a self-hoster behind NAT could run the Slack surface
 a project that treats self-hosting as a product promise, that is a real argument.
 
 Rejected on two counts, either sufficient. It is a websocket, which is a binding non-goal
-(ADR-0013). And it requires a persistently connected process, which is not one of the two runtime
-shapes (ADR-0025) — it would be the long-running worker that decision explicitly excludes, on a
-platform where scale-to-zero is assumed (ADR-0018).
+(ADR-0012). And it requires a persistently connected process, which is not one of the two runtime
+shapes (ADR-0023) — it would be the long-running worker that decision explicitly excludes, on a
+platform where scale-to-zero is assumed (ADR-0017).
 
 The self-hosting cost is real and is accepted rather than dismissed: Slack needs a tunnel, the core
 product does not.
@@ -124,7 +124,7 @@ product does not.
 
 Fewer moving parts, no second deployment, no client credentials to manage.
 
-Rejected because it fails ADR-0024's criteria on two counts — it holds third-party credentials, and
+Rejected because it fails ADR-0022's criteria on two counts — it holds third-party credentials, and
 it is exactly the kind of thing a third party could build against the API. Co-locating it would also
 put Slack's signing secret and bot token in the serving container, widening the blast radius of the
 process that holds database credentials.
@@ -167,7 +167,7 @@ plausible additional surface later, and would need its own record.
 
 Would avoid the Slack dependency and serve clients regardless of what chat platform they use.
 
-Rejected as squarely the non-goal ADR-0013 exists to gate. It is also not what the vision describes,
+Rejected as squarely the non-goal ADR-0012 exists to gate. It is also not what the vision describes,
 and it would be a larger commitment — sessions, its own authentication, a design surface — than the
 component chosen here.
 
@@ -191,7 +191,7 @@ component chosen here.
   to the component. "The Slack bot did it" is not an audit trail.
 - Never post posting amounts, account numbers, or payee names into a channel that is not bound to
   that entity — and treat message content as untrusted input throughout.
-- ADR-0013's non-goals list is updated to record that this item passed the gate, and when.
+- ADR-0012's non-goals list is updated to record that this item passed the gate, and when.
 - `infra/README.md` documents the Slack component's variables and its public-ingress requirement.
 
 **Reversal cost. Moderate.** The component is separable and the ledger knows nothing about Slack, so
@@ -201,7 +201,7 @@ per-client channels would be badly disrupted, so the cost is to them rather than
 ## Revisit when
 
 - Slack changes its event delivery model, or Socket Mode becomes the only supported path — which
-  would force a return to ADR-0013, since websockets would then be unavoidable rather than chosen.
+  would force a return to ADR-0012, since websockets would then be unavoidable rather than chosen.
 - A second delivery surface is genuinely needed, at which point the channel-to-entity binding
   generalises to a conversation-to-entity binding and should be designed once rather than twice.
 - Self-hosted demand for Slack without public ingress becomes real, which is the case that would

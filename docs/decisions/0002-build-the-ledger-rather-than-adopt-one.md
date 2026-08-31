@@ -1,5 +1,5 @@
 ---
-status: "accepted"
+status: "draft"
 kind: "requirement-driven"
 date: 2026-08-18
 decision-makers: [Geoff]
@@ -28,7 +28,7 @@ CFOKit is being built partly to test a hypothesis: **the value of software is ap
 value accrues to an accountable service offering** — hosting, compliance, and everything that
 attends them.
 
-That thesis is already load-bearing elsewhere. [ADR-0020](0020-identity-provider-conformance-contract.md)
+That thesis is already load-bearing elsewhere. [ADR-0019](0019-identity-provider-conformance-contract.md)
 rejects building an OAuth issuer in its own words: *"Security-critical code with no differentiating
 value, and CFOKit's thesis is that software value is zero — writing an OAuth server contradicts it
 directly."*
@@ -46,8 +46,8 @@ the product failing at the thing it charges for.
 
 So the thesis survives intact, and it narrows the question usefully. It does not say "never build."
 It says **build only what carries the accountability claim, and adopt or delegate everything else.**
-By that rule: the issuer is delegated (ADR-0020), the reporting oracle is borrowed (ADR-0011), the
-spec workflow is adopted (ADR-0022), the cloud is rented — and the ledger is built, because it is
+By that rule: the issuer is delegated (ADR-0019), the reporting oracle is borrowed (ADR-0010), the
+cloud is rented — and the ledger is built, because it is
 where the accountability lives.
 
 ### What CFOKit actually needs built
@@ -63,7 +63,7 @@ deferrals already recorded, the ledger is:
 | Reversing corrections | Fixed asset depreciation |
 | Entity isolation and per-entity grants | Multi-currency revaluation |
 | Audit log, idempotency keys, entity locking | Manufacturing, CRM, HR, projects |
-| Cash basis now, accrual representable (LED-14, LED-17) | Anything on the ADR-0013 non-goals list |
+| Cash basis now, accrual representable (LED-14, LED-17) | Anything on the ADR-0012 non-goals list |
 | Trial balance, P&L, balance sheet, journal queries | Purchase orders, quotes, estimates |
 | Deterministic categorisation rules (BKP-06, BKP-08) | Accounts payable — until a requirement exists |
 | Advisory period close | |
@@ -82,7 +82,7 @@ still wants to know who owes it money; it simply recognises revenue on settlemen
 being a future data-model risk and becomes close to a reporting choice over data already present.
 
 The risk argument holds regardless of size: double-entry semantics have been stable for five
-centuries, an independent oracle exists to test against (ADR-0011), and the requirements do not
+centuries, an independent oracle exists to test against (ADR-0010), and the requirements do not
 move. The scope is large; its *uncertainty* is not.
 
 ### The risk profile inverts the usual heuristic
@@ -105,7 +105,7 @@ untouched.
   fifteen deployments.
 * **Ledger semantics must be enforceable in the schema** — append-only (ADR-0007), zero-sum
   (ADR-0006), `NUMERIC(28,10)` money (ADR-0005), Postgres-only (ADR-0003).
-* **Scope must stay bounded.** A general ledger, not an ERP (ADR-0013).
+* **Scope must stay bounded.** A general ledger, not an ERP (ADR-0012).
 * Licence is explicitly **not** a driver. See More Information.
 
 ## Considered Options
@@ -142,7 +142,7 @@ either direction.
 
 ### Confirmation
 
-The Beancount differential oracle (ADR-0011) is CI gate 3 and substitutes for the production exposure
+The Beancount differential oracle (ADR-0010) is CI gate 3 and substitutes for the production exposure
 an adopted system would have brought. The accountability properties are enforced by schema and by CI
 rather than by convention: append-only (ADR-0007), the zero-sum deferred constraint trigger
 (ADR-0006), and CI gate 4 on float storage types (ADR-0005).
@@ -166,7 +166,7 @@ tenancy model genuinely fits, it is not bloated, and **its licence is not an obj
 * Good, because database-per-tenant tenancy fits LED-13 — documented use of 30+ clients on one
   instance.
 * Good, because `accounts_transactions` already carries both `date` and `created_at`, so most of
-  ADR-0014's two-date model is present.
+  ADR-0013's two-date model is present.
 * Bad, and decisively so, because **`LedgerEntriesStorage.deleteEntries()` issues a hard `.delete()`
   on general ledger rows**, `accounts_transactions` has no `updated_at`, and the audit log is an
   activity log without before/after state. History can be removed without trace. That is
@@ -179,7 +179,7 @@ tenancy model genuinely fits, it is not bloated, and **its licence is not an obj
 * Bad, but **not load-bearing**, because money is held at two scales — `DECIMAL(13,3)` on ledger
   entries, `DECIMAL(15,5)` on account amounts, neither reaching `NUMERIC(28,10)`.
 * Bad, but **not load-bearing**, because it is MySQL-only, leaving ADR-0006's zero-sum trigger without
-  a mechanism and weakening ADR-0012's locking.
+  a mechanism and weakening ADR-0011's locking.
 
 **Reconsider immediately if** GL semantics change upstream to append-only or soft-delete with a change
 log carrying before/after state. That is specific, checkable, and would remove the one objection this
@@ -194,14 +194,14 @@ rejection now rests on.
   deployments to migrate, back up and upgrade — LED-13 requires many entities in one deployment.
 * Bad, because using the general ledger means deploying, securing and upgrading HR, CRM,
   manufacturing and a web UI, an enormous surface for a project whose non-goals exclude a web UI
-  outright (ADR-0013).
+  outright (ADR-0012).
 
 ### Use Beancount as the booking engine
 
 * Good, because it is a correct, independently maintained double-entry implementation.
 * Bad, because it is file-based and single-writer, exactly the model ADR-0003 rejected once
   multi-tenant hosting became the point.
-* Neutral, because it is retained in the role it does suit: the differential test oracle (ADR-0011).
+* Neutral, because it is retained in the role it does suit: the differential test oracle (ADR-0010).
 
 ### Build on TigerBeetle
 
@@ -216,7 +216,7 @@ Worth naming because it will be proposed.
 
 ### Adopt now, replace later if the thesis validates
 
-Ship in weeks on an adopted backend, validate, let revenue fund a ledger later. ADR-0015 supports it
+Ship in weeks on an adopted backend, validate, let revenue fund a ledger later. ADR-0014 supports it
 structurally, since skills reach the ledger over HTTP and never import its code.
 
 * Good, because it reaches a demonstrable product fastest.
@@ -251,12 +251,12 @@ verified in its repository:
 |---|---|---|
 | **Multi-tenancy** | Database-per-tenant; separate `system` and `tenant` migration trees; documented use of 30+ clients on one instance | **Fits.** |
 | **Weight** | Accounting-focused and headless | **Fits.** The ERP-weight objection does not apply. |
-| **Two dates** | `accounts_transactions` carries both `date` and `created_at` | **Fits.** Most of ADR-0014's model already present. |
+| **Two dates** | `accounts_transactions` carries both `date` and `created_at` | **Fits.** Most of ADR-0013's model already present. |
 | **Database** | MySQL only — `mysql`/`mysql2`, no `pg`; Knex + Objection.js | Conflicts with ADR-0003 |
 | **Money precision** | `accounts_transactions.credit`/`debit` is `DECIMAL(13,3)`; `accounts.amount` is `DECIMAL(15,5)` | Conflicts with ADR-0005 |
 | **GL mutability** | `LedgerEntriesStorage.deleteEntries()` issues a hard `.delete()` on `accounts_transactions` | Conflicts with ADR-0007 |
 | **Audit trail** | `audit_logs` added April 2026: `action`, `subject`, `subject_id`, nullable JSON `metadata`. No before/after columns | Does not compensate |
-| **Data access** | Objection.js ORM | Conflicts with ADR-0009 |
+| **Data access** | Objection.js ORM | Conflicts with ADR-0008 |
 
 Three of these are material rather than stylistic.
 
@@ -274,7 +274,7 @@ a defect regardless of magnitude.
 
 **MySQL is not a swap.** It removes deferred constraint triggers, so ADR-0006's zero-sum guarantee has
 no mechanism and would fall back to application-only checking — which ADR-0006 rejects explicitly.
-`GET_LOCK` has different semantics from `pg_advisory_xact_lock`, weakening ADR-0012.
+`GET_LOCK` has different semantics from `pg_advisory_xact_lock`, weakening ADR-0011.
 
 ### On licence, which is not a reason here
 
@@ -291,7 +291,7 @@ constraint for the server. The licence question is left open and is not load-bea
 ### Follow-on obligations
 
 * The Beancount differential oracle is not optional. It substitutes for the production exposure an
-  adopted system would have brought (ADR-0011, CI gate 3).
+  adopted system would have brought (ADR-0010, CI gate 3).
 * Scope discipline is load-bearing. A first-party ledger has no natural boundary; the scope table is
   the boundary, and anything beyond it needs a requirement first.
 * Validate the agent hypotheses **early and against fixtures**, so the uncertain work is not gated on
@@ -303,7 +303,7 @@ constraint for the server. The licence question is left open and is not load-bea
 ### Reversal cost
 
 **Asymmetric.** Abandoning a partly built ledger for an adopted one costs the sunk build, but the tool
-contract and skills survive because ADR-0015 keeps the backend swappable — bounded, and cheaper than
+contract and skills survive because ADR-0014 keeps the backend swappable — bounded, and cheaper than
 it sounds. Going the other way is worse: adopting first and building later means a contract shaped by
 someone else's semantics and users who relied on unenforced guarantees.
 

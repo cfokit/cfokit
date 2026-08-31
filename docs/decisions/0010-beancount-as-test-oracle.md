@@ -1,11 +1,11 @@
 ---
-status: "accepted"
+status: "draft"
 kind: "requirement-driven"
 date: 2026-08-17
 decision-makers: [Geoff]
 ---
 
-# ADR-0011: Beancount is a differential test oracle, never a runtime dependency
+# ADR-0010: Beancount is a differential test oracle, never a runtime dependency
 
 **Requirements served:** `NFR-01`.
 
@@ -144,7 +144,7 @@ By far the most attractive option on the surface.
 
 * Good, because users wanting Beancount's exact semantics could opt into them.
 * Bad, because it creates a second booking path exercised by a subset of users — the
-  divergence-nobody-catches failure mode that ADR-0015 and ADR-0019 both reject in other guises.
+  divergence-nobody-catches failure mode that ADR-0014 and ADR-0018 both reject in other guises.
   Two booking implementations in one product is the problem, regardless of which is default.
 
 ## More Information

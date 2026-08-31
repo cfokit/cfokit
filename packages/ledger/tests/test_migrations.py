@@ -38,7 +38,7 @@ def test_every_decimal_column_is_numeric_28_10() -> None:
 
 
 def test_transaction_carries_both_dates() -> None:
-    """ADR-0014: recorded_at cannot be retrofitted, so it ships in the first migration."""
+    """ADR-0013: recorded_at cannot be retrofitted, so it ships in the first migration."""
     sql = discover()[0].sql
     assert "transaction_date" in sql
     assert "recorded_at" in sql

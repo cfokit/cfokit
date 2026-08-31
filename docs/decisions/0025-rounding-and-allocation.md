@@ -1,11 +1,11 @@
 ---
-status: "accepted"
+status: "draft"
 kind: "requirement-driven"
 date: 2026-08-20
 decision-makers: [Geoff]
 ---
 
-# ADR-0027: The ledger never rounds; presentation rounds half-up, allocation uses largest remainder
+# ADR-0025: The ledger never rounds; presentation rounds half-up, allocation uses largest remainder
 
 **Requirements served:** `LED-05`, `LED-06`, `RPT-12`.
 
@@ -14,7 +14,7 @@ decision-makers: [Geoff]
 [ADR-0005](0005-decimal-throughout-numeric-28-10.md) fixed how money is *represented* —
 `decimal.Decimal` and `NUMERIC(28,10)` — and explicitly left rounding undecided. That is the
 remaining gap before the booking engine can be written, and it surfaces immediately rather than
-eventually: the Beancount differential harness ([ADR-0011](0011-beancount-as-test-oracle.md)) cannot
+eventually: the Beancount differential harness ([ADR-0010](0010-beancount-as-test-oracle.md)) cannot
 be built without knowing whether the two systems are expected to agree exactly.
 
 Three separate questions hide inside "rounding", and conflating them is how systems end up with
@@ -47,7 +47,7 @@ A transaction balances exactly or it does not balance. CFOKit does not infer tol
 Beancount does infer them, because a text ledger is written by hand at whatever precision the author
 chose. CFOKit stores ten decimal places and never rounds on the way in, so exact balance is
 achievable — and a tolerance is a place for genuine errors to hide. **This is a deliberate divergence
-from the oracle and belongs in the divergence register** (ADR-0011), not treated as a defect when the
+from the oracle and belongs in the divergence register** (ADR-0010), not treated as a defect when the
 harness reports it.
 
 ### 3. Presentation rounds half-up, to the commodity's scale
@@ -73,7 +73,7 @@ The parts always sum to the original total exactly. That is the whole requiremen
 whose parts do not reconstitute the whole will fail the zero-sum trigger, loudly, at commit.
 
 Allocation is **deterministic**. The same input always produces the same split, because reproducible
-reports (ADR-0014) and a differential oracle both depend on it.
+reports (ADR-0013) and a differential oracle both depend on it.
 
 ## Alternatives rejected
 
@@ -141,7 +141,7 @@ enters. Rounding happens once, at the edge.
   divergence register has an entry from its first run.
 
 **Follow-on obligations.**
-- Allocation lives in the **pure engine** (ADR-0009): deterministic, no I/O, and therefore
+- Allocation lives in the **pure engine** (ADR-0008): deterministic, no I/O, and therefore
   property-testable — the parts must always sum to the whole, for any total and any line count.
 - A divergence-register entry recording that CFOKit requires exact balance where Beancount infers
   tolerance.

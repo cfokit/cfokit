@@ -1,5 +1,5 @@
 ---
-status: "accepted"
+status: "draft"
 kind: "substrate"
 date: 2026-08-30
 decision-makers: [Geoff]

@@ -1,28 +1,28 @@
 ---
-status: "accepted"
+status: "draft"
 kind: "requirement-driven"
 date: 2026-08-18
 decision-makers: [Geoff]
 ---
 
-# ADR-0025: Components ship as one image with many entrypoints, and authenticate as OAuth clients
+# ADR-0023: Components ship as one image with many entrypoints, and authenticate as OAuth clients
 
 **Requirements served:** `NFR-10`, `NFR-11`, `IAM-11`.
 
 ## Context
 
-[ADR-0024](0024-tiny-ledger-modules-and-components.md) established that anything which is not the
+[ADR-0022](0022-tiny-ledger-modules-and-components.md) established that anything which is not the
 ledger is either an in-process module or a **separate component** reaching the ledger through the
 published API. It deliberately left three questions open, and a component cannot ship until they are
 answered:
 
 1. How is a component built and shipped?
 2. How does it **authenticate**? It is a machine caller with no interactive user, but every request
-   requires audience validation ([ADR-0020](0020-identity-provider-conformance-contract.md)) and
-   entity access is checked server-side ([ADR-0012](0012-entity-advisory-lock-idempotency-keys.md)).
+   requires audience validation ([ADR-0019](0019-identity-provider-conformance-contract.md)) and
+   entity access is checked server-side ([ADR-0011](0011-entity-advisory-lock-idempotency-keys.md)).
 3. What runtime shapes exist, and how do they map to both the local compose stack
-   ([ADR-0019](0019-local-compose-dev-and-production.md)) and the maintained cloud target
-   ([ADR-0018](0018-gcp-initial-cloud-target.md))?
+   ([ADR-0018](0018-local-compose-dev-and-production.md)) and the maintained cloud target
+   ([ADR-0017](0017-gcp-initial-cloud-target.md))?
 
 Two existing constraints narrow the answer sharply and are worth stating before the decision.
 
@@ -31,7 +31,7 @@ module scope, and CI runs the stack with no cloud credentials present
 ([ADR-0004](0004-portability-as-a-build-gate.md)). Anything decided here must survive that gate.
 
 **There is no event bus.** It is a binding non-goal
-([ADR-0013](0013-binding-non-goals-and-scope-discipline.md)), which removes the entire
+([ADR-0012](0012-binding-non-goals-and-scope-discipline.md)), which removes the entire
 queue-and-worker category from consideration without further argument.
 
 ## Decision
@@ -63,7 +63,7 @@ nothing by default locally, because a laptop deployment has no reason to poll on
 is infrastructure, not application behaviour; the component itself only knows how to run once.
 
 **There are no long-running workers.** That shape requires a queue, and an event bus is a binding
-non-goal (ADR-0013). If work genuinely needs queueing, that is an ADR against the non-goals list,
+non-goal (ADR-0012). If work genuinely needs queueing, that is an ADR against the non-goals list,
 not an implementation detail.
 
 ### 3. Components authenticate as OAuth clients
@@ -72,25 +72,25 @@ A component obtains a token via the **client credentials grant** against the sam
 application already uses, and calls the API like any other client. Audience validation applies
 unchanged.
 
-This follows directly from ADR-0019's rejection of a static bearer token for local mode: a second
+This follows directly from ADR-0018's rejection of a static bearer token for local mode: a second
 authentication path is a path exercised by fewer people, and auth is where divergence is least
 acceptable. Components use the path that already exists.
 
 **Entity access is a grant, not a claim.** A component's client is granted access to specific
-entities exactly as a user is, validated server-side regardless of token contents (ADR-0012). A
+entities exactly as a user is, validated server-side regardless of token contents (ADR-0011). A
 component holds least privilege — an ingestion component that writes drafts needs neither posting
 rights nor access to entities it does not serve.
 
 ### 4. Configuration surface
 
 Components read three variables beyond the shared auth settings. This record is the ADR that
-ADR-0017 requires for extending the deployment contract:
+ADR-0016 requires for extending the deployment contract:
 
 | Variable | Purpose |
 |---|---|
 | `CFOKIT_API_URL` | Where the API is reachable **from this component**. Distinct from `PUBLIC_BASE_URL`, which is what the service says about *itself* and may be a tunnel or public hostname. |
 | `AUTH_CLIENT_ID` | Component's OAuth client identity |
-| `AUTH_CLIENT_SECRET` | Populated out of band; IaC creates the container, never the value (ADR-0017) |
+| `AUTH_CLIENT_SECRET` | Populated out of band; IaC creates the container, never the value (ADR-0016) |
 
 `infra/README.md` is updated accordingly.
 
@@ -116,7 +116,7 @@ using multi-stage build targets from the same Dockerfile, which preserves versio
 
 Clean ownership and independent release cadence.
 
-Rejected because ADR-0024 keeps components in one repository, and splitting repositories makes the
+Rejected because ADR-0022 keeps components in one repository, and splitting repositories makes the
 version-skew problem worse rather than better while adding cross-repository contract testing.
 
 ### A long-lived API key or shared secret for components
@@ -124,7 +124,7 @@ version-skew problem worse rather than better while adding cross-repository cont
 By far the simplest thing that works. No token exchange, no issuer round trip, no client
 registration.
 
-Rejected on the precedent already set in ADR-0019, which rejected a static bearer token for local
+Rejected on the precedent already set in ADR-0018, which rejected a static bearer token for local
 mode by name: it is a second authentication path in the application, and auth is the component where
 divergence between what we develop against and what users run is least acceptable. A machine caller
 is not a good enough reason to reintroduce it.
@@ -146,7 +146,7 @@ Faster, avoids the auth round trip entirely, and they are our own code in our ow
 Rejected because it is precisely what makes something a component rather than a module. Row-level
 security and service-layer filtering on `entity_id` both sit *above* the database, so a direct
 connection bypasses grant validation, the audit trail, and idempotency handling. This is the same
-reasoning that rejected direct database reads for skills (ADR-0015), and it applies with equal force
+reasoning that rejected direct database reads for skills (ADR-0014), and it applies with equal force
 to first-party code.
 
 ### A queue with long-running worker components
@@ -154,16 +154,16 @@ to first-party code.
 The standard shape for ingestion and background work, with real benefits: backpressure, retries,
 and decoupling.
 
-Rejected because an event bus is a binding non-goal (ADR-0013), and because the workload does not
+Rejected because an event bus is a binding non-goal (ADR-0012), and because the workload does not
 need it — ingestion is periodic rather than continuous, and idempotency keys already make retries
-safe (ADR-0012). Revisit through the scope gate if that changes.
+safe (ADR-0011). Revisit through the scope gate if that changes.
 
 ### Components as sidecars in the same container or pod
 
 Would keep deployment simple and let components share a network namespace with the service.
 
 Rejected because it forfeits the isolation that justified making them components at all. If a
-component is co-located and shares a lifecycle, the criteria in ADR-0024 § 3 say it should have been
+component is co-located and shares a lifecycle, the criteria in ADR-0022 § 3 say it should have been
 a module.
 
 ### Always-on services for scheduled work
@@ -190,10 +190,10 @@ belongs.
   states the two runtime shapes any target must provide — a request-serving runtime and a one-shot
   job runtime with no request timeout.
 - The issuer must support the client credentials grant. This is an addition to the conformance
-  contract in ADR-0020 and the conformance suite covers it.
+  contract in ADR-0019 and the conformance suite covers it.
 - Entity grants are issuable to component clients, not only to users.
 - `compose.yaml` defines component entrypoints behind profiles so they never run by default — the
-  same discipline applied to seeding in ADR-0019.
+  same discipline applied to seeding in ADR-0018.
 - A component started without credentials **fails immediately with a stable error code**, rather than
   hanging or retrying. CI gate 2 runs with no credentials present and must not hang.
 - Because the local default ingestion provider requires no cloud account (BKP-03), ingestion is
@@ -208,6 +208,6 @@ conformance contract.
 - **Dependency sets diverge** enough that the serving image carries meaningful unused weight. The
   remedy is multi-stage build targets from one Dockerfile, not separate builds.
 - Work appears that genuinely needs queueing and backpressure, which is a scope-gate question
-  (ADR-0013) before it is a deployment one.
+  (ADR-0012) before it is a deployment one.
 - A second cloud target is added, which is when the two-runtime-shape abstraction is first tested
   against a platform that may not offer both.

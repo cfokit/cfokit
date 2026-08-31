@@ -1,11 +1,11 @@
 ---
-status: "accepted"
+status: "draft"
 kind: "requirement-driven"
 date: 2026-08-17
 decision-makers: [Geoff]
 ---
 
-# ADR-0014: Every transaction carries two dates; backdating is permitted but never silent
+# ADR-0013: Every transaction carries two dates; backdating is permitted but never silent
 
 **Requirements served:** `LED-09`, `RPT-11`.
 
@@ -149,7 +149,7 @@ append-only ledger already provides the history dimension without a second mecha
 **Accepted costs.**
 - A second date column on every transaction, indexed for the "as known at" query.
 - Callers must acknowledge close-crossing writes, so the tool contract and the REST API both grow a
-  parameter (ADR-0015).
+  parameter (ADR-0014).
 - The reversal-dating default will occasionally be wrong for a user's intent, so it must be
   overridable — and overriding it is itself a close-crossing.
 - "Statement affected by later activity" needs a representation, which depends on the issued-report
@@ -161,7 +161,7 @@ append-only ledger already provides the history dimension without a second mecha
 - Every report accepts an optional "as known at" watermark; omitted means now.
 - Close-crossing writes carry a distinguishable `audit_log` marker, so "what changed in a closed
   period" is a query rather than an investigation.
-- A stable error `code` for a close-crossing attempted without acknowledgement (ADR-0016).
+- A stable error `code` for a close-crossing attempted without acknowledgement (ADR-0015).
 - The bookkeeper skill surfaces close-crossings to the user rather than acknowledging on their
   behalf. An agent that auto-acknowledges defeats the rule (BKP-12).
 - **Revisit this record when lot tracking activates** (LED-18). Reintroducing lots reintroduces the

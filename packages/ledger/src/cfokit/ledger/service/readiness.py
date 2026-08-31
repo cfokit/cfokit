@@ -2,7 +2,7 @@
 
 Lives in the service layer rather than the adapter so the REST and MCP surfaces answer
 the same question the same way, and so no adapter reaches past `service` into the
-database (ADR-0009).
+database (ADR-0008).
 
 `/healthz` deliberately does not call any of this. Liveness must not depend on the
 database, or a database blip restarts healthy containers.

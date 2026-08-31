@@ -1,11 +1,11 @@
 ---
-status: "accepted"
+status: "draft"
 kind: "substrate"
 date: 2026-08-17
 decision-makers: [Geoff]
 ---
 
-# ADR-0021: Repository layout separates artifact kinds, and packages are named for capabilities
+# ADR-0020: Repository layout separates artifact kinds, and packages are named for capabilities
 
 > **Two clauses are superseded by [ADR-0001](0001-documentation-structure.md).** The `specs/`
 > directory does not exist — ADR-0001 settled the documentation structure without one, and whether
@@ -26,7 +26,7 @@ structural.
 **`packages/skill` conflates two artifact kinds.** A `packages/` directory in a `uv`
 workspace holds Python distributions; `uv sync` installs its members. An agent skill is a
 `SKILL.md` bundle with resources. It is not installable, has no dependency graph, and its
-presence in the workspace globs would break `uv sync`. ADR-0015 goes further: the skill and
+presence in the workspace globs would break `uv sync`. ADR-0014 goes further: the skill and
 the ledger are separate systems that share only a tool contract. Housing them in one
 installable tree works against a boundary the project treats as hard.
 
@@ -45,14 +45,14 @@ have opposite lifecycles: ADRs are immutable once accepted, while specs churn un
 feature ships.
 
 **A fourth artifact kind then surfaced during review.** Auditing the ADR backlog showed that
-four entries — 0007 append-only, 0008 lot selection, 0013 scope, 0014 backdating — are not
+four entries — 0007 append-only, lot selection, 0012 scope, 0013 backdating — are not
 architecture at all. They are **accounting or product policy**: decisions users experience
-directly and that an auditor may need to read. Four more (0004, 0005, 0006, 0012) bundle a
+directly and that an auditor may need to read. Four more (0004, 0005, 0006, 0011) bundle a
 requirement together with the mechanism implementing it; their titles show the seam, as in
 "zero-sum **enforced by** deferred constraint trigger".
 
 The problem this creates is one of audience, not filing. An auditor asking "what is your cost
-basis method?" should not be handed ADR-0008, and a fractional CFO evaluating CFOKit for a
+basis method?" should not be handed the lot-selection record, and a fractional CFO evaluating CFOKit for a
 client needs the backdating rules before installing anything. Neither reads decision records.
 
 ## Decision
@@ -83,7 +83,7 @@ infra/      OpenTofu for the one maintained cloud target
 *This record proposed four kinds. Two survive.* The accounting-policy document was written and then
 dissolved: it restated settled requirements in a second voice, and the two drifted, which is the
 failure ADR-0001 names when it makes `requirements.md` serve the auditor and the contributor alike.
-The specification layer went with Spec Kit (ADR-0022); whether one returns is open in ADR-0001.
+The specification layer was Spec Kit, since removed; whether one returns is open in ADR-0001.
 
 - `packages/skill` becomes `skills/bookkeeper/`.
 - `packages/plaid-sync` becomes `packages/connectors`, with Plaid and Stripe as providers.
@@ -116,7 +116,7 @@ lifecycle-mixing problem as the option above, in a worse position.
 
 Preserves one tree. Rejected because it requires enumerating workspace members instead of
 globbing them, so every new package silently fails to install until someone remembers to
-edit the root manifest. It also keeps the category error that ADR-0015's boundary exists to
+edit the root manifest. It also keeps the category error that ADR-0014's boundary exists to
 prevent.
 
 ### Ship skills as a Claude plugin bundle
@@ -125,7 +125,7 @@ The official layout for distributing skills, agents, and commands as one version
 installable unit, and a plausible eventual answer. Rejected **for now** rather than on
 merit: it commits to plugin installation as the distribution path, and the vision points at
 a hosted service reached through Slack ("Deploy once, manage multiple clients through
-Slack"), which ADR-0015 reinforces. Choosing a distribution mechanism before the delivery
+Slack"), which ADR-0014 reinforces. Choosing a distribution mechanism before the delivery
 surface is settled is the wrong order.
 
 ### Keep `plaid-sync`, add packages per provider
@@ -152,7 +152,7 @@ decisions in different words is a second thing to keep correct. It was dissolved
 
 ### Split the bundled ADRs into pure requirements and pure ADRs
 
-Tempting for taxonomic cleanliness: move the obligation half of 0004, 0005, 0006, and 0012
+Tempting for taxonomic cleanliness: move the obligation half of 0004, 0005, 0006, and 0011
 into requirements and leave only the mechanism in the ADR. Rejected as churn for its own sake.
 The requirement halves already exist (NFR-10, NFR-11, LED-04, LED-03, NFR-03) and cross-
 reference the ADRs; splitting the ADRs as well would double the documents and create two
@@ -171,13 +171,13 @@ comprehensible directly beside the obligation it satisfies.
 - `packages/*` globbing stays valid, so nothing non-installable may be added under it.
 - Connectors must ship one provider that works with no cloud account — the CI portability
   gate depends on it (ADR-0004).
-- import-linter enforces the ADR-0015 boundary as a contract rather than a convention;
+- import-linter enforces the ADR-0014 boundary as a contract rather than a convention;
   `cfokit.connectors` may not import `cfokit.ledger`.
 - The skills layout is provisional pending the delivery-surface decision and the question of
   whether agent roles split.
 - The ADR backlog is sequenced by **who has to decide**, not by technical dependency. The
-  policy four (0007, 0008, 0013, 0014) need accounting judgement from a human; the
-  architecture set (0009, 0010, 0011, 0015, 0016) can be drafted from constraints already
+  policy four (0007, lot selection, 0012, 0013) need accounting judgement from a human; the
+  architecture set (0008, 0009, 0010, 0014, 0015) can be drafted from constraints already
   accepted.
 
 **Reversal cost.** Low for the directory moves — they are renames plus a `CLAUDE.md` edit,

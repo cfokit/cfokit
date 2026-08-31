@@ -1,11 +1,11 @@
 ---
-status: "accepted"
+status: "draft"
 kind: "requirement-driven"
 date: 2026-08-16
 decision-makers: [Geoff]
 ---
 
-# ADR-0019: One compose stack serving both local development and local production
+# ADR-0018: One compose stack serving both local development and local production
 
 **Requirements served:** `NFR-11`, `NFR-21`.
 
@@ -19,7 +19,7 @@ Local development has overlapping but different needs: source reload, an inspect
 database, seed fixtures, verbose logs.
 
 The failure mode to avoid is a "local mode" that quietly becomes a second product with
-its own semantics. That is what collapsing the two backends (ADR-0015) was meant to
+its own semantics. That is what collapsing the two backends (ADR-0014) was meant to
 prevent, and a divergent compose file is the same mistake in a different place.
 
 The genuinely hard part is not containers. It is authentication: the service is an
@@ -32,13 +32,13 @@ We will ship **`compose.yaml` as a production-shaped local deployment**, with
 differences.
 
 Local deployment will not require an external identity provider. The specific issuer
-arrangement is deferred to ADR-0020; what this ADR fixes is that whatever it is, it runs
+arrangement is deferred to ADR-0019; what this ADR fixes is that whatever it is, it runs
 inside the compose stack and needs no cloud account.
 
 **Scope note.** An earlier draft of this ADR claimed a local issuer makes the
 application's auth path "identical in every topology." That is true only of token
 validation. Issuer-side behaviour — dynamic client registration, claim shapes, scope
-encoding — can still diverge, and the DCR shim is custom code. ADR-0020 addresses what
+encoding — can still diverge, and the DCR shim is custom code. ADR-0019 addresses what
 must actually be held constant.
 
 ## Alternatives rejected
@@ -72,7 +72,7 @@ nobody who could catch its bugs.
 
 **Accepted costs.**
 - At least one additional container in the local stack.
-- Whatever ADR-0020 settles on must be pinned and tracked for security updates like any
+- Whatever ADR-0019 settles on must be pinned and tracked for security updates like any
   other dependency.
 
 **Follow-on obligations.**

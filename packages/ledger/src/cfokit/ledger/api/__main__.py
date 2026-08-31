@@ -1,6 +1,6 @@
 """``python -m cfokit.ledger.api`` — run the REST service.
 
-One of the entrypoints this image provides (ADR-0025). Migrations are never applied here;
+One of the entrypoints this image provides (ADR-0023). Migrations are never applied here;
 they are a separate, explicitly invoked job (ADR-0004).
 """
 

@@ -13,7 +13,7 @@ and both are closed here: the scan read only markdown outside ``docs/decisions/`
 every drifted file was YAML, SQL, or a ``.gitkeep``; and it asked whether a cited number
 existed rather than whether it was the right one.
 
-Semantic correctness is not mechanically checkable — no test can know that ADR-0010 is
+Semantic correctness is not mechanically checkable — no test can know that ADR-0009 is
 the record about protocol adapters. What *is* checkable is agreement between a citation
 and its target, which is the form the drift actually took.
 """
@@ -48,8 +48,8 @@ CITING_NAMES = {".gitkeep"}
 # Inline markdown links, excluding images.
 LINK = re.compile(r"(?<!!)\[[^\]]*\]\(([^)]+)\)")
 ADR_REFERENCE = re.compile(r"ADR-(\d{4})")
-# A link whose text names a record: [ADR-0020](…/0020-identity-provider….md)
-ADR_LINK = re.compile(r"\[ADR-(\d{4})\]\(([^)]+)\)")
+# A link whose text names a record: [ADR-0019](…/0020-identity-provider….md)
+ADR_LINK = re.compile(r"\[(?:ADR-)?(\d{4})\]\(([^)]+)\)")
 ADR_HEADING = re.compile(r"^# ADR-(\d{4})\b", re.MULTILINE)
 # An index row pointing at a record file.
 INDEX_ENTRY = re.compile(r"\((\d{4}-[a-z0-9-]+\.md)\)")
@@ -144,8 +144,8 @@ def test_adr_link_text_matches_its_target(source: Path) -> None:
     """A link reading [ADR-NNNN] must point at record NNNN.
 
     Catches the renumbering failure directly: the label and the path disagree, both halves
-    resolve, and nothing else notices. The root README carried exactly this — [ADR-0021]
-    pointing at `0020-identity-provider-conformance-contract.md`.
+    resolve, and nothing else notices. The root README carried exactly this — [ADR-0020]
+    pointing at `0019-identity-provider-conformance-contract.md`.
     """
     mismatched: list[str] = []
     for cited, target in ADR_LINK.findall(source.read_text(encoding="utf-8")):

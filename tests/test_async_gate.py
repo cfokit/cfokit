@@ -1,4 +1,4 @@
-"""The gate keeping the ledger synchronous must actually catch a violation (ADR-0026).
+"""The gate keeping the ledger synchronous must actually catch a violation (ADR-0024).
 
 A gate nobody has seen fail has not been verified.
 """
@@ -68,7 +68,7 @@ def test_service_layer_is_not_allowed() -> None:
 
 
 def test_rest_adapter_is_not_allowed() -> None:
-    """REST has no async requirement and is deliberately outside the allowlist (ADR-0026)."""
+    """REST has no async requirement and is deliberately outside the allowlist (ADR-0024)."""
     api = REPO_ROOT / "packages/ledger/src/cfokit/ledger/api/__init__.py"
     assert not is_allowed(api)
 
@@ -81,7 +81,7 @@ def test_the_ledger_is_what_gets_checked() -> None:
 
 def test_components_and_modules_are_not_checked() -> None:
     """Ingestion and delivery are I/O-bound against third parties, and a component is a
-    separate runtime reaching the ledger over HTTP (ADR-0024, ADR-0025). Its execution model
+    separate runtime reaching the ledger over HTTP (ADR-0022, ADR-0023). Its execution model
     cannot reach the write path, so the gate does not constrain it."""
     connectors = REPO_ROOT / "packages/connectors/src/cfokit/connectors/__init__.py"
     assert not is_checked(connectors)

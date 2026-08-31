@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The ledger stays synchronous; async is permitted outside it (ADR-0026).
+"""The ledger stays synchronous; async is permitted outside it (ADR-0024).
 
 The boundary is the ledger, not the codebase. What the rule protects is code holding a
 transaction and an advisory lock, where an `await` can yield mid-transaction: `engine`,
@@ -8,7 +8,7 @@ is exempt because the MCP SDK is async.
 
 Modules and components are deliberately not checked. Ingestion, invoice delivery and
 notifications are I/O-bound against third parties, and a component is a separate runtime
-reaching the ledger over HTTP (ADR-0024, ADR-0025), so its execution model cannot reach the
+reaching the ledger over HTTP (ADR-0022, ADR-0023), so its execution model cannot reach the
 write path.
 
 Why this needs a machine check rather than a rule: the failure is silent. An `await` added to a
@@ -31,7 +31,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # The gate covers the ledger only. Modules and components choose their own execution model.
 CHECKED_PREFIX = "packages/ledger/src/cfokit/ledger/"
 
-# Paths inside the checked tree that may still contain async. Adding one is an ADR-0026 change.
+# Paths inside the checked tree that may still contain async. Adding one is an ADR-0024 change.
 ALLOWED_PREFIXES = ("packages/ledger/src/cfokit/ledger/mcp/",)
 
 ASYNC_MODULES = frozenset({"asyncio", "anyio", "trio"})
@@ -85,13 +85,13 @@ def main() -> int:
         for number, what in offending_nodes(source):
             text = lines[number - 1].strip() if number <= len(lines) else ""
             rel = path.relative_to(REPO_ROOT)
-            print(f"{rel}:{number}: {what} inside the ledger (ADR-0026)")
+            print(f"{rel}:{number}: {what} inside the ledger (ADR-0024)")
             print(f"    {text}")
             failures += 1
 
     if failures:
         print(f"\nAsync boundary violated: {failures} occurrence(s).")
-        print("The ledger stays synchronous. Widening this is an ADR-0026 change.")
+        print("The ledger stays synchronous. Widening this is an ADR-0024 change.")
         return 1
 
     print(f"Async boundary holds: {checked} ledger file(s) outside mcp/, none async.")

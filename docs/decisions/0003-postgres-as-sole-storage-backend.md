@@ -1,5 +1,5 @@
 ---
-status: "accepted"
+status: "draft"
 kind: "requirement-driven"
 date: 2026-08-16
 decision-makers: [Geoff]
@@ -56,7 +56,7 @@ including for local development.
 * Good, because the zero-sum invariant can be enforced by a deferred constraint trigger
   rather than by application code alone (ADR-0006).
 * Good, because `pg_advisory_xact_lock` gives per-entity write serialization directly
-  (ADR-0012).
+  (ADR-0011).
 * Good, because ad-hoc reporting is `SUM()` over postings rather than a set of access
   patterns designed in advance.
 * Bad, because self-hosters run a Postgres container rather than nothing.
@@ -109,7 +109,7 @@ tenancy; the deferred constraint trigger (ADR-0006) enforces zero-sum.
   become mandatory from day one rather than an optimization introduced under profiler evidence.
 * Bad, because **backdating becomes structural**. With materialized balances, a backdated entry
   requires rewriting every downstream balance item in 100-item non-atomic batches. The
-  backdating policy stops being a choice (ADR-0014).
+  backdating policy stops being a choice (ADR-0013).
 * Bad, because there are **no cross-item constraints**. The zero-sum invariant would live only
   in application code. For a system whose value proposition is that the books are correct,
   losing the database-level guard against silently creating money is disqualifying.
@@ -130,7 +130,7 @@ The strongest serverless option — GA 27 May 2025. **Not rejected on merit, but
   targeted code changes, not a port. That is why it is deferred rather than chosen now, and
   why no DynamoDB path is kept open.
 * Bad, because it supports neither triggers (breaking the deferred zero-sum constraint) nor
-  advisory locks (breaking the entity write lock in ADR-0012).
+  advisory locks (breaking the entity write lock in ADR-0011).
 * Bad, because it fixes isolation at Repeatable Read and uses optimistic concurrency requiring
   commit-time retry logic.
 * Neutral, because RLS support is unverified.
@@ -140,7 +140,7 @@ The strongest serverless option — GA 27 May 2025. **Not rejected on merit, but
 **Follow-on obligations.**
 
 - Deferred constraint trigger for zero-sum (ADR-0006).
-- `pg_advisory_xact_lock` per entity on all writes (ADR-0012).
+- `pg_advisory_xact_lock` per entity on all writes (ADR-0011).
 - Row-level security keyed on `entity_id`, plus explicit service-layer filtering.
 - `compose.yaml` bringing up service and Postgres, exercised in CI (ADR-0004).
 

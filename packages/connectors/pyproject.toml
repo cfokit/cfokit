@@ -3,11 +3,11 @@ name = "cfokit-connectors"
 version = "0.0.0"
 description = "Transaction feed ingestion — bank and payment-processor connectors"
 readme = "README.md"
-license = "MIT"
+license = "Apache-2.0"
 requires-python = ">=3.12"
 
 # Deliberately does not depend on cfokit-ledger. Connectors reach the ledger over its
-# public API, and import-linter enforces it (ADR-0015).
+# public API, and import-linter enforces it (ADR-0014).
 dependencies = []
 
 [build-system]
