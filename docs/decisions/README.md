@@ -136,6 +136,45 @@ module, so ingestion, delivery and AR are free to be async. The record also no l
 that synchronous code makes the ledger concurrency-safe — it removes an `await` mid-transaction,
 and the guarantees come from ADR-0006 and ADR-0011.
 
-**Known conflicts, not yet resolved.** None. The period-close contradiction between ADR-0007,
-ADR-0013 and `LED-11` is settled in favour of `LED-11`: a closed period is reopened, never
-overridden. The licence is settled in ADR-0026.
+**Resolved.** The period-close contradiction between ADR-0007, ADR-0013 and `LED-11` is settled in
+favour of `LED-11`: a closed period is reopened, never overridden. The licence is settled in
+ADR-0026.
+
+### The SOC 1 and SOC 2 sections were never swept
+
+Sections 7 and 8 of `requirements.md` carry about seventy `Must` requirements, and **no decision
+record cites one of them**. That disconnection is how ADR-0013 came to specify an acknowledgement
+parameter while `SOC1-17` already required an administrative reopen with no privileged path around
+it — neither document was wrong on its own terms, and nothing compared them.
+
+A sweep found five conflicts and eight unserved requirements. None is fixed.
+
+**Conflicts.**
+
+| Conflict | Where |
+|---|---|
+| `SOC1-25` requires the acting principal's own credential to flow through, "never against a shared credential with the real actor passed as a parameter". Components authenticate by client credentials and assert which user is acting — the intersection of grants mitigates this but does not satisfy it. The fix is OAuth token exchange (RFC 8693), which ADR-0019's conformance contract also does not require | ADR-0021, ADR-0023, ADR-0019 |
+| `SOC1-15` puts actor class on the entry "in the data itself, not only in an audit record", and `SOC1-06`, `SOC1-34` and `SOC1-35` add model and skill versions against it. ADR-0022 says the ledger knows nothing about agents. Its boundary test has no answer for this | ADR-0022 |
+| `SOC2-19` requires refusing a session where the issuer does not assert MFA, and `SOC2-20` requires central session revocation reaching skills. ADR-0019's conformance contract enumerates six issuer capabilities and includes neither, so a conforming issuer satisfies neither requirement | ADR-0019 |
+| `SOC1-22` requires audit records in storage the application cannot modify or delete by any code path, administrative ones included. ADR-0003 permits only Postgres and does not address how | ADR-0003 |
+| `SOC2-03` requires an agent turn reading untrusted content to hold a reduced capability set, enforced at the interface, so reading a document and writing to the ledger are not simultaneously available. The published tool surface has no notion of a reduced capability set | ADR-0015, ADR-0009 |
+
+**`Must` requirements no record serves.**
+
+| Requirement | What it needs decided |
+|---|---|
+| `SOC1-08` | Gapless verifiable sequencing — sequence numbers, a hash chain, or both, with different failure modes |
+| `SOC1-04`, `SOC1-33` | Per-entity versioned configuration of what an agent may complete without a person |
+| `SOC1-28`–`SOC1-32` | The exception queue: durable, dispositioned, reportable. A subsystem, not a field |
+| `SOC1-27`, `SOC2-23` | Break-glass operator access — time-bounded, individually authorised, visible to the customer |
+| `SOC2-09`, `SOC2-10` | A provider registry the system maintains, enforcing zero-retention terms as configuration validation |
+| `SOC2-16` | Entity isolation across derived artifacts — embeddings, conversation memory, indexes |
+| `SOC2-18` | Deletion reaching derived artifacts and representations held by a provider |
+| `SOC2-14` | Key custody, rotation, and revoking access to encrypted data as deployment properties |
+
+**Not every one of these wants an ADR.** Several are foreclosed by the requirement that states them —
+`SOC1-25` has no live alternative, and a record would add ceremony rather than reasoning. Sections 7
+and 8 already annotate their own architectural consequences in place, which is most of what a record
+would say. What earns a record is where the requirement leaves genuine latitude: `SOC1-08` is a real
+choice between mechanisms with different failure modes, and `SOC1-28`–`32` is a subsystem whose shape
+is not implied by anything.
