@@ -7,7 +7,7 @@ decision-makers: [Geoff]
 
 # ADR-0013: Two dates per transaction; a closed period is reopened, never overridden
 
-**Requirements served:** `LED-09`, `RPT-11`.
+**Requirements served:** `LED-09`, `LED-11`, `RPT-11`, `SOC1-17`.
 
 ## Context
 
@@ -41,7 +41,10 @@ and what happens to figures already reported?**
 `LED-09` obliges every transaction to carry both the date the event occurred and the date it was
 recorded, and permits backdating into an open period provided it is never silent. `RPT-11` obliges
 any report to be reproducible as the books stood at an earlier moment. `LED-11` obliges a closed
-period to admit no posting except through a recorded reopening. This record does not restate those.
+period to admit no posting except through a recorded reopening, and `SOC1-17` states the same rule
+in the register an examiner reads: a closed period *"admits nothing from any actor over any
+interface, agents included, and reopening it requires an administrative role, is recorded, and
+captures the reason. There is no privileged path around either."* This record does not restate those.
 It decides how they are met, and settles what happens at the boundary.
 
 ### 1. Bitemporality is free, so nothing is built for it
@@ -81,7 +84,8 @@ period end are the management-override fraud vector.
 
 Most CFOKit entities will have one person. Segregation of duties is then impossible and `IAM-17`
 says the system must not raise it. So the control that matters is not person against person — it is
-person against agent. A skill's principal never holds the capability to reopen a period. The agent
+person against agent. `SOC1-17` requires an administrative role to reopen and forbids a privileged path around it. A
+skill's principal never holds that capability. The agent
 can draft, it can post into an open period, and when it meets a closed one it must ask.
 
 This is what the acknowledgement parameter could not do. Its own follow-on obligation conceded as
@@ -208,9 +212,8 @@ append-only ledger already provides the history dimension without a second mecha
 - A reopen that is not followed by a re-close leaves the period open, which must be visible. An
   entity with a period left open by an abandoned correction is a condition to surface, not a state
   to tolerate.
-- **Whether reopening a period reopens the ones after it.** NetSuite cascades, because closing
-  entries chain. `LED-12` closes income and expense to retained earnings at year end, so a reopen
-  behind a year-end has to reckon with that. Undecided here and needs settling before close ships.
+- Reopening scope is settled in ADR-0027: a reopen touches one period, and a year-end close that a
+  later posting makes stale is reversed and re-run.
 - **Revisit this record when lot tracking activates** (LED-18). Reintroducing lots reintroduces the
   cascade, and rule 3 alone will not be sufficient — a backdated acquisition would then need
   downstream basis recalculation, which is the `rebook` operation currently deferred.

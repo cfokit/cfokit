@@ -68,6 +68,7 @@ cost the same context as inlining, while diluting adherence to the rules that ma
 | [0024](0024-synchronous-application-code.md) | The ledger is synchronous; async is permitted outside it | Draft |
 | [0025](0025-rounding-and-allocation.md) | The ledger never rounds; presentation rounds half-up, allocation uses largest remainder | Draft |
 | [0026](0026-apache-2-0-as-the-project-licence.md) | Apache 2.0 is the project licence | Draft |
+| [0027](0027-reopening-does-not-cascade.md) | Reopening does not cascade; a stale year-end close is re-run | Draft |
 
 ## Deferred — decided in principle, waiting on a need
 
@@ -83,7 +84,6 @@ designing a boundary around a guess (ADR-0012).
 
 | Question | Where |
 |---|---|
-| Whether reopening a closed period reopens the ones after it, given `LED-12` closes income and expense to retained earnings at year end | ADR-0013 |
 | Whether CFOKit uses a specification workflow, and which one | ADR-0001 leaves this open; Spec Kit was adopted and removed, and its record is deleted |
 | How rendered report output works | RPT-13 — needs a record through the ADR-0012 scope gate, as ADR-0021 took for Slack |
 
