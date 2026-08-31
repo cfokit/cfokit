@@ -5,7 +5,7 @@ date: 2026-08-19
 decision-makers: [Geoff]
 ---
 
-# ADR-0026: Application code is synchronous; async is confined to the MCP module
+# ADR-0026: The ledger is synchronous; async is permitted outside it
 
 > **This record also fixes a gap.** `CLAUDE.md` has carried "Synchronous throughout — do not
 > introduce async without an ADR" citing ADR-0013, but ADR-0013 never mentions async: its non-goals
@@ -60,25 +60,42 @@ were genuinely problematic, that pairing would not be ubiquitous.
 
 ## Decision
 
-**Application code is synchronous. The transport may not be.**
+**The ledger's write path is synchronous. Everything else may choose.**
 
-- **No `async def`, no `await`, no `asyncio`/`anyio`/`trio` import** in `engine`, `repository`,
-  `service`, or the `api` adapter.
-- **The one exception is `cfokit.ledger.mcp`**, because the SDK requires it. That module owns its own
-  event loop and may block it calling synchronous service code; the loop serves only MCP and the work
-  is short.
+The boundary is the ledger, not the language. What the argument below actually supports is keeping
+`await` out of code that holds a transaction and an advisory lock — which is the ledger, and nothing
+else.
+
+- **No `async def`, no `await`, no `asyncio`/`anyio`/`trio` import** in the ledger's `engine`,
+  `repository`, `service`, or `api` adapter.
+- **`cfokit.ledger.mcp` is exempt**, because the SDK requires it. That module owns its own event loop
+  and may block it calling synchronous service code; the loop serves only MCP and the work is short.
+- **Modules and components are unconstrained.** Ingestion, invoice delivery, notifications and email
+  are I/O-bound against third parties, which is the workload async exists for. A component is a
+  separate runtime reaching the ledger over HTTP (ADR-0024, ADR-0025), so its execution model costs
+  the write path nothing. An in-process module sharing the ledger's transaction is bound by the first
+  rule for that work, and free otherwise.
 - **REST is FastAPI**, with **synchronous `def` handlers only**. The event loop lives in the server,
   not in our code. OpenAPI generation is native, which CI gate 5 requires as a committed, diffed
   artifact (ADR-0016).
-- **Nothing async crosses out of `mcp`.** Coroutines, tasks, and async context managers do not leave
-  that module. What the service layer receives and returns is ordinary synchronous Python.
+- **Nothing async crosses into the service layer.** Coroutines, tasks, and async context managers do
+  not reach it. What it receives and returns is ordinary synchronous Python.
 - ADR-0010 is preserved: MCP still calls the service layer **in-process**, which meant *not looping
   back through HTTP*, and still does.
 
-**Enforced, not asserted.** `scripts/check_async.py` walks the AST of everything under `packages/`
-and fails on async constructs outside the allowlisted module. It runs inside `uv run task lint`,
-beside the import-linter contracts. This matters *more* under FastAPI than it would have under Flask:
-the framework now permits `async def`, and the gate is what makes choosing not to use it a property
+**What this does not do.** Synchronous code does not make the ledger single-threaded and does not
+eliminate concurrency. The service scales horizontally, so two instances write the same entity
+concurrently as a matter of course; sync `def` handlers run in anyio's threadpool, forty at a time by
+default; and database anomalies are unaffected by the calling convention. Concurrency safety comes
+from `pg_advisory_xact_lock` per entity, the deferred zero-sum trigger, mandatory idempotency keys
+and row-level security (ADR-0003, ADR-0006, ADR-0012) — every one of which holds identically under
+`AsyncConnection`. What sync buys is narrower and worth stating exactly: **an `await` inside a
+transaction is not expressible.** It removes a footgun; it does not supply a guarantee.
+
+**Enforced, not asserted.** `scripts/check_async.py` walks the AST of the ledger package and fails on
+async constructs outside `cfokit.ledger.mcp`. It runs inside `uv run task lint`, beside the
+import-linter contracts. This matters *more* under FastAPI than it would have under Flask: the
+framework now permits `async def`, and the gate is what makes choosing not to use it a property
 rather than a preference.
 
 ## Alternatives rejected

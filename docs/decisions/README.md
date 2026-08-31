@@ -66,7 +66,7 @@ cost the same context as inlining, while diluting adherence to the rules that ma
 | [0023](0023-slack-as-a-delivery-surface.md) | Slack is a delivery surface, built as a separate component over HTTP events | Accepted |
 | [0024](0024-tiny-ledger-modules-and-components.md) | The ledger stays tiny; everything else is an in-process module or a separate component | Accepted |
 | [0025](0025-component-deployment-and-authentication.md) | Components ship as one image with many entrypoints; authenticate as OAuth clients | Accepted |
-| [0026](0026-synchronous-application-code.md) | Application code is synchronous; async confined to the MCP module | Accepted |
+| [0026](0026-synchronous-application-code.md) | The ledger is synchronous; async is permitted outside it | Accepted |
 | [0027](0027-rounding-and-allocation.md) | The ledger never rounds; presentation rounds half-up, allocation uses largest remainder | Accepted |
 
 ## Deferred — decided in principle, waiting on a need
@@ -126,14 +126,16 @@ requirement needing a record lacks one. `RPT-13` is the known instance of the se
 
 ADR-0026 is reclassified `substrate`. Nothing in the requirements forces the synchronous choice;
 its reasoning rests on workload and on the MCP SDK, and a different product of this shape would
-face the same question. Its scope is separately in doubt — see below.
+face the same question. Its scope has been corrected: the boundary is the ledger, not the MCP
+module, so ingestion, delivery and AR are free to be async. The record also no longer implies
+that synchronous code makes the ledger concurrency-safe — it removes an `await` mid-transaction,
+and the guarantees come from ADR-0006 and ADR-0012.
 
 **Known conflicts, not yet resolved.**
 
 | Conflict | Where |
 |---|---|
 | Period close is advisory and backdating into a closed period needs only acknowledgement — but `LED-11` requires a recorded reopening, which is the alternative ADR-0014 rejected by name | ADR-0007, ADR-0014 |
-| Async is confined to `cfokit.ledger.mcp`, and `scripts/check_async.py` enforces that across all of `packages/`. Ingestion, delivery and AR are I/O-bound and will want async; components are separate runtimes where it costs the ledger nothing. The boundary is probably the ledger, not the MCP module | ADR-0026 |
 | Licence is "deliberately left open", yet `LICENSE`, `pyproject.toml`, `README.md` and ADR-0017's rejection of Terraform all rely on MIT, and `NFR-14` makes permissive licensing a Must | ADR-0002, ADR-0017 |
 | Prescribes `specs/` and an accounting-policy artifact kind, both since retired | ADR-0021 |
 | Status is `deprecated`; ADR-0001 replaced its decision, so `superseded by ADR-0001` is the accurate status under rule 2 | ADR-0022 |

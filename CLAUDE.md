@@ -88,10 +88,14 @@ otherwise get wrong, because absence isn't visible in a manifest:
 - **No ORM.** Hand-written SQL in the repository module. Do not introduce SQLAlchemy,
   SQLModel, or a query builder. Auditability requirement. (ADR-0009)
 - **`uv` only.** Not pip, not poetry.
-- **Application code is synchronous; the transport is not.** No `async def`, no `await`, no
-  `asyncio`/`anyio`/`trio` import in engine, repository, service, or the REST `api` adapter.
-  The one exception is `cfokit.ledger.mcp`, because the MCP SDK is async. `uv run task lint`
-  fails on a violation; widening the allowlist is an ADR change. (ADR-0026)
+- **The ledger is synchronous; the transport is not, and neither is anything outside it.** No
+  `async def`, no `await`, no `asyncio`/`anyio`/`trio` import in the ledger's engine, repository,
+  service, or REST `api` adapter. `cfokit.ledger.mcp` is exempt because the MCP SDK is async.
+  **Modules and components choose their own execution model** — ingestion and delivery are
+  I/O-bound and a component is a separate runtime anyway. The rule protects code holding a
+  transaction and an advisory lock, and nothing else; it removes a footgun rather than supplying
+  a concurrency guarantee, which comes from ADR-0006 and ADR-0012. `uv run task lint` fails on a
+  violation inside the ledger. (ADR-0026)
 - **REST is FastAPI with synchronous `def` handlers only.** The event loop lives in the
   server, not in our code. `async def` handlers are the normal way to write FastAPI and are
   forbidden here — the driver is blocking, so they would gain nothing and would make an
