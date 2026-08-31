@@ -1,7 +1,7 @@
 """Schema migrations, applied by an explicit command and never at startup (ADR-0004).
 
 Migrations ship inside the package so the same files are available in the container, on
-a laptop, and in CI. They are plain SQL, in keeping with the no-ORM decision (ADR-0009).
+a laptop, and in CI. They are plain SQL, in keeping with the no-ORM decision (ADR-0008).
 
 Naming: ``NNNN-short-description.sql``, applied in lexical order, never renumbered.
 """

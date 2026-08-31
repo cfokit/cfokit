@@ -12,10 +12,10 @@
 --   ADR-0005  Decimal everywhere; every decimal column is NUMERIC(28,10)
 --   ADR-0006  Zero-sum enforced by a deferred constraint trigger, at posting
 --   ADR-0007  Immutable at posting; corrections are reversing entries
---   ADR-0012  Idempotency keys; one audit_log row per state change
---   ADR-0014  Two dates per transaction, so backdating is self-identifying
---   REQ-A6    Lots deferred, but the shape is reserved
---   REQ-A8    Accounting basis and fiscal year are entity properties
+--   ADR-0011  Idempotency keys; one audit_log row per state change
+--   ADR-0013  Two dates per transaction, so backdating is self-identifying
+--   LED-18    Lots deferred, but the shape is reserved
+--   LED-14    Accounting basis and fiscal year are entity properties
 
 -- ---------------------------------------------------------------------------
 -- Migration bookkeeping. The runner creates this if absent, but declaring it
@@ -29,13 +29,13 @@ CREATE TABLE IF NOT EXISTS schema_migration (
 
 -- ---------------------------------------------------------------------------
 -- Entities. One deployment holds books for many; nothing crosses the boundary
--- without an explicit grant (REQ-A2).
+-- without an explicit grant (LED-13).
 -- ---------------------------------------------------------------------------
 CREATE TABLE entity (
     id                    uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
     slug                  text        NOT NULL UNIQUE,
     name                  text        NOT NULL,
-    -- REQ-A8: a property of the entity, not a per-report option. Changing it is a
+    -- LED-14: a property of the entity, not a per-report option. Changing it is a
     -- significant event, not a preference.
     accounting_basis      text        NOT NULL CHECK (accounting_basis IN ('cash', 'accrual')),
     fiscal_year_end_month smallint    NOT NULL CHECK (fiscal_year_end_month BETWEEN 1 AND 12),
@@ -68,7 +68,7 @@ CREATE TABLE ledger_transaction (
     entity_id        uuid        NOT NULL REFERENCES entity (id),
     -- ADR-0007: posting is the point of no return. Drafts are freely editable.
     status           text        NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'posted')),
-    -- ADR-0014: two dates. transaction_date is when it economically occurred;
+    -- ADR-0013: two dates. transaction_date is when it economically occurred;
     -- recorded_at is when it entered the books. Backdating is these diverging, which
     -- makes every backdated entry self-identifying with no flag required. recorded_at
     -- is also what makes "the books as we knew them at T" a plain WHERE clause.
@@ -83,7 +83,7 @@ CREATE TABLE ledger_transaction (
 
 CREATE INDEX ledger_transaction_entity_date_idx
     ON ledger_transaction (entity_id, transaction_date);
--- Supports "as known at T" reporting (ADR-0014).
+-- Supports "as known at T" reporting (ADR-0013).
 CREATE INDEX ledger_transaction_recorded_idx ON ledger_transaction (entity_id, recorded_at);
 
 -- ---------------------------------------------------------------------------
@@ -96,7 +96,7 @@ CREATE TABLE posting (
     account_id     uuid           NOT NULL REFERENCES account (id),
     amount         numeric(28,10) NOT NULL,
     commodity      text           NOT NULL,
-    -- REQ-A6: lot tracking is deferred until an entity holds inventory or investments.
+    -- LED-18: lot tracking is deferred until an entity holds inventory or investments.
     -- The shape is reserved from the first migration because ADR-0003 already presumes
     -- lot state, and adding these later is a migration on the most-written table.
     -- Nothing populates them yet.
@@ -111,7 +111,7 @@ CREATE INDEX posting_transaction_idx ON posting (transaction_id);
 CREATE INDEX posting_account_idx ON posting (entity_id, account_id);
 
 -- ---------------------------------------------------------------------------
--- Audit trail. Exactly one row per state-changing service call (ADR-0012).
+-- Audit trail. Exactly one row per state-changing service call (ADR-0011).
 -- ---------------------------------------------------------------------------
 CREATE TABLE audit_log (
     id           uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -132,7 +132,7 @@ CREATE INDEX audit_log_subject_idx ON audit_log (subject_type, subject_id);
 
 -- ---------------------------------------------------------------------------
 -- Idempotency. Mandatory on writes; a replay returns the original result rather
--- than applying the operation again (ADR-0012).
+-- than applying the operation again (ADR-0011).
 -- ---------------------------------------------------------------------------
 CREATE TABLE idempotency_key (
     entity_id    uuid        NOT NULL REFERENCES entity (id),

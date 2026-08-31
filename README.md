@@ -36,5 +36,7 @@ docs/        Vision, requirements, and decision records
 
 ## License
 
-MIT. No copyleft component ships in the distributed artifact — see
-[ADR-0020](docs/decisions/0020-identity-provider-conformance-contract.md).
+Apache License 2.0. It carries an explicit patent grant, makes contributions
+inbound-equals-outbound without a separate CLA, and reserves the project's name — see
+[ADR-0026](docs/decisions/0026-apache-2-0-as-the-project-licence.md). No copyleft component
+ships in the distributed artifact ([ADR-0019](docs/decisions/0019-identity-provider-conformance-contract.md)).

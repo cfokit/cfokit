@@ -23,7 +23,7 @@ Give every business a finance function it can afford to run.
 | **GitHub** | `github.com/cfokit/cfokit` |
 | **Domain** | cfokit.ai |
 | **Brand** | The open source CFO toolkit |
-| **Licence** | MIT |
+| **Licence** | Apache 2.0 |
 
 ## The problem
 
@@ -186,7 +186,7 @@ does, on top of running the business, and a guidance skill answers the questions
 actually asks about runway, margin, and whether a hire is affordable. It states its limits, and
 sends anything turning on tax election, entity structure, or financing to a professional.
 
-The software is MIT licensed and runs on a laptop with no cloud account. The hosted service
+The software is Apache 2.0 licensed and runs on a laptop with no cloud account. The hosted service
 is the same software, operated under third-party audit.
 
 ### What it displaces
@@ -272,7 +272,7 @@ a slogan; these are the statements CFOKit can be held to.
 
 ## The commercial thesis
 
-CFOKit is MIT licensed and stays that way. Anyone can run it, fork it, or build on it without
+CFOKit is Apache 2.0 licensed and stays that way. Anyone can run it, fork it, or build on it without
 asking, and the self-hosted build is complete rather than a limited edition.
 
 The commercial product is the hosted service, and what it sells is assurance.
@@ -339,7 +339,7 @@ reconstructed in April, and straight answers about what you can afford.
 of every engagement goes to making an inherited ledger trustworthy. A client on CFOKit
 arrives closed, current, and traceable, so the engagement is the work you sell.
 
-**For the developer.** MIT licensed, so you can run it, fork it, or build on it without asking
+**For the developer.** Apache 2.0 licensed, so you can run it, fork it, or build on it without asking
 anyone. It comes up in one command with no cloud account and no signup, the booking engine is
 tested against an independent implementation rather than against its own assumptions, and
 adding a bank or a payment provider is an additive change against a stable extension point.
@@ -383,7 +383,7 @@ open source agents – here's the ledger design"
 > • Bank and card feeds in, categorised by rules you approve once
 > • Real double-entry, append-only, tested against Beancount
 > • Statements a lender or your accountant will accept
-> • MIT licensed, runs on your laptop, no cloud account
+> • Apache 2.0 licensed, runs on your laptop, no cloud account
 >
 > github.com/cfokit/cfokit
 

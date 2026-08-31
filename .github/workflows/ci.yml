@@ -123,7 +123,7 @@ jobs:
         run: docker compose -f compose.yaml down -v
 
   # Gate 3 — differential test against the Beancount oracle, every divergence documented
-  # (ADR-0011). Beancount is a CI-only dependency and never ships in the artifact.
+  # (ADR-0010). Beancount is a CI-only dependency and never ships in the artifact.
   #
   # Enabled in M2, when the booking engine exists.
   #
@@ -137,7 +137,7 @@ jobs:
   #     - run: uv run pytest -m oracle
 
   # Gate 5 — generated OpenAPI and MCP tool descriptions match what is committed; a diff
-  # means a contract change and needs review (ADR-0016).
+  # means a contract change and needs review (ADR-0015).
   #
   # Enabled in M4, when the adapters exist.
   #

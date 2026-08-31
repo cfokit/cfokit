@@ -1,4 +1,4 @@
-"""The gate confining async to the MCP module must actually catch a violation (ADR-0026).
+"""The gate keeping the ledger synchronous must actually catch a violation (ADR-0024).
 
 A gate nobody has seen fail has not been verified.
 """
@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from check_async import is_allowed, offending_nodes
+from check_async import is_allowed, is_checked, offending_nodes
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -45,7 +45,7 @@ def test_anyio_and_trio_are_caught() -> None:
 
 def test_prose_mentioning_async_is_not_flagged() -> None:
     """Documentation of the rule must not trip the gate."""
-    source = '"""Async is permitted only inside the MCP module. Never await here."""\n'
+    source = '"""Async is permitted only inside cfokit.ledger.mcp. Never await here."""\n'
     assert offending_nodes(source) == []
 
 
@@ -68,6 +68,20 @@ def test_service_layer_is_not_allowed() -> None:
 
 
 def test_rest_adapter_is_not_allowed() -> None:
-    """REST has no async requirement and is deliberately outside the allowlist (ADR-0026)."""
+    """REST has no async requirement and is deliberately outside the allowlist (ADR-0024)."""
     api = REPO_ROOT / "packages/ledger/src/cfokit/ledger/api/__init__.py"
     assert not is_allowed(api)
+
+
+def test_the_ledger_is_what_gets_checked() -> None:
+    """The rule protects code holding a transaction and a lock, which is the ledger."""
+    assert is_checked(REPO_ROOT / "packages/ledger/src/cfokit/ledger/service/__init__.py")
+    assert is_checked(REPO_ROOT / "packages/ledger/src/cfokit/ledger/repository/__init__.py")
+
+
+def test_components_and_modules_are_not_checked() -> None:
+    """Ingestion and delivery are I/O-bound against third parties, and a component is a
+    separate runtime reaching the ledger over HTTP (ADR-0022, ADR-0023). Its execution model
+    cannot reach the write path, so the gate does not constrain it."""
+    connectors = REPO_ROOT / "packages/connectors/src/cfokit/connectors/__init__.py"
+    assert not is_checked(connectors)

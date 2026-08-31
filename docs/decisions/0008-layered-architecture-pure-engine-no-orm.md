@@ -1,18 +1,20 @@
 ---
-status: "accepted"
+status: "draft"
 kind: "requirement-driven"
 date: 2026-08-17
 decision-makers: [Geoff]
 ---
 
-# ADR-0009: Four layers with a pure booking engine, and hand-written SQL rather than an ORM
+# ADR-0008: Four layers with a pure booking engine, and hand-written SQL rather than an ORM
+
+**Requirements served:** `NFR-01`, `RPT-08`, `PLT-16`.
 
 ## Context and Problem Statement
 
 CFOKit's claim is that the books are correct. Two consequences follow for internal structure.
 
 **Booking semantics must be testable without infrastructure.** The correctness of double-entry
-booking is verified differentially against an independent implementation (ADR-0011). If booking
+booking is verified differentially against an independent implementation (ADR-0010). If booking
 logic can only run with a database attached, every oracle comparison needs fixtures, a live
 Postgres, and transaction management — which makes the comparison slow, flaky, and therefore
 run rarely. Property-based testing of booking rules becomes impractical for the same reason.
@@ -22,16 +24,16 @@ preference. When someone asks what statement moved money, the answer has to be a
 read, not a query that a library composed at runtime from session state.
 
 Against this, the service has ordinary needs — orchestration, audit logging, entity locking,
-grant validation, and two protocol adapters (ADR-0010) — which have to live somewhere that is
+grant validation, and two protocol adapters (ADR-0009) — which have to live somewhere that is
 neither the pure logic nor the SQL.
 
 ## Decision Drivers
 
 * Booking logic must be evaluable with no database attached, or the differential oracle
-  (ADR-0011) becomes too slow to run often.
+  (ADR-0010) becomes too slow to run often.
 * The statement that touches the books must be readable in a file, for audit.
 * Precise control of transaction and statement boundaries, which the deferred trigger (ADR-0006)
-  and advisory locking (ADR-0012) both require.
+  and advisory locking (ADR-0011) both require.
 * The guarantee must be static and enforced, not a convention review protects.
 
 ## Considered Options
@@ -63,7 +65,7 @@ engine        pure booking logic
 ### Consequences
 
 * Good, because booking logic is differentially testable against Beancount with no infrastructure
-  (ADR-0011).
+  (ADR-0010).
 * Good, because the SQL that moves money is a file someone can read.
 * Bad, because row-to-object mapping is written by hand, and it is tedious.
 * Bad, because there is no migration autogeneration. Migrations are hand-written SQL, applied by
@@ -97,7 +99,7 @@ The default choice in Python, and genuinely attractive.
   module to see what runs against the books" stops being true, and that sentence is load-bearing
   for this project.
 * Bad, because **it fights the specific patterns this system depends on.** A deferred constraint
-  trigger (ADR-0006) and `pg_advisory_xact_lock` per entity (ADR-0012) both require precise
+  trigger (ADR-0006) and `pg_advisory_xact_lock` per entity (ADR-0011) both require precise
   control of transaction and statement boundaries. The unit-of-work pattern exists to take that
   control away, so every such site becomes an escape hatch into raw SQL anyway — leaving the ORM's
   cost without its benefit.

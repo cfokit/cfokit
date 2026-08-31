@@ -1,5 +1,5 @@
 ---
-status: "accepted"
+status: "draft"
 kind: "requirement-driven"
 date: 2026-08-17
 decision-makers: [Geoff]
@@ -7,11 +7,13 @@ decision-makers: [Geoff]
 
 # ADR-0004: Portability is a build gate, and configuration is environment variables only
 
+**Requirements served:** `NFR-10`, `NFR-11`, `NFR-17`.
+
 ## Context and Problem Statement
 
 Self-hosting is a product promise, not a convenience. CFOKit must run in three topologies —
 managed cloud, self-hosted cloud, and self-hosted local — and the local one is a real deployment
-holding real books, not a demo (ADR-0019).
+holding real books, not a demo (ADR-0018).
 
 Portability is not a property you can hold by intention. It erodes one convenience at a time: a
 cloud SDK imported for secrets, a metadata lookup for the project id, a URL derived from a request
@@ -29,7 +31,7 @@ So the question is not what configuration mechanism to use. It is what makes por
   require knowing precedence rules.
 * No path by which the package becomes unimportable without a cloud account.
 * Attacker-controlled input must never determine what the service says about itself
-  (ADR-0020).
+  (ADR-0019).
 * The variable surface must stay small enough for a human to hold in mind.
 
 ## Considered Options
@@ -56,7 +58,7 @@ variables**, and **CI proves it.**
 - Provider-specific code sits behind a protocol with a **local default requiring no cloud account**.
 
 The complete variable surface is documented in `infra/README.md`, and adding to it requires an ADR
-(ADR-0017 records why that document is the portability contract).
+(ADR-0016 records why that document is the portability contract).
 
 ### Consequences
 
@@ -68,7 +70,7 @@ The complete variable surface is documented in `infra/README.md`, and adding to 
 * Bad, because secrets pass through the environment in the managed tier rather than being fetched
   directly.
 * Bad, because the connector layer must ship a credential-free default provider so the gate can
-  run — work that exists solely to keep the promise true (REQ-C2).
+  run — work that exists solely to keep the promise true (BKP-03).
 * Bad, because adding a variable is deliberately slow, requiring an ADR.
 
 ### Confirmation
@@ -123,7 +125,7 @@ as variables.
 * Bad, because it makes the package unimportable without cloud credentials — so the test suite,
   the CLI, and `--help` all require a cloud account.
 * Neutral, because the security benefit is recoverable in the managed tier by having the platform
-  inject secrets from its store into the environment, which Cloud Run does natively (ADR-0017).
+  inject secrets from its store into the environment, which Cloud Run does natively (ADR-0016).
   Where a provider SDK is genuinely required, it is imported **inside the function that needs it**,
   never at module scope.
 
@@ -136,7 +138,7 @@ The obvious way to make a service work at whatever address it is reached on, wit
   identifiers come out wrong in exactly the deployments self-hosters use.
 * Bad, because they are attacker-controlled: host-header injection is a real class of
   vulnerability, and in a system where the resource identifier participates in audience validation
-  (ADR-0020), trusting them is a security defect rather than a portability one.
+  (ADR-0019), trusting them is a security defect rather than a portability one.
 
 ### Running migrations at container startup
 
@@ -164,7 +166,7 @@ Letting each target contribute its own variables, so each can be configured idio
 * Good, because each target is configured in its own idiom.
 * Bad, because the shared surface **is** the portability artifact. Once targets have their own
   variables, the application knows which cloud it is on, and moving becomes a code change rather
-  than new infrastructure (ADR-0017, ADR-0018).
+  than new infrastructure (ADR-0016, ADR-0017).
 
 ## More Information
 
@@ -176,8 +178,8 @@ Letting each target contribute its own variables, so each can be configured idio
 - `config.py` is the only place environment variables are read. **Already in place.**
 - An import-linter contract forbidding provider SDKs at module scope is added when the first
   provider SDK arrives — import-linter cannot reference modules that are not installed.
-- The local compose stack requires no cloud account, including its OAuth issuer (ADR-0019,
-  ADR-0020).
+- The local compose stack requires no cloud account, including its OAuth issuer (ADR-0018,
+  ADR-0019).
 
 **Reversal cost. Low to abandon, high to regain.** Relaxing the rule is deleting a CI job. Getting
 portability back after it has eroded means finding every implicit dependency, which is precisely

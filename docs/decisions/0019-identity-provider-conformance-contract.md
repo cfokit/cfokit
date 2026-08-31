@@ -1,15 +1,17 @@
 ---
-status: "accepted"
+status: "draft"
 kind: "requirement-driven"
 date: 2026-08-17
 decision-makers: [Geoff]
 ---
 
-# ADR-0020: Identity provider is a swappable dependency behind a conformance contract
+# ADR-0019: Identity provider is a swappable dependency behind a conformance contract
+
+**Requirements served:** `IAM-10`, `NFR-06`, `NFR-14`.
 
 ## Context
 
-ADR-0019 requires an OAuth 2.1 issuer that runs in the local compose stack with no cloud
+ADR-0018 requires an OAuth 2.1 issuer that runs in the local compose stack with no cloud
 account. That turned "self-hostable, light, permissively licensed" from a preference
 into a hard constraint, and it eliminated the entire managed-IdP category — Auth0,
 WorkOS, Clerk, Stytch, Descope — none of which can be self-hosted at all.
@@ -41,7 +43,7 @@ The default in the compose stack is **Ory Hydra** (Apache 2.0). It is a default,
 coupling.
 
 **No AGPL or other network-copyleft component ships in the default stack.** This follows
-the same reasoning already applied to Beancount (ADR-0011): copyleft stays out of the
+the same reasoning already applied to Beancount (ADR-0010): copyleft stays out of the
 distributed artifact.
 
 ## The contract
@@ -65,11 +67,11 @@ issuer-specific code exists anywhere in the codebase.
 The prior working assumption, carried over from planning that predated the local
 self-hosting requirement. Open source and self-hostable, but the supported self-host
 path is the full platform stack rather than a standalone auth service. Selected when
-managed convenience was the priority; that priority inverted with ADR-0019.
+managed convenience was the priority; that priority inverted with ADR-0018.
 
 ### Auth0 and other managed IdPs
 
-Hosted-only. Cannot run in the local compose stack. Fails ADR-0019 outright, regardless
+Hosted-only. Cannot run in the local compose stack. Fails ADR-0018 outright, regardless
 of merit.
 
 ### Keycloak
@@ -106,7 +108,7 @@ that software value is zero — writing an OAuth server contradicts it directly.
   records and entity-grants model rather than adding a second component.
 - Tokens from a shared issuer can otherwise be replayed across resource servers. Audience
   validation against `AUTH_AUDIENCE` is mandatory on every request, and entity grants are
-  validated server-side regardless (ADR-0012).
+  validated server-side regardless (ADR-0011).
 - DCR support now, CIMD support before DCR's removal window closes. Track SEP-991.
 
 **Reversal cost.** Low by construction — that is the point of the ADR. A license change

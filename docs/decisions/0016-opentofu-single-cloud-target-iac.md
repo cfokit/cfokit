@@ -1,11 +1,11 @@
 ---
-status: "accepted"
+status: "draft"
 kind: "substrate"
 date: 2026-08-16
 decision-makers: [Geoff]
 ---
 
-# ADR-0017: Use OpenTofu, one cloud target at a time, with a written deployment contract
+# ADR-0016: Use OpenTofu, one cloud target at a time, with a written deployment contract
 
 ## Context
 
@@ -18,9 +18,9 @@ container's configuration contract — the app needs `DATABASE_URL`, `PUBLIC_BAS
 auth issuer settings, and nothing else (ADR-0004). Given that contract, IaC for any
 particular cloud is thin glue, not a port.
 
-We are also an MIT-licensed project distributing IaC that users are expected to run
-themselves, which makes the license of the IaC tool a product concern rather than an
-internal preference.
+We also distribute IaC that users are expected to run themselves, under a permissive
+licence (`NFR-14`, settled as Apache 2.0 in ADR-0026), which makes the licence of the IaC
+tool a product concern rather than an internal preference.
 
 ## Decision
 
@@ -44,7 +44,7 @@ ships state encryption — directly useful for a financial application.
 
 ### IaC for all four targets up front
 
-Rejected as speculative abstraction (ADR-0013). Module sets nobody runs and CI never
+Rejected as speculative abstraction (ADR-0012). Module sets nobody runs and CI never
 exercises rot silently; the first user to try an unmaintained module hits provider
 version errors and concludes the project is abandoned. That is worse than shipping
 nothing for that cloud. A documented contract plus one working target is both more

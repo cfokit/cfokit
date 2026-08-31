@@ -6,11 +6,11 @@ service.
 Publishes a tool contract and knows nothing about any consumer. The bookkeeper skill and
 this package are separate systems with separate dependency graphs that share that
 contract — there is no code dependency between them in either direction
-([ADR-0015](../../docs/decisions/README.md)).
+([ADR-0014](../../docs/decisions/README.md)).
 
 ## Layering
 
-Enforced by import-linter, not by convention ([ADR-0009](../../docs/decisions/README.md)):
+Enforced by import-linter, not by convention ([ADR-0008](../../docs/decisions/README.md)):
 
 | Layer | Responsibility |
 |---|---|
@@ -21,7 +21,7 @@ Enforced by import-linter, not by convention ([ADR-0009](../../docs/decisions/RE
 
 `config.py` is the complete configuration surface. Adding to it requires an ADR, because
 `infra/README.md` is the portability contract
-([ADR-0017](../../docs/decisions/0017-opentofu-single-cloud-target-iac.md)).
+([ADR-0016](../../docs/decisions/0016-opentofu-single-cloud-target-iac.md)).
 
 ## Non-negotiables
 

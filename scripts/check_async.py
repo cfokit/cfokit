@@ -1,9 +1,15 @@
 #!/usr/bin/env python3
-"""Async is permitted only inside the MCP adapter module (ADR-0026).
+"""The ledger stays synchronous; async is permitted outside it (ADR-0024).
 
-The MCP Python SDK is async, and that is the sole reason async exists in this codebase. It is
-therefore confined to one module rather than granted to the adapter layer generally: `engine`,
-`repository`, `service`, and the REST `api` adapter all stay synchronous.
+The boundary is the ledger, not the codebase. What the rule protects is code holding a
+transaction and an advisory lock, where an `await` can yield mid-transaction: `engine`,
+`repository`, `service`, and the REST `api` adapter all stay synchronous. `cfokit.ledger.mcp`
+is exempt because the MCP SDK is async.
+
+Modules and components are deliberately not checked. Ingestion, invoice delivery and
+notifications are I/O-bound against third parties, and a component is a separate runtime
+reaching the ledger over HTTP (ADR-0022, ADR-0023), so its execution model cannot reach the
+write path.
 
 Why this needs a machine check rather than a rule: the failure is silent. An `await` added to a
 service function still passes every test that calls it from async code, and a blocking call left
@@ -22,10 +28,18 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-# Only these module paths may contain async constructs. Adding an entry is an ADR-0026 change.
+# The gate covers the ledger only. Modules and components choose their own execution model.
+CHECKED_PREFIX = "packages/ledger/src/cfokit/ledger/"
+
+# Paths inside the checked tree that may still contain async. Adding one is an ADR-0024 change.
 ALLOWED_PREFIXES = ("packages/ledger/src/cfokit/ledger/mcp/",)
 
 ASYNC_MODULES = frozenset({"asyncio", "anyio", "trio"})
+
+
+def is_checked(path: Path) -> bool:
+    """True if this file is inside the ledger, which is where the rule applies."""
+    return path.relative_to(REPO_ROOT).as_posix().startswith(CHECKED_PREFIX)
 
 
 def is_allowed(path: Path) -> bool:
@@ -63,7 +77,7 @@ def main() -> int:
     checked = 0
     failures = 0
     for path in py_files:
-        if is_allowed(path):
+        if not is_checked(path) or is_allowed(path):
             continue
         checked += 1
         source = path.read_text(encoding="utf-8")
@@ -71,16 +85,16 @@ def main() -> int:
         for number, what in offending_nodes(source):
             text = lines[number - 1].strip() if number <= len(lines) else ""
             rel = path.relative_to(REPO_ROOT)
-            print(f"{rel}:{number}: {what} outside the MCP module (ADR-0026)")
+            print(f"{rel}:{number}: {what} inside the ledger (ADR-0024)")
             print(f"    {text}")
             failures += 1
 
     if failures:
         print(f"\nAsync boundary violated: {failures} occurrence(s).")
-        print("Async is confined to cfokit.ledger.mcp. Widening it is an ADR-0026 change.")
+        print("The ledger stays synchronous. Widening this is an ADR-0024 change.")
         return 1
 
-    print(f"Async boundary holds: {checked} file(s) outside the MCP module, none async.")
+    print(f"Async boundary holds: {checked} ledger file(s) outside mcp/, none async.")
     return 0
 
 

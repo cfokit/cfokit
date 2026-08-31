@@ -26,7 +26,7 @@ def test_require_env_rejects_missing_and_empty(monkeypatch: pytest.MonkeyPatch) 
 
 
 def test_config_error_carries_a_stable_code(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Callers depend on the code, not the message (ADR-0016)."""
+    """Callers depend on the code, not the message (ADR-0015)."""
     monkeypatch.delenv("EXAMPLE_SETTING", raising=False)
     with pytest.raises(ConfigError) as caught:
         require_env("EXAMPLE_SETTING")

@@ -1,11 +1,13 @@
 ---
-status: "accepted"
+status: "draft"
 kind: "requirement-driven"
 date: 2026-08-17
 decision-makers: [Geoff]
 ---
 
-# ADR-0012: Per-entity advisory lock on writes, and mandatory idempotency keys
+# ADR-0011: Per-entity advisory lock on writes, and mandatory idempotency keys
+
+**Requirements served:** `NFR-03`, `LED-13`, `PLT-20`.
 
 ## Context and Problem Statement
 
@@ -27,12 +29,12 @@ idempotency does not order concurrent writes.
 
 ## Decision Drivers
 
-* Writes across entities must never contend, or multi-tenant hosting stops being viable (REQ-A2).
+* Writes across entities must never contend, or multi-tenant hosting stops being viable (LED-13).
 * A duplicated write is permanent under append-only semantics (ADR-0007), so prevention must not
   depend on caller judgement.
 * Retry logic must not proliferate into every write path.
 * Both protocol surfaces must be protected, including MCP, which never passes through HTTP
-  (ADR-0010).
+  (ADR-0009).
 
 ## Considered Options
 
@@ -46,6 +48,9 @@ idempotency does not order concurrent writes.
 * Idempotency at the HTTP layer only, via `Idempotency-Key`
 
 ## Decision Outcome
+
+`NFR-03` obliges a retried operation to produce the same result and create no duplicate, and
+`LED-13` obliges many entities to share one deployment. This record chooses the mechanisms.
 
 Chosen option: **every write takes `pg_advisory_xact_lock` keyed on the entity, and carries a
 mandatory idempotency key.**
@@ -69,11 +74,11 @@ independent of both mechanisms — it is authorisation, not concurrency, and is 
 * Good, because the lock is transaction-scoped, so no failure path leaks it.
 * Bad, because writes to one entity serialise, so a long-running write blocks others for that
   entity. Acceptable given per-entity write concurrency is low by workload assumption, and it is
-  the reason any long-running operation belongs on a non-request path (ADR-0018).
+  the reason any long-running operation belongs on a non-request path (ADR-0017).
 * Bad, because callers must generate and manage idempotency keys, and this must be documented on
-  both published surfaces (ADR-0016).
+  both published surfaces (ADR-0015).
 * Bad, because idempotency records need storage and a retention policy of their own — long enough
-  to outlive any plausible retry, short enough not to accumulate indefinitely (REQ-E7).
+  to outlive any plausible retry, short enough not to accumulate indefinitely (PLT-20).
 
 ### Confirmation
 
@@ -118,7 +123,7 @@ documented fallback should the backend change.
 
 * Good, because it is simplest to reason about and trivially correct.
 * Bad, because it serialises writes across all entities, which destroys the high-parallelism
-  property that makes one deployment viable for a fractional CFO with many clients (REQ-A2). It
+  property that makes one deployment viable for a fractional CFO with many clients (LED-13). It
   would turn an idle-heavy multi-tenant workload into a single-writer system.
 
 ### `SERIALIZABLE` isolation instead of explicit locking
@@ -146,7 +151,7 @@ documented fallback should the backend change.
 
 * Good, because it is standard, and it is where the header belongs.
 * Bad, as *sufficient* rather than as a mechanism. MCP calls the service layer in-process and never
-  passes through HTTP (ADR-0010), so an HTTP-layer implementation would leave the primary consumer
+  passes through HTTP (ADR-0009), so an HTTP-layer implementation would leave the primary consumer
   surface unprotected. The requirement belongs in the service layer, where both adapters reach it.
 
 ## More Information
@@ -159,7 +164,7 @@ documented fallback should the backend change.
   transaction as the write.
 - A replayed idempotency key returns the original result, and must not silently succeed with a
   different one — a key reused with different parameters is a client error and gets a stable error
-  `code` (ADR-0016).
+  `code` (ADR-0015).
 - The audit trail records one row per state-changing call; a replayed idempotent request is not a
   new state change and must not write a second row.
 - Advisory lock keys are derived from `entity_id` by a documented, collision-free scheme.

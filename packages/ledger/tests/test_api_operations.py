@@ -77,7 +77,7 @@ def test_readyz_is_ready_when_everything_is_current(monkeypatch: pytest.MonkeyPa
 
 
 def test_openapi_document_is_generated(client: TestClient) -> None:
-    """CI gate 5 diffs this document; it has to exist first (ADR-0016)."""
+    """CI gate 5 diffs this document; it has to exist first (ADR-0015)."""
     schema = client.get("/openapi.json").json()
     assert "/healthz" in schema["paths"]
     assert "/readyz" in schema["paths"]

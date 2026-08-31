@@ -1,25 +1,27 @@
 ---
-status: "accepted"
+status: "draft"
 kind: "requirement-driven"
 date: 2026-08-18
 decision-makers: [Geoff]
 ---
 
-# ADR-0024: The ledger stays tiny; everything else is an in-process module or a separate component
+# ADR-0022: The ledger stays tiny; everything else is an in-process module or a separate component
+
+**Requirements served:** `AR-03`, `NFR-01`, `NFR-12`.
 
 ## Context
 
-[ADR-0009](0009-layered-architecture-pure-engine-no-orm.md) specifies **layers** — a pure engine
+[ADR-0008](0008-layered-architecture-pure-engine-no-orm.md) specifies **layers** — a pure engine
 beneath hand-written SQL, beneath orchestration, beneath protocol adapters. That is horizontal
 stratification, and it is settled.
 
 It says nothing about the **vertical** axis: what constitutes a distinct piece of the system. That
-gap became visible when invoicing and accounts receivable entered scope (REQ-A9), which is a whole
+gap became visible when invoicing and accounts receivable entered scope (AR-01–AR-19), which is a whole
 domain — customers, invoices, line items, payment application, ageing — with its own vocabulary.
 Absorbing it into the ledger would roughly double what "the ledger" means.
 
 There is a reason specific to this project to resist that. The differential oracle
-([ADR-0011](0011-beancount-as-test-oracle.md)) compares CFOKit's booking against Beancount, and that
+([ADR-0010](0010-beancount-as-test-oracle.md)) compares CFOKit's booking against Beancount, and that
 comparison is meaningful only while the thing being compared is *about* double-entry. Once invoice
 concepts are inside the booking engine, the oracle is comparing two different systems and the
 strongest correctness evidence available quietly degrades.
@@ -83,7 +85,7 @@ splits into depends on decisions not yet made.
 
 ### 5. What this deliberately does not decide
 
-- **The module list.** Only the ledger is fixed. Invoicing is a module because REQ-A9 requires
+- **The module list.** Only the ledger is fixed. Invoicing is a module because AR-03 requires
   atomicity with ledger writes. Everything else is classified when it is built, using § 3.
 - **Where ingestion lands.** An earlier draft asserted it must use HTTP. That was over-committed:
   ingestion writes *drafts*, which are ledger records, so a sync batch committing atomically is an
@@ -135,7 +137,7 @@ correctness of the write path.
 
 Would settle the architecture in one pass and avoid re-opening it repeatedly.
 
-Rejected as speculative abstraction, which ADR-0013 forbids. Naming modules before the domains exist
+Rejected as speculative abstraction, which ADR-0012 forbids. Naming modules before the domains exist
 means designing boundaries around guesses, and a wrong boundary written down is harder to move than
 one never drawn. The criteria are the durable artifact; the list is the perishable one.
 

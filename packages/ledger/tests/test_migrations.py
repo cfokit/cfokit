@@ -38,14 +38,14 @@ def test_every_decimal_column_is_numeric_28_10() -> None:
 
 
 def test_transaction_carries_both_dates() -> None:
-    """ADR-0014: recorded_at cannot be retrofitted, so it ships in the first migration."""
+    """ADR-0013: recorded_at cannot be retrofitted, so it ships in the first migration."""
     sql = discover()[0].sql
     assert "transaction_date" in sql
     assert "recorded_at" in sql
 
 
 def test_lot_shape_is_reserved_though_deferred() -> None:
-    """REQ-A6 defers lots but reserves the columns, to avoid a later migration."""
+    """LED-18 defers lots but reserves the columns, to avoid a later migration."""
     sql = discover()[0].sql
     assert "cost_amount" in sql
     assert "lot_id" in sql

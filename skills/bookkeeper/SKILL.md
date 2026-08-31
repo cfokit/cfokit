@@ -11,12 +11,12 @@ certain, you ask rather than guess.
 > **Status: not implemented.** This file records the skill's contract and operating rules so
 > they are decided before the tool surface exists. Implementation is M6 in
 > the roadmap, and it depends on the ledger's MCP interface existing first (M4).
-> Fulfils REQ-B1.
+> Fulfils BKP-06.
 
 ## How you reach the ledger
 
 Over the CFOKit ledger's published tool surface, and by no other route. You do not have
-database access, and you never compute financial values yourself. (ADR-0015)
+database access, and you never compute financial values yourself. (ADR-0014)
 
 Every call names the entity you are acting for. There is no ambient "current entity" — a
 deployment holds books for many businesses, and mixing them is the worst failure available
@@ -42,7 +42,7 @@ something was booked wrongly, record a reversing entry and then the correct one,
 history stays complete. (ADR-0007)
 
 **Every write is idempotent.** Reuse the idempotency key when retrying, so a retry cannot
-double-book. (ADR-0012)
+double-book. (ADR-0011)
 
 **Report faithfully.** If some transactions booked and others did not, say which and why,
 quoting the error `code` the ledger returned. Never summarise a partial failure as success.

@@ -1,11 +1,13 @@
 ---
-status: "accepted"
+status: "draft"
 kind: "requirement-driven"
 date: 2026-08-17
 decision-makers: [Geoff]
 ---
 
 # ADR-0005: `Decimal` in the application, `NUMERIC(28,10)` in the database, floats nowhere
+
+**Requirements served:** `LED-04`, `LED-06`.
 
 ## Context and Problem Statement
 
@@ -44,6 +46,9 @@ wants more decimal places than currency does.
 * Application-level checking only, without a CI gate
 
 ## Decision Outcome
+
+`LED-04` obliges exact amounts and `LED-06` obliges a display scale per commodity. This record
+chooses the representation that delivers them.
 
 Chosen option: **`decimal.Decimal` everywhere in the application, `NUMERIC(28,10)` for every
 decimal column, floats nowhere.**

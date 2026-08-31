@@ -1,4 +1,4 @@
-"""Errors carry a stable, machine-readable ``code``. Callers depend on it (ADR-0016).
+"""Errors carry a stable, machine-readable ``code``. Callers depend on it (ADR-0015).
 
 Adding a code is a contract change. Renaming one is a breaking change.
 """

@@ -4,7 +4,7 @@ Transaction feed ingestion — bank accounts, cards, and payment processors.
 
 Produces transactions through the ledger's **public API**. It does not import ledger
 code, and import-linter fails the build if it starts to
-([ADR-0015](../../docs/decisions/README.md)).
+([ADR-0014](../../docs/decisions/README.md)).
 
 ## Why it isn't named after a vendor
 

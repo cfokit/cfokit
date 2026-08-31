@@ -5,17 +5,17 @@ Loads when you work in `packages/connectors/`. Root `CLAUDE.md` still applies.
 ## The boundary
 
 **Never import `cfokit.ledger`.** Connectors produce transactions through the ledger's public
-API, over HTTP. An `import-linter` contract fails `uv run task lint` if you try. (ADR-0015)
+API, over HTTP. An `import-linter` contract fails `uv run task lint` if you try. (ADR-0014)
 
 The temptation is real — the ledger's booking code is right there in the same repository, and
 calling it directly would be faster. Doing so would make the two packages one system with a
-shared dependency graph, which is exactly what ADR-0015 exists to prevent.
+shared dependency graph, which is exactly what ADR-0014 exists to prevent.
 
 ## Naming
 
 The package is named for the **capability**, not the vendor. It was `plaid-sync`; that made
 one provider structural. Plaid is a provider. So is Stripe. Neither is the package.
-(ADR-0021)
+(ADR-0020)
 
 Do not add `plaid` or `stripe` to a module name outside `providers/`.
 
@@ -56,7 +56,7 @@ is in the wrong package.
   amounts as JSON numbers or as integer minor units — **convert deliberately**, and never via
   `float`. This is the single most likely place for a float to enter the system. (ADR-0005)
 - Ingestion is idempotent. Re-running a sync must never double-book, which means carrying a
-  stable idempotency key derived from the provider's own transaction identifier. (ADR-0012)
+  stable idempotency key derived from the provider's own transaction identifier. (ADR-0011)
 - Never log account numbers, tokens, or payee names at info level. Log counts and identifiers.
 - A provider that returns a transaction you cannot map is a reported error, not a silently
   dropped row.

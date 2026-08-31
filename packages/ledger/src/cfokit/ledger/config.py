@@ -5,7 +5,7 @@ product promise, so the entire coupling between the application and its deployme
 the variables read here.
 
 Adding a variable to this surface requires an ADR — ``infra/README.md`` is the
-portability contract (ADR-0017).
+portability contract (ADR-0016).
 """
 
 from __future__ import annotations
@@ -29,10 +29,10 @@ class Settings:
 
     auth_issuer_url: str
     """OAuth 2.1 issuer. The issuer is swappable; no issuer-specific code exists
-    anywhere in the codebase (ADR-0020)."""
+    anywhere in the codebase (ADR-0019)."""
 
     auth_audience: str
-    """Audience validation is mandatory on every request (ADR-0012, ADR-0020)."""
+    """Audience validation is mandatory on every request (ADR-0011, ADR-0019)."""
 
     port: int = 8080
     """Listen port. Optional; the platform usually supplies it."""

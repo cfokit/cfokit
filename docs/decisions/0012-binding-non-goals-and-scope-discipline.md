@@ -1,11 +1,11 @@
 ---
-status: "accepted"
+status: "draft"
 kind: "substrate"
 date: 2026-08-17
 decision-makers: [Geoff]
 ---
 
-# ADR-0013: Binding non-goals, enforced as a gate rather than a ban
+# ADR-0012: Binding non-goals, enforced as a gate rather than a ban
 
 ## Context and Problem Statement
 
@@ -56,8 +56,8 @@ Chosen option: the following are **binding non-goals**. Do not build them, and d
 | Custom query language | Reimplementing SQL, worse, against a database chosen for its query capability |
 | Caching or rollup layer | ADR-0003 chose derived balances deliberately; materialisation belongs behind profiler evidence |
 | Read replicas | Replication lag against read-your-writes on a ledger, for a workload that is mostly idle |
-| GraphQL | Caller-composed queries sit badly with per-entity grant checks (ADR-0012) |
-| Websockets or SSE transport | Stateful connections against a scale-to-zero container (ADR-0018) |
+| GraphQL | Caller-composed queries sit badly with per-entity grant checks (ADR-0011) |
+| Websockets or SSE transport | Stateful connections against a scale-to-zero container (ADR-0017) |
 | Event bus | A second account of what happened, when an append-only ledger already is one |
 
 **This is a gate, not a ban.** The rule is *do not build without an ADR*, and an ADR sanctioning one
@@ -65,10 +65,10 @@ of these is a legitimate outcome, not a violation.
 
 **What an ADR must establish** to lift the gate:
 
-1. The `REQ-` id it serves, and why that requirement cannot be met with the existing surfaces.
+1. The requirement id it serves, and why that requirement cannot be met with the existing surfaces.
 2. What the smallest version looks like, and where its boundary sits.
 3. Its ongoing cost: security surface, operational burden, and whether it becomes a published
-   interface with stability obligations (ADR-0016).
+   interface with stability obligations (ADR-0015).
 
 Anything absent from this list is not thereby endorsed. The list names the temptations that were
 foreseen, not the complete set.
@@ -77,7 +77,7 @@ foreseen, not the complete set.
 
 | Item | Passed via | When |
 |---|---|---|
-| Slack as a delivery surface | [ADR-0023](0023-slack-as-a-delivery-surface.md) | 2026-08-18 |
+| Slack as a delivery surface | [ADR-0021](0021-slack-as-a-delivery-surface.md) | 2026-08-18 |
 
 Slack was never literally on the list, but two ways of building it are — Socket Mode is a websocket,
 and a chat surface is adjacent enough to "web UI" that building one unrecorded would be the drift
@@ -124,7 +124,7 @@ The usual approach, and it works in teams with shared context and a habit of say
 ### Hard prohibitions instead of a gate
 
 * Good, because it is cleaner and more enforceable: these things are never built, full stop.
-* Bad, because it is already false. The product vision depends on a Slack surface, and REQ-B3
+* Bad, because it is already false. The product vision depends on a Slack surface, and RPT-13
   requires statements in a form a human can hand to a lender — which is rendered output. A ban
   would either be violated within months, teaching everyone that the list is advisory, or would
   block the product. A gate that is respected is worth more than a ban that is not.
@@ -161,7 +161,7 @@ They are product boundaries, so arguably they belong with the vision rather than
 - `vision.md` states the outward-facing version, and must not overstate it as a prohibition.
   **Already in place.**
 - An ADR that lifts the gate for an item updates the list to record that it passed, and when.
-- Slack has passed (ADR-0023). Rendered report output, which REQ-B3 requires, is still queued.
+- Slack has passed (ADR-0021). Rendered report output, which RPT-13 requires, is still queued.
 
 **Reversal cost. Low.** The list is a rule, not an architecture. Removing it costs nothing
 mechanically and costs the forcing function entirely.

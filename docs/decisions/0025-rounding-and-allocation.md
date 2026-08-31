@@ -1,18 +1,20 @@
 ---
-status: "accepted"
+status: "draft"
 kind: "requirement-driven"
 date: 2026-08-20
 decision-makers: [Geoff]
 ---
 
-# ADR-0027: The ledger never rounds; presentation rounds half-up, allocation uses largest remainder
+# ADR-0025: The ledger never rounds; presentation rounds half-up, allocation uses largest remainder
+
+**Requirements served:** `LED-05`, `LED-06`, `RPT-12`.
 
 ## Context
 
 [ADR-0005](0005-decimal-throughout-numeric-28-10.md) fixed how money is *represented* —
 `decimal.Decimal` and `NUMERIC(28,10)` — and explicitly left rounding undecided. That is the
 remaining gap before the booking engine can be written, and it surfaces immediately rather than
-eventually: the Beancount differential harness ([ADR-0011](0011-beancount-as-test-oracle.md)) cannot
+eventually: the Beancount differential harness ([ADR-0010](0010-beancount-as-test-oracle.md)) cannot
 be built without knowing whether the two systems are expected to agree exactly.
 
 Three separate questions hide inside "rounding", and conflating them is how systems end up with
@@ -24,54 +26,37 @@ money that does not add up:
 3. **What happens when a total must be split** across lines that cannot divide evenly — £100 across
    three lines is 33.33 three times, which is a penny short of the total.
 
-The third is not hypothetical. Invoicing and AR (REQ-A9) allocate constantly: tax across line items,
+The third is not hypothetical. Invoicing and AR (AR-12) allocate constantly: tax across line items,
 a payment across several invoices, a discount across a basket.
 
 ## Decision
 
-### 1. The ledger never rounds
+`LED-06` obliges the ledger never to round and gives each commodity a display scale. `RPT-12`
+obliges presentation to round half-up and to total from unrounded values. `LED-05` obliges an
+uneven division to sum exactly and to be deterministic. `LED-03` obliges exact balance. Those are
+the rules, they are stated once in `requirements.md`, and this record does not restate them.
 
-What is posted is what is stored, at full `NUMERIC(28,10)` precision. No rounding happens in the
-engine, the repository, or the service layer.
+What this record decides is how they are met, and three things follow that requirements do not say.
 
-This is the load-bearing part. A ledger that rounds on the way in has silently changed the user's
-figure, and the change is unrecoverable — the original is gone. It also makes reversal asymmetric,
-because reversing a rounded value does not restore the pre-rounding state.
+**Allocation is largest remainder, ties broken by line order.** `LED-05` requires the parts to sum
+exactly and the division to be deterministic; it does not say which parts get the residual pennies.
+Largest remainder distributes by how close each line came to rounding up anyway. Line order settles
+ties so the result is reproducible, which the differential oracle and reproducible reports both
+need.
 
-### 2. Zero-sum is exact; there is no tolerance
+**Allocation lives in the pure engine** (ADR-0008). It takes a total and a line count and returns
+parts: no I/O, no configuration, no clock. That makes it property-testable — the parts must sum to
+the whole, for any total and any line count — which is the only way a rule like this stays true.
 
-A transaction balances exactly or it does not balance. CFOKit does not infer tolerances.
+**Exact balance is a deliberate divergence from the oracle.** Beancount infers tolerances, because
+a text ledger is written by hand at whatever precision its author chose. CFOKit's input arrives
+through an API at full precision and is never rounded on the way in, so anything that fails to
+balance exactly is a real defect rather than a rounding artefact. The differential harness will
+report this on its first run, and it belongs in the divergence register as intended rather than
+being treated as a failure (ADR-0010).
 
-Beancount does infer them, because a text ledger is written by hand at whatever precision the author
-chose. CFOKit stores ten decimal places and never rounds on the way in, so exact balance is
-achievable — and a tolerance is a place for genuine errors to hide. **This is a deliberate divergence
-from the oracle and belongs in the divergence register** (ADR-0011), not treated as a defect when the
-harness reports it.
-
-### 3. Presentation rounds half-up, to the commodity's scale
-
-When a figure is shown to a human — a statement, a report, a tax schedule — it is rounded
-**half-up** to the commodity's minor unit.
-
-Half-up rather than banker's rounding because this is the boundary where CFOKit meets people and
-their expectations. Accountants expect 0.5 to round up, and tax authorities generally specify it.
-Statistical neutrality is the better argument in the abstract; matching what the reader and the form
-expect is the better argument at a presentation boundary, where the figures are being compared
-against documents prepared by other means.
-
-Rounding is applied **once, at the edge**. Never to an intermediate, and never stored back.
-
-### 4. Allocation uses largest remainder
-
-When a total is split across lines and does not divide evenly, the parts are computed at the target
-scale and the residual pennies are distributed to the lines with the **largest fractional
-remainders**, ties broken by line order.
-
-The parts always sum to the original total exactly. That is the whole requirement: an allocation
-whose parts do not reconstitute the whole will fail the zero-sum trigger, loudly, at commit.
-
-Allocation is **deterministic**. The same input always produces the same split, because reproducible
-reports (ADR-0014) and a differential oracle both depend on it.
+**Rounding is applied once, at the edge.** Never to an intermediate, never stored back. If a
+rounding call appears in `engine`, `repository`, or `service`, the boundary has been misplaced.
 
 ## Alternatives rejected
 
@@ -139,7 +124,7 @@ enters. Rounding happens once, at the edge.
   divergence register has an entry from its first run.
 
 **Follow-on obligations.**
-- Allocation lives in the **pure engine** (ADR-0009): deterministic, no I/O, and therefore
+- Allocation lives in the **pure engine** (ADR-0008): deterministic, no I/O, and therefore
   property-testable — the parts must always sum to the whole, for any total and any line count.
 - A divergence-register entry recording that CFOKit requires exact balance where Beancount infers
   tolerance.
