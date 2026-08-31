@@ -50,6 +50,9 @@ would reject every valid transaction.
 
 ## Decision Outcome
 
+`LED-03` obliges every transaction to balance, in any commodity the entity holds, and `NFR-02`
+forbids silent alteration. This record chooses where that is enforced.
+
 Chosen option: **a deferred constraint trigger, checked at `COMMIT`.**
 
 - Deferred, so the intermediate states during multi-row insertion are permitted.

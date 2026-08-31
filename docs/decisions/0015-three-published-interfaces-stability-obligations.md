@@ -37,6 +37,10 @@ not detect that the change requiring a major bump has occurred.
 
 ## Decision
 
+`PLT-03` obliges a documented interface for third parties carrying stated obligations about how
+and when it may change, and `NFR-13` obliges breaking changes to be announced rather than
+discovered. This record decides which interfaces those are and what makes the obligation real.
+
 Three interfaces are **published**, meaning third parties may depend on them and we may not change
 them without review:
 

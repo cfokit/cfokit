@@ -76,26 +76,31 @@ to fix a typo. Fractional CFOs arrive with ERP expectations and want immutabilit
 
 ## Decision Outcome
 
-Chosen option: **posting is the point of no return.**
+`LED-07` obliges a draft to be freely editable and a posted record to be permanent. `LED-08`
+obliges a posted transaction never to be altered or removed, with corrections as reversing entries
+that leave both visible. `NFR-02` forbids silent alteration at any layer. Those are the rules and
+they are stated in `requirements.md`. This record decides three things they do not settle.
 
-- A **draft** record is freely mutable. Assigning an account, fixing an amount, correcting a
-  date, and splitting a transaction are ordinary edits with no reversal.
-- A **posted** record is immutable. No `UPDATE` to any financial field, no `DELETE`, ever.
-  Corrections are new reversing entries.
-- **Annotations are append-only rather than mutable.** Notes, tags, and attachments are added
-  as new rows and never rewritten, so nothing anywhere in a posted transaction is overwritten.
+**Enforcement is in the schema, not the service layer.** Posted rows reject `UPDATE` on financial
+fields and reject `DELETE` outright, at the database. A rule the application honours is only as
+good as every future write path — the bulk import, the backfill, the repair script written at 2am
+— and this is the guarantee the product is sold on. It does not get to depend on discipline.
 
-**Financial fields**, for the avoidance of the argument that will otherwise recur: amount,
-commodity, account, transaction date, and entity. Changing any of them on a posted record is
-forbidden, in the schema and in the repository layer, not merely by convention.
+**Financial fields, enumerated, to end the argument that will otherwise recur:** amount, commodity,
+account, transaction date, and entity. Those are sealed on a posted record. Everything else is not:
+notes, tags and attachments are added as new rows, never rewritten, so nothing is overwritten
+anywhere — but adding a note to a posted transaction is not a change to the books and is not
+treated as one. This is the same line NetSuite draws between general-ledger-impacting changes and
+everything else.
 
-**Period close is a second and deliberately weaker boundary.** It is advisory: it marks a
-period as reviewed and is a workflow signal, not the mechanism that guarantees auditability.
-Append-only posting already provides that guarantee, which is precisely why close does not
-need to be hard. See ADR-0013 for whether backdating into a closed period is permitted.
+**Agent postings are drafts by default.** The agent proposes; a person's confirmation posts. This
+is what makes an agent bookkeeper trustworthy without filling the ledger with its corrected
+guesses, and it is the reason the draft state exists at all.
 
-**Agent postings are drafts by default.** The agent proposes; confirmation posts. This keeps
-the trust property without filling the ledger with the agent's corrected guesses.
+**Period close is a hard boundary, and this record no longer says otherwise.** An earlier version
+made close advisory, on the reasoning that append-only posting already guaranteed auditability so
+close did not need to be hard. `LED-11` requires that no posting enter a closed period except
+through a recorded reopening. ADR-0013 holds the reopen model and the reasoning behind it.
 
 ### Consequences
 

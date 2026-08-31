@@ -49,6 +49,9 @@ idempotency does not order concurrent writes.
 
 ## Decision Outcome
 
+`NFR-03` obliges a retried operation to produce the same result and create no duplicate, and
+`LED-13` obliges many entities to share one deployment. This record chooses the mechanisms.
+
 Chosen option: **every write takes `pg_advisory_xact_lock` keyed on the entity, and carries a
 mandatory idempotency key.**
 

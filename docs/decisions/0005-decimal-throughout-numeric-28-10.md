@@ -47,6 +47,9 @@ wants more decimal places than currency does.
 
 ## Decision Outcome
 
+`LED-04` obliges exact amounts and `LED-06` obliges a display scale per commodity. This record
+chooses the representation that delivers them.
+
 Chosen option: **`decimal.Decimal` everywhere in the application, `NUMERIC(28,10)` for every
 decimal column, floats nowhere.**
 

@@ -54,7 +54,7 @@ cost the same context as inlining, while diluting adherence to the rules that ma
 | [0010](0010-beancount-as-test-oracle.md) | Beancount is a differential test oracle, never a runtime dependency | Draft |
 | [0011](0011-entity-advisory-lock-idempotency-keys.md) | Per-entity advisory lock on writes; mandatory idempotency keys | Draft |
 | [0012](0012-binding-non-goals-and-scope-discipline.md) | Binding non-goals, enforced as a gate rather than a ban | Draft |
-| [0013](0013-backdating-two-dates-and-close-crossing.md) | Two dates per transaction; backdating permitted but never silent | Draft |
+| [0013](0013-two-dates-and-period-reopen.md) | Two dates per transaction; a closed period is reopened, never overridden | Draft |
 | [0014](0014-single-tool-surface-hosted-backend-only.md) | One tool surface; skills target the hosted backend only | Draft |
 | [0015](0015-three-published-interfaces-stability-obligations.md) | Three published interfaces, each with a committed artifact and diff gate | Draft |
 | [0016](0016-opentofu-single-cloud-target-iac.md) | OpenTofu, one cloud target, written deployment contract | Draft |
@@ -83,6 +83,7 @@ designing a boundary around a guess (ADR-0012).
 
 | Question | Where |
 |---|---|
+| Whether reopening a closed period reopens the ones after it, given `LED-12` closes income and expense to retained earnings at year end | ADR-0013 |
 | Whether CFOKit uses a specification workflow, and which one | ADR-0001 leaves this open; Spec Kit was adopted and removed, and its record is deleted |
 | How rendered report output works | RPT-13 — needs a record through the ADR-0012 scope gate, as ADR-0021 took for Slack |
 
@@ -135,8 +136,6 @@ module, so ingestion, delivery and AR are free to be async. The record also no l
 that synchronous code makes the ledger concurrency-safe — it removes an `await` mid-transaction,
 and the guarantees come from ADR-0006 and ADR-0011.
 
-**Known conflicts, not yet resolved.**
-
-| Conflict | Where |
-|---|---|
-| Period close is advisory and backdating into a closed period needs only acknowledgement — but `LED-11` requires a recorded reopening, which is the alternative ADR-0013 rejected by name | ADR-0007, ADR-0013 |
+**Known conflicts, not yet resolved.** None. The period-close contradiction between ADR-0007,
+ADR-0013 and `LED-11` is settled in favour of `LED-11`: a closed period is reopened, never
+overridden. The licence is settled in ADR-0026.
