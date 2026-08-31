@@ -11,7 +11,7 @@ decision-makers: [Geoff]
 
 ## Context and Problem Statement
 
-ADR-0013 makes a closed period reopenable and nothing else. It leaves one question unanswered, and
+ADR-0030 makes a closed period reopenable and nothing else. It leaves one question unanswered, and
 close cannot ship without it: **when March is reopened, what happens to April?**
 
 NetSuite answers by cascading — reopening a period reopens every subsequent closed period. That is
@@ -42,7 +42,7 @@ That is a real dependency, and it is the only one.
   (ADR-0003).
 * `LED-12`'s acceptance is checkable and must stay true: the trial balance on the first day of a
   fiscal year shows every income and expense account at zero.
-* Reopening must stay cheap enough for a single operator to use (ADR-0013, `NFR-19`), so any
+* Reopening must stay cheap enough for a single operator to use (ADR-0030, `NFR-19`), so any
   cascade must be the smallest one that is actually required.
 * `SOC1-20` requires an issued statement whose figures a later correction changes to be marked
   superseded.
@@ -82,7 +82,7 @@ FY2027 derives from postings that include FY2026's closing entries, so re-runnin
 makes FY2027's stale in turn. With three closed years and a posting into the earliest, three closes
 re-run — not thirty-six months reopened.
 
-**The default remains not to reopen at all.** ADR-0013 rule 5 already sends a correction discovered
+**The default remains not to reopen at all.** ADR-0030 rule 4 already sends a correction discovered
 after close into the current open period, which is the prior-period-adjustment treatment accounting
 expects. Reopening a prior fiscal year is deliberate and rare, and the cost above is the reason.
 

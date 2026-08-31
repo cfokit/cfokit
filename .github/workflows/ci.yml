@@ -1,4 +1,4 @@
-# CFOKit CI — the five gates that define "done" (CLAUDE.md § CI gates).
+# CFOKit CI — the gates that define "done" (CLAUDE.md § CI gates).
 #
 # Gate 2 is the load-bearing one: the suite runs against compose.yaml WITHOUT the dev
 # overlay and with no cloud credentials present, because portability is a build gate rather
@@ -51,6 +51,20 @@ jobs:
       - run: uv python install ${{ env.PYTHON_VERSION }}
       - run: uv sync --locked
       - run: uv run task check-money
+
+  # Gate 6: the decision corpus is well-formed (ADR-0001). Cheap, no infrastructure, and it
+  # is the gate that keeps every other record's reasoning findable.
+  decisions:
+    name: "Gate 6: decision corpus is well-formed"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - run: uv python install ${{ env.PYTHON_VERSION }}
+      - run: uv sync --locked
+      - run: uv run task check-decisions
 
   # Unit and documentation tests. No infrastructure required.
   test:
@@ -156,7 +170,7 @@ jobs:
   gates:
     name: All gates
     if: always()
-    needs: [lint, money, test, portability]
+    needs: [lint, money, decisions, test, portability]
     runs-on: ubuntu-latest
     steps:
       - name: Fail if any gate failed

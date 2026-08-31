@@ -7,8 +7,15 @@ Portability is a product promise and a CI gate, not a convenience (ADR-0004). Wh
 true is that the application's entire coupling to its environment is the variable list below
 — so infrastructure code for any particular cloud is thin glue rather than a port.
 
-**Adding anything to the environment surface below requires an ADR.** That is what makes
-this document a contract instead of documentation. (ADR-0016)
+**This document is authoritative for the variable names.** Decision records do not enumerate
+them: names are specification, they change, and a record that lists them becomes wrong the
+first time one is renamed.
+
+**Changing the *shape* of the contract requires a decision record. Adding a variable within
+the existing shape does not.** The shape is what portability rests on — configuration is
+environment variables only, secrets arrive as containers whose values are populated out of
+band, and nothing is read from cloud metadata. Anything that breaks one of those is
+architectural and needs its own record. (ADR-0016)
 
 ## What any target must provide
 
@@ -29,7 +36,7 @@ metadata lookups, no provider SDK imports at module scope.
 There is deliberately no variable selecting a cloud, a region, or a provider.
 
 **Separate components** — anything running in its own runtime and reaching the API rather than the
-database (ADR-0022) — read three more (ADR-0023):
+database (ADR-0022) — read three more (ADR-0032):
 
 | Variable | Required | Purpose |
 |---|---|---|
@@ -61,7 +68,7 @@ Any conforming issuer must provide:
 - Declared, configurable claim names for subject and scopes
 - RFC 7591 Dynamic Client Registration **or** Client ID Metadata Documents
 - The **client credentials grant**, for separate components authenticating as machine callers
-  (ADR-0023 — an extension to the contract originally set in ADR-0019)
+  (ADR-0032 — an extension to the contract originally set in ADR-0019)
 
 An automated conformance suite verifies this. It runs in CI against the default issuer and
 against any additional issuer we claim to support — that suite is what makes the swap claim

@@ -97,10 +97,11 @@ everything else.
 is what makes an agent bookkeeper trustworthy without filling the ledger with its corrected
 guesses, and it is the reason the draft state exists at all.
 
-**Period close is a hard boundary, and this record no longer says otherwise.** An earlier version
-made close advisory, on the reasoning that append-only posting already guaranteed auditability so
-close did not need to be hard. `LED-11` requires that no posting enter a closed period except
-through a recorded reopening. ADR-0013 holds the reopen model and the reasoning behind it.
+**Period close is a hard boundary.** `LED-11` requires that no posting enter a closed period
+except through a recorded reopening. Append-only posting and a hard close answer different
+questions — append-only guarantees nothing is destroyed, while a hard close makes entry into a
+reported period a deliberate, evidenced act. ADR-0030 holds the reopen model and the reasoning
+behind it.
 
 ### Consequences
 
@@ -223,9 +224,9 @@ Genuinely tempting, because it matches the audience split exactly.
 - Period close needs a representation, and closing writes an `audit_log` row like any other
   state change.
 - Correction mechanics stated as requirements in `docs/product/requirements.md`.
-- ADR-0013 must settle backdating. A backdated posting into a soft-closed period is permissible
-  under this ADR, but it changes an already-issued statement and therefore has to be surfaced
-  rather than merely recorded.
+- Backdating is settled in ADR-0013 and ADR-0030. A posting dated into a period already reported
+  on changes an already-issued statement, so it is surfaced rather than merely recorded, and a
+  closed period admits it only through a recorded reopening.
 
 **Reversal cost. High — close to a one-way door.** The schema, every write path, and the
 reporting model all assume it. Moving to editable records later would mean abandoning reproducible

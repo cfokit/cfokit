@@ -39,6 +39,7 @@ lint = { cmd = "ruff check . && ruff format --check . && mypy && lint-imports &&
 migrate = { cmd = "python -m cfokit.ledger.migrations", help = "Apply migrations. Never runs at startup (ADR-0004)" }
 dev = { cmd = "docker compose -f compose.yaml -f compose.dev.yaml up", help = "Local stack with the dev overlay explicitly applied (ADR-0018)" }
 "check-money" = { cmd = "python scripts/check_money.py", help = "CI gate 4: no floats touch money, in schema or code (ADR-0005)" }
+"check-decisions" = { cmd = "python scripts/check_decisions.py", help = "CI gate 6: the decision corpus is well-formed (ADR-0001)" }
 
 # ---------------------------------------------------------------------------
 # ruff

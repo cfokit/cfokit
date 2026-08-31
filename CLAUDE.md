@@ -10,7 +10,7 @@ stop and ask rather than working around it.
 ## Repository map
 
 Directories are organised by **artifact kind**, and packages are named for
-**capabilities, not vendors**. (ADR-0020)
+**capabilities, not vendors**. (ADR-0020, ADR-0031)
 
 | Path | What it is | Boundary |
 |---|---|---|
@@ -72,6 +72,7 @@ uv run task test                 # full suite
 uv run task test <path>          # one package, e.g. packages/ledger
 uv run task lint                 # ruff + mypy --strict + import-linter + async boundary
 uv run task check-money          # CI gate 4: no floats touch money
+uv run task check-decisions      # CI gate 6: decision corpus is well-formed
 uv run task migrate              # apply migrations (never runs on startup)
 docker compose up                # local production stack, no cloud account needed
 uv run task dev                  # compose.yaml + compose.dev.yaml
@@ -86,7 +87,7 @@ Everything else is discoverable from `pyproject.toml`. These are the choices you
 otherwise get wrong, because absence isn't visible in a manifest:
 
 - **No ORM.** Hand-written SQL in the repository module. Do not introduce SQLAlchemy,
-  SQLModel, or a query builder. Auditability requirement. (ADR-0008)
+  SQLModel, or a query builder. Auditability requirement. (ADR-0028)
 - **`uv` only.** Not pip, not poetry.
 - **The ledger is synchronous; the transport is not, and neither is anything outside it.** No
   `async def`, no `await`, no `asyncio`/`anyio`/`trio` import in the ledger's engine, repository,
@@ -94,7 +95,7 @@ otherwise get wrong, because absence isn't visible in a manifest:
   **Modules and components choose their own execution model** — ingestion and delivery are
   I/O-bound and a component is a separate runtime anyway. The rule protects code holding a
   transaction and an advisory lock, and nothing else; it removes a footgun rather than supplying
-  a concurrency guarantee, which comes from ADR-0006 and ADR-0011. `uv run task lint` fails on a
+  a concurrency guarantee, which comes from ADR-0006, ADR-0011 and ADR-0029. `uv run task lint` fails on a
   violation inside the ledger. (ADR-0024)
 - **REST is FastAPI with synchronous `def` handlers only.** The event loop lives in the
   server, not in our code. `async def` handlers are the normal way to write FastAPI and are
@@ -156,6 +157,9 @@ These define "done". Do not write code that assumes an environment they forbid.
 4. No float storage types anywhere in the schema. (ADR-0005)
 5. Generated OpenAPI and MCP tool descriptions match what's committed — a diff means a
    contract change and needs review. (ADR-0015)
+6. `check-decisions` clean — every record carries a valid `status` and `kind`, cites only live
+   requirement ids, follows the MADR template, and matches the index. Requirements and the vision
+   cite no record. (ADR-0001)
 
 ## Licensing
 

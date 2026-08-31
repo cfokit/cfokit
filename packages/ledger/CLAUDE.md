@@ -29,7 +29,7 @@ back through HTTP. (ADR-0009)
 
 Hand-written, in `repository/`. **No SQLAlchemy, no SQLModel, no query builder.** The SQL
 that runs against the books is the SQL in that directory, readable without a translation
-step. This is an auditability requirement, not a taste preference. (ADR-0008)
+step. This is an auditability requirement, not a taste preference. (ADR-0028)
 
 - All decimal columns are `NUMERIC(28,10)`. No `REAL`, `DOUBLE PRECISION`, `FLOAT`, or
   `MONEY` — `uv run task check-money` fails the build on any of them. (ADR-0005)
@@ -56,7 +56,7 @@ Each of these is a bug if missed, not a nice-to-have:
 
 - **Exactly one `audit_log` row per state-changing call.** A code path that mutates state
   without one is a bug.
-- Mandatory idempotency keys on writes. A retry must not double-book. (ADR-0011)
+- Mandatory idempotency keys on writes. A retry must not double-book. (ADR-0029)
 - Entity grants validated **server-side regardless of token contents**. (ADR-0011, ADR-0019)
 - Audience validated against `AUTH_AUDIENCE` on every request — tokens from a shared issuer
   are otherwise replayable across resource servers. (ADR-0019)

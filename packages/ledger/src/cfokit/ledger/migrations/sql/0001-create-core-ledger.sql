@@ -12,7 +12,8 @@
 --   ADR-0005  Decimal everywhere; every decimal column is NUMERIC(28,10)
 --   ADR-0006  Zero-sum enforced by a deferred constraint trigger, at posting
 --   ADR-0007  Immutable at posting; corrections are reversing entries
---   ADR-0011  Idempotency keys; one audit_log row per state change
+--   ADR-0011  Per-entity advisory lock; one audit_log row per state change
+--   ADR-0029  Idempotency keys, mandatory on every write
 --   ADR-0013  Two dates per transaction, so backdating is self-identifying
 --   LED-18    Lots deferred, but the shape is reserved
 --   LED-14    Accounting basis and fiscal year are entity properties
@@ -132,7 +133,7 @@ CREATE INDEX audit_log_subject_idx ON audit_log (subject_type, subject_id);
 
 -- ---------------------------------------------------------------------------
 -- Idempotency. Mandatory on writes; a replay returns the original result rather
--- than applying the operation again (ADR-0011).
+-- than applying the operation again (ADR-0029).
 -- ---------------------------------------------------------------------------
 CREATE TABLE idempotency_key (
     entity_id    uuid        NOT NULL REFERENCES entity (id),
