@@ -110,8 +110,8 @@ The double-entry record itself, and the entity settings that govern how it is ke
 | **LED-12** | At fiscal year end, income and expense balances are closed to retained earnings so the new year opens with them at zero. The closing entries are ordinary postings and are identifiable as such. | Must | Approved |
 | **LED-13** | One deployment holds the books of many entities, each with its own chart of accounts, basis, and fiscal year. | Must | Approved |
 | **LED-14** | Each entity declares its accounting basis and its fiscal year end when it is created; neither has an undeclared state. These are properties of the entity, not options on a report. A change of basis is recorded with the date it takes effect, and never rewrites history. | Must | Approved |
-| **LED-15** | An entity declares its functional currency when it is created, and every recorded amount carries the currency it is denominated in. An amount in any other currency is refused. | Must | Approved |
-| **LED-16** | A transaction in a currency other than the entity's functional currency is converted at the rate in force on its date, and the difference between the rate at obligation and the rate at settlement is recorded as foreign exchange gain or loss. | Could | Deferred — activates when an entity first transacts in another currency. Not built before then |
+| **LED-15** | An entity declares its functional currency when it is created, and every recorded amount carries the currency it is denominated in. An amount in any other currency is refused for as long as LED-16 has not activated for that entity; LED-16 is what permits and governs conversion, and activating it relaxes this refusal rather than contradicting it. | Must | Approved |
+| **LED-16** | A transaction in a currency other than the entity's functional currency is converted at the rate in force on its date, and the difference between the rate at obligation and the rate at settlement is recorded as foreign exchange gain or loss. | Could | Deferred — activates when an entity first transacts in another currency, and on activation supersedes LED-15's refusal for that entity. Not built before then |
 | **LED-17** | An obligation and its settlement are recorded as two related events rather than one. An invoice raised in one period and paid in another is recoverable as either, depending on the basis in force. | Must | Approved |
 | **LED-18** | The ledger holds positions in things other than money — inventory, or investments held in a brokerage account. | Could | Deferred — activates when an entity acquires inventory or holds investments |
 | **LED-19** | Where an entity holds fungible units acquired at different costs and disposes of some, disposals consume the earliest lots first, exactly rather than approximately. Where a disposal is ambiguous the system refuses rather than selecting a plausible lot. | Could | Deferred — activates with LED-18 |
@@ -130,8 +130,8 @@ retrievable, and no field of the original has changed.
 **Acceptance, LED-12.** The trial balance on the first day of a fiscal year shows every income
 and expense account at zero, and retained earnings changed by exactly the prior year's result.
 
-**Acceptance, LED-15.** An amount presented in a currency other than the entity's functional
-currency is refused, with a reason, rather than accepted and converted.
+**Acceptance, LED-15.** Where LED-16 has not activated, an amount presented in a currency other
+than the entity's functional currency is refused, with a reason, rather than accepted and converted.
 
 ### 5.2 Data Migration — `MIG`
 
@@ -157,7 +157,7 @@ system, the other moves an entity between CFOKit deployments intact.
 | | Requirement | Priority | Status |
 |---|---|---|---|
 | **MIG-09** | **Interchange export.** The books in a form another accounting system can read: chart of accounts, transactions, and balances. | Must | Approved |
-| **MIG-10** | **Complete export.** Everything the entity holds — the interchange content, plus supporting documents, attachments, raw ingested payloads, rule definitions and the attribution linking them to postings, approvals, agent records, and the audit trail. | Must | Approved |
+| **MIG-10** | **Complete export.** Everything the entity holds — the interchange content, plus supporting documents, attachments, raw ingested payloads, rule definitions and the attribution linking them to postings, approvals, the record of what an agent did and on what basis, and the audit trail. | Must | Approved |
 | **MIG-11** | Both exports are available at any time, in any entity state short of deletion, without asking anyone and without a support request. | Must | Approved |
 | **MIG-12** | A complete export taken from one CFOKit deployment and imported into another reproduces the books, their history, and their attribution. Moving between a self-hosted and a hosted deployment is this operation in either direction. | Must | Approved |
 
@@ -228,7 +228,7 @@ Billing customers, collecting from them, and knowing who owes what.
 | **AR-05** | Issued invoices carry numbers from a gapless sequence the entity controls. A cancelled invoice keeps its number and is visible as cancelled; a number is never reused or silently skipped. | Must | Approved |
 | **AR-06** | An invoice carries payment terms and a due date derived from them. | Must | Approved |
 | **AR-07** | An issued invoice is available as a shareable artifact — a document and a stable link — that an operator can deliver by any means, including by hand into a messaging application CFOKit knows nothing about. | Must | Approved |
-| **AR-08** | Access to an invoice through its link is unauthenticated, deliberately: requiring a customer to hold an identity before they can see a bill is an obstacle to being paid. The link is unguessable, reaches that one invoice and nothing else about the entity, and can be revoked. It is the only unauthenticated read path in the system. | Must | Approved |
+| **AR-08** | Access to an invoice through its link is unauthenticated, deliberately: requiring a customer to hold an identity before they can see a bill is an obstacle to being paid. The link reaches that one invoice and nothing else about the entity, and is subject to IAM-20 like any other unauthenticated path. | Must | Approved |
 | **AR-09** | Where a delivery channel is integrated, CFOKit delivers the invoice on the entity's behalf. Email is the first such channel. | Should | Approved |
 | **AR-10** | Invoices can be raised on a recurring schedule the entity sets, without a person triggering each one. | Should | Approved |
 | **AR-11** | Receipt of payment is recorded. | Must | Approved |
@@ -268,7 +268,7 @@ Producing statements, and answering questions the books can support.
 | **RPT-10** | Every report states the accounting basis it was produced on, on its face. | Must | Approved |
 | **RPT-11** | Any report can be produced as the books stood at an earlier moment, by the date records were made rather than the date events occurred. Where two runs of the same report differ, the difference is exactly the postings recorded between them. | Must | Approved |
 | **RPT-12** | A presented figure is rounded half-up to its commodity's display scale. A total is computed from the unrounded values and then rounded, never by summing figures already rounded. | Must | Approved |
-| **RPT-13** | A report is available as a document and as a stable link, either of which can be given to a lender, a board, or an accountant by any means. | Must | Approved |
+| **RPT-13** | A report is available as a document and as a stable link, either of which can be given to a lender, a board, or an accountant by any means. The link is unauthenticated and is subject to IAM-20; a report exposes an entity's whole position rather than a single document, so its scope is one report as of one date and nothing further. | Must | Approved |
 | **RPT-14** | Every report is printable, laid out so a printed copy carries the same figures, headings, and basis statement as the screen. | Should | Approved |
 | **RPT-15** | Cash position and runway are reported, and material changes are surfaced without being asked for. | Should | Approved |
 | **RPT-16** | In addition to the standard reports, a user can ask a question of their own books that nobody anticipated, and get an answer drawn from what is posted. | Should | Approved |
@@ -318,7 +318,8 @@ Who may reach an entity, what they may do there, and how that is evidenced.
 | **IAM-16** | Where an entity has more than one identity able to post and has elected to segregate duties, the system enforces that the **person** who drafts a transaction is not the person who posts it. Two skills acting for the same person do not satisfy this: a skill's separate principal is a capability constraint, not a segregation of duties. | Should | Approved |
 | **IAM-17** | Where only one identity in an entity can post, segregation is impossible. The system determines this from the entity's own roster rather than asking, and neither offers the choice nor mentions it. What stands in segregation's place is what ordinary use already produces — reconciliations performed, exceptions dispositioned, agent-posted entries reviewed — and the system evidences those as the controls in force. The question arises only when a second identity able to post is added. | Should | Approved |
 | **IAM-18** | Roles exist at two scopes, entity and deployment, and the two are independent. Holding an administrative role in an entity confers nothing at deployment scope, and holding a deployment-scoped role confers no role in any entity. | Must | Approved |
-| **IAM-19** | Deployment-scoped administrative capabilities are enumerable and individually assignable — configuring a provider that receives customer data, setting the retention schedule, authorising a disposal batch, reviewing security events, and approving privileged access. Each is held by a named identity at all times, and the system can say which. | Must | Approved |
+| **IAM-19** | Deployment-scoped administrative capabilities are enumerable and individually assignable — among them configuring a provider that receives customer data, setting the retention schedule, authorising a disposal batch, reviewing security events, and approving privileged access. The set grows as capabilities are added and the system can state it at any time. Each is held by a named identity at all times, and the system can say which. | Must | Approved |
+| **IAM-20** | The read paths that require no identity are enumerable, and the system can state them. Each reaches exactly one artifact and nothing else about the entity, uses a link that cannot be guessed or arrived at by enumeration, and can be revoked. A path that exposes more than one artifact, or that cannot be revoked, is not one of them. | Must | Approved |
 
 **Acceptance, IAM-07.** A person invited to an entity and never authenticated holds nothing,
 and appears in IAM-14's history as invited rather than as holding a role.
@@ -430,7 +431,7 @@ stricter target than the global one.
 | **NFR-05** | Amounts, account numbers, payee names, and credentials never appear in logs, telemetry, or error output. | Confidentiality | Must | Zero occurrences |
 | **NFR-06** | Every request is validated as intended for this deployment and this entity before it is served. A request meant for somewhere else is refused rather than interpreted. | Security | Must | Every request, no exemptions |
 | **NFR-07** | Committed financial records survive the loss of any single machine or storage device. A deployment can be restored to a known point, and the restore is exercised rather than assumed. | Durability | Must | No committed record lost to a single failure |
-| **NFR-09** | Interactive queries return quickly enough to be used conversationally, against a stated volume of history that a target customer would actually accumulate. Both the latency and the volume are numbers, or neither means anything. Under one second at the 95th percentile, against five years of history for an entity posting a thousand transactions a month. | Performance | Should | Approved |
+| **NFR-09** | Interactive queries return quickly enough to be used conversationally, against a stated volume of history that a target customer would actually accumulate. Both the latency and the volume are numbers, or neither means anything. | Performance | Should | Under one second at the 95th percentile, against five years of history for an entity posting a thousand transactions a month |
 | **NFR-10** | The system depends on no single infrastructure provider. Relocating a deployment is an infrastructure change, not a change to the product. | Portability | Must | No provider dependency in the shipped artifact |
 | **NFR-11** | The complete product runs on one machine, with no cloud account, no signup, and no credentials, holding real books rather than a demonstration. | Deployability | Must | One command |
 | **NFR-12** | A third party can add a financial institution, a payment processor, an email provider, or a jurisdiction's rules as an additive contribution against a stable extension point. | Extensibility | Must | No change to the ledger or the modules around it |
@@ -441,10 +442,13 @@ stricter target than the global one.
 | **NFR-17** | Every capability is present in every deployment. No build withholds one. | Parity | Must | Zero deployment-specific capabilities |
 | **NFR-18** | Controls are evidenced rather than asserted. For every control these requirements state, the system produces the record showing it operated throughout a stated period. A control that cannot be evidenced does not count as implemented. | Auditability | Must | Every stated control evidenced |
 | **NFR-19** | The product is operable by someone who runs a business rather than someone who keeps books. Where an accounting term is unavoidable it is explained in place, and no ordinary task requires knowing what a contra account is. | Usability | Should | A non-accountant completes onboarding, categorisation, and a month-end close unaided |
-| **NFR-20** | Dates, numbers, and currency are presented in the conventions of the entity's locale, and the interface is available in languages other than English. | Localisation | Could | Deferred — activates when an entity operates outside the initial locale |
+| **NFR-20** | Dates, numbers, and currency are presented in the conventions of the entity's locale, and the interface is available in languages other than English. Deferred; it activates when an entity operates outside the initial locale, and is not built before then. | Localisation | Could | Dates, numbers, and currency correct for the entity's declared locale |
 | **NFR-21** | A contributor can build the system, run its full test suite, and exercise it end to end from a clean checkout, with no credentials, no accounts, and no access anyone has to grant them. | Contributability | Must | Clean checkout to passing suite, unaided |
 | **NFR-22** | Correctness guarantees attach to what the ledger records and computes, never to a judgement an agent made. Where CFOKit does not operate the agent runtime, the model behind a coding decision is not identifiable to CFOKit and its effect on accuracy is not observable — a poor one degrades the books silently rather than visibly. The system states that limit rather than implying uniform assurance. | Correctness | Must | No assurance claimed for a component CFOKit cannot observe |
 | **NFR-23** | Alteration, removal, or absence of a financial record is detectable from the records themselves, rather than only by comparison against a backup or a log held elsewhere. | Integrity | Must | Any alteration, removal, or gap detectable from the records alone |
+
+**NFR-08 is not present.** Whether it was retired or lost is not recorded. The identifier is not
+reused either way, so the numbering carries a gap — the same treatment 8.11 gives its own.
 
 **Two kinds of guardrail, and only one of them is trustworthy.** NFR-16 constrains what the
 product is asked to do, and is therefore a behavioural standard an agent can fail to meet.
@@ -787,7 +791,7 @@ is fully compromised and cooperative with the attacker.
 | | Requirement | Priority | Status |
 |---|---|---|---|
 | **SOC2-14** | Customer data is encrypted in transit and at rest. Key custody, rotation, and the ability to revoke access to encrypted data are stated properties of a deployment rather than assumptions about its infrastructure. | Must | Proposed |
-| **SOC2-15** | Entity isolation is enforced at the data layer, so that a cross-entity read is impossible rather than merely unlikely. No interface, query path, or administrative operation may bypass it. The single exception is the invoice link of AR-08, which is scoped to one invoice and carries nothing else about the entity. | Must | Proposed |
+| **SOC2-15** | Entity isolation is enforced at the data layer, so that a cross-entity read is impossible rather than merely unlikely. No interface, query path, or administrative operation may bypass it. The exceptions are the unauthenticated read paths of IAM-20, each scoped to one artifact and carrying nothing else about the entity. | Must | Proposed |
 | **SOC2-16** | Isolation extends to everything derived. An agent operating for one entity cannot reach another entity's data through any tool, cache, conversation memory, embedding, index, or model context. | Must | Proposed |
 | **SOC2-17** | Data is classified — financial records, credentials and secrets, personal information, and derived artifacts including embeddings, extracted document text, and agent traces — and handling obligations follow the classification. | Must | Proposed |
 | **SOC2-18** | Deleting an entity destroys its derived artifacts as well as its records: embeddings, caches, extracted text, agent traces, and any representation held by a provider under SOC2-10. Deletion that leaves derived data behind does not satisfy PLT-13. | Must | Proposed |
@@ -944,7 +948,7 @@ serving no objective does not belong here.
 | **OBJ-5** The recurring cost goes away | BKP-01–BKP-06, BKP-13–BKP-18, AR-01–AR-19, RPT-01–RPT-09, MIG-01–MIG-08, NFR-19, NFR-20 |
 | **OBJ-6** Output accepted as it stands | LED-01, LED-02, LED-14, LED-17, RPT-01–RPT-05, RPT-07, RPT-09, RPT-10, RPT-12, RPT-13, RPT-14, RPT-16, RPT-17, RPT-18, RPT-19, NFR-01, NFR-16, NFR-22 |
 | **OBJ-7** Never forced off by growing | LED-10, LED-13, LED-14, LED-15, LED-16, LED-17, LED-18, LED-19, RPT-19, RPT-20, RPT-21, IAM-08, IAM-09, PLT-04, PLT-08, NFR-09 |
-| **OBJ-8** Only authorised people reach the books | IAM-01–IAM-07, IAM-11, IAM-12, IAM-15, IAM-16, IAM-17, AR-08, PLT-05, PLT-23, NFR-04, NFR-05, NFR-06 |
+| **OBJ-8** Only authorised people reach the books | IAM-01–IAM-07, IAM-11, IAM-12, IAM-15, IAM-16, IAM-17, IAM-20, AR-08, PLT-05, PLT-23, NFR-04, NFR-05, NFR-06 |
 | **OBJ-9** Provable to an examiner | IAM-13, IAM-14, IAM-18, IAM-19, PLT-15–PLT-19, PLT-22, NFR-18, SOC1-01–SOC1-36, SOC2-01–SOC2-24, SOC2-27–SOC2-30 |
 | **OBJ-10** Leave with everything, at any time | MIG-09–MIG-12, PLT-09, PLT-10, PLT-11, PLT-12, PLT-13, PLT-21, NFR-07, NFR-17 |
 | **OBJ-11** Runs with no vendor relationship | BKP-03, IAM-10, PLT-01, PLT-02, PLT-03, PLT-06, NFR-10, NFR-11, NFR-14, NFR-17 |
