@@ -1,5 +1,5 @@
 ---
-status: "draft"
+status: "accepted"
 kind: "requirement-driven"
 date: 2026-08-17
 decision-makers: [Geoff]
@@ -153,10 +153,10 @@ Rely on review and on `mypy` to keep floats out.
 
 - CI gate 4, scanning schema and source. **Already implemented** in `scripts/check_money.py`.
 - Every decimal column in every migration is `NUMERIC(28,10)`.
-- The rounding strategy for display and for allocation remains to be decided; this record fixes
-  representation, not rounding policy.
-- The Postgres driver, when chosen, must return `NUMERIC` as `Decimal` rather than `float`. This is
-  a selection criterion, not a configuration detail.
+- Rounding and allocation policy is a separate question, settled in ADR-0025. This record fixes
+  representation and says nothing about when a figure is rounded.
+- The Postgres driver must return `NUMERIC` as `Decimal` rather than `float`. This was a selection
+  criterion rather than a configuration detail, and `psycopg` was chosen partly on it (ADR-0024).
 
 **Reversal cost. Very high.** Changing representation later means migrating every monetary column
 and every value that passed through the application, with no way to recover precision already lost.
