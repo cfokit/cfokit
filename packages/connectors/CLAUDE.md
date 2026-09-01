@@ -4,12 +4,17 @@ Loads when you work in `packages/connectors/`. Root `CLAUDE.md` still applies.
 
 ## The boundary
 
-**Never import `cfokit.ledger`.** Connectors produce transactions through the ledger's public
-API, over HTTP. An `import-linter` contract fails `uv run task lint` if you try. (ADR-0014)
+**Never import `cfokit.ledger`.** An `import-linter` contract fails `uv run task lint` if you try.
 
-The temptation is real — the ledger's booking code is right there in the same repository, and
-calling it directly would be faster. Doing so would make the two packages one system with a
-shared dependency graph, which is exactly what ADR-0014 exists to prevent.
+**This is a provisional default, not a settled answer.** ADR-0014 governs *skills*, which are
+unambiguously separate, and says explicitly that it does not settle whether first-party packages
+must also use HTTP. ADR-0022 § 5 leaves ingestion's classification open: it writes drafts, which are
+ledger records, so committing atomically argues for an in-process module, while credential isolation
+and a scheduled runtime argue for a separate component. The contract stands because it is the safe
+direction to be wrong in — an HTTP boundary can be relaxed later, an in-process one cannot.
+
+If you have a reason to cross it, that is the open question in ADR-0022 § 5 being answered. Raise it;
+do not work around the contract.
 
 ## Naming
 
@@ -59,4 +64,11 @@ is in the wrong package.
   stable idempotency key derived from the provider's own transaction identifier. (ADR-0029)
 - Never log account numbers, tokens, or payee names at info level. Log counts and identifiers.
 - A provider that returns a transaction you cannot map is a reported error, not a silently
-  dropped row.
+  dropped row. Retain it with the reason, and record what each sync run was expected to cover
+  against what it delivered — a feed that skips a period must be detectable, not inferred from an
+  absent batch. (`BKP-21`)
+- **Mark content the organisation did not author as it arrives**, and carry the marking with the
+  stored record. It cannot be applied retrospectively, and everything downstream that limits what
+  an agent may do with untrusted content depends on it. (`BKP-20`, `PLT-23`)
+- Record what each transaction was derived from — the feed record, the uploaded statement, the
+  document. The link ships with the row or it is lost. (`BKP-19`)

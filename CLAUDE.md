@@ -16,7 +16,7 @@ Directories are organised by **artifact kind**, and packages are named for
 |---|---|---|
 | `packages/ledger/` | The double-entry primitive, kept deliberately tiny | Accounts, postings, draft/posted, reversal, close. Knows nothing about customers, invoices, banks, email, or agents. |
 | `packages/<module>/` | In-process modules — siblings of the ledger, same deployable | Depend on the ledger; never on each other; the ledger never depends on them. |
-| `packages/connectors/` | Transaction feed ingestion. **Name is known-wrong and will be renamed** (ADR-0022) | Classification as module or component is not yet settled. |
+| `packages/connectors/` | Transaction feed ingestion. **Name is known-wrong and will be renamed** (ADR-0031) | Classification as module or component is not yet settled (ADR-0022 § 5). |
 | `skills/` | Shipped Agent Skills, as `SKILL.md` bundles | Talk to the ledger over HTTP only. Never import ledger code. |
 | `infra/` | OpenTofu for the one maintained cloud target, plus the deployment contract | Supplies env vars only. No app coupling. |
 | `docs/product/` | Vision and numbered requirements | The source for positioning; the README derives from it. |
@@ -99,8 +99,10 @@ otherwise get wrong, because absence isn't visible in a manifest:
   violation inside the ledger. (ADR-0024)
 - **REST is FastAPI with synchronous `def` handlers only.** The event loop lives in the
   server, not in our code. `async def` handlers are the normal way to write FastAPI and are
-  forbidden here — the driver is blocking, so they would gain nothing and would make an
-  `await` mid-transaction expressible. (ADR-0024)
+  forbidden here. Not because the driver blocks — psycopg 3 is dual-mode and an `async def`
+  handler would genuinely await the database, so that option is faster in principle. It is
+  forbidden because it makes an `await` inside a transaction expressible, and the workload has
+  almost no concurrency to reclaim in exchange. (ADR-0024)
 - **Runtime dependencies are load-bearing and few.** Adding one is a decision, not a
   convenience. Ask before adding any. Currently **five**, all in `packages/ledger`, each with
   its reason and verified licence in a comment there: `psycopg[binary]` (driver), `fastapi`
@@ -119,6 +121,13 @@ Applies to any package that touches financial values.
   Corrections are reversing entries. (ADR-0007)
 - Postgres is the only storage backend. Do not add SQLite, DynamoDB, or any second
   store, including "just for local dev". (ADR-0003)
+- **Rounding happens once, at presentation.** Never to an intermediate, never stored back. A
+  rounding call in `engine`, `repository`, or `service` means the boundary has been misplaced.
+  Allocation lives in the pure engine and is property-tested. (ADR-0025)
+- **The ledger is intrinsically accrual, and accounting basis is a presentation property.** Every
+  obligation and every settlement is a posting whatever basis the entity declared; the cash view
+  is derived from the stored link between them. **No posting path branches on the declared
+  basis.** (ADR-0037)
 
 ## Portability
 
@@ -152,14 +161,29 @@ These define "done". Do not write code that assumes an environment they forbid.
 1. `lint` clean — ruff, `mypy --strict`, import-linter layer rules.
 2. Full suite green against `compose.yaml` (without the dev overlay) **with no cloud credentials
    present**. (ADR-0004)
-3. Differential test against the Beancount oracle passes, with every divergence
-   matching a documented entry. (ADR-0010)
+3. **Deferred, not running.** The Beancount differential oracle activates with `LED-18`; until
+   then correctness rests on the layers below. (ADR-0010, ADR-0036)
 4. No float storage types anywhere in the schema. (ADR-0005)
 5. Generated OpenAPI and MCP tool descriptions match what's committed — a diff means a
    contract change and needs review. (ADR-0015)
 6. `check-decisions` clean — every record carries a valid `status` and `kind`, cites only live
    requirement ids, follows the MADR template, and matches the index. Requirements and the vision
    cite no record. (ADR-0001)
+
+## Testing
+
+Four layers, and only the top one needs a model. (ADR-0036)
+
+1. Unit and property tests over the engine and service — no protocol, no model, no database.
+2. A conformance corpus of published worked examples. **This is where independence comes from**,
+   and every case cites its source. A case with no citation is a unit test that has been misfiled.
+3. Protocol integration against REST and MCP as a client would, deterministic.
+4. Evals, which assert on records — the transaction and its status, the postings, the audit row —
+   never on prose.
+
+Layers 1 to 3 gate every commit; layer 4 does not. **No model writes an assertion, at any layer**:
+a generated assertion encodes current behaviour including its defects, which is the blind spot
+layer 2 exists to close.
 
 ## Licensing
 
@@ -197,8 +221,9 @@ Scope the question by **what triggers the obligation**, not by the licence name.
   applied explicitly. Never provision a laptop with OpenTofu. (ADR-0018)
 - **IaC creates secret containers, never secret values.** State stores secrets in
   plaintext. Values are populated out of band. (ADR-0016)
-- Adding anything to the environment surface in `infra/README.md` requires an ADR — that
-  document is the portability contract. (ADR-0016)
+- Changing the **shape** of the environment contract requires an ADR — env-vars-only, secrets as
+  containers populated out of band, nothing from cloud metadata. Adding a variable within that
+  shape does not; `infra/README.md` is authoritative for the names. (ADR-0016)
 
 ## Scope discipline
 
