@@ -68,6 +68,10 @@ question, addressed in its own record rather than assumed here.
 Chosen option: **Beancount is a development and CI dependency used as a differential oracle**, and
 nothing else.
 
+**It activates with `LED-18` and `LED-19`, not before.** See § "What the oracle covers, and when it
+is worth its cost" below; [ADR-0036](0036-correctness-is-tested-in-four-layers.md) holds what tests
+correctness in the meantime.
+
 - It is never imported at runtime, never present in the distributed image, and never in the
   default compose stack.
 - A differential test suite compares CFOKit's booking results against Beancount's over a corpus
@@ -75,6 +79,34 @@ nothing else.
 - **Every divergence must match a documented entry.** An undocumented divergence fails the build.
 - The Beancount version is pinned; an upgrade is a deliberate act, because it can change the
   oracle's answers.
+
+### What the oracle covers, and when it is worth its cost
+
+Mapping the ledger requirements against Beancount gives a smaller answer than this record originally
+assumed.
+
+| | Requirements | Oracle value |
+|---|---|---|
+| **Exercised by comparison** | `LED-01` chart of accounts, `LED-02` account types, `LED-03` balance, `LED-10` opening balances | Low. None of these is a semantic anybody misunderstands, and each is a property test. `LED-03` compares only with Beancount's tolerance divergence already documented (ADR-0025). |
+| **Where comparison is worth most — deferred** | `LED-18` positions in non-money commodities, `LED-19` FIFO lot consumption | **High, and unavailable.** Lot booking is Beancount's strongest area and CFOKit's hardest problem. Both are `Could \| Deferred`. |
+| **No Beancount analogue** | `LED-05`, `LED-07`, `LED-08`, `LED-09`, `LED-11`, `LED-12`, `LED-13`, `LED-14`, `LED-15`, `LED-17`, `LED-20` | None. Beancount is a single-book text file with one date per transaction, no period concept, no accounting basis, and no record that cannot be edited. |
+
+So the claim above — that the oracle pins down "booking arithmetic and lot semantics" — is half true.
+Lot semantics are deferred, leaving booking arithmetic, which is the part least likely to be got
+wrong and which property tests already reach.
+
+**The cost was also understated.** The oracle is not a CI job. It is a transaction corpus in two
+formats, a translator from CFOKit's model into Beancount syntax, a comparison harness, and a
+divergence register. The translator is untested code sitting between the system and its own
+correctness evidence, and a defect in it produces false agreement as readily as false divergence.
+
+Eleven of twenty requirements having no analogue also means the divergence register would be
+dominated by entries reading "Beancount has no concept of this" — noise that buries whatever signal
+the register carries.
+
+None of this makes the oracle wrong. It makes it **early**. When lot booking activates, the oracle
+covers the hardest semantics in the ledger against the implementation best qualified to check them,
+and the cost is then proportionate.
 
 ### Consequences
 
@@ -91,7 +123,11 @@ nothing else.
 
 **CI gate 3:** the differential suite passes, with every divergence matching a documented entry.
 The `oracle` pytest marker is reserved and configured — **already in place** in `pyproject.toml`;
-the CI job is scaffolded and commented out pending the engine existing (M2).
+the CI job is scaffolded and commented out.
+
+It stays commented out until `LED-18` activates. Until then the gate that carries `NFR-01` is the
+conformance corpus of [ADR-0036](0036-correctness-is-tested-in-four-layers.md) § 2, which buys the
+same independence from published answers rather than from a second implementation.
 
 ## Pros and Cons of the Options
 
@@ -153,7 +189,10 @@ By far the most attractive option on the surface.
 
 - CI gate 3: the differential suite passes, with every divergence matching a documented entry.
 - A divergence register, versioned in the repository, where each entry states what differs and why
-  it is correct for CFOKit.
+  it is correct for CFOKit. **It is not created until the oracle activates** — ADR-0001 defines a home
+  for every kind of document and has none for this, and deferring the register defers that question
+  with it. Whoever turns the oracle on settles where the register lives and who adjudicates an entry,
+  because a comparison detects difference and cannot say which side is wrong.
 - The `oracle` pytest marker is reserved and configured. **Already in place.**
 - Beancount pinned, in a CI-only dependency group — never in the default `dev` group used to build
   or run the service, and never in the image.
@@ -165,6 +204,8 @@ correctness evidence CFOKit has, but it would break no shipped code.
 
 ## Revisit when
 
+- **`LED-18` and `LED-19` activate.** This is the trigger that turns the oracle on, and the point at
+  which its cost becomes proportionate to what it covers.
 - Beancount gains multi-writer, database-backed operation. That is the architectural objection
   rather than the licensing one, and it is the only thing that would reopen using it directly.
 - The divergence register grows large enough that the two systems are no longer usefully
