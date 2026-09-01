@@ -17,12 +17,10 @@ members = ["packages/*"]
 
 [tool.uv.sources]
 cfokit-ledger = { workspace = true }
-cfokit-connectors = { workspace = true }
 
 [dependency-groups]
 dev = [
     "cfokit-ledger",
-    "cfokit-connectors",
     "ruff>=0.14",
     "mypy>=1.18",
     "pytest>=8.4",
@@ -82,7 +80,7 @@ docstring-code-format = true
 strict = true
 python_version = "3.12"
 files = ["packages", "scripts", "tests"]
-mypy_path = ["packages/ledger/src", "packages/connectors/src", "scripts"]
+mypy_path = ["packages/ledger/src", "scripts"]
 namespace_packages = true
 explicit_package_bases = true
 warn_unreachable = true
@@ -127,12 +125,6 @@ forbidden_modules = [
     "cfokit.ledger.api",
     "cfokit.ledger.mcp",
 ]
-
-[[tool.importlinter.contracts]]
-name = "Connectors reach the ledger over its public API only, never in-process (ADR-0014)"
-type = "forbidden"
-source_modules = ["cfokit.connectors"]
-forbidden_modules = ["cfokit.ledger"]
 
 # NOTE: a contract forbidding provider SDKs at module scope (ADR-0004) is added when
 # the first provider SDK is introduced — import-linter errors on modules it cannot find.

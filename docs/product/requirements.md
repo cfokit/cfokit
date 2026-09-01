@@ -270,7 +270,7 @@ Producing statements, and answering questions the books can support.
 | **RPT-12** | A presented figure is rounded half-up to its commodity's display scale. A total is computed from the unrounded values and then rounded, never by summing figures already rounded. | Must | Approved |
 | **RPT-13** | A report is available as a document and as a stable link, either of which can be given to a lender, a board, or an accountant by any means. The link is unauthenticated and is subject to IAM-20; a report exposes an entity's whole position rather than a single document, so its scope is one report as of one date and nothing further. | Must | Approved |
 | **RPT-14** | Every report is printable, laid out so a printed copy carries the same figures, headings, and basis statement as the screen. | Should | Approved |
-| **RPT-15** | Cash position and runway are reported, and material changes are surfaced without being asked for. | Should | Approved |
+| **RPT-15** | Cash position and runway are reported, and a change beyond the alerting threshold of PLT-07 is surfaced without being asked for. | Should | Approved |
 | **RPT-16** | In addition to the standard reports, a user can ask a question of their own books that nobody anticipated, and get an answer drawn from what is posted. | Should | Approved |
 | **RPT-17** | A statement can be marked issued, fixing what was reported, to whom, and when. | Should | Approved |
 | **RPT-18** | Assemble the figures, schedules, and supporting detail a tax return requires, to a standard where a preparer can answer their own questions without contacting the client. CFOKit does not file. | Should | Approved |
@@ -356,7 +356,7 @@ records about itself.
 | **PLT-04** | An operator managing several entities can work with each one in a dedicated conversational channel, with the product's reach limited to that channel's entity. | Should | Approved |
 | **PLT-05** | Presence in a channel confers no access. A request is permitted only where a linked CFOKit identity independently holds a role for the entity that channel is bound to. The binding is a stored decision and is never inferred from a channel's name, topic, or contents. | Should | Approved |
 | **PLT-06** | CFOKit sends email on an entity's behalf where the deployment supplies a mail service, and requires no particular provider. Where none is supplied, invoices and reminders remain available as documents and stable links for an operator to deliver by hand (AR-07), and CFOKit records that it did not send rather than reporting a delivery it cannot make (AR-19). | Should | Approved |
-| **PLT-07** | CFOKit reaches the people who operate an entity when something needs them — a transaction no rule resolves, a delivery that failed, a material change in position, a scheduled run that did not complete. Where they are reached is theirs to set, and any class of it can be turned off. | Must | Approved |
+| **PLT-07** | CFOKit reaches the people who operate an entity when something needs them — a transaction no rule resolves, a delivery that failed, a change in cash position beyond an alerting threshold the entity sets, a scheduled run that did not complete. Where they are reached is theirs to set, and any class of it can be turned off. | Must | Approved |
 
 #### Entity settings and lifecycle
 
@@ -551,6 +551,14 @@ conclusions are both individually explainable from what was persisted.
 > entry is meaningful storage and a real write-path burden, realised at examination time rather
 > than in daily use.
 
+**On the word "materiality".** It is not used as a system threshold anywhere in this document, and
+that is deliberate. Three separate ideas were previously sharing it. What decides whether agent work
+needs a person is SOC1-04's configuration **per class of action**, not an amount. What decides
+whether a change is worth interrupting someone about is PLT-07's **alerting threshold**, which the
+entity sets. *Materiality* proper — the threshold below which a misstatement would not change a
+reader's decision — is an accountant's judgement about a set of statements, not a setting the system
+holds, and CFOKit does not offer to make it.
+
 ### 7.2 Ledger integrity
 
 Mostly carried already: LED-03 balance enforcement, LED-07 the draft-to-posted boundary,
@@ -676,11 +684,11 @@ adds customer burden.
 
 | | The user entity must |
 |---|---|
-| **CUEC-1** | Review and approve agent work above the materiality thresholds it has configured, rather than allowing approvals to accumulate unexamined |
+| **CUEC-1** | Review and approve the agent work its SOC1-04 configuration routes to a person, rather than allowing approvals to accumulate unexamined |
 | **CUEC-2** | Administer its own identities and roles, including removing access promptly when a person leaves or an engagement ends |
 | **CUEC-3** | Review exception and reconciliation reports on a defined cadence |
 | **CUEC-4** | Verify opening balances at onboarding, and confirm that migrated history agrees with the system it came from |
-| **CUEC-5** | Own the materiality thresholds and autonomy configuration in force, whether it set them or accepted the defaults, and be able to say why they are appropriate to the business |
+| **CUEC-5** | Own the autonomy configuration and alerting thresholds in force, whether it set them or accepted the defaults, and be able to say why they are appropriate to the business |
 
 ### 7.11 Excluded from this section
 
@@ -758,7 +766,7 @@ template, so we should be able to describe our controls before we are asked.
 | **SOC2-03** | An agent turn that reads untrusted content operates with a reduced capability set, enforced at the interface. Reading an untrusted document and writing to the ledger are not simultaneously available within one turn. A prompt instructing the model to disregard embedded instructions is not a control and does not satisfy this. | Must | Proposed |
 | **SOC2-04** | Attempts to inject instructions through ingested content are detected and recorded as security events, retrievable alongside other security events. They are never silently handled. | Must | Proposed |
 | **SOC2-05** | On detection, the turn stops and the content is quarantined rather than processed further. The item becomes an exception under SOC1-28 for a person to disposition. Detection that only records is telemetry, not a control. | Must | Proposed |
-| **SOC2-06** | The maximum damage a fully successful injection can cause is stated, bounded by the materiality thresholds and human authorisation gates of SOC1-04, and demonstrable by test. The bound is a property of the capability model, never of model behaviour. | Must | Proposed |
+| **SOC2-06** | The maximum damage a fully successful injection can cause is stated, bounded by the human authorisation gates of SOC1-04, and demonstrable by test. The bound is a property of the capability model, never of model behaviour. | Must | Proposed |
 | **SOC2-07** | Changing where a customer is told to send money, or the identity a customer is told they are paying, requires human authorisation in every case, at any amount, regardless of the agent's stated confidence. This covers the payment details an invoice carries and the customer record behind it. CFOKit moves no money, so this — not a payment instruction — is where revenue can be redirected, and it carries no autonomous path. | Must | Proposed |
 | **SOC2-08** | The detection approach for injection attempts is a stated, versioned artifact under SOC1-34, so that a change to it is a change to a security control. | Must | Proposed |
 
@@ -769,7 +777,7 @@ model attempts to comply.
 **Acceptance, SOC2-06.** The stated blast radius is exercised by a test that assumes the model
 is fully compromised and cooperative with the attacker.
 
-> SOC1-04's thresholds and SOC2-03's capability split carry nearly all of the bound in SOC2-06.
+> SOC1-04's authorisation gates and SOC2-03's capability split carry nearly all of the bound in SOC2-06.
 > Weakening either for usability moves it.
 
 ### 8.3 Inference providers and data flow

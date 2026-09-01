@@ -107,9 +107,18 @@ not yet made.
   atomicity with ledger writes. Everything else is classified when it is built, using § 3.
 - **Where ingestion lands.** The criteria pull both ways and the verdict is deliberately left open.
   Ingestion writes *drafts*, which are ledger records, so a sync batch committing atomically argues
-  for a module; credential isolation and a scheduled runtime shape argue for a component. The
-  `import-linter` contract forbidding `cfokit.connectors` from importing `cfokit.ledger` stands as a
-  safe provisional default rather than a settled answer.
+  for a module; credential isolation and a scheduled runtime shape argue for a component.
+
+  A `packages/connectors` existed as a placeholder for this, holding no code, with an
+  `import-linter` contract and its own rules file. That was the guess this record rejected in
+  "Decide the full module list now" — a boundary drawn before the domain existed — and it had begun
+  to act as an answer: the package's rules file asserted HTTP-only as settled. It has been removed.
+  The question is open, and nothing now pre-empts it.
+
+  Note also that it cannot be answered for "ingestion" as a unit. Scheduled feeds hold credentials
+  and are third-party extensible (`NFR-12`); statement file upload (`BKP-03`) holds no credentials,
+  runs on no schedule, and arrives over the API. Those classify differently, so the split precedes
+  the classification.
 - **How components map to deployment infrastructure.** Settled subsequently by
   [ADR-0023](0023-one-image-many-entrypoints.md) and
   [ADR-0032](0032-component-authentication-and-configuration.md).
@@ -122,8 +131,8 @@ not yet made.
   subdirectory nobody counts.
 * Good, because the criteria are the durable artifact and the module list is the perishable one, so
   the record does not go stale as domains arrive.
-* Bad, because the `connectors` package carries a name known to be wrong until it is renamed — a
-  small ongoing embarrassment, and a deliberate one.
+* Bad, because ingestion has no package until one is built, so a contributor arriving early finds a
+  criteria table rather than a place to put code.
 * Bad, because classifying each new capability is a judgement call, and § 3 will occasionally be
   ambiguous.
 * Bad, because modules cannot depend on each other, so a genuine cross-module need forces either a
@@ -201,7 +210,7 @@ Would settle the architecture in one pass and avoid re-opening it repeatedly.
 * `import-linter` contracts encoding the module dependency rules, added as the first module lands.
 * Reports follow ownership: financial statements depend only on the ledger, while AR ageing belongs to
   invoicing. This keeps a reporting module from depending on invoicing.
-* `connectors` renamed, and probably split, before implementation begins (ADR-0031).
+* A package is created when its capability is known and it has code; `connectors` was removed rather than renamed (ADR-0031).
 * `CLAUDE.md`'s repository map reflects the ledger/module/component distinction.
 
 **Reversal cost. Low now, high later.** Nothing is built, so boundaries are free to move today. Once

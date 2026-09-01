@@ -69,9 +69,9 @@ cannot have two implementations.
 Skills are unambiguously separate, and this record binds them. It does **not** settle whether
 first-party in-repository packages must also use HTTP.
 [ADR-0022](0022-tiny-ledger-modules-and-components.md) holds the criteria for classifying such a
-package as an in-process module or a separate component. The `import-linter` contract forbidding
-`cfokit.connectors` from importing `cfokit.ledger` stays in force as a safe provisional default
-rather than a settled answer.
+package as an in-process module or a separate component. There was an `import-linter` contract
+standing as a provisional default for ingestion; the package it guarded held no code and has been
+removed, so the question is open with nothing pre-empting it.
 
 ### Consequences
 

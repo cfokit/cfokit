@@ -28,7 +28,6 @@ WORKDIR /app
 # Manifests first, so the dependency layer is cached independently of source.
 COPY pyproject.toml uv.lock ./
 COPY packages/ledger/pyproject.toml packages/ledger/
-COPY packages/connectors/pyproject.toml packages/connectors/
 
 # The workspace members are declared in the root `dev` group, so `--no-dev` alone
 # would install nothing. `--package` resolves the member and its runtime deps.

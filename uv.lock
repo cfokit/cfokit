@@ -10,7 +10,6 @@ resolution-markers = [
 [manifest]
 members = [
     "cfokit",
-    "cfokit-connectors",
     "cfokit-ledger",
 ]
 
@@ -210,7 +209,6 @@ source = { virtual = "." }
 
 [package.dev-dependencies]
 dev = [
-    { name = "cfokit-connectors" },
     { name = "cfokit-ledger" },
     { name = "import-linter" },
     { name = "mypy" },
@@ -223,7 +221,6 @@ dev = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "cfokit-connectors", editable = "packages/connectors" },
     { name = "cfokit-ledger", editable = "packages/ledger" },
     { name = "import-linter", specifier = ">=2.3" },
     { name = "mypy", specifier = ">=1.18" },
@@ -231,11 +228,6 @@ dev = [
     { name = "ruff", specifier = ">=0.14" },
     { name = "taskipy", specifier = ">=1.14" },
 ]
-
-[[package]]
-name = "cfokit-connectors"
-version = "0.0.0"
-source = { editable = "packages/connectors" }
 
 [[package]]
 name = "cfokit-ledger"

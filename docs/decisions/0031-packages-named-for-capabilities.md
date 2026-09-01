@@ -53,10 +53,15 @@ is precisely the set of things that change.
 Distributions are `cfokit-<capability>`, importing as `cfokit.<capability>` through PEP 420 implicit
 namespace packages.
 
-Applying the rule to the package that prompted it: **`connectors` is renamed before implementation
-begins**, and probably split, since bank feeds, payment processing, and transactional email are three
-capabilities rather than one. The rename is deferred rather than done now, because doing it twice is
-worse than doing it once, and what it splits into depends on decisions not yet made (ADR-0022 § 5).
+Applying the rule to the package that prompted it: **`connectors` was removed rather than renamed.**
+It held no code — two `__init__.py` files of docstrings — while carrying an `import-linter` contract,
+a rules file, and entries in the Dockerfile, the dev overlay, and the workspace manifest.
+
+Removal is the better form of the rename. Bank feeds, payment processing and transactional email are
+three capabilities rather than one, so any single new name would be a second guess; and a package
+existing before its capability is known is exactly the boundary-around-a-guess ADR-0012 forbids and
+ADR-0022 rejected. **A package is created when the capability it provides is known and there is code
+to put in it.**
 
 ### Consequences
 
@@ -64,8 +69,7 @@ worse than doing it once, and what it splits into depends on decisions not yet m
 * Good, because provider independence is visible in the layout rather than only in a rule.
 * Good, because a capability name resists accumulating unrelated things, since the mismatch is
   obvious.
-* Bad, because `cfokit-connectors` is vaguer than `plaid-sync` and says less about what exists today.
-  It is also a name known to be wrong, carried deliberately until the rename.
+* Bad, because a capability name is vaguer than a vendor name and says less about what exists today.
 * Bad, because "what capability is this?" is occasionally a genuinely hard question, and the rule
   gives no help when the answer is unclear.
 
@@ -111,7 +115,7 @@ The one mechanical part is that `packages/` holds distributions only, which `uv 
 
 **Follow-on obligations.**
 
-- `connectors` renamed, and probably split, before implementation begins.
+- A package is created when its capability is known and it has code, never before.
 - `CLAUDE.md`'s repository map carries the rule where an agent proposing a package will read it.
 
 **Reversal cost.** Low now, moderate once anything is published to an index, because import paths

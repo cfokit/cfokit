@@ -66,15 +66,21 @@ Write tests alongside the code, not after. Never report work complete on a red s
    in CI-only tooling is fine.
 3. Runtime dependencies need approval before you add them.
 
-## Adding a connector
+## Adding a provider
 
-This is the most contribution-friendly surface in the project, deliberately.
+Bank feeds, payment processors and delivery channels are the most contribution-friendly surface
+in the project, deliberately — `NFR-12` makes third-party contribution a requirement rather than
+a courtesy.
 
-One module per provider under `packages/connectors/src/cfokit/connectors/providers/`, all
-behind the same protocol. Import provider SDKs inside the function that needs them, never at
-module scope, so the package stays importable without credentials present. Do not make your
-provider structural — if adding it requires changing the protocol, say so in the PR and
-expect a discussion.
+**The package that will hold them does not exist yet.** There was a `packages/connectors`
+containing no code, and it was removed rather than renamed: "connectors" names a mechanism rather
+than a capability, and bank feeds, payment processing and transactional email are not one
+capability (ADR-0031). What they split into is decided when the first is built.
+
+Two rules will apply whatever the package is called. Import provider SDKs inside the function that
+needs them, never at module scope, so the package stays importable without credentials present. And
+do not make your provider structural — if adding it requires changing the protocol, say so in the PR
+and expect a discussion.
 
 ## Architecture decisions
 

@@ -10,7 +10,8 @@ requires-python = ">=3.12"
 # convenience — ask before adding any (CLAUDE.md). Licences verified 2026-08-19.
 dependencies = [
     # Postgres driver. Returns NUMERIC as Decimal, which ADR-0005 makes a selection
-    # criterion. Synchronous. LGPL-3.0-only, which is not a constraint for a
+    # criterion. Dual-mode: we use the synchronous API, and AsyncConnection exists if
+    # ADR-0024 is ever revisited. LGPL-3.0-only, which is not a constraint for a
     # server-side dependency resolved from an index (CLAUDE.md, Licensing).
     "psycopg[binary]>=3.2",
     # REST adapter. FastAPI with synchronous `def` handlers only — the event loop
