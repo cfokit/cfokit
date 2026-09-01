@@ -22,6 +22,7 @@ from cfokit.ledger.errors import (
     IdempotencyKeyReused,
     LedgerError,
     NotAuthenticated,
+    NotAuthorised,
     TransactionAlreadyPosted,
     TransactionIncomplete,
     TransactionNotFound,
@@ -32,6 +33,7 @@ __all__ = ["STATUS_FOR_CODE", "status_for"]
 
 STATUS_FOR_CODE: dict[str, int] = {
     NotAuthenticated.code: HTTPStatus.UNAUTHORIZED,
+    NotAuthorised.code: HTTPStatus.FORBIDDEN,
     EntityNotFound.code: HTTPStatus.NOT_FOUND,
     TransactionNotFound.code: HTTPStatus.NOT_FOUND,
     # 409 rather than 422: the request is well-formed and would have been valid earlier. The

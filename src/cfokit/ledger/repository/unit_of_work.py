@@ -20,14 +20,14 @@ from __future__ import annotations
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from typing import Any
 
 import psycopg
 
 from cfokit.ledger.engine import Posting
 from cfokit.ledger.errors import EntityNotFound
-from cfokit.ledger.repository import audit, idempotency, transactions
+from cfokit.ledger.repository import audit, grants, idempotency, transactions
 from cfokit.ledger.repository.connection import connect
 from cfokit.ledger.repository.transactions import StoredTransaction
 
@@ -77,6 +77,13 @@ class EntityWrite:
 
     def store_idempotency_result(self, key: str, result: dict[str, Any]) -> None:
         idempotency.store_result(self._conn, self._entity_id, key, result)
+
+    # --- grants (IAM-01, ADR-0011) -------------------------------------------------------
+
+    def roles_in_force(self, principal_id: str, at: datetime) -> frozenset[str]:
+        """Roles this principal holds here at `at`. Read inside the locked transaction, so a
+        revocation committed a moment ago is already in force (`IAM-15`)."""
+        return grants.roles_in_force(self._conn, self._entity_id, principal_id, at)
 
     # --- the books -----------------------------------------------------------------------
 

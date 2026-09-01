@@ -179,15 +179,54 @@ def test_rest_reverses_a_posted_transaction(
     assert read.json()["reverses_id"] == original
 
 
-def test_rest_reports_another_entitys_transaction_as_not_found(
+def test_rest_refuses_an_entity_the_caller_holds_nothing_in(
     client: TestClient, books: tuple[str, str, str], two_entities: tuple[str, str]
 ) -> None:
-    """`NFR-04`: absent and invisible are the same answer, or the answer leaks."""
+    """`IAM-01`: holding no role in an entity means being able to do nothing with it.
+
+    403 rather than 404, which does reveal that the entity exists. That is the deliberate
+    trade `NotAuthorised` documents: a caller who names an entity and holds nothing in it is
+    far more often someone whose access lapsed or was revoked than someone probing for ids,
+    and "not found" would send them to support instead of to an administrator.
+    """
     entity_id, cash, revenue = books
     created = client.post(
         f"/entities/{entity_id}/transactions", json=body(cash, revenue), headers=headers()
     )
     other_entity, _ = two_entities
+
+    response = client.get(
+        f"/entities/{other_entity}/transactions/{created.json()['transaction_id']}"
+    )
+
+    assert response.status_code == 403
+    assert response.json()["code"] == "not_authorised"
+
+
+def test_rest_hides_another_entitys_transaction_from_someone_who_may_read_here(
+    client: TestClient,
+    owner_conn: psycopg.Connection[Any],
+    books: tuple[str, str, str],
+    two_entities: tuple[str, str],
+) -> None:
+    """`NFR-04`, now that a grant is what gets you through the door.
+
+    The caller holds a role in the *other* entity, so authorisation passes and the question
+    becomes what row-level security lets them see. It shows them nothing, and the answer is
+    "not found" rather than "forbidden" — absent and invisible are the same answer, or the
+    answer leaks which ids exist elsewhere.
+    """
+    entity_id, cash, revenue = books
+    created = client.post(
+        f"/entities/{entity_id}/transactions", json=body(cash, revenue), headers=headers()
+    )
+    other_entity, _ = two_entities
+    with owner_conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO entity_grant (entity_id, principal_id, role, granted_by)"
+            " VALUES (%s, 'user:geoff', 'reader', 'test')",
+            (other_entity,),
+        )
 
     response = client.get(
         f"/entities/{other_entity}/transactions/{created.json()['transaction_id']}"

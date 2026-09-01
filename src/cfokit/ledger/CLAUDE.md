@@ -74,7 +74,11 @@ Each of these is a bug if missed, not a nice-to-have:
 - **Exactly one `audit_log` row per state-changing call.** A code path that mutates state
   without one is a bug.
 - Mandatory idempotency keys on writes. A retry must not double-book. (ADR-0029)
-- Entity grants validated **server-side regardless of token contents**. (ADR-0011, ADR-0019)
+- Entity grants validated **server-side regardless of token contents**, inside the locked
+  transaction rather than at the edge — which is also what makes `IAM-15`'s "takes effect
+  immediately" true, since there is no cache to invalidate. An agent's authority is the
+  **intersection** of its own grants and those of the person it acts for (`IAM-11`).
+  (ADR-0011, ADR-0019)
 - Audience validated against `AUTH_AUDIENCE` on every request — tokens from a shared issuer
   are otherwise replayable across resource servers. (ADR-0019)
 - One request id per inbound call, propagated into `audit_log`.

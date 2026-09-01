@@ -39,6 +39,22 @@ class NotAuthenticated(LedgerError):
     code = "not_authenticated"
 
 
+class NotAuthorised(LedgerError):
+    """The caller is known and holds no role permitting this (`IAM-01`).
+
+    Distinct from `not_authenticated` on purpose: "log in" and "you may not" are different
+    answers, and ADR-0030 applies the same reasoning to a closed period so a skill can surface
+    the right question rather than a generic refusal.
+
+    It reveals that the entity exists, which is a deliberate trade. A caller who has named an
+    entity and holds nothing in it is far more often someone whose access lapsed (`IAM-09`)
+    or was revoked (`IAM-15`) than someone probing for entity ids, and telling the first group
+    "not found" sends them to support instead of to an administrator.
+    """
+
+    code = "not_authorised"
+
+
 # --- Booking ---------------------------------------------------------------------------
 # Raised by the pure engine, so both adapters surface the same code for the same condition
 # (ADR-0009). Messages carry amounts and commodities and are therefore error detail, not
