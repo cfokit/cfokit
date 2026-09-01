@@ -82,6 +82,10 @@ def test_the_ledger_is_what_gets_checked() -> None:
 def test_components_and_modules_are_not_checked() -> None:
     """Ingestion and delivery are I/O-bound against third parties, and a component is a
     separate runtime reaching the ledger over HTTP (ADR-0022, ADR-0023). Its execution model
-    cannot reach the write path, so the gate does not constrain it."""
-    connectors = REPO_ROOT / "packages/connectors/src/cfokit/connectors/__init__.py"
-    assert not is_checked(connectors)
+    cannot reach the write path, so the gate does not constrain it.
+
+    No such package exists yet — `packages/connectors` held no code and was removed rather
+    than renamed. The gate is scoped to `packages/ledger`, so a future sibling is outside it
+    by construction; this asserts that scoping directly rather than against a placeholder.
+    """
+    assert not is_checked(REPO_ROOT / "packages/some-future-module/src/cfokit/whatever.py")

@@ -16,7 +16,6 @@ Directories are organised by **artifact kind**, and packages are named for
 |---|---|---|
 | `packages/ledger/` | The double-entry primitive, kept deliberately tiny | Accounts, postings, draft/posted, reversal, close. Knows nothing about customers, invoices, banks, email, or agents. |
 | `packages/<module>/` | In-process modules — siblings of the ledger, same deployable | Depend on the ledger; never on each other; the ledger never depends on them. |
-| `packages/connectors/` | Transaction feed ingestion. **Name is known-wrong and will be renamed** (ADR-0031) | Classification as module or component is not yet settled (ADR-0022 § 5). |
 | `skills/` | Shipped Agent Skills, as `SKILL.md` bundles | Talk to the ledger over HTTP only. Never import ledger code. |
 | `infra/` | OpenTofu for the one maintained cloud target, plus the deployment contract | Supplies env vars only. No app coupling. |
 | `docs/product/` | Vision and numbered requirements | The source for positioning; the README derives from it. |
@@ -25,6 +24,11 @@ Directories are organised by **artifact kind**, and packages are named for
 
 `packages/` holds Python distributions **only** — its members are globbed into the `uv`
 workspace, so nothing non-installable goes there. A skill is not a distribution.
+
+**`packages/ledger` is the only package.** There was a `packages/connectors` holding no code; it
+was removed rather than renamed, because a package that exists before its capability is known is a
+boundary drawn around a guess (ADR-0012, ADR-0022 § 5, ADR-0031). Create a package when the
+capability it provides is known and there is code to put in it.
 
 **The ledger stays tiny.** It owns the double-entry primitive and nothing else. If the ledger needs
 to know what a customer is, the boundary has moved wrongly. There is no `core` module — the ledger
