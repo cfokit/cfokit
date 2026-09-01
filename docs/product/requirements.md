@@ -472,8 +472,16 @@ examination cheap and to avoid design decisions we would have to reverse. Requir
 only make sense once an examination is underway are named in section 7.11 and excluded.
 
 **Automated in preference to procedural.** A control a person performs is sampled at every
-examination and costs money forever. A control the system enforces is tested once, plus change
-management. Where both are possible, these requirements choose the system.
+examination and costs money forever. A control the system enforces is sampled far more lightly,
+provided the IT general controls around it — change management, access to programs, operations —
+give assurance it did not change during the period. Those are in scope for the examination even
+though they are not properties of the software, and 7.11 is wrong to exclude them.
+
+> **Everything in this section is `Proposed`, and none of it has been reviewed by anyone
+> qualified.** SOC 1 prescribes no controls: management writes its own control objectives and the
+> auditor opines on whether they are fairly described, suitably designed, and operating. So these
+> are CFOKit's own objectives rather than compliance with a standard, and several are design
+> opinion in requirement voice. They move to `Approved` when a practitioner has read them.
 
 ### 7.1 Agent authority and segregation of duties
 
@@ -488,13 +496,12 @@ segregate at all. What follows is what constrains the agent itself.
 
 | | Requirement | Priority | Status |
 |---|---|---|---|
-| **SOC1-01** | Every agent action carries a distinct non-human principal identifying the skill that acted. It is never recorded as the supervising person's own action, and never as a shared service account. | Must | Approved |
-| **SOC1-02** | Each skill has an explicit, enumerable set of permitted operations, enforced at the interface and at the data layer. A `bookkeeper` skill performing a `controller` approval is impossible, not discouraged, and no prompt or instruction participates in the enforcement. | Must | Approved |
-| **SOC1-03** | An agent's effective authority is the intersection of its skill's permitted operations and the role of the person it acts for. Neither widens the other, and no combination of the two exceeds either. | Must | Approved |
-| **SOC1-04** | Each class of action is configured as either autonomously completable by an agent or requiring human authorisation before it posts. The configuration is per entity, versioned, and carries a full change history. It ships split by provenance: an agent may complete a transaction assigned by an approved rule, and anything derived from untrusted content requires human authorisation before it posts. | Must | Approved |
-| **SOC1-05** | Where a person authorises agent work, the record captures what was presented to them, what the agent proposed and on what stated basis, what alternatives were offered, who decided, when, and what they decided. An approval recording only the decision is not evidence and does not satisfy this. | Must | Approved |
-| **SOC1-06** | A posted entry can be explained after the fact without re-running a model. The system persists, against the entry: the model identifier and version, the skill version, the inputs and context supplied, the tool calls made, and the agent's stated basis for the conclusion. | Must | Approved |
-| **SOC1-07** | No agent holds any capability to mutate or delete a posted record, under any configuration. Agent-originated errors are corrected through the ordinary correction path and no other. | Must | Approved |
+| **SOC1-01** | Every agent action carries a distinct non-human principal identifying the skill that acted. It is never recorded as the supervising person's own action, and never as a shared service account. | Must | Proposed |
+| **SOC1-02** | Each skill has an explicit, enumerable set of permitted operations, enforced at the interface and at the data layer. A `bookkeeper` skill performing a `controller` approval is impossible, not discouraged, and no prompt or instruction participates in the enforcement. | Must | Proposed |
+| **SOC1-03** | An agent's effective authority is the intersection of its skill's permitted operations and the role of the person it acts for. Neither widens the other, and no combination of the two exceeds either. | Must | Proposed |
+| **SOC1-04** | Each class of action is configured as either autonomously completable by an agent or requiring human authorisation before it posts. The configuration is per entity, versioned, and carries a full change history. It ships split by provenance: an agent may complete a transaction assigned by an approved rule, and anything derived from untrusted content requires human authorisation before it posts. | Must | Proposed |
+| **SOC1-05** | Where a person authorises agent work, the record captures what was presented to them, what the agent proposed and on what stated basis, what alternatives were offered, who decided, when, and what they decided. An approval recording only the decision is not evidence and does not satisfy this. | Must | Proposed |
+| **SOC1-06** | A posted entry can be explained after the fact without re-running a model. The system persists, against the entry: the model identifier and version, the skill version, the inputs and context supplied, the tool calls made, and the agent's stated basis for the conclusion. | Must | Proposed |
 
 **Acceptance, SOC1-02.** A `bookkeeper` skill issued a controller approval operation is
 refused at the interface, and the refusal is recorded, regardless of how the request is phrased
@@ -517,9 +524,9 @@ LED-08 correction by reversal, NFR-02 integrity, NFR-03 idempotency.
 
 | | Requirement | Priority | Status |
 |---|---|---|---|
-| **SOC1-08** | Entries are sequenced gaplessly and verifiably, so that a missing entry is detectable by inspection rather than by inference. | Must | Approved |
-| **SOC1-09** | Every write path accepts an idempotency key, and a repeated key returns the original result rather than posting again. This is an interface contract, not an internal convention. | Must | Approved |
-| **SOC1-10** | Integrity invariants — the trial balance ties, the sequence is intact, control totals reconcile — are verified on a defined cadence, and each verification is persisted as a durable dated artifact rather than displayed and discarded. | Must | Approved |
+| **SOC1-08** | Entries are sequenced gaplessly and verifiably, so that a missing entry is detectable by inspection rather than by inference. | Must | Proposed |
+| **SOC1-09** | Every write path accepts an idempotency key, and a repeated key returns the original result rather than posting again. This is an interface contract, not an internal convention. | Must | Proposed |
+| **SOC1-10** | Integrity invariants — the trial balance ties, the sequence is intact, control totals reconcile — are verified on a defined cadence, and each verification is persisted as a durable dated artifact rather than displayed and discarded. | Must | Proposed |
 
 > **Constrains the interface contract.** The idempotency key is in the published surface, so it
 > binds third-party integrators and cannot be added later without a breaking change.
@@ -530,11 +537,11 @@ Covering transaction feeds, uploaded statements, document capture, and any third
 
 | | Requirement | Priority | Status |
 |---|---|---|---|
-| **SOC1-11** | Every ingest boundary records control totals — record count and amount sum — reconciled against what was received and persisted with the batch. | Must | Approved |
-| **SOC1-12** | Duplicate, missing, and out-of-order source records are detected and handled explicitly. None is silently accepted, and none is silently dropped. | Must | Approved |
-| **SOC1-13** | A source that delivers nothing is distinguished from one that delivers an empty result. A feed silently skipping a period is detected against the coverage it was expected to supply, not inferred from the absence of a batch. | Must | Approved |
-| **SOC1-14** | Every ledger entry carries lineage to the originating document or feed record, retained for as long as the entry is. | Must | Approved |
-| **SOC1-15** | A coding decision made by an agent is distinguishable from one made by a person **in the data itself**, not only in an audit record, and resolves to which skill acted and which person it acted for. It remains so for the life of the entry. | Must | Approved |
+| **SOC1-11** | Every ingest boundary records control totals — record count and amount sum — reconciled against what was received and persisted with the batch. | Must | Proposed |
+| **SOC1-12** | Duplicate, missing, and out-of-order source records are detected and handled explicitly. None is silently accepted, and none is silently dropped. | Must | Proposed |
+| **SOC1-13** | A source that delivers nothing is distinguished from one that delivers an empty result. A feed silently skipping a period is detected against the coverage it was expected to supply, not inferred from the absence of a batch. | Must | Proposed |
+| **SOC1-14** | Every ledger entry carries lineage to the originating document or feed record, retained for as long as the entry is. | Must | Proposed |
+| **SOC1-15** | A coding decision made by an agent is distinguishable from one made by a person **in the data itself**, not only in an audit record, and resolves to which skill acted and which person it acted for. It remains so for the life of the entry. | Must | Proposed |
 
 > **Constrains the data model.** Actor class sits on the entry rather than in a side log.
 
@@ -545,11 +552,11 @@ reopening; PLT-08 fixes the time zone period boundaries are determined in.
 
 | | Requirement | Priority | Status |
 |---|---|---|---|
-| **SOC1-16** | The accounting period is a first-class record, not a date range computed when a report is asked for. | Must | Approved |
-| **SOC1-17** | A closed period admits nothing from any actor over any interface, agents included, and reopening it requires an administrative role, is recorded, and captures the reason. There is no privileged path around either. | Must | Approved |
-| **SOC1-18** | All timestamps are generated by the server from a synchronised source and stored in UTC. No client-supplied time is trusted for any record affecting financial data. | Must | Approved |
-| **SOC1-19** | Which period a transaction falls in is determined in the entity's time zone, never in the deployment's and never in UTC. A UTC timestamp records when something happened; it never decides which period it happened in. | Must | Approved |
-| **SOC1-20** | Where a correction posted after a statement was issued changes that statement's figures, the issued statement is marked superseded, and both what was reported and what is now true remain retrievable. | Must | Approved |
+| **SOC1-16** | The accounting period is a first-class record, not a date range computed when a report is asked for. | Must | Proposed |
+| **SOC1-17** | A closed period admits nothing from any actor over any interface, agents included, and reopening it requires an administrative role, is recorded, and captures the reason. There is no privileged path around either. | Must | Proposed |
+| **SOC1-18** | All timestamps are generated by the server from a synchronised source and stored in UTC. No client-supplied time is trusted for any record affecting financial data. | Must | Proposed |
+| **SOC1-19** | Which period a transaction falls in is determined in the entity's time zone, never in the deployment's and never in UTC. A UTC timestamp records when something happened; it never decides which period it happened in. | Must | Proposed |
+| **SOC1-20** | Where a correction posted after a statement was issued changes that statement's figures, the issued statement is marked superseded, and both what was reported and what is now true remain retrievable. | Must | Proposed |
 
 **Acceptance, SOC1-19.** A transaction recorded at 23:30 local on the last day of a period
 falls in that period, whatever the deployment's clock reads.
@@ -564,9 +571,9 @@ NFR-18 controls evidenced rather than asserted.
 
 | | Requirement | Priority | Status |
 |---|---|---|---|
-| **SOC1-21** | Every action affecting financial data records the actor, the action, and the time. Where the action changed something that can change — a draft, a rule, a threshold, a configuration setting — the prior and resulting values are both recorded. A posted entry has no prior value, and is never given one. | Must | Approved |
-| **SOC1-22** | Audit records are written to storage the application cannot subsequently modify or delete, by any code path, including administrative ones. | Must | Approved |
-| **SOC1-23** | The complete lineage of a single transaction — source record, agent actions, approvals, resulting entries, and every subsequent correction — is retrievable in one operation. | Must | Approved |
+| **SOC1-21** | Every action affecting financial data records the actor, the action, and the time. Where the action changed something that can change — a draft, a rule, a threshold, a configuration setting — the prior and resulting values are both recorded. A posted entry has no prior value, and is never given one. | Must | Proposed |
+| **SOC1-22** | Audit records are written to storage the application cannot subsequently modify or delete, by any code path, including administrative ones. | Must | Proposed |
+| **SOC1-23** | The complete lineage of a single transaction — source record, agent actions, approvals, resulting entries, and every subsequent correction — is retrievable in one operation. | Must | Proposed |
 
 > **Cost.** Examiners work by sampling. If each sampled item needs an engineer writing an ad hoc
 > query, that cost recurs at every examination for the life of the product.
@@ -577,10 +584,10 @@ Carried already: IAM-01 through IAM-19.
 
 | | Requirement | Priority | Status |
 |---|---|---|---|
-| **SOC1-24** | Authorisation is enforced at the data layer. Interface-level concealment of an operation is never the mechanism by which it is denied. | Must | Approved |
-| **SOC1-25** | The acting principal propagates unmodified from the entry point through to authorisation and to the audit record. Where one surface calls another on a principal's behalf, the principal's own credential flows through and authorisation is evaluated against it — never against a shared credential with the real actor passed as a parameter. | Must | Approved |
-| **SOC1-26** | No access path authorises against a principal different from the one recorded in the audit trail for the same action. | Must | Approved |
-| **SOC1-27** | Operator personnel hold no standing access to customer financial data. Such access exists only as break-glass: individually authorised, time-bounded, and logged identically to a customer's own, under the same evidence requirements. | Must | Approved |
+| **SOC1-24** | Authorisation is enforced at the data layer. Interface-level concealment of an operation is never the mechanism by which it is denied. | Must | Proposed |
+| **SOC1-25** | The acting principal propagates unmodified from the entry point through to authorisation and to the audit record. Where one surface calls another on a principal's behalf, the principal's own credential flows through and authorisation is evaluated against it — never against a shared credential with the real actor passed as a parameter. | Must | Proposed |
+| **SOC1-26** | No access path authorises against a principal different from the one recorded in the audit trail for the same action. | Must | Proposed |
+| **SOC1-27** | Operator personnel hold no standing access to customer financial data. Such access exists only as break-glass: individually authorised, time-bounded, and logged identically to a customer's own, under the same evidence requirements. | Must | Proposed |
 
 > **The failure this prevents.** A surface that authenticates as itself and passes the real
 > actor as a parameter still performs authorisation — it just records the intermediary as the
@@ -595,12 +602,12 @@ What happens when processing fails is the second thing an examiner asks.
 
 | | Requirement | Priority | Status |
 |---|---|---|---|
-| **SOC1-28** | An item that cannot be processed lands in a durable exception queue. Nothing is silently dropped, and nothing is silently retried into oblivion. | Must | Approved |
-| **SOC1-29** | Every exception reaches a recorded disposition — resolved, reprocessed, rejected, or written off — with the actor and the reason. An exception has no terminal state that is merely absence. | Must | Approved |
-| **SOC1-30** | Reprocessing an exception is safe against duplication, under the same guarantee as any other write. | Must | Approved |
-| **SOC1-31** | Unresolved exceptions age visibly and escalate on a schedule the entity sets. | Should | Approved |
-| **SOC1-32** | Exceptions are reportable for any period — what arrived, what was dispositioned and how, and what remains open — as a durable artifact rather than a transient view. This is the report a reviewer reviews and an examiner samples. | Must | Approved |
-| **SOC1-33** | Which exception classes an agent may resolve autonomously, and which must escalate to a person, is configured through the same mechanism as SOC1-04. | Must | Approved |
+| **SOC1-28** | An item that cannot be processed lands in a durable exception queue. Nothing is silently dropped, and nothing is silently retried into oblivion. | Must | Proposed |
+| **SOC1-29** | Every exception reaches a recorded disposition — resolved, reprocessed, rejected, or written off — with the actor and the reason. An exception has no terminal state that is merely absence. | Must | Proposed |
+| **SOC1-30** | Reprocessing an exception is safe against duplication, under the same guarantee as any other write. | Must | Proposed |
+| **SOC1-31** | Unresolved exceptions age visibly and escalate on a schedule the entity sets. | Should | Proposed |
+| **SOC1-32** | Exceptions are reportable for any period — what arrived, what was dispositioned and how, and what remains open — as a durable artifact rather than a transient view. This is the report a reviewer reviews and an examiner samples. | Must | Proposed |
+| **SOC1-33** | Which exception classes an agent may resolve autonomously, and which must escalate to a person, is configured through the same mechanism as SOC1-04. | Must | Proposed |
 
 ### 7.8 Change management of agent artifacts
 
@@ -609,14 +616,14 @@ and is excluded in 7.11.
 
 | | Requirement | Priority | Status |
 |---|---|---|---|
-| **SOC1-34** | Skills, their prompts, and their tool definitions are versioned artifacts. Every entry an agent produces records the versions in force when it was produced. A prompt edit that changes how transactions are categorised is a change to a financial control and is treated as one. | Must | Approved |
-| **SOC1-35** | A change of model identifier or model version is recorded as a change to the control environment, with the date it took effect and the entries produced on either side of it distinguishable. | Must | Approved |
+| **SOC1-34** | Skills, their prompts, and their tool definitions are versioned artifacts. Every entry an agent produces records the versions in force when it was produced. A prompt edit that changes how transactions are categorised is a change to a financial control and is treated as one. | Must | Proposed |
+| **SOC1-35** | A change of model identifier or model version is recorded as a change to the control environment, with the date it took effect and the entries produced on either side of it distinguishable. | Must | Proposed |
 
 ### 7.9 Subservice organizations
 
 | | Requirement | Priority | Status |
 |---|---|---|---|
-| **SOC1-36** | Where an external provider supplied or processed data, the system records which provider and which version or endpoint, retrievable as part of the lineage in SOC1-23. | Must | Approved |
+| **SOC1-36** | Where an external provider supplied or processed data, the system records which provider and which version or endpoint, retrievable as part of the lineage in SOC1-23. | Must | Proposed |
 
 Anticipated examination treatment.
 
@@ -651,6 +658,10 @@ adds customer burden.
 | Personnel screening, onboarding, and security training | Operating process. |
 | Anything touching security, availability, or privacy without touching ICFR | The SOC 2 track, handled separately. |
 
+SOC1-07 was removed here. It restated LED-08 and NFR-02 — a posted transaction is never altered
+or removed, by anyone — and saying it again for agents implied that some other actor might hold
+that capability. Its identifier is retired rather than reused, so the numbering carries a gap.
+
 ### 7.12 Examination scoping questions
 
 | | Question |
@@ -671,6 +682,10 @@ period**, which is why every requirement below prefers a control that evidences 
 continuously over one that a person assembles at examination time.
 
 Section 8.10 holds the shared control map.
+
+> **Everything in this section is `Proposed` and unreviewed**, on the same basis as section 7.
+> 8.2 in particular describes controls for a problem no established audit practice covers, so it
+> is the part most likely to be the wrong shape.
 
 ### 8.1 Category scope
 
@@ -697,14 +712,14 @@ template, so we should be able to describe our controls before we are asked.
 
 | | Requirement | Priority | Status |
 |---|---|---|---|
-| **SOC2-01** | Every content source is classified as trusted or untrusted in the data model, and the classification travels with the content for as long as it is retained. It is a property of the record, not a runtime judgement. | Must | Approved |
-| **SOC2-02** | Untrusted content never enters an agent's instruction context undemarcated. The boundary between instruction and data is explicit and machine-checkable rather than a matter of formatting convention. | Must | Approved |
-| **SOC2-03** | An agent turn that reads untrusted content operates with a reduced capability set, enforced at the interface. Reading an untrusted document and writing to the ledger are not simultaneously available within one turn. A prompt instructing the model to disregard embedded instructions is not a control and does not satisfy this. | Must | Approved |
-| **SOC2-04** | Attempts to inject instructions through ingested content are detected and recorded as security events, retrievable alongside other security events. They are never silently handled. | Must | Approved |
-| **SOC2-05** | On detection, the turn stops and the content is quarantined rather than processed further. The item becomes an exception under SOC1-28 for a person to disposition. Detection that only records is telemetry, not a control. | Must | Approved |
-| **SOC2-06** | The maximum damage a fully successful injection can cause is stated, bounded by the materiality thresholds and human authorisation gates of SOC1-04, and demonstrable by test. The bound is a property of the capability model, never of model behaviour. | Must | Approved |
-| **SOC2-07** | Changing where a customer is told to send money, or the identity a customer is told they are paying, requires human authorisation in every case, at any amount, regardless of the agent's stated confidence. This covers the payment details an invoice carries and the customer record behind it. CFOKit moves no money, so this — not a payment instruction — is where revenue can be redirected, and it carries no autonomous path. | Must | Approved |
-| **SOC2-08** | The detection approach for injection attempts is a stated, versioned artifact under SOC1-34, so that a change to it is a change to a security control. | Must | Approved |
+| **SOC2-01** | Every content source is classified as trusted or untrusted in the data model, and the classification travels with the content for as long as it is retained. It is a property of the record, not a runtime judgement. | Must | Proposed |
+| **SOC2-02** | Untrusted content never enters an agent's instruction context undemarcated. The boundary between instruction and data is explicit and machine-checkable rather than a matter of formatting convention. | Must | Proposed |
+| **SOC2-03** | An agent turn that reads untrusted content operates with a reduced capability set, enforced at the interface. Reading an untrusted document and writing to the ledger are not simultaneously available within one turn. A prompt instructing the model to disregard embedded instructions is not a control and does not satisfy this. | Must | Proposed |
+| **SOC2-04** | Attempts to inject instructions through ingested content are detected and recorded as security events, retrievable alongside other security events. They are never silently handled. | Must | Proposed |
+| **SOC2-05** | On detection, the turn stops and the content is quarantined rather than processed further. The item becomes an exception under SOC1-28 for a person to disposition. Detection that only records is telemetry, not a control. | Must | Proposed |
+| **SOC2-06** | The maximum damage a fully successful injection can cause is stated, bounded by the materiality thresholds and human authorisation gates of SOC1-04, and demonstrable by test. The bound is a property of the capability model, never of model behaviour. | Must | Proposed |
+| **SOC2-07** | Changing where a customer is told to send money, or the identity a customer is told they are paying, requires human authorisation in every case, at any amount, regardless of the agent's stated confidence. This covers the payment details an invoice carries and the customer record behind it. CFOKit moves no money, so this — not a payment instruction — is where revenue can be redirected, and it carries no autonomous path. | Must | Proposed |
+| **SOC2-08** | The detection approach for injection attempts is a stated, versioned artifact under SOC1-34, so that a change to it is a change to a security control. | Must | Proposed |
 
 **Acceptance, SOC2-03.** An agent given a document containing an instruction to post an entry
 cannot post one within that turn, irrespective of how the instruction is phrased or whether the
@@ -720,11 +735,11 @@ is fully compromised and cooperative with the attacker.
 
 | | Requirement | Priority | Status |
 |---|---|---|---|
-| **SOC2-09** | Every third party that receives customer financial data during agent operation — inference, document extraction, embedding or vector storage — is enumerated in a registry the system maintains, not in a document maintained beside it. | Must | Approved |
-| **SOC2-10** | A provider that does not contractually offer zero data retention and no training on submitted data cannot be configured to receive customer data. This is a constraint the system enforces on configuration, not a procurement preference. | Must | Approved |
-| **SOC2-11** | What is sent to a provider is the minimum the task requires. Whether raw financial records leave the system, or redacted or tokenised representations, is recorded per provider and per operation. | Must | Approved |
-| **SOC2-12** | Where data residency is committed to, inference and extraction routing respects it, and a request that cannot be routed compliantly fails rather than falling back. | Should | Approved |
-| **SOC2-13** | Changing an inference provider, or a model version, is a change to the control environment under SOC1-35. | Must | Approved |
+| **SOC2-09** | Every third party that receives customer financial data during agent operation — inference, document extraction, embedding or vector storage — is enumerated in a registry the system maintains, not in a document maintained beside it. | Must | Proposed |
+| **SOC2-10** | A provider that does not contractually offer zero data retention and no training on submitted data cannot be configured to receive customer data. This is a constraint the system enforces on configuration, not a procurement preference. | Must | Proposed |
+| **SOC2-11** | What is sent to a provider is the minimum the task requires. Whether raw financial records leave the system, or redacted or tokenised representations, is recorded per provider and per operation. | Must | Proposed |
+| **SOC2-12** | Where data residency is committed to, inference and extraction routing respects it, and a request that cannot be routed compliantly fails rather than falling back. | Should | Proposed |
+| **SOC2-13** | Changing an inference provider, or a model version, is a change to the control environment under SOC1-35. | Must | Proposed |
 
 > **Constrains the provider abstraction.** Provider selection is validated configuration rather
 > than a deployment detail. Model swaps are frequent, so enforcement sits in the configuration
@@ -734,11 +749,11 @@ is fully compromised and cooperative with the attacker.
 
 | | Requirement | Priority | Status |
 |---|---|---|---|
-| **SOC2-14** | Customer data is encrypted in transit and at rest. Key custody, rotation, and the ability to revoke access to encrypted data are stated properties of a deployment rather than assumptions about its infrastructure. | Must | Approved |
-| **SOC2-15** | Entity isolation is enforced at the data layer, so that a cross-entity read is impossible rather than merely unlikely. No interface, query path, or administrative operation may bypass it. The single exception is the invoice link of AR-08, which is scoped to one invoice and carries nothing else about the entity. | Must | Approved |
-| **SOC2-16** | Isolation extends to everything derived. An agent operating for one entity cannot reach another entity's data through any tool, cache, conversation memory, embedding, index, or model context. | Must | Approved |
-| **SOC2-17** | Data is classified — financial records, credentials and secrets, personal information, and derived artifacts including embeddings, extracted document text, and agent traces — and handling obligations follow the classification. | Must | Approved |
-| **SOC2-18** | Deleting an entity destroys its derived artifacts as well as its records: embeddings, caches, extracted text, agent traces, and any representation held by a provider under SOC2-10. Deletion that leaves derived data behind does not satisfy PLT-13. | Must | Approved |
+| **SOC2-14** | Customer data is encrypted in transit and at rest. Key custody, rotation, and the ability to revoke access to encrypted data are stated properties of a deployment rather than assumptions about its infrastructure. | Must | Proposed |
+| **SOC2-15** | Entity isolation is enforced at the data layer, so that a cross-entity read is impossible rather than merely unlikely. No interface, query path, or administrative operation may bypass it. The single exception is the invoice link of AR-08, which is scoped to one invoice and carries nothing else about the entity. | Must | Proposed |
+| **SOC2-16** | Isolation extends to everything derived. An agent operating for one entity cannot reach another entity's data through any tool, cache, conversation memory, embedding, index, or model context. | Must | Proposed |
+| **SOC2-17** | Data is classified — financial records, credentials and secrets, personal information, and derived artifacts including embeddings, extracted document text, and agent traces — and handling obligations follow the classification. | Must | Proposed |
+| **SOC2-18** | Deleting an entity destroys its derived artifacts as well as its records: embeddings, caches, extracted text, agent traces, and any representation held by a provider under SOC2-10. Deletion that leaves derived data behind does not satisfy PLT-13. | Must | Proposed |
 
 > Of SOC2-15 and SOC2-16, the second is harder: the isolation boundary has to hold across
 > artifacts that did not exist in conventional software. An embedding index and a conversation
@@ -750,21 +765,21 @@ Carried by IAM-01 through IAM-19 and SOC1-24 through SOC1-27. Additional SOC 2 o
 
 | | Requirement | Priority | Status |
 |---|---|---|---|
-| **SOC2-19** | Multi-factor authentication is required for every human identity. CFOKit does not implement it — IAM-10 delegates identity — so the requirement is that the system demands the issuer assert it, and refuses a session where it is absent. | Must | Approved |
-| **SOC2-20** | Sessions have a bounded lifetime and can be revoked centrally, taking effect everywhere including for skills acting under IAM-11. | Must | Approved |
-| **SOC2-21** | Programmatic credentials and tokens have a defined lifecycle — issuance, scope, expiry, rotation, and revocation — and a token's scope is never broader than the role of the identity it was issued to. | Must | Approved |
-| **SOC2-22** | The access review of IAM-14 produces its evidence automatically, on a defined cadence, as a persisted artifact. A review that requires someone to assemble screenshots is sampled at every examination and costs money forever. | Must | Approved |
-| **SOC2-23** | Where privileged operator access to customer data exists under SOC1-27, it is time-bounded, individually authorised, logged identically to customer access, and visible to the affected customer. | Must | Approved |
+| **SOC2-19** | Multi-factor authentication is required for every human identity. CFOKit does not implement it — IAM-10 delegates identity — so the requirement is that the system demands the issuer assert it, and refuses a session where it is absent. | Must | Proposed |
+| **SOC2-20** | Sessions have a bounded lifetime and can be revoked centrally, taking effect everywhere including for skills acting under IAM-11. | Must | Proposed |
+| **SOC2-21** | Programmatic credentials and tokens have a defined lifecycle — issuance, scope, expiry, rotation, and revocation — and a token's scope is never broader than the role of the identity it was issued to. | Must | Proposed |
+| **SOC2-22** | The access review of IAM-14 produces its evidence automatically, on a defined cadence, as a persisted artifact. A review that requires someone to assemble screenshots is sampled at every examination and costs money forever. | Must | Proposed |
+| **SOC2-23** | Where privileged operator access to customer data exists under SOC1-27, it is time-bounded, individually authorised, logged identically to customer access, and visible to the affected customer. | Must | Proposed |
 
 ### 8.6 System operations and monitoring — CC7
 
 | | Requirement | Priority | Status |
 |---|---|---|---|
-| **SOC2-24** | Security events under PLT-17 are retained for the full review period plus lookback, and alerting is defined per event class rather than left to inspection. | Must | Approved |
-| **SOC2-27** | Agent behaviour is monitored as a security signal, not only an operational one: volume anomalies, unusual account or payee targets, repeated authorisation failures, and clustering of exceptions are detected and alertable. | Must | Approved |
-| **SOC2-28** | The line between an agent error and a reportable security incident is defined in advance. An agent posting an incorrect but non-malicious entry is a processing exception under SOC1-28; an agent acting outside its capability set, or acting on injected instruction, is a security incident. | Must | Approved |
-| **SOC2-29** | Behaviour under degradation is defined, including what happens when an inference or extraction provider is unavailable partway through a workflow. Partial completion never leaves the books in a state no one can account for. | Must | Approved |
-| **SOC2-30** | An interrupted agent workflow resumes without duplicate posting, under the idempotency guarantee of SOC1-09 and NFR-03. | Must | Approved |
+| **SOC2-24** | Security events under PLT-17 are retained for the full review period plus lookback, and alerting is defined per event class rather than left to inspection. | Must | Proposed |
+| **SOC2-27** | Agent behaviour is monitored as a security signal, not only an operational one: volume anomalies, unusual account or payee targets, repeated authorisation failures, and clustering of exceptions are detected and alertable. | Must | Proposed |
+| **SOC2-28** | The line between an agent error and a reportable security incident is defined in advance. An agent posting an incorrect but non-malicious entry is a processing exception under SOC1-28; an agent acting outside its capability set, or acting on injected instruction, is a security incident. | Must | Proposed |
+| **SOC2-29** | Behaviour under degradation is defined, including what happens when an inference or extraction provider is unavailable partway through a workflow. Partial completion never leaves the books in a state no one can account for. | Must | Proposed |
+| **SOC2-30** | An interrupted agent workflow resumes without duplicate posting, under the idempotency guarantee of SOC1-09 and NFR-03. | Must | Proposed |
 
 > Agents will post wrong entries; that is a known property, not an incident. Deciding which is
 > which after the first bad week produces a decision shaped by that week.
@@ -830,7 +845,7 @@ and SOC2-33 — are retired rather than reused, so the numbering carries gaps.
 | **ES-5** | Which Trust Services categories do we commit to? Security is not elective; the other four are, and each one taken is scope we carry at every examination for the life of the report. |
 | **ES-6** | What availability commitment are we prepared to be measured against? The category costs what we promise, so this is a pricing and positioning decision before it is an engineering one. |
 | **ES-7** | Does the roadmap trigger Privacy? Payroll, contractor 1099 handling, and employee expense reimbursement each do. None is built today, and the first one to ship makes the category unavoidable. Scoping one does not; handling the data does. |
-| **ES-8** | Are the controls in 9.2 and 9.3 sufficient? No established audit practice covers agent manipulation through untrusted content. We are describing controls an examiner has no template for, which means we may be over-building, under-building, or building the wrong shape — and the framework will not tell us which. |
+| **ES-8** | Are the controls in 8.2 and 8.3 sufficient? No established audit practice covers agent manipulation through untrusted content. We are describing controls an examiner has no template for, which means we may be over-building, under-building, or building the wrong shape — and the framework will not tell us which. |
 
 ---
 
