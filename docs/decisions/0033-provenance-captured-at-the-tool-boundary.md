@@ -7,7 +7,9 @@ decision-makers: [Geoff]
 
 # ADR-0033: Provenance is captured at the tool boundary, never self-reported by the agent
 
-**Requirements served:** `SOC1-06`, `SOC1-15`, `SOC1-34`, `SOC1-35`.
+**Requirements served:** `LED-20`, `NFR-23`, `SOC1-06`, `SOC1-15`, `SOC1-34`, `SOC1-35`.
+
+> `LED-20` and `NFR-23` carry this record's basis. They were promoted out of section 7 because attribution and tamper-detectability are irreversible under append-only storage, which is true whether or not an examination ever happens. The `SOC1-` citations remain because the record also serves them, but it does not depend on them surviving review.
 
 ## Context and Problem Statement
 

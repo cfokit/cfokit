@@ -115,6 +115,10 @@ The double-entry record itself, and the entity settings that govern how it is ke
 | **LED-17** | An obligation and its settlement are recorded as two related events rather than one. An invoice raised in one period and paid in another is recoverable as either, depending on the basis in force. | Must | Approved |
 | **LED-18** | The ledger holds positions in things other than money — inventory, or investments held in a brokerage account. | Could | Deferred — activates when an entity acquires inventory or holds investments |
 | **LED-19** | Where an entity holds fungible units acquired at different costs and disposes of some, disposals consume the earliest lots first, exactly rather than approximately. Where a disposal is ambiguous the system refuses rather than selecting a plausible lot. | Could | Deferred — activates with LED-18 |
+| **LED-20** | Every transaction records the principal that wrote it, whether that principal is a person, a rule, or an agent, and where an agent acted for a person, which person. The record carries this itself and keeps it for the life of the transaction, independently of any log and of any retention schedule. | Must | Approved |
+
+**Acceptance, LED-20.** For any transaction, however old, the system names what wrote it and on
+whose behalf, without reference to a log that may since have been pruned.
 
 **Acceptance, LED-04.** Divide $10.00 three ways: the three resulting postings sum to exactly
 $10.00, with no residual and no drift, and repeating the operation a million times introduces
@@ -195,6 +199,12 @@ Getting transactions in, deciding where they belong, and agreeing that the books
 | **BKP-16** | Feeds synchronise on a schedule the entity controls, with no person triggering them. | Must | Approved |
 | **BKP-17** | A document — a receipt, an invoice, a statement — can be attached to a transaction, an account, or a period, and is retained and exported with what it is attached to. | Could | Deferred — activates when an entity needs supporting documents held with its books. Not built before then |
 | **BKP-18** | A document supplies the content of a draft transaction, which is then assigned and posted like any other. | Could | Deferred — activates with BKP-17 |
+| **BKP-19** | Where a transaction was derived from something outside the books — a feed record, an uploaded statement, a document — it records what it came from, and that link survives for the life of the transaction. | Must | Approved |
+| **BKP-20** | Content the organisation did not author is marked as such when it enters the system, and the marking travels with it for as long as it is retained. It is a property of the stored record, never a judgement made when the content is read. | Must | Approved |
+| **BKP-21** | An item the system cannot process is retained along with the reason, and every ingest run records what it was expected to cover and what it actually delivered. Nothing that entered the system leaves it without a record of what became of it, and a source that silently delivers nothing is distinguishable from one that delivers an empty result. | Must | Approved |
+
+**Acceptance, BKP-21.** A feed that skips a period is detected against the coverage it was
+expected to supply, rather than inferred from the absence of a batch.
 
 **Acceptance, BKP-06.** Replaying an entity's full transaction history against an unchanged
 rule set reproduces every assignment identically.
@@ -371,6 +381,7 @@ records about itself.
 | **PLT-20** | The retention schedule is set per record class at deployment scope, applies to every entity the deployment holds, and starts from the defaults below. | Should | Approved |
 | **PLT-21** | A deployment can be moved to a later version of CFOKit in place, keeping its books, its history, and its configuration. An upgrade that cannot complete leaves the deployment on the version it started from rather than partway between two. | Must | Approved |
 | **PLT-22** | A person may ask an entity to erase what it holds about them. The request is answered per record rather than per person: a record carrying no retention obligation is erased on the request, and one carrying an obligation is retained, restricted to the purpose that compels it, and becomes a disposal candidate under PLT-19. Erasure destroys whole records and never edits one that survives — an issued invoice is immutable under AR-14 for the whole of its life, and is reached by disposal alone, never by redaction. Each retained record's period runs from the event that created the obligation, never from the request and never from the person's later activity. The requester is told what was erased, what was retained, on what ground, and until when. | Should | Approved |
+| **PLT-23** | An agent that has read content the organisation did not author (BKP-20) cannot post to the books in that session without a person authorising it. The constraint is enforced by what the agent is able to do, never by an instruction telling it what not to do. | Must | Approved |
 
 | Record class | Default |
 |---|---|
@@ -415,7 +426,7 @@ stricter target than the global one.
 | **NFR-01** | Booking results are demonstrably correct against an independent implementation of double-entry accounting, and every divergence is documented rather than tolerated. | Correctness | Must | Zero undocumented divergences |
 | **NFR-02** | No financial record is silently altered or destroyed, by any operation, at any layer. | Integrity | Must | Zero |
 | **NFR-03** | A repeated or retried operation produces the same result and creates no duplicate record. | Integrity | Must | Zero duplicates under retry |
-| **NFR-04** | No operation reads or writes across an entity boundary except as the acting identity's role in that entity permits. Roles are evaluated by the system regardless of what a request, or a skill acting for a person, asserts about itself. | Security | Must | Zero cross-entity reads or writes |
+| **NFR-04** | No operation reads or writes across an entity boundary except as the acting identity's role in that entity permits. Roles are evaluated by the system regardless of what a request, or a skill acting for a person, asserts about itself. The boundary holds across anything derived as well as anything stored — a cache, an index, an embedding, or a conversation an agent carries between turns is inside it, not beside it. | Security | Must | Zero cross-entity reads or writes |
 | **NFR-05** | Amounts, account numbers, payee names, and credentials never appear in logs, telemetry, or error output. | Confidentiality | Must | Zero occurrences |
 | **NFR-06** | Every request is validated as intended for this deployment and this entity before it is served. A request meant for somewhere else is refused rather than interpreted. | Security | Must | Every request, no exemptions |
 | **NFR-07** | Committed financial records survive the loss of any single machine or storage device. A deployment can be restored to a known point, and the restore is exercised rather than assumed. | Durability | Must | No committed record lost to a single failure |
@@ -433,6 +444,7 @@ stricter target than the global one.
 | **NFR-20** | Dates, numbers, and currency are presented in the conventions of the entity's locale, and the interface is available in languages other than English. | Localisation | Could | Deferred — activates when an entity operates outside the initial locale |
 | **NFR-21** | A contributor can build the system, run its full test suite, and exercise it end to end from a clean checkout, with no credentials, no accounts, and no access anyone has to grant them. | Contributability | Must | Clean checkout to passing suite, unaided |
 | **NFR-22** | Correctness guarantees attach to what the ledger records and computes, never to a judgement an agent made. Where CFOKit does not operate the agent runtime, the model behind a coding decision is not identifiable to CFOKit and its effect on accuracy is not observable — a poor one degrades the books silently rather than visibly. The system states that limit rather than implying uniform assurance. | Correctness | Must | No assurance claimed for a component CFOKit cannot observe |
+| **NFR-23** | Alteration, removal, or absence of a financial record is detectable from the records themselves, rather than only by comparison against a backup or a log held elsewhere. | Integrity | Must | Any alteration, removal, or gap detectable from the records alone |
 
 **Two kinds of guardrail, and only one of them is trustworthy.** NFR-16 constrains what the
 product is asked to do, and is therefore a behavioural standard an agent can fail to meet.
@@ -482,6 +494,24 @@ though they are not properties of the software, and 7.11 is wrong to exclude the
 > auditor opines on whether they are fairly described, suitably designed, and operating. So these
 > are CFOKit's own objectives rather than compliance with a standard, and several are design
 > opinion in requirement voice. They move to `Approved` when a practitioner has read them.
+
+**Nine things here were load-bearing on the architecture, and have been promoted out.** They are
+cheap to build now and expensive or impossible to retrofit, which is true whether or not an
+examination ever happens — so they no longer depend on this section being right.
+
+| Promoted to | Was | Why it could not wait |
+|---|---|---|
+| `LED-20` | `SOC1-15` | Records are append-only. A transaction written before it carries its principal can never be attributed afterwards. |
+| `BKP-19` | `SOC1-14` | Same. The link to what a transaction came from cannot be reconstructed later. |
+| `NFR-23` | `SOC1-08`, `SOC1-22` | Detectability of alteration or absence has to cover the records from the first one, or it never covers the early period. |
+| `BKP-21` | `SOC1-12`, `SOC1-13`, `SOC1-28` | A silently dropped item leaves no trace that it existed, so the loss is not recoverable by building the queue later. |
+| `NFR-04` (extended) | `SOC2-16` | Retrofitting entity isolation into a shared index or cache is a rebuild. |
+
+Four more were already covered by live requirements and are duplicates rather than gaps:
+`SOC1-09` by `NFR-03`, `SOC1-19` by `PLT-08`, `SOC1-25` by `IAM-11`, and `SOC1-16` by `LED-11`.
+`SOC1-25` adds one thing `IAM-11` does not — that a principal's own credential flows through when
+one surface calls another — and that is deliberately left here, because the current design does not
+satisfy it and promoting it would put a live `Must` in known violation.
 
 ### 7.1 Agent authority and segregation of duties
 
@@ -686,6 +716,13 @@ Section 8.10 holds the shared control map.
 > **Everything in this section is `Proposed` and unreviewed**, on the same basis as section 7.
 > 8.2 in particular describes controls for a problem no established audit practice covers, so it
 > is the part most likely to be the wrong shape.
+
+Two things here were load-bearing and have been promoted out, on the same basis as section 7:
+`SOC2-01` to `BKP-20`, because content stored without a marking cannot be classified afterwards,
+and `SOC2-03` to `PLT-23`, because a capability boundary is part of the published tool surface and
+adding one later breaks callers. `PLT-23` also fixes a defect in `SOC2-03`: bounding the constraint
+to a single *turn* is defeated by reading in one turn and writing in the next, so it is bounded to
+the session.
 
 ### 8.1 Category scope
 
@@ -902,12 +939,12 @@ serving no objective does not belong here.
 |---|---|
 | **OBJ-1** Kept without the company keeping them | BKP-01, BKP-06, BKP-09, BKP-12, RPT-15 |
 | **OBJ-2** Current, and a close never waiting on us | BKP-16, LED-11, LED-12, PLT-07, PLT-14, NFR-15 |
-| **OBJ-3** Exact, and unchanged once posted | LED-03, LED-04, LED-05, LED-06, LED-07, LED-08, BKP-07, BKP-08, BKP-11, BKP-12, BKP-14, MIG-05, MIG-08, RPT-09, RPT-12, NFR-01, NFR-02, NFR-03, NFR-22 |
-| **OBJ-4** Every number explains itself | LED-08, LED-09, BKP-10, MIG-04, IAM-13, PLT-16, PLT-20, RPT-08, RPT-11, NFR-02, SOC1-14, SOC1-15, SOC1-22, SOC1-23, SOC1-36 |
+| **OBJ-3** Exact, and unchanged once posted | LED-03, LED-04, LED-05, LED-06, LED-07, LED-08, BKP-07, BKP-08, BKP-11, BKP-12, BKP-14, BKP-20, BKP-21, MIG-05, MIG-08, PLT-23, RPT-09, RPT-12, NFR-01, NFR-02, NFR-03, NFR-22, NFR-23 |
+| **OBJ-4** Every number explains itself | LED-08, LED-09, LED-20, BKP-10, BKP-19, MIG-04, IAM-13, PLT-16, PLT-20, RPT-08, RPT-11, NFR-02, NFR-23, SOC1-14, SOC1-15, SOC1-22, SOC1-23, SOC1-36 |
 | **OBJ-5** The recurring cost goes away | BKP-01–BKP-06, BKP-13–BKP-18, AR-01–AR-19, RPT-01–RPT-09, MIG-01–MIG-08, NFR-19, NFR-20 |
 | **OBJ-6** Output accepted as it stands | LED-01, LED-02, LED-14, LED-17, RPT-01–RPT-05, RPT-07, RPT-09, RPT-10, RPT-12, RPT-13, RPT-14, RPT-16, RPT-17, RPT-18, RPT-19, NFR-01, NFR-16, NFR-22 |
 | **OBJ-7** Never forced off by growing | LED-10, LED-13, LED-14, LED-15, LED-16, LED-17, LED-18, LED-19, RPT-19, RPT-20, RPT-21, IAM-08, IAM-09, PLT-04, PLT-08, NFR-09 |
-| **OBJ-8** Only authorised people reach the books | IAM-01–IAM-07, IAM-11, IAM-12, IAM-15, IAM-16, IAM-17, AR-08, PLT-05, NFR-04, NFR-05, NFR-06 |
+| **OBJ-8** Only authorised people reach the books | IAM-01–IAM-07, IAM-11, IAM-12, IAM-15, IAM-16, IAM-17, AR-08, PLT-05, PLT-23, NFR-04, NFR-05, NFR-06 |
 | **OBJ-9** Provable to an examiner | IAM-13, IAM-14, IAM-18, IAM-19, PLT-15–PLT-19, PLT-22, NFR-18, SOC1-01–SOC1-36, SOC2-01–SOC2-24, SOC2-27–SOC2-30 |
 | **OBJ-10** Leave with everything, at any time | MIG-09–MIG-12, PLT-09, PLT-10, PLT-11, PLT-12, PLT-13, PLT-21, NFR-07, NFR-17 |
 | **OBJ-11** Runs with no vendor relationship | BKP-03, IAM-10, PLT-01, PLT-02, PLT-03, PLT-06, NFR-10, NFR-11, NFR-14, NFR-17 |
