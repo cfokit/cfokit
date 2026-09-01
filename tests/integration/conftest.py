@@ -30,6 +30,8 @@ from typing import Any
 import psycopg
 import pytest
 
+from cfokit.ledger.repository.unit_of_work import Database
+
 APP_URL = os.environ.get("DATABASE_URL", "")
 OWNER_URL = os.environ.get("DATABASE_OWNER_URL", "")
 
@@ -68,6 +70,21 @@ def app_conn() -> Iterator[psycopg.Connection[Any]]:
     """A connection as the application role, subject to row-level security."""
     with _connect(APP_URL) as conn:
         yield conn
+
+
+@pytest.fixture
+def owner_dsn() -> str:
+    """The owner connection string, for a test that must open its own connection.
+
+    `Connection.info.dsn` deliberately omits the password, so it cannot be used to reconnect.
+    """
+    return OWNER_URL
+
+
+@pytest.fixture
+def database() -> Database:
+    """The database as the service layer sees it, connecting as the application role."""
+    return Database(APP_URL)
 
 
 @pytest.fixture

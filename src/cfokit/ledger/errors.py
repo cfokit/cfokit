@@ -65,6 +65,60 @@ class TransactionIncomplete(LedgerError):
     code = "transaction_incomplete"
 
 
+# --- The write path ----------------------------------------------------------------------
+# Raised by the service layer, so both adapters surface the same code for the same condition
+# (ADR-0009). Each is a contract addition under ADR-0015.
+
+
+class IdempotencyKeyRequired(LedgerError):
+    """A write arrived without an idempotency key (ADR-0029).
+
+    Mandatory rather than optional, because "the write that omits a key is the write that
+    double-books" — making it required moves the decision from runtime judgement to a
+    property every write path can assume.
+    """
+
+    code = "idempotency_key_required"
+
+
+class IdempotencyKeyReused(LedgerError):
+    """A key was replayed with different parameters (ADR-0029).
+
+    A client error rather than a replay. ADR-0029 requires that a repeated key "must not
+    silently succeed with a different one" — two five-dollar coffees on the same day are two
+    transactions, and the way a caller says so is a second key.
+    """
+
+    code = "idempotency_key_reused"
+
+
+class EntityNotFound(LedgerError):
+    """No entity with that id is visible.
+
+    Deliberately not distinguished from "exists but you cannot see it": row-level security
+    scopes reads to the entity on the connection, so another entity's rows are indistinguishable
+    from absent ones, and saying otherwise would leak their existence (`NFR-04`).
+    """
+
+    code = "entity_not_found"
+
+
+class TransactionNotFound(LedgerError):
+    """No transaction with that id is visible to this entity."""
+
+    code = "transaction_not_found"
+
+
+class TransactionAlreadyPosted(LedgerError):
+    """Posting is the point of no return, and it has already been passed (`LED-07`).
+
+    Distinct from `unbalanced_transaction`: nothing is wrong with the entry, it is simply no
+    longer a draft. The correction for a posted entry is a reversal (ADR-0007).
+    """
+
+    code = "transaction_already_posted"
+
+
 class AllocationInvalid(LedgerError):
     """An allocation was asked for that cannot be satisfied exactly (`LED-05`).
 
