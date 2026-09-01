@@ -340,11 +340,11 @@ records about itself.
 | | Requirement | Priority | Status |
 |---|---|---|---|
 | **PLT-01** | The books are readable and writable by agent software the organisation chooses, rather than only by software CFOKit supplies. | Must | Approved |
-| **PLT-02** | CFOKit installs into an agent runtime the organisation already operates, and that runtime supplies the inference. CFOKit does not bundle, require, or charge for inference of its own. | Must | Approved |
+| **PLT-02** | CFOKit runs against an agent runtime the organisation operates and chooses, and needs no inference account or credential of CFOKit's own to do so. | Must | Approved |
 | **PLT-03** | A documented programmatic interface is available to third parties, carrying stated obligations about how and when it may change. | Should | Approved |
 | **PLT-04** | An operator managing several entities can work with each one in a dedicated conversational channel, with the product's reach limited to that channel's entity. | Should | Approved |
 | **PLT-05** | Presence in a channel confers no access. A request is permitted only where a linked CFOKit identity independently holds a role for the entity that channel is bound to. The binding is a stored decision and is never inferred from a channel's name, topic, or contents. | Should | Approved |
-| **PLT-06** | CFOKit sends email on an entity's behalf, and can do so with no third-party account and no credentials, so that no deployment is degraded for want of one. | Should | Approved |
+| **PLT-06** | CFOKit sends email on an entity's behalf where the deployment supplies a mail service, and requires no particular provider. Where none is supplied, invoices and reminders remain available as documents and stable links for an operator to deliver by hand (AR-07), and CFOKit records that it did not send rather than reporting a delivery it cannot make (AR-19). | Should | Approved |
 | **PLT-07** | CFOKit reaches the people who operate an entity when something needs them — a transaction no rule resolves, a delivery that failed, a material change in position, a scheduled run that did not complete. Where they are reached is theirs to set, and any class of it can be turned off. | Must | Approved |
 
 #### Entity settings and lifecycle
@@ -432,6 +432,7 @@ stricter target than the global one.
 | **NFR-19** | The product is operable by someone who runs a business rather than someone who keeps books. Where an accounting term is unavoidable it is explained in place, and no ordinary task requires knowing what a contra account is. | Usability | Should | A non-accountant completes onboarding, categorisation, and a month-end close unaided |
 | **NFR-20** | Dates, numbers, and currency are presented in the conventions of the entity's locale, and the interface is available in languages other than English. | Localisation | Could | Deferred — activates when an entity operates outside the initial locale |
 | **NFR-21** | A contributor can build the system, run its full test suite, and exercise it end to end from a clean checkout, with no credentials, no accounts, and no access anyone has to grant them. | Contributability | Must | Clean checkout to passing suite, unaided |
+| **NFR-22** | Correctness guarantees attach to what the ledger records and computes, never to a judgement an agent made. Where CFOKit does not operate the agent runtime, the model behind a coding decision is not identifiable to CFOKit and its effect on accuracy is not observable — a poor one degrades the books silently rather than visibly. The system states that limit rather than implying uniform assurance. | Correctness | Must | No assurance claimed for a component CFOKit cannot observe |
 
 **Two kinds of guardrail, and only one of them is trustworthy.** NFR-16 constrains what the
 product is asked to do, and is therefore a behavioural standard an agent can fail to meet.
@@ -886,10 +887,10 @@ serving no objective does not belong here.
 |---|---|
 | **OBJ-1** Kept without the company keeping them | BKP-01, BKP-06, BKP-09, BKP-12, RPT-15 |
 | **OBJ-2** Current, and a close never waiting on us | BKP-16, LED-11, LED-12, PLT-07, PLT-14, NFR-15 |
-| **OBJ-3** Exact, and unchanged once posted | LED-03, LED-04, LED-05, LED-06, LED-07, LED-08, BKP-07, BKP-08, BKP-11, BKP-12, BKP-14, MIG-05, MIG-08, RPT-09, RPT-12, NFR-01, NFR-02, NFR-03 |
+| **OBJ-3** Exact, and unchanged once posted | LED-03, LED-04, LED-05, LED-06, LED-07, LED-08, BKP-07, BKP-08, BKP-11, BKP-12, BKP-14, MIG-05, MIG-08, RPT-09, RPT-12, NFR-01, NFR-02, NFR-03, NFR-22 |
 | **OBJ-4** Every number explains itself | LED-08, LED-09, BKP-10, MIG-04, IAM-13, PLT-16, PLT-20, RPT-08, RPT-11, NFR-02, SOC1-14, SOC1-15, SOC1-22, SOC1-23, SOC1-36 |
 | **OBJ-5** The recurring cost goes away | BKP-01–BKP-06, BKP-13–BKP-18, AR-01–AR-19, RPT-01–RPT-09, MIG-01–MIG-08, NFR-19, NFR-20 |
-| **OBJ-6** Output accepted as it stands | LED-01, LED-02, LED-14, LED-17, RPT-01–RPT-05, RPT-07, RPT-09, RPT-10, RPT-12, RPT-13, RPT-14, RPT-16, RPT-17, RPT-18, RPT-19, NFR-01, NFR-16 |
+| **OBJ-6** Output accepted as it stands | LED-01, LED-02, LED-14, LED-17, RPT-01–RPT-05, RPT-07, RPT-09, RPT-10, RPT-12, RPT-13, RPT-14, RPT-16, RPT-17, RPT-18, RPT-19, NFR-01, NFR-16, NFR-22 |
 | **OBJ-7** Never forced off by growing | LED-10, LED-13, LED-14, LED-15, LED-16, LED-17, LED-18, LED-19, RPT-19, RPT-20, RPT-21, IAM-08, IAM-09, PLT-04, PLT-08, NFR-09 |
 | **OBJ-8** Only authorised people reach the books | IAM-01–IAM-07, IAM-11, IAM-12, IAM-15, IAM-16, IAM-17, AR-08, PLT-05, NFR-04, NFR-05, NFR-06 |
 | **OBJ-9** Provable to an examiner | IAM-13, IAM-14, IAM-18, IAM-19, PLT-15–PLT-19, PLT-22, NFR-18, SOC1-01–SOC1-36, SOC2-01–SOC2-24, SOC2-27–SOC2-30 |
