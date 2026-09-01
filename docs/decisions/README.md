@@ -27,7 +27,12 @@ cost the same context as inlining, while diluting adherence to the rules that ma
 ## Rules
 
 1. **Immutable once accepted.** Fix typos; never rewrite the reasoning. A changed mind is a new
-   record that supersedes the old one.
+   record that supersedes the old one. Enforced on pull requests by `check_decisions`, which
+   diffs each accepted record against the base ref. The exception is a correction that leaves
+   the decision itself intact — a typo, or a `Confirmation` naming a gate that turned out not
+   to exist: set `ALLOW_ACCEPTED_EDIT` to the record numbers it covers and say why in the
+   commit. It names records rather than being a boolean, so it cannot silently become a
+   blanket disable, and it fails once the records it names stop differing from the base.
 2. **Supersede, don't delete.** Set the old record's `status` to `superseded by ADR-NNNN` and leave
    it in place. The rejected-alternatives history is most of the value.
 3. **One decision per file, tested by supersession.** A record may state a decision in several
