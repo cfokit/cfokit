@@ -135,6 +135,11 @@ The intuitive choice: store what you would display, so the books and the stateme
 Python's `decimal` default, IEEE's default, and genuinely better in the abstract: it avoids the
 systematic upward bias that half-up accumulates over many roundings.
 
+**Recorded for completeness rather than as a live choice.** `RPT-12` already specifies half-up, so
+this option was foreclosed before this record was written. The reasoning below is why the requirement
+is right, not why the record chose against an open alternative — and if `RPT-12` is ever revisited,
+this is the case to answer.
+
 * Good, because it is unbiased over repeated arithmetic, and is what a statistician would choose.
 * Bad, because the bias argument applies to *repeated arithmetic*, and under this decision rounding
   happens once, at the edge, on figures never fed back into further calculation. What is left is a
