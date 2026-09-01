@@ -28,7 +28,7 @@ under third-party audit.
 ## Repository layout
 
 ```
-packages/    Python distributions (uv workspace)
+src/cfokit/  The Python distribution; one package per capability
 skills/      Shipped Agent Skills (SKILL.md bundles)
 infra/       OpenTofu for the one maintained cloud target
 docs/        Vision, requirements, and decision records

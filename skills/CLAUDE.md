@@ -8,9 +8,9 @@ Shipped Agent Skills, as `SKILL.md` bundles. These are **product artifacts**, no
 development tooling — tooling for developing this repository lives in `.claude/` and is
 never shipped. (ADR-0020)
 
-A skill is **not a Python distribution.** It has no `pyproject.toml`, is not a `uv`
-workspace member, and `uv sync` does not install it. If you find yourself wanting to add
-one, the thing you are building is a package and belongs in `packages/`.
+A skill is **not Python.** It has no `pyproject.toml`, nothing installs it, and it has no
+import path into anything. If you find yourself wanting one, the thing you are building is a
+capability and belongs in `src/cfokit/`.
 
 ## The hard boundary
 

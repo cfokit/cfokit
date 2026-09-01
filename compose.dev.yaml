@@ -32,7 +32,7 @@ services:
   #   volumes:
   #     # Source reload. Note this mounts source over the image's installed package, which
   #     # is exactly why CI does not apply this overlay.
-  #     - ./packages/ledger/src:/app/packages/ledger/src:ro
+  #     - ./src:/app/src:ro
 
   # Seed fixtures. Behind a profile so they NEVER run by default: seeding a ledger that
   # holds real books would corrupt it (ADR-0018).

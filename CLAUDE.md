@@ -1,6 +1,6 @@
 # CFOKit — Working Agreement
 
-Loaded into every session. Package-specific rules live in `packages/*/CLAUDE.md` and
+Loaded into every session. Capability-specific rules live in `src/cfokit/*/CLAUDE.md` and
 load when you work in those directories.
 
 Rules are binding. Each cites the ADR holding its reasoning — read it before proposing
@@ -14,18 +14,22 @@ Directories are organised by **artifact kind**, and packages are named for
 
 | Path | What it is | Boundary |
 |---|---|---|
-| `packages/ledger/` | The double-entry primitive, kept deliberately tiny | Accounts, postings, draft/posted, reversal, close. Knows nothing about customers, invoices, banks, email, or agents. |
-| `packages/<module>/` | In-process modules — siblings of the ledger, same deployable | Depend on the ledger; never on each other; the ledger never depends on them. |
+| `src/cfokit/ledger/` | The double-entry primitive, kept deliberately tiny | Accounts, postings, draft/posted, reversal, close. Knows nothing about customers, invoices, banks, email, or agents. |
+| `src/cfokit/<module>/` | In-process modules — siblings of the ledger, same deployable | Depend on the ledger; never on each other; the ledger never depends on them. |
 | `skills/` | Shipped Agent Skills, as `SKILL.md` bundles | Talk to the ledger over HTTP only. Never import ledger code. |
 | `infra/` | OpenTofu for the one maintained cloud target, plus the deployment contract | Supplies env vars only. No app coupling. |
 | `docs/product/` | Vision and numbered requirements | The source for positioning; the README derives from it. |
 | `docs/decisions/` | Decision records, MADR 4.0.0. Immutable once accepted. | Not auto-loaded. Read on demand. |
 | `.claude/` | Tooling for developing *this repo* | Never shipped. Distinct from `skills/`. |
 
-`packages/` holds Python distributions **only** — its members are globbed into the `uv`
-workspace, so nothing non-installable goes there. A skill is not a distribution.
+**One distribution, rooted at `src/cfokit/`.** Every capability is a sibling package inside
+it, because ADR-0023 ships one image with many entrypoints — so nothing is ever versioned,
+installed, or released separately, which is the whole of what a multi-distribution workspace
+buys. Boundaries between capabilities are enforced by `import-linter` on module paths, which
+works the same either way. `src/cfokit/` is a PEP 420 namespace package: **do not add
+`src/cfokit/__init__.py`**. A skill is not a package and never goes here (ADR-0014, ADR-0020).
 
-**`packages/ledger` is the only package.** There was a `packages/connectors` holding no code; it
+**`ledger` is the only capability.** There was a `connectors` package holding no code; it
 was removed rather than renamed, because a package that exists before its capability is known is a
 boundary drawn around a guess (ADR-0012, ADR-0022 § 5, ADR-0031). Create a package when the
 capability it provides is known and there is code to put in it.
@@ -71,9 +75,9 @@ needs its own record. (ADR-0001)
 ## Commands
 
 ```
-uv sync                          # install, all packages
+uv sync                          # install everything
 uv run task test                 # full suite
-uv run task test <path>          # one package, e.g. packages/ledger
+uv run task test <path>          # scope it, e.g. tests/test_migrations.py
 uv run task lint                 # ruff + mypy --strict + import-linter + async boundary
 uv run task check-money          # CI gate 4: no floats touch money
 uv run task check-decisions      # CI gate 6: decision corpus is well-formed
@@ -108,11 +112,12 @@ otherwise get wrong, because absence isn't visible in a manifest:
   forbidden because it makes an `await` inside a transaction expressible, and the workload has
   almost no concurrency to reclaim in exchange. (ADR-0024)
 - **Runtime dependencies are load-bearing and few.** Adding one is a decision, not a
-  convenience. Ask before adding any. Currently **five**, all in `packages/ledger`, each with
-  its reason and verified licence in a comment there: `psycopg[binary]` (driver), `fastapi`
+  convenience. Ask before adding any. Currently **five**, in the root `pyproject.toml`, each
+  with its reason and verified licence in a comment there: `psycopg[binary]` (driver), `fastapi`
   (REST + OpenAPI), `uvicorn` (ASGI server), `mcp` (tool surface), `pyjwt[crypto]` (audience
-  validation). 54 packages resolved in total; the MCP SDK is most of it, accepted knowingly
-  (ADR-0024).
+  validation). Those five pull **36** packages in total — `uv export --no-dev
+  --no-emit-project --no-hashes | grep -c '^[a-z]'` — and the MCP SDK is most of it, accepted
+  knowingly (ADR-0024).
 - **Python 3.12+**, `ruff`, `mypy --strict`, `import-linter`.
 
 ## Money and correctness

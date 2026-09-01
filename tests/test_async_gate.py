@@ -58,25 +58,25 @@ def test_unrelated_import_is_not_flagged() -> None:
 
 
 def test_mcp_module_is_allowed() -> None:
-    mcp = REPO_ROOT / "packages/ledger/src/cfokit/ledger/mcp/__init__.py"
+    mcp = REPO_ROOT / "src/cfokit/ledger/mcp/__init__.py"
     assert is_allowed(mcp)
 
 
 def test_service_layer_is_not_allowed() -> None:
-    service = REPO_ROOT / "packages/ledger/src/cfokit/ledger/service/__init__.py"
+    service = REPO_ROOT / "src/cfokit/ledger/service/__init__.py"
     assert not is_allowed(service)
 
 
 def test_rest_adapter_is_not_allowed() -> None:
     """REST has no async requirement and is deliberately outside the allowlist (ADR-0024)."""
-    api = REPO_ROOT / "packages/ledger/src/cfokit/ledger/api/__init__.py"
+    api = REPO_ROOT / "src/cfokit/ledger/api/__init__.py"
     assert not is_allowed(api)
 
 
 def test_the_ledger_is_what_gets_checked() -> None:
     """The rule protects code holding a transaction and a lock, which is the ledger."""
-    assert is_checked(REPO_ROOT / "packages/ledger/src/cfokit/ledger/service/__init__.py")
-    assert is_checked(REPO_ROOT / "packages/ledger/src/cfokit/ledger/repository/__init__.py")
+    assert is_checked(REPO_ROOT / "src/cfokit/ledger/service/__init__.py")
+    assert is_checked(REPO_ROOT / "src/cfokit/ledger/repository/__init__.py")
 
 
 def test_components_and_modules_are_not_checked() -> None:
@@ -84,8 +84,8 @@ def test_components_and_modules_are_not_checked() -> None:
     separate runtime reaching the ledger over HTTP (ADR-0022, ADR-0023). Its execution model
     cannot reach the write path, so the gate does not constrain it.
 
-    No such package exists yet — `packages/connectors` held no code and was removed rather
-    than renamed. The gate is scoped to `packages/ledger`, so a future sibling is outside it
-    by construction; this asserts that scoping directly rather than against a placeholder.
+    No such capability exists yet — `connectors` held no code and was removed rather than
+    renamed. The gate is scoped to `src/cfokit/ledger/`, so a sibling capability is outside
+    it by construction; this asserts that scoping directly rather than against a placeholder.
     """
-    assert not is_checked(REPO_ROOT / "packages/some-future-module/src/cfokit/whatever.py")
+    assert not is_checked(REPO_ROOT / "src/cfokit/some_future_capability/whatever.py")

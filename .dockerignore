@@ -6,12 +6,10 @@
 .import_linter_cache
 **/__pycache__
 docs
-specs
 skills
 infra
 .claude
 .github
 compose*.yaml
 *.md
-!packages/*/README.md
 !README.md

@@ -7,9 +7,9 @@ everywhere; never `float`, including in tests and fixtures":
 1. **Schema.** No `REAL`, `DOUBLE PRECISION`, `FLOAT`, or `MONEY` column types. A float
    column silently loses cents, and for a system whose value proposition is that the books
    are correct that is disqualifying.
-2. **Python source.** No `float` annotations or casts under `packages/`. A `float` in a
-   fixture teaches the next contributor the wrong thing and eventually reaches production
-   code.
+2. **Python source.** No `float` annotations or casts under `src/` or `tests/`. A `float`
+   in a fixture teaches the next contributor the wrong thing and eventually reaches
+   production code, so the test tree is in scope as deliberately as the source tree.
 
 Escape hatch for the genuinely non-monetary case (a timeout, a ratio): put `not-money` in a
 comment on the same line. Use it rarely and say why.
@@ -79,14 +79,19 @@ def _report(path: Path, number: int, text: str, message: str) -> None:
 def main() -> int:
     failures = 0
 
-    sql_files = sorted(REPO_ROOT.glob("packages/*/src/cfokit/*/migrations/sql/*.sql"))
+    sql_files = sorted(REPO_ROOT.glob("src/cfokit/*/migrations/sql/*.sql"))
     for path in sql_files:
         for number, text in offending_lines(path.read_text(encoding="utf-8")):
             _report(path, number, text, "float storage type — use NUMERIC(28,10) (ADR-0005)")
             failures += 1
 
+    # Both trees. ADR-0005 puts fixtures explicitly in scope, so dropping tests/ here
+    # would quietly narrow the gate to less than the rule it enforces.
     py_files = sorted(
-        path for path in REPO_ROOT.glob("packages/**/*.py") if "__pycache__" not in path.parts
+        path
+        for tree in ("src", "tests")
+        for path in REPO_ROOT.glob(f"{tree}/**/*.py")
+        if "__pycache__" not in path.parts
     )
     for path in py_files:
         for number, text in offending_python_lines(path.read_text(encoding="utf-8")):
