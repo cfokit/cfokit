@@ -26,7 +26,7 @@ metadata lookups, no provider SDK imports at module scope.
 
 | Variable | Required | Purpose |
 |---|---|---|
-| `DATABASE_URL` | yes | PostgreSQL connection string. The only storage backend (ADR-0003). |
+| `DATABASE_URL` | yes | PostgreSQL connection string. The only storage backend (ADR-0003). **The value differs per entrypoint** — see *Two database roles* below. |
 | `PUBLIC_BASE_URL` | yes | Authoritative for anything the service says about itself. **Never derived from request headers** — behind a proxy or tunnel they lie (ADR-0004). |
 | `AUTH_ISSUER_URL` | yes | OAuth 2.1 issuer base URL (ADR-0019). |
 | `AUTH_AUDIENCE` | yes | Expected token audience. Validated on every request (ADR-0011, ADR-0019). |
@@ -52,6 +52,37 @@ or retry, because the CI portability gate runs with no credentials present.
 Reachable at `DATABASE_URL`, supporting deferred constraint triggers (ADR-0006), advisory
 locks (ADR-0011), and row-level security. These requirements are why Aurora DSQL is deferred
 rather than chosen (ADR-0003).
+
+#### Two database roles
+
+Row-level security does not apply to a superuser, and does not apply to a table's owner
+unless the table is `FORCE`'d. So the role that applies migrations and the role the
+application connects as **must be different**, or the policies are inert and entity isolation
+rests on service-layer filtering alone. ADR-0003 asks for two layers precisely because "RLS
+misconfiguration is silent" — nothing fails, and a bypassed policy is indistinguishable from
+an enforced one unless something checks.
+
+| Role | Used by | Needs |
+|---|---|---|
+| Owner | the `migrate` entrypoint | Ownership of the schema; DDL |
+| `cfokit_app` | every serving entrypoint | `LOGIN`, **`NOSUPERUSER`**, **`NOBYPASSRLS`**, and no ownership of any table |
+
+`DATABASE_URL` carries the owner connection for the migrate job and the `cfokit_app`
+connection for everything else. It is one variable with a different value per entrypoint
+rather than two variables, so the configuration surface is unchanged.
+
+The application role's table privileges are granted by migration `0002`, which names
+`cfokit_app` directly. **Creating the role is a deployment step, not a migration** — roles are
+cluster-scoped and a managed provider may not grant `CREATEROLE`. Create it before applying
+migrations; `0002` fails loudly if it does not exist, which is the right outcome, because a
+deployment missing the role would otherwise run with isolation silently halved.
+
+`infra/postgres/init-app-role.sh` does this for the compose stack, on first initialisation of
+an empty data directory.
+
+Verified rather than assumed: `tests/integration/test_entity_isolation.py` asserts the
+property from the outside, as the application role, and CI gate 2 runs it inside the compose
+network on every pull request.
 
 ### 3. An OAuth 2.1 issuer meeting the conformance contract
 

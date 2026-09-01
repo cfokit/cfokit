@@ -38,6 +38,23 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-dev
 
 # ---------------------------------------------------------------------------
+# The suite, in an image built from the same source as production. Used by the `test`
+# compose profile so integration tests run inside the network, where Postgres is reachable
+# without compose.yaml publishing a database port (ADR-0018, ADR-0023).
+FROM builder AS test
+
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --locked
+
+COPY tests/ ./tests/
+
+# Only the integration tests. The unit and documentation tests run on the host in the same
+# CI job and need the full checkout — `test_documentation.py` walks the repository at import
+# time — while these need a database and nothing else. Naming the path rather than filtering
+# by marker keeps the rest out of collection entirely.
+CMD ["uv", "run", "--no-sync", "pytest", "tests/integration"]
+
+# ---------------------------------------------------------------------------
 FROM python:${PYTHON_VERSION}-slim AS runtime
 
 RUN groupadd --system cfokit && useradd --system --gid cfokit --create-home cfokit

@@ -134,6 +134,14 @@ jobs:
       - name: Migrations run as an explicit command, never at startup
         run: docker compose -f compose.yaml --profile migrate run --rm migrate
 
+      # The integration suite, inside the network and as the application role. It cannot run
+      # in the step above: compose.yaml publishes no database port, so the host cannot reach
+      # Postgres, and that is deliberate (ADR-0018). Row-level security is only actually in
+      # force for a non-superuser that does not own the tables, so these are the tests that
+      # can tell an enforced policy from an inert one (ADR-0003).
+      - name: Integration suite, inside the compose network
+        run: docker compose -f compose.yaml --profile test run --rm test
+
       - name: Stack diagnostics
         if: failure()
         run: docker compose -f compose.yaml ps && docker compose -f compose.yaml logs --tail 200

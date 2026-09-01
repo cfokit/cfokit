@@ -26,8 +26,14 @@ services:
       # Local-only credential. Managed deployments inject this from a secret store; IaC
       # creates secret containers, never values (ADR-0016).
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cfokit}
+      # Consumed by the init script below, not by Postgres itself.
+      POSTGRES_APP_PASSWORD: ${POSTGRES_APP_PASSWORD:-cfokit_app}
     volumes:
       - ledger-data:/var/lib/postgresql/data
+      # Creates the non-superuser role the application connects as. Runs once, on an empty
+      # data directory. Without it the RLS policies in migration 0001 are inert, because a
+      # superuser bypasses them (ADR-0003).
+      - ./infra/postgres/init-app-role.sh:/docker-entrypoint-initdb.d/10-init-app-role.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U cfokit -d cfokit"]
       interval: 5s
@@ -76,7 +82,11 @@ services:
     environment:
       # The complete configuration surface. Adding to it requires an ADR, because
       # infra/README.md is the portability contract (ADR-0016).
-      DATABASE_URL: postgresql://cfokit:${POSTGRES_PASSWORD:-cfokit}@postgres:5432/cfokit
+      # The application connects as cfokit_app, which is not a superuser and does not own
+      # the tables, so row-level security actually applies to it. The migrate job below
+      # connects as the owner instead, because applying DDL needs privileges the application
+      # must never hold (ADR-0003, ADR-0007). Same variable, different value per entrypoint.
+      DATABASE_URL: postgresql://cfokit_app:${POSTGRES_APP_PASSWORD:-cfokit_app}@postgres:5432/cfokit
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
       AUTH_ISSUER_URL: ${AUTH_ISSUER_URL:-http://hydra:4444}
       AUTH_AUDIENCE: ${AUTH_AUDIENCE:-cfokit-ledger}
@@ -107,6 +117,30 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql://cfokit:${POSTGRES_PASSWORD:-cfokit}@postgres:5432/cfokit
+
+  # The suite, run inside the compose network (ADR-0023: one image, many entrypoints).
+  # compose.yaml deliberately publishes no database port, so a host-run integration test
+  # cannot reach Postgres — and CI gate 2 runs this file without the dev overlay. Running
+  # the tests here is what lets the write path's guarantees be proved against the stack
+  # users actually run, rather than asserted.
+  #
+  #   docker compose --profile test run --rm test
+  #
+  test:
+    profiles: ["test"]
+    build:
+      context: .
+      target: test
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # As the application role, so an integration test sees exactly the privileges and the
+      # row-level security the application runs under.
+      DATABASE_URL: postgresql://cfokit_app:${POSTGRES_APP_PASSWORD:-cfokit_app}@postgres:5432/cfokit
+      # Owner connection, for fixtures that need to create an entity before RLS scoping
+      # applies, and for the migration the suite applies before it starts.
+      DATABASE_OWNER_URL: postgresql://cfokit:${POSTGRES_PASSWORD:-cfokit}@postgres:5432/cfokit
 
 volumes:
   ledger-data:

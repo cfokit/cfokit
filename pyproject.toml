@@ -144,6 +144,8 @@ markers = [
 # ---------------------------------------------------------------------------
 [tool.importlinter]
 root_packages = ["cfokit"]
+# Required to name an external package (psycopg) in a forbidden contract.
+include_external_packages = true
 
 [[tool.importlinter.contracts]]
 name = "Ledger is layered; the booking engine sits at the bottom (ADR-0008, ADR-0009)"
@@ -166,6 +168,24 @@ forbidden_modules = [
     "cfokit.ledger.api",
     "cfokit.ledger.mcp",
 ]
+
+[[tool.importlinter.contracts]]
+# ADR-0028's Confirmation claims this contract. It did not exist, and `service/readiness.py`
+# was importing the driver directly — so the rule keeping SQL in one readable place was
+# review-enforced while the record said it was gated. `migrations` is not listed because the
+# migrate entrypoint legitimately opens its own connection (ADR-0004).
+name = "Only the repository layer names the database driver (ADR-0028)"
+type = "forbidden"
+source_modules = [
+    "cfokit.ledger.engine",
+    "cfokit.ledger.service",
+    "cfokit.ledger.api",
+    "cfokit.ledger.mcp",
+]
+forbidden_modules = ["psycopg"]
+# Direct imports only. Reaching the database *through* `repository` is the design; what is
+# forbidden is naming the driver anywhere else, which is what puts SQL in one readable place.
+allow_indirect_imports = true
 
 # NOTE: a contract forbidding provider SDKs at module scope (ADR-0004) is added when
 # the first provider SDK is introduced — import-linter errors on modules it cannot find.
