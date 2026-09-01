@@ -172,7 +172,7 @@ only that *some* CFOKit-operated runtime exists.
 ### Confirmation
 
 Coverage is derived, never asserted: the acting principal's client registration determines it, and a
-third-party client cannot mint a covered-class credential (ADR-0032). A test asserts that an entry
+third-party client cannot mint a covered-class credential (ADR-0032). A test will assert that an entry
 marked covered resolves to a decision record carrying a model identifier in the **verified** class of
 ADR-0033 § 1 — checked against the registry of models the runtime is released to call — so a covered
 entry whose model was merely asserted fails. Operating the runtime moves model identity from

@@ -104,8 +104,9 @@ Three mechanisms, of which two exist:
   precondition for any of this holding (ADR-0005).
 * **Property tests on the allocator** — the parts sum to the whole, for any total and any line count.
   These are written with the allocator, not after (`CLAUDE.md`, working style).
-* **CI gate 3**, the differential oracle, confirms exact balance against Beancount with the tolerance
-  divergence documented in the register (ADR-0010).
+* **CI gate 3**, the differential oracle, would confirm exact balance against Beancount with the
+  tolerance divergence documented in the register — this is the one of the three that does not
+  exist, and it stays deferred until `LED-18` (ADR-0010).
 
 Not gated: nothing mechanically prevents a rounding call appearing in `engine`, `repository`, or
 `service`. That is a review rule, and a candidate for a lint contract if it is ever violated.

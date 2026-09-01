@@ -77,8 +77,9 @@ authorisation rather than concurrency, and is noted here only because `CLAUDE.md
 
 ### Confirmation
 
-Tests must prove serialisation by actually running concurrent writes, not by inspection. This is an
-M3 exit criterion.
+Serialisation must be proved by actually running concurrent writes rather than by inspection.
+**No such test exists yet.** It lands with the service layer that takes the lock, and until then this
+record is a design argument rather than a verified property.
 
 `scripts/check_async.py` protects the property the lock depends on: no `await` can appear in code
 holding the lock, because async constructs are rejected throughout the ledger's service layer

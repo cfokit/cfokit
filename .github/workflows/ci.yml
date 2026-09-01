@@ -153,7 +153,7 @@ jobs:
   # Gate 3 — differential test against the Beancount oracle, every divergence documented
   # (ADR-0010). Beancount is a CI-only dependency and never ships in the artifact.
   #
-  # Enabled in M2, when the booking engine exists.
+  # Enabled when LED-18 activates lot tracking, which is what the oracle is for (ADR-0010).
   #
   # oracle:
   #   name: "Gate 3: Beancount oracle"
@@ -167,7 +167,7 @@ jobs:
   # Gate 5 — generated OpenAPI and MCP tool descriptions match what is committed; a diff
   # means a contract change and needs review (ADR-0015).
   #
-  # Enabled in M4, when the adapters exist.
+  # Enabled when the adapters exist and there is a committed artifact to diff against.
   #
   # contracts:
   #   name: "Gate 5: published interfaces unchanged"

@@ -145,8 +145,10 @@ either direction.
 
 ### Confirmation
 
-The Beancount differential oracle (ADR-0010) is CI gate 3 and substitutes for the production exposure
-an adopted system would have brought. The accountability properties are enforced by schema and by CI
+The Beancount differential oracle (ADR-0010) is scaffolded as CI gate 3 and **is not running** — it
+activates with `LED-18`. Its intended substitute until then, the conformance corpus of ADR-0036 § 2,
+**is not written either**, so nothing yet replaces the production exposure an adopted system would
+have brought. The accountability properties are enforced by schema and by CI
 rather than by convention: append-only (ADR-0007), the zero-sum deferred constraint trigger
 (ADR-0006), and CI gate 4 on float storage types (ADR-0005).
 
