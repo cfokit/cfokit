@@ -1,115 +1,73 @@
 # Contributing to CFOKit
 
-CFOKit keeps books. A bug here does not degrade an experience — it misstates someone's
-financial position. The rules below exist for that reason.
+Thanks for your interest. Bug reports, documentation fixes and code are all welcome.
 
-## Before you write code
+This file covers the **process** of contributing, and deliberately holds no project rules.
+Those live in [`CLAUDE.md`](CLAUDE.md) and the [decision records](docs/decisions/README.md);
+restating them here would give them a second home to drift from, which is the failure
+`CLAUDE.md` names when it says a second rules document becomes a second source of truth.
 
-Read [`CLAUDE.md`](CLAUDE.md). It is the project's constitution and it is binding for
-humans and agents alike. Each rule cites the [ADR](docs/decisions/README.md) holding its
-reasoning; read the cited ADR before proposing a change to a rule.
+## Before you start
 
-If a task appears to require breaking a rule, **stop and ask** rather than working around
-it. That is not bureaucracy — a workaround in this codebase is how correctness guarantees
-quietly stop holding.
+Read [`CLAUDE.md`](CLAUDE.md). It is the project's constitution, and every rule in it cites
+the decision record holding its reasoning. If a task appears to require breaking a rule, ask
+rather than working around it.
 
-## Setup
+## Reporting a bug
+
+Open an issue. Include what you did, what you expected, what happened instead, and the
+versions of CFOKit, Python and Postgres you were running.
+
+**Do not open a public issue for a security vulnerability.** Contact the maintainers
+privately.
+
+## Suggesting a change
+
+Open an issue before writing code for anything larger than a fix, so the approach can be
+agreed before you spend time on it.
+
+A decision that future work should be bound by belongs in a decision record rather than a
+code comment. [`docs/decisions/README.md`](docs/decisions/README.md) explains the format and
+[`adr-template.md`](docs/decisions/adr-template.md) is the starting point.
+
+## Setting up
+
+[`uv`](https://docs.astral.sh/uv/) only — not pip, not poetry.
 
 ```bash
-uv sync                  # install everything; uv only, not pip or poetry
-uv run task lint         # ruff, mypy --strict, import-linter
-uv run task test         # full suite
-docker compose up        # local production stack, no cloud account needed
-uv run task dev          # compose with the development overlay applied
+uv sync              # install everything
+uv run task --list   # every command, and what it does
 ```
 
-## The workflow
+`docker compose up` brings up the full stack locally. It needs no cloud account.
 
-`CLAUDE.md` plus the decision records are the constitution. A second rules document becomes a
-second source of truth.
+## Running the checks
 
-Requirements carry stable domain-prefixed ids ([`docs/product/requirements.md`](docs/product/requirements.md)).
-Cite them in commit messages. Derivation runs vision → requirements → decision records → the
-rules in `CLAUDE.md`; requirements never cite a decision record.
+```bash
+uv run task lint
+uv run task test
+```
 
-There is no roadmap file and no specifications directory. Work sequencing lives in GitHub
-Milestones and Projects. Whether the project adopts a specification workflow is undecided
-([ADR-0001](docs/decisions/0001-documentation-structure.md)).
+CI runs these and more on every pull request.
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) is the authority on what has to pass.
 
-## What "done" means
+## Opening a pull request
 
-These are CI gates, not guidelines. Do not write code that assumes an environment they
-forbid.
+- Work on a branch. Never commit to `main`.
+- One logical change per commit, with an imperative subject line.
+- Cite the requirement or `ADR-` id when a change implements or follows one. Requirement ids
+  are defined in [`requirements.md`](docs/product/requirements.md).
+- Say which checks you ran locally, and flag anything you could not verify. A red suite
+  belongs in the pull request description, not in the reviewer's discovery.
+- If part of the work is incomplete or blocked, say so. Scaling work down is a maintainer's
+  call rather than something to do quietly.
 
-1. `uv run task lint` clean — ruff, `mypy --strict`, import-linter layer contracts.
-2. Full suite green against `compose.yaml` **without** the dev overlay and **with no cloud
-   credentials present**.
-3. **Deferred, not running.** The Beancount differential oracle activates with `LED-18`
-   ([ADR-0010](docs/decisions/0010-beancount-as-test-oracle.md)); until then correctness rests
-   on the layers below.
-4. No float storage types anywhere in the schema.
-5. Generated OpenAPI and MCP tool descriptions match what is committed.
+## Review
 
-Write tests alongside the code, not after. Never report work complete on a red suite.
+A maintainer will review. Expect as many questions about reasoning as about code — this is an
+accounting system, and *why is this correct?* is the substance of the review.
 
-## Changes that need human review before you proceed
+## Licensing
 
-- **Booking semantics** — anything affecting how a transaction is recorded.
-- **Authentication** — the issuer contract, audience validation, entity grants.
-- **The write path** — locking, idempotency, the audit trail.
-- **Adding any runtime dependency.** Runtime dependencies are load-bearing and few; adding
-  one is a decision, not a convenience. Ask first.
-
-## Adding a dependency
-
-1. Check the licence, and **verify it currently rather than from memory** — licences change,
-   and two of our own ADRs exist because a dependency relicensed.
-2. No AGPL, GPL, or other copyleft component may ship in the distributed artifact. Copyleft
-   in CI-only tooling is fine.
-3. Runtime dependencies need approval before you add them.
-
-## Adding a provider
-
-Bank feeds, payment processors and delivery channels are the most contribution-friendly surface
-in the project, deliberately — `NFR-12` makes third-party contribution a requirement rather than
-a courtesy.
-
-**The package that will hold them does not exist yet.** There was a `connectors` package
-containing no code, and it was removed rather than renamed: "connectors" names a mechanism rather
-than a capability, and bank feeds, payment processing and transactional email are not one
-capability (ADR-0031). What they split into is decided when the first is built.
-
-Two rules will apply whatever the package is called. Import provider SDKs inside the function that
-needs them, never at module scope, so the package stays importable without credentials present. And
-do not make your provider structural — if adding it requires changing the protocol, say so in the PR
-and expect a discussion.
-
-## Architecture decisions
-
-If you make a decision future work should be bound by, propose an ADR rather than burying it
-in a code comment. Copy [`docs/decisions/adr-template.md`](docs/decisions/adr-template.md) to the next
-free number.
-
-The **Pros and Cons of the Options** section is mandatory and is the most important part of
-the file. MADR marks it optional; here it is not. An ADR that names alternatives without
-refuting each one does not prevent re-litigation, which is the main thing an ADR is for.
-"Didn't feel right" is not a rejection reason; cite specifics.
-
-**One decision per record.** A record may state a decision in several clauses when they stand
-or fall together. The test: could one clause be superseded without reopening the others? If it
-could, they are two decisions — write two records. A title containing "and" is a signal to
-apply the test, not a violation by itself.
-
-`uv run task check-decisions` checks the mechanical parts — frontmatter, mandatory sections,
-requirement ids, and index agreement — before CI does. Run it after writing a record.
-
-ADRs are immutable once accepted. Fix typos; never rewrite reasoning. A changed mind is a
-new ADR that supersedes the old one.
-
-## Commits and pull requests
-
-- One logical change per commit; imperative subject line.
-- Cite the requirement or `ADR-` id when the change implements or follows one.
-- State in the PR which CI gates you ran locally, and flag anything you could not verify.
-- If part of the work is incomplete or blocked, say so explicitly. Scaling work down is a
-  maintainer's call.
+CFOKit is [Apache 2.0](LICENSE). Contributions are accepted under the same licence, which
+Apache 2.0 § 5 makes the default. There is no separate CLA to sign.
