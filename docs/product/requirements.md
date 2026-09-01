@@ -423,7 +423,7 @@ stricter target than the global one.
 
 | | Requirement | Category | Priority | Target |
 |---|---|---|---|---|
-| **NFR-01** | Booking results are demonstrably correct against an independent implementation of double-entry accounting, and every divergence is documented rather than tolerated. | Correctness | Must | Zero undocumented divergences |
+| **NFR-01** | Booking results are demonstrably correct against a source of truth CFOKit did not author, and every disagreement with it is resolved rather than tolerated. Agreement with our own tests is not evidence: they encode the same understanding as the code. | Correctness | Must | Every disagreement resolved, none carried |
 | **NFR-02** | No financial record is silently altered or destroyed, by any operation, at any layer. | Integrity | Must | Zero |
 | **NFR-03** | A repeated or retried operation produces the same result and creates no duplicate record. | Integrity | Must | Zero duplicates under retry |
 | **NFR-04** | No operation reads or writes across an entity boundary except as the acting identity's role in that entity permits. Roles are evaluated by the system regardless of what a request, or a skill acting for a person, asserts about itself. The boundary holds across anything derived as well as anything stored — a cache, an index, an embedding, or a conversation an agent carries between turns is inside it, not beside it. | Security | Must | Zero cross-entity reads or writes |
