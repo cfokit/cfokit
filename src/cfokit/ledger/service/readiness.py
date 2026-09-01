@@ -12,9 +12,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-import psycopg
-
-from cfokit.ledger.migrations import pending
+from cfokit.ledger.repository.connection import DatabaseUnavailable
+from cfokit.ledger.repository.health import pending_migrations
 
 
 @dataclass(frozen=True, slots=True)
@@ -40,15 +39,15 @@ def check_readiness(database_url: str) -> Readiness:
     proceeding past a missed migration (ADR-0004).
     """
     try:
-        with psycopg.connect(database_url, connect_timeout=5) as conn:
-            outstanding = pending(conn)
-    except psycopg.Error as exc:
+        outstanding = pending_migrations(database_url)
+    except DatabaseUnavailable as exc:
         return Readiness(
             database_reachable=False,
             migrations_current=False,
             pending_migrations=-1,
-            # The class name, never the connection string: it carries credentials.
-            detail=f"database unreachable: {exc.__class__.__name__}",
+            # The driver's exception class, never the connection string: it carries
+            # credentials, and the repository has already stripped everything else.
+            detail=f"database unreachable: {exc.reason}",
         )
 
     if outstanding:

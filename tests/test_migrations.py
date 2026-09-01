@@ -14,10 +14,17 @@ def test_sql_directory_ships_inside_the_package() -> None:
 
 
 def test_first_migration_is_discovered() -> None:
-    """0001 establishes the core schema; discovery must find it in the package."""
+    """0001 establishes the core schema; discovery must find it in the package.
+
+    Asserts 0001's identity and the ordering property rather than the exact list, which was
+    a statement about how many migrations existed on the day it was written.
+    """
     found = discover()
-    assert [m.version for m in found] == ["0001"]
+
+    assert found[0].version == "0001"
     assert found[0].name == "create-core-ledger"
+    assert [m.version for m in found] == sorted(m.version for m in found)
+    assert len({m.version for m in found}) == len(found), "versions are never reused"
 
 
 def test_first_migration_declares_the_invariants() -> None:
@@ -30,11 +37,16 @@ def test_first_migration_declares_the_invariants() -> None:
 
 
 def test_every_decimal_column_is_numeric_28_10() -> None:
-    """ADR-0005 fixes the scale; CI gate 4 catches float types, this catches the scale."""
-    sql = discover()[0].sql
-    assert sql.count("numeric(") == sql.count("numeric(28,10)"), (
-        "every decimal column must be NUMERIC(28,10)"
-    )
+    """ADR-0005 fixes the scale; CI gate 4 catches float types, this catches the scale.
+
+    Every migration, not only the first: a decimal column added later is as capable of
+    getting the scale wrong, and would have been unchecked.
+    """
+    for migration in discover():
+        sql = migration.sql
+        assert sql.count("numeric(") == sql.count("numeric(28,10)"), (
+            f"{migration.path.name}: every decimal column must be NUMERIC(28,10)"
+        )
 
 
 def test_transaction_carries_both_dates() -> None:
