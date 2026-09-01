@@ -66,8 +66,11 @@ including for local development.
 ### Confirmation
 
 `compose.yaml` brings up service and Postgres and is exercised in CI as gate 2 (ADR-0004).
-Row-level security keyed on `entity_id` plus explicit service-layer filtering enforces
-tenancy; the deferred constraint trigger (ADR-0006) enforces zero-sum.
+Row-level security keyed on `entity_id` is enforced and proved from outside, as the
+application role, in `tests/integration/test_entity_isolation.py`. **The explicit service-layer
+filtering meant to sit beside it is not built**, so tenancy rests on one of its two layers
+today. The deferred constraint trigger (ADR-0006) enforces zero-sum, and is exercised in
+`tests/integration/test_schema_invariants.py`.
 
 ## Pros and Cons of the Options
 

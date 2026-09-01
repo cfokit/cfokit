@@ -71,6 +71,16 @@ jobs:
       - run: uv run task check-decisions
         env:
           BASE_REF: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || '' }}
+          # Rule 1's documented exception, naming the records it covers. These five accepted
+          # Confirmations described verification of features that are not built — a factual
+          # correction that leaves every decision untouched.
+          #
+          # This is SELF-EXPIRING BY DESIGN. Once this lands on main the records no longer
+          # differ from the base ref, the allowance is stale, and gate 6 fails until this
+          # block is deleted. That is deliberate: a boolean nobody removed is how rule 1
+          # would become a gate the corpus claims and does not have.
+          ALLOW_ACCEPTED_EDIT: "0003,0013,0029,0033,0037"
+
 
   # Unit and documentation tests. No infrastructure required.
   test:

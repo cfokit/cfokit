@@ -195,9 +195,10 @@ from any request parameter — a caller cannot supply them because no write path
 the same device ADR-0013 used for `recorded_at`.
 
 Atomicity is enforced by writing the decision record in the transaction that writes the postings,
-under the advisory lock already held (ADR-0011). A test asserts that no posting produced by an
+under the advisory lock already held (ADR-0011). A test will assert that no posting produced by an
 `agent`-class principal exists without a resolvable `decision_record_id`, and that no decision record
-is orphaned.
+is orphaned. **Neither the decision-record module nor that test exists yet**; the four columns ship
+ahead of both because append-only forbids adding them afterwards.
 
 An unregistered artifact digest is refused at the write path with a stable error `code` (ADR-0015),
 so a runtime carrying an unreleased prompt cannot post at all.

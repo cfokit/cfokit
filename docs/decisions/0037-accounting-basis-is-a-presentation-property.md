@@ -130,9 +130,9 @@ output an accountant accepts as it stands, and a reader who sees a fixed-asset r
 
 ### Confirmation
 
-Property tests over the derivation: for any set of obligations and settlements, accrual-view revenue
-equals the sum of obligations and cash-view revenue equals the sum of settled amounts, both computed
-from one ledger. Partial payment and overpayment are the cases that break a naive implementation and
+**The derivation is not built, so none of this runs yet.** When it is, property tests over it: for
+any set of obligations and settlements, accrual-view revenue equals the sum of obligations and
+cash-view revenue equals the sum of settled amounts, both computed from one ledger. Partial payment and overpayment are the cases that break a naive implementation and
 belong in the property's generator rather than in a worked example.
 
 Cash-to-accrual conversion is also standard textbook material, so it is exactly the kind of thing the
