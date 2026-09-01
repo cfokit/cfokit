@@ -83,7 +83,7 @@ issuer-specific code exists anywhere in the codebase.
 ### Consequences
 
 * Good, because a licence change or capability gap becomes a configuration swap plus a
-  conformance run, rather than a migration.
+  conformance run, rather than a rebuild.
 * Good, because the contract states what "supported issuer" means, so the claim is testable
   rather than a marketing sentence.
 * Good, because delegating identity entirely keeps a security-critical component out of our

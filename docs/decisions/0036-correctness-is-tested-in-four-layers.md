@@ -111,7 +111,7 @@ materially different behaviours can produce an identical one, such as drafting t
 posting directly, or a posting plus a reversal that nets out. Asserting on it would be weaker than
 asserting on the records, and would couple a behaviour eval to the reporting layer so that a
 reporting defect failed an agent eval. Its place is layer 1, where "it ties" is an invariant, and
-`MIG-09`, where it verifies an export.
+`EXP-01`, where it verifies an export.
 
 So the questions worth asking are all record questions:
 

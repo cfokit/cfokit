@@ -39,7 +39,7 @@ are recorded elsewhere. Identifiers are stable and are never reused.
 
 Recording, reconciling, and closing a double-entry general ledger; ingesting transactions
 from financial institutions and processors; billing customers and collecting from them;
-producing financial statements and answering questions against the books; migrating in from
+producing financial statements and answering questions against the books; importing from
 an incumbent system and out to any other; and supplying, from the system's own records, the
 evidence an external examination of its controls requires.
 
@@ -81,7 +81,7 @@ Business conditions this document relies on.
 | **A-4** | Where a company uses a tax preparer, that preparer works from what CFOKit produces. Many owner-operators prepare and file their own returns. |
 | **A-5** | On the default path, inference cost is carried by the runtime the user already operates, not by CFOKit. Where CFOKit operates the runtime itself, it carries that cost and the assumption does not hold. |
 | **A-6** | An independent auditor can be engaged, and the operating history an attestation requires accumulates only from the date the practice begins. |
-| **A-7** | Companies migrating in are most often leaving a small-business accounting package whose export fidelity is outside our control. |
+| **A-7** | Companies importing are most often leaving a small-business accounting package whose export fidelity is outside our control. |
 | **A-8** | A customer will open an invoice from an unauthenticated link, and neither they nor their supplier regards that as a risk. The incumbents work this way and the market has accepted it. |
 
 ---
@@ -133,49 +133,49 @@ and expense account at zero, and retained earnings changed by exactly the prior 
 **Acceptance, LED-15.** Where LED-16 has not activated, an amount presented in a currency other
 than the entity's functional currency is refused, with a reason, rather than accepted and converted.
 
-### 5.2 Data Migration — `MIG`
+### 5.2 Import — `IMP`
 
-Getting an existing company's books in, and any company's books out. Two exports serve
-different purposes and are not interchangeable: one hands the books to another accounting
-system, the other moves an entity between CFOKit deployments intact.
-
-#### Import
+Getting an existing company's books in, from whatever the company runs today.
 
 | | Requirement | Priority | Status |
 |---|---|---|---|
-| **MIG-01** | Import an existing chart of accounts from the system a company already runs. | Should | Approved |
-| **MIG-02** | Import opening balances from the system a company already runs, and transaction history to the extent that system's export carries it. An import declares which of the two it delivered. | Should | Approved |
-| **MIG-03** | Import the customers and the categorisation rules the company already has, so a migrated entity does not arrive with an empty receivables ledger and no rules. | Should | Approved |
-| **MIG-04** | Every imported record is identifiable as imported and names the system it came from. | Should | Approved |
-| **MIG-05** | An import is validated before anything is posted. The operator sees what will be created, and what will not, and can abandon it. | Should | Approved |
-| **MIG-06** | An import declares the accounting basis of the data it carries, and is refused where that conflicts with the entity's declared basis. | Should | Approved |
-| **MIG-07** | An import carrying amounts in a currency other than the entity's functional currency is refused, on the same terms as any other foreign amount. | Should | Approved |
-| **MIG-08** | An import produces a reconciliation the operator can check against the source system — balances by account, and totals by period — so that agreement is demonstrated rather than assumed. | Should | Approved |
+| **IMP-01** | Import an existing chart of accounts from the system a company already runs. | Should | Approved |
+| **IMP-02** | Import opening balances from the system a company already runs, and transaction history to the extent that system's export carries it. An import declares which of the two it delivered. | Should | Approved |
+| **IMP-03** | Import the customers and the categorisation rules the company already has, so an imported entity does not arrive with an empty receivables ledger and no rules. | Should | Approved |
+| **IMP-04** | Every imported record is identifiable as imported and names the system it came from. | Should | Approved |
+| **IMP-05** | An import is validated before anything is posted. The operator sees what will be created, and what will not, and can abandon it. | Should | Approved |
+| **IMP-06** | An import declares the accounting basis of the data it carries, and is refused where that conflicts with the entity's declared basis. | Should | Approved |
+| **IMP-07** | An import carrying amounts in a currency other than the entity's functional currency is refused, on the same terms as any other foreign amount. | Should | Approved |
+| **IMP-08** | An import produces a reconciliation the operator can check against the source system — balances by account, and totals by period — so that agreement is demonstrated rather than assumed. | Should | Approved |
 
-#### Export
-
-| | Requirement | Priority | Status |
-|---|---|---|---|
-| **MIG-09** | **Interchange export.** The books in a form another accounting system can read: chart of accounts, transactions, and balances. | Must | Approved |
-| **MIG-10** | **Complete export.** Everything the entity holds — the interchange content, plus supporting documents, attachments, raw ingested payloads, rule definitions and the attribution linking them to postings, approvals, the record of what an agent did and on what basis, and the audit trail. | Must | Approved |
-| **MIG-11** | Both exports are available at any time, in any entity state short of deletion, without asking anyone and without a support request. | Must | Approved |
-| **MIG-12** | A complete export taken from one CFOKit deployment and imported into another reproduces the books, their history, and their attribution. Moving between a self-hosted and a hosted deployment is this operation in either direction. | Must | Approved |
-
-**Acceptance, MIG-08.** The operator compares two figures per account and either agrees the
+**Acceptance, IMP-08.** The operator compares two figures per account and either agrees the
 import or rejects it, without exporting anything from the source system a second time.
 
-**Acceptance, MIG-09.** The export is a single self-contained archive, and a trial balance
+### 5.3 Export — `EXP`
+
+Getting any company's books out, at will. Two exports serve different purposes and are not
+interchangeable: one hands the books to another accounting system, the other moves an entity
+between CFOKit deployments intact.
+
+| | Requirement | Priority | Status |
+|---|---|---|---|
+| **EXP-01** | **Interchange export.** The books in a form another accounting system can read: chart of accounts, transactions, and balances. | Must | Approved |
+| **EXP-02** | **Complete export.** Everything the entity holds — the interchange content, plus supporting documents, attachments, raw ingested payloads, rule definitions and the attribution linking them to postings, approvals, the record of what an agent did and on what basis, and the audit trail. | Must | Approved |
+| **EXP-03** | Both exports are available at any time, in any entity state short of deletion, without asking anyone and without a support request. | Must | Approved |
+| **EXP-04** | A complete export taken from one CFOKit deployment and imported into another reproduces the books, their history, and their attribution. Moving between a self-hosted and a hosted deployment is this operation in either direction. | Must | Approved |
+
+**Acceptance, EXP-01.** The export is a single self-contained archive, and a trial balance
 derived from the archive alone agrees, line for line, with the trial balance CFOKit produces
 for the same date. What a receiving system then computes is outside our control and is not
 part of this requirement.
 
-**Acceptance, MIG-11.** A suspended entity can still be exported completely, unaided.
+**Acceptance, EXP-03.** A suspended entity can still be exported completely, unaided.
 
-**Acceptance, MIG-12.** The receiving deployment produces identical statements for every
+**Acceptance, EXP-04.** The receiving deployment produces identical statements for every
 period, and an audit trail that resolves every posting to the same rule, source record, and
 actor as the sending one.
 
-### 5.3 Bookkeeping — `BKP`
+### 5.4 Bookkeeping — `BKP`
 
 Getting transactions in, deciding where they belong, and agreeing that the books match reality.
 
@@ -215,7 +215,7 @@ run, and the operator can see which rule won and why before approving either.
 **Acceptance, BKP-14.** A transfer between two feed-connected accounts of the same entity
 leaves total income and total expense unchanged.
 
-### 5.4 Accounts Receivable — `AR`
+### 5.5 Accounts Receivable — `AR`
 
 Billing customers, collecting from them, and knowing who owes what.
 
@@ -250,7 +250,7 @@ not send a customer the same reminder twice.
 **Acceptance, AR-19.** An invoice CFOKit did not send never reports a send date, and one
 opened through a link pasted into a third-party application does report that it was opened.
 
-### 5.5 Reporting — `RPT`
+### 5.6 Reporting — `RPT`
 
 Producing statements, and answering questions the books can support.
 
@@ -294,7 +294,7 @@ printed total by less than one unit of display scale. The printed total is the c
 **Acceptance, RPT-18.** A preparer works from the output alone and needs to ask the company
 nothing.
 
-### 5.6 Access & Identity — `IAM`
+### 5.7 Access & Identity — `IAM`
 
 Who may reach an entity, what they may do there, and how that is evidenced.
 
@@ -341,7 +341,7 @@ sequence proceeds.
 told they lack a second approver. An examination of their books is still answerable, from the
 reconciliation, exception, and review records ordinary use produced.
 
-### 5.7 Platform — `PLT`
+### 5.8 Platform — `PLT`
 
 How the books are reached, how work happens without a person present, and what the system
 records about itself.
@@ -465,7 +465,7 @@ a row inherits the global target unchanged.
 | NFR | Module | Stricter target |
 |---|---|---|
 | **NFR-01** Correctness | Ledger | Exactness, not accuracy within a tolerance. A tolerance is a defect, not a target. |
-| **NFR-02** Integrity | Data Migration | An import applies completely or not at all. A partially applied import is never left in the books. |
+| **NFR-02** Integrity | Import | An import applies completely or not at all. A partially applied import is never left in the books. |
 | **NFR-03** Idempotency | Bookkeeping | A transaction appearing in two overlapping pulls, or in a re-run of the same pull, is recorded once. Synchronisation may be repeated freely. |
 | **NFR-03** Idempotency | Accounts Receivable | A retried or overlapping scheduled run does not send a customer a duplicate invoice or reminder, and does not post a payment twice. |
 | **NFR-05** Confidentiality | Platform | Financial detail must not cross into a conversational channel or an outbound message except where the binding and the role have both been established for that entity. |
@@ -687,7 +687,7 @@ adds customer burden.
 | **CUEC-1** | Review and approve the agent work its SOC1-04 configuration routes to a person, rather than allowing approvals to accumulate unexamined |
 | **CUEC-2** | Administer its own identities and roles, including removing access promptly when a person leaves or an engagement ends |
 | **CUEC-3** | Review exception and reconciliation reports on a defined cadence |
-| **CUEC-4** | Verify opening balances at onboarding, and confirm that migrated history agrees with the system it came from |
+| **CUEC-4** | Verify opening balances at onboarding, and confirm that imported history agrees with the system it came from |
 | **CUEC-5** | Own the autonomy configuration and alerting thresholds in force, whether it set them or accepted the defaults, and be able to say why they are appropriate to the business |
 
 ### 7.11 Excluded from this section
@@ -951,13 +951,13 @@ serving no objective does not belong here.
 |---|---|
 | **OBJ-1** Kept without the company keeping them | BKP-01, BKP-06, BKP-09, BKP-12, RPT-15 |
 | **OBJ-2** Current, and a close never waiting on us | BKP-16, LED-11, LED-12, PLT-07, PLT-14, NFR-15 |
-| **OBJ-3** Exact, and unchanged once posted | LED-03, LED-04, LED-05, LED-06, LED-07, LED-08, BKP-07, BKP-08, BKP-11, BKP-12, BKP-14, BKP-20, BKP-21, MIG-05, MIG-08, PLT-23, RPT-09, RPT-12, NFR-01, NFR-02, NFR-03, NFR-22, NFR-23 |
-| **OBJ-4** Every number explains itself | LED-08, LED-09, LED-20, BKP-10, BKP-19, MIG-04, IAM-13, PLT-16, PLT-20, RPT-08, RPT-11, NFR-02, NFR-23, SOC1-14, SOC1-15, SOC1-22, SOC1-23, SOC1-36 |
-| **OBJ-5** The recurring cost goes away | BKP-01–BKP-06, BKP-13–BKP-18, AR-01–AR-19, RPT-01–RPT-09, MIG-01–MIG-08, NFR-19, NFR-20 |
+| **OBJ-3** Exact, and unchanged once posted | LED-03, LED-04, LED-05, LED-06, LED-07, LED-08, BKP-07, BKP-08, BKP-11, BKP-12, BKP-14, BKP-20, BKP-21, IMP-05, IMP-08, PLT-23, RPT-09, RPT-12, NFR-01, NFR-02, NFR-03, NFR-22, NFR-23 |
+| **OBJ-4** Every number explains itself | LED-08, LED-09, LED-20, BKP-10, BKP-19, IMP-04, IAM-13, PLT-16, PLT-20, RPT-08, RPT-11, NFR-02, NFR-23, SOC1-14, SOC1-15, SOC1-22, SOC1-23, SOC1-36 |
+| **OBJ-5** The recurring cost goes away | BKP-01–BKP-06, BKP-13–BKP-18, AR-01–AR-19, RPT-01–RPT-09, IMP-01–IMP-08, NFR-19, NFR-20 |
 | **OBJ-6** Output accepted as it stands | LED-01, LED-02, LED-14, LED-17, RPT-01–RPT-05, RPT-07, RPT-09, RPT-10, RPT-12, RPT-13, RPT-14, RPT-16, RPT-17, RPT-18, RPT-19, NFR-01, NFR-16, NFR-22 |
 | **OBJ-7** Never forced off by growing | LED-10, LED-13, LED-14, LED-15, LED-16, LED-17, LED-18, LED-19, RPT-19, RPT-20, RPT-21, IAM-08, IAM-09, PLT-04, PLT-08, NFR-09 |
 | **OBJ-8** Only authorised people reach the books | IAM-01–IAM-07, IAM-11, IAM-12, IAM-15, IAM-16, IAM-17, IAM-20, AR-08, PLT-05, PLT-23, NFR-04, NFR-05, NFR-06 |
 | **OBJ-9** Provable to an examiner | IAM-13, IAM-14, IAM-18, IAM-19, PLT-15–PLT-19, PLT-22, NFR-18, SOC1-01–SOC1-36, SOC2-01–SOC2-24, SOC2-27–SOC2-30 |
-| **OBJ-10** Leave with everything, at any time | MIG-09–MIG-12, PLT-09, PLT-10, PLT-11, PLT-12, PLT-13, PLT-21, NFR-07, NFR-17 |
+| **OBJ-10** Leave with everything, at any time | EXP-01–EXP-04, PLT-09, PLT-10, PLT-11, PLT-12, PLT-13, PLT-21, NFR-07, NFR-17 |
 | **OBJ-11** Runs with no vendor relationship | BKP-03, IAM-10, PLT-01, PLT-02, PLT-03, PLT-06, NFR-10, NFR-11, NFR-14, NFR-17 |
 | **OBJ-12** Outsiders can work on it | NFR-11, NFR-12, NFR-13, NFR-14, NFR-21 |

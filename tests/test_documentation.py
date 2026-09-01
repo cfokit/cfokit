@@ -58,7 +58,7 @@ ADR_HEADING = re.compile(r"^# ADR-(\d{4})\b", re.MULTILINE)
 # An index row pointing at a record file.
 INDEX_ENTRY = re.compile(r"\((\d{4}-[a-z0-9-]+\.md)\)")
 # Domain-prefixed requirement ids. The `REQ-` scheme they replaced is retired.
-REQUIREMENT_ID = re.compile(r"\b(?:LED|BKP|IAM|PLT|RPT|MIG|AR|NFR|SOC1|SOC2)-\d+\b")
+REQUIREMENT_ID = re.compile(r"\b(?:LED|BKP|IAM|PLT|RPT|IMP|EXP|AR|NFR|SOC1|SOC2)-\d+\b")
 ADR_KIND = re.compile(r'^kind: "([^"]+)"', re.MULTILINE)
 
 
