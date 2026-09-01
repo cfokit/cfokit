@@ -291,30 +291,43 @@ applies that hypothesis and tests it.
 
 ### Cost structure
 
-CFOKit ships as an Agent Skill that installs into an agentic runtime the user already has,
-and that runtime supplies its own inference. The end user carries the token cost, the same
-way they carry the cost of the machine the agent runs on.
+There are two, and conflating them is how this gets priced wrong.
 
-What CFOKit hosts is the ledger, the MCP surface, the API, and the compliance posture around
-them. That is a conventional SaaS cost structure of Postgres, compute, and storage, and it
-does not move with token prices. Pricing is therefore a question about the value of the stack
-being displaced, decided on ordinary SaaS margins.
+**By default, CFOKit ships as an Agent Skill** installing into an agentic runtime the user
+already has, and that runtime supplies its own inference. The end user carries the token cost,
+the same way they carry the cost of the machine the agent runs on. What CFOKit hosts is the
+ledger, the MCP surface, the API, and the compliance posture around them — a conventional SaaS
+cost structure of Postgres, compute, and storage, which does not move with token prices.
+Pricing is an ordinary question about the value of the stack being displaced.
 
-This also shapes the product surface. Because the intelligence sits in the user's runtime
-rather than behind our API, what we expose has to be a complete, well-described data
-interface and not only a fixed menu of reports.
+**Where an entity needs its books produced under attestation, CFOKit operates the runtime and
+holds the inference relationship**, because the obligations that make attestation worth buying
+— zero retention, no training on submitted data, deletion that reaches the provider — can only
+be enforced by whoever holds the contract. Producing assurance is not a SaaS cost structure. It
+is a recurring Type 2 examination, the readiness work before the first one, the retention of
+context and tool calls the evidence obligations require, a runtime shipped and supported across
+platforms, and a token bill that moves with provider prices. That is the cost of the thing
+actually being sold, and a price reaching ordinary SaaS margins has not accounted for it.
+
+The interface both paths imply is the same, and it follows from the books being reachable by
+agent software the organisation chooses — whatever that software is, including ours. What we
+expose has to be a complete, well-described data interface and not only a fixed menu of
+reports.
 
 The standard statements are standard: a profit and loss, a balance sheet, a cash flow
 statement, and a receivables ageing report have settled definitions, and CFOKit produces them
-deterministically rather than composing them afresh each time somebody asks. The data interface
-is what answers the questions nobody wrote a report for.
+deterministically rather than composing them afresh each time somebody asks. That determinism
+is also what makes them the part of the output CFOKit can warrant. The data interface is what
+answers the questions nobody wrote a report for.
 
 ### What the thesis constrains
 
 Two things follow, and they bind the product:
 
 - **Leaving has to be genuinely easy**, or the software is not really free. Export is
-  continuous and complete, and the self-hosted build stays at parity with the hosted one.
+  continuous and complete, and the self-hosted build stays at capability parity with the hosted
+  one. What the hosted service adds is attestation, which is not a feature and cannot be
+  self-hosted — nobody attests to a deployment they run themselves.
   Bench's collapse in December 2024 locked roughly 12,000 customers out of their own books
   days before tax season, with no clean export path. That is the failure this constraint
   exists to prevent.
