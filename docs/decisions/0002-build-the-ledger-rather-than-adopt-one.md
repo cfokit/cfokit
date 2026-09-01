@@ -60,7 +60,7 @@ deferrals already recorded, the ledger is:
 | Chart of accounts with account types | Inventory and cost of goods sold |
 | Transactions with balanced postings, `Decimal` | Cost basis, lots, FIFO disposal (LED-18, LED-19, deferred) |
 | Draft to posted state machine (ADR-0007) | Payroll |
-| Reversing corrections | Fixed asset depreciation |
+| Reversing corrections | Fixed asset depreciation *schedules*; a manual depreciation journal is BKP-04 and is in scope |
 | Entity isolation and per-entity grants | Multi-currency revaluation |
 | Audit log, idempotency keys, entity locking | Manufacturing, CRM, HR, projects |
 | Cash basis now, accrual representable (LED-14, LED-17) | Anything on the ADR-0012 non-goals list |
@@ -80,6 +80,9 @@ a payment received is a settlement, so recording both — which invoicing requir
 exactly the dual-event model that accrual reporting needs. A cash-basis entity still invoices and
 still wants to know who owes it money; it simply recognises revenue on settlement. So accrual stops
 being a future data-model risk and becomes close to a reporting choice over data already present.
+[ADR-0037](0037-accounting-basis-is-a-presentation-property.md) settles that observation as a
+decision; this passage is where the reasoning first appeared, as evidence for scope rather than as a
+commitment.
 
 The risk argument holds regardless of size: double-entry semantics have been stable for five
 centuries, an independent oracle exists to test against (ADR-0010), and the requirements do not
