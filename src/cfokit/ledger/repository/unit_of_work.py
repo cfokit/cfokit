@@ -49,13 +49,26 @@ class EntityWrite:
     is what stops an adapter or a service from reaching past `repository` into SQL of its own.
     """
 
-    def __init__(self, conn: psycopg.Connection[Any], entity_id: str) -> None:
+    def __init__(
+        self, conn: psycopg.Connection[Any], entity_id: str, functional_currency: str
+    ) -> None:
         self._conn = conn
         self._entity_id = entity_id
+        self._functional_currency = functional_currency
 
     @property
     def entity_id(self) -> str:
         return self._entity_id
+
+    @property
+    def functional_currency(self) -> str:
+        """The entity's declared currency (`LED-15`).
+
+        Read from the entity inside this transaction, never taken from the caller. An amount
+        in any other commodity is refused until `LED-16` activates, and a caller who could
+        state the currency could state its way past that refusal.
+        """
+        return self._functional_currency
 
     # --- idempotency (ADR-0029) ----------------------------------------------------------
 
@@ -147,11 +160,11 @@ class Database:
         per entity (ADR-0003), so this is not the thing to optimise first.
         """
         with connect(self._dsn) as conn, conn.transaction():
-            self._scope_and_lock(conn, entity_id)
-            yield EntityWrite(conn, entity_id)
+            currency = self._scope_and_lock(conn, entity_id)
+            yield EntityWrite(conn, entity_id, currency)
 
     @staticmethod
-    def _scope_and_lock(conn: psycopg.Connection[Any], entity_id: str) -> None:
+    def _scope_and_lock(conn: psycopg.Connection[Any], entity_id: str) -> str:
         """Set the RLS scope, then take the entity's lock. Order matters.
 
         The scope is transaction-local (`set_config(..., true)`) rather than session-level, so
@@ -161,11 +174,16 @@ class Database:
         `entity.id`. ADR-0011 requires a "documented, collision-free scheme", and a 64-bit
         hash of a uuid is collision-*resistant* at best; a collision would not fail, it would
         silently serialise two unrelated entities against each other.
+
+        Returns the entity's functional currency, which this query fetches anyway.
         """
         with conn.cursor() as cur:
             cur.execute("SELECT set_config('cfokit.entity_id', %s, true)", (entity_id,))
-            cur.execute("SELECT lock_key FROM entity WHERE id = %s", (entity_id,))
+            cur.execute(
+                "SELECT lock_key, functional_currency FROM entity WHERE id = %s", (entity_id,)
+            )
             row = cur.fetchone()
             if row is None:
                 raise EntityNotFound(f"no entity {entity_id}")
             cur.execute("SELECT pg_advisory_xact_lock(%s)", (row[0],))
+        return str(row[1])

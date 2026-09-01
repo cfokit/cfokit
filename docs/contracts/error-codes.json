@@ -1,0 +1,50 @@
+[
+  {
+    "code": "allocation_invalid",
+    "error": "AllocationInvalid"
+  },
+  {
+    "code": "commodity_not_permitted",
+    "error": "CommodityNotPermitted"
+  },
+  {
+    "code": "config_invalid",
+    "error": "ConfigError"
+  },
+  {
+    "code": "entity_not_found",
+    "error": "EntityNotFound"
+  },
+  {
+    "code": "idempotency_key_required",
+    "error": "IdempotencyKeyRequired"
+  },
+  {
+    "code": "idempotency_key_reused",
+    "error": "IdempotencyKeyReused"
+  },
+  {
+    "code": "migration_failed",
+    "error": "MigrationError"
+  },
+  {
+    "code": "not_authenticated",
+    "error": "NotAuthenticated"
+  },
+  {
+    "code": "transaction_already_posted",
+    "error": "TransactionAlreadyPosted"
+  },
+  {
+    "code": "transaction_incomplete",
+    "error": "TransactionIncomplete"
+  },
+  {
+    "code": "transaction_not_found",
+    "error": "TransactionNotFound"
+  },
+  {
+    "code": "unbalanced_transaction",
+    "error": "UnbalancedTransaction"
+  }
+]

@@ -28,6 +28,17 @@ class MigrationError(LedgerError):
     code = "migration_failed"
 
 
+class NotAuthenticated(LedgerError):
+    """The caller was not authenticated.
+
+    Distinct from an authorisation failure by design: ADR-0030 requires "period closed" to be
+    distinguishable from "not permitted" so a skill can surface the right question, and the
+    same reasoning applies here — "log in" and "you may not" are different answers.
+    """
+
+    code = "not_authenticated"
+
+
 # --- Booking ---------------------------------------------------------------------------
 # Raised by the pure engine, so both adapters surface the same code for the same condition
 # (ADR-0009). Messages carry amounts and commodities and are therefore error detail, not
