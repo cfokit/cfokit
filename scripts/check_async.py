@@ -9,7 +9,8 @@ is exempt because the MCP SDK is async.
 Modules and components are deliberately not checked. Ingestion, invoice delivery and
 notifications are I/O-bound against third parties, and a component is a separate runtime
 reaching the ledger over HTTP (ADR-0022, ADR-0023), so its execution model cannot reach the
-write path.
+write path. They ship in the same distribution as sibling packages under `src/cfokit/`,
+which the prefix below excludes without needing to name them.
 
 Why this needs a machine check rather than a rule: the failure is silent. An `await` added to a
 service function still passes every test that calls it from async code, and a blocking call left
@@ -28,11 +29,12 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-# The gate covers the ledger only. Modules and components choose their own execution model.
-CHECKED_PREFIX = "packages/ledger/src/cfokit/ledger/"
+# The gate covers the ledger only. Modules and components choose their own execution model,
+# and a sibling capability under src/cfokit/ is outside this prefix by construction.
+CHECKED_PREFIX = "src/cfokit/ledger/"
 
 # Paths inside the checked tree that may still contain async. Adding one is an ADR-0024 change.
-ALLOWED_PREFIXES = ("packages/ledger/src/cfokit/ledger/mcp/",)
+ALLOWED_PREFIXES = ("src/cfokit/ledger/mcp/",)
 
 ASYNC_MODULES = frozenset({"asyncio", "anyio", "trio"})
 
@@ -71,7 +73,7 @@ def offending_nodes(source: str) -> list[tuple[int, str]]:
 
 def main() -> int:
     py_files = sorted(
-        path for path in REPO_ROOT.glob("packages/**/*.py") if "__pycache__" not in path.parts
+        path for path in REPO_ROOT.glob("src/**/*.py") if "__pycache__" not in path.parts
     )
 
     checked = 0

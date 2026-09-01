@@ -5,22 +5,52 @@ description = "The open source CFO toolkit"
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.12"
-dependencies = []
 
-[tool.uv]
-# The workspace root is not itself a distribution; it carries dev tooling and config.
-package = false
+# Runtime dependencies are load-bearing and few. Adding one is a decision, not a
+# convenience — ask before adding any (CLAUDE.md). Licences verified 2026-08-19.
+dependencies = [
+    # Postgres driver. Returns NUMERIC as Decimal, which ADR-0005 makes a selection
+    # criterion. Dual-mode: we use the synchronous API, and AsyncConnection exists if
+    # ADR-0024 is ever revisited. LGPL-3.0-only, which is not a constraint for a
+    # server-side dependency resolved from an index (CLAUDE.md, Licensing).
+    "psycopg[binary]>=3.2",
+    # REST adapter. FastAPI with synchronous `def` handlers only — the event loop
+    # lives in the server, not in our code, and scripts/check_async.py enforces that
+    # (ADR-0024). Chosen over flask+apiflask on measurement: starlette and pydantic
+    # arrive with the MCP SDK regardless, so this is 2 net new packages against 15.
+    # MIT; starlette BSD-3-Clause.
+    "fastapi>=0.115",
+    # ASGI server for both the REST and MCP entrypoints. Declared directly because we
+    # invoke it, rather than relied on transitively through mcp. BSD-3-Clause.
+    "uvicorn>=0.34",
+    # MCP tool surface. Async, and the sole reason async exists in this codebase —
+    # confined to cfokit.ledger.mcp and enforced by scripts/check_async.py (ADR-0024).
+    # The SDK owns its own server (mcp.server.runner). MIT.
+    "mcp>=2.0",
+    # JWT and JWKS validation. Audience validation is mandatory on every request
+    # (ADR-0011, ADR-0019), and the REST adapter needs it independently of the MCP
+    # SDK's own auth support. Declared directly rather than relied on transitively
+    # through mcp — a transitive dependency we call into is one that can vanish in a
+    # patch release. MIT; the crypto extra is cryptography, Apache-2.0 OR BSD-3-Clause.
+    "pyjwt[crypto]>=2.10",
+]
 
-[tool.uv.workspace]
-# Python distributions only. Skills live in skills/ and are not installable (ADR-0020).
-members = ["packages/*"]
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-[tool.uv.sources]
-cfokit-ledger = { workspace = true }
+[tool.hatch.build.targets.wheel]
+# One distribution holding every capability, because ADR-0023 ships one image with many
+# entrypoints — so nothing is ever installed or versioned separately. Capabilities are
+# sibling packages under src/cfokit/, named for what they provide (ADR-0031).
+#
+# PEP 420 implicit namespace package: there is deliberately no src/cfokit/__init__.py.
+# Nothing needs one today, and its absence keeps a genuinely separate cfokit-<capability>
+# distribution possible later without a migration.
+packages = ["src/cfokit"]
 
 [dependency-groups]
 dev = [
-    "cfokit-ledger",
     "ruff>=0.14",
     "mypy>=1.18",
     "pytest>=8.4",
@@ -32,7 +62,7 @@ dev = [
 # Commands. These names are documented in CLAUDE.md; keep them in sync.
 # ---------------------------------------------------------------------------
 [tool.taskipy.tasks]
-test = { cmd = "pytest", help = "Run the suite. Pass a path to scope it: task test packages/ledger" }
+test = { cmd = "pytest", help = "Run the suite. Pass a path to scope it: task test tests/test_migrations.py" }
 lint = { cmd = "ruff check . && ruff format --check . && mypy && lint-imports && python scripts/check_async.py", help = "CI gate 1: ruff, mypy --strict, import-linter, async boundary" }
 migrate = { cmd = "python -m cfokit.ledger.migrations", help = "Apply migrations. Never runs at startup (ADR-0004)" }
 dev = { cmd = "docker compose -f compose.yaml -f compose.dev.yaml up", help = "Local stack with the dev overlay explicitly applied (ADR-0018)" }
@@ -64,7 +94,6 @@ select = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101"]              # assert is the point of a test
-"packages/*/tests/**" = ["S101"]
 "scripts/**" = ["T201"]            # CI scripts report to stdout
 
 [tool.ruff.lint.isort]
@@ -79,8 +108,8 @@ docstring-code-format = true
 [tool.mypy]
 strict = true
 python_version = "3.12"
-files = ["packages", "scripts", "tests"]
-mypy_path = ["packages/ledger/src", "scripts"]
+files = ["src", "scripts", "tests"]
+mypy_path = ["src", "scripts"]
 namespace_packages = true
 explicit_package_bases = true
 warn_unreachable = true
@@ -90,7 +119,7 @@ enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
 # pytest
 # ---------------------------------------------------------------------------
 [tool.pytest.ini_options]
-testpaths = ["tests", "packages"]
+testpaths = ["tests"]
 pythonpath = ["scripts"]
 addopts = "-ra --strict-markers --strict-config"
 markers = [

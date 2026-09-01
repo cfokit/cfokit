@@ -1,6 +1,6 @@
 # Ledger — package rules
 
-Loads when you work in `packages/ledger/`. Root `CLAUDE.md` still applies.
+Loads when you work in `src/cfokit/ledger/`. Root `CLAUDE.md` still applies.
 
 ## Layering
 
@@ -109,6 +109,6 @@ change and needs review. (ADR-0015)
 ## Stop and ask
 
 Booking semantics, auth, and the write path need human review **before** you proceed. So does
-adding any runtime dependency. This package has **five**, each with its reason and verified
-licence in a comment in `pyproject.toml`: `psycopg[binary]`, `fastapi`, `uvicorn`, `mcp`,
+adding any runtime dependency. There are **five**, each with its reason and verified licence in
+a comment in the root `pyproject.toml`: `psycopg[binary]`, `fastapi`, `uvicorn`, `mcp`,
 `pyjwt[crypto]`. Five is the number; a sixth is a decision.

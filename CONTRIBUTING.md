@@ -44,7 +44,9 @@ forbid.
 1. `uv run task lint` clean — ruff, `mypy --strict`, import-linter layer contracts.
 2. Full suite green against `compose.yaml` **without** the dev overlay and **with no cloud
    credentials present**.
-3. Differential test against the Beancount oracle passes, every divergence documented.
+3. **Deferred, not running.** The Beancount differential oracle activates with `LED-18`
+   ([ADR-0010](docs/decisions/0010-beancount-as-test-oracle.md)); until then correctness rests
+   on the layers below.
 4. No float storage types anywhere in the schema.
 5. Generated OpenAPI and MCP tool descriptions match what is committed.
 
@@ -72,7 +74,7 @@ Bank feeds, payment processors and delivery channels are the most contribution-f
 in the project, deliberately — `NFR-12` makes third-party contribution a requirement rather than
 a courtesy.
 
-**The package that will hold them does not exist yet.** There was a `packages/connectors`
+**The package that will hold them does not exist yet.** There was a `connectors` package
 containing no code, and it was removed rather than renamed: "connectors" names a mechanism rather
 than a capability, and bank feeds, payment processing and transactional email are not one
 capability (ADR-0031). What they split into is decided when the first is built.

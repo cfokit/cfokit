@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 #
-# One image, many entrypoints (ADR-0024). The REST service, the MCP surface, the
+# One image, many entrypoints (ADR-0023). The REST service, the MCP surface, the
 # migration job, and any component all run from this image and differ only in the
 # command. That is what makes it structurally impossible for a component to run
 # against an API version it was not built for.
@@ -9,7 +9,7 @@
 #   docker run … python -m cfokit.ledger.api           REST service (default)
 #   docker run … python -m cfokit.ledger.mcp           MCP surface
 #
-# Migrations never run at startup (ADR-0003). There is deliberately no entrypoint
+# Migrations never run at startup (ADR-0004). There is deliberately no entrypoint
 # script that applies them before starting the service.
 
 ARG PYTHON_VERSION=3.12
@@ -26,18 +26,16 @@ ENV UV_COMPILE_BYTECODE=1 \
 WORKDIR /app
 
 # Manifests first, so the dependency layer is cached independently of source.
-COPY pyproject.toml uv.lock ./
-COPY packages/ledger/pyproject.toml packages/ledger/
-
-# The workspace members are declared in the root `dev` group, so `--no-dev` alone
-# would install nothing. `--package` resolves the member and its runtime deps.
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked --no-dev --no-install-workspace --package cfokit-ledger
-
-COPY packages/ ./packages/
+# README.md comes too: [project] readme names it, so the build backend needs it present.
+COPY pyproject.toml uv.lock README.md ./
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked --no-dev --package cfokit-ledger
+    uv sync --locked --no-dev --no-install-project
+
+COPY src/ ./src/
+
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --locked --no-dev
 
 # ---------------------------------------------------------------------------
 FROM python:${PYTHON_VERSION}-slim AS runtime
@@ -52,7 +50,7 @@ ENV PATH="/app/.venv/bin:${PATH}" \
     PYTHONDONTWRITEBYTECODE=1
 
 # Nothing here selects a cloud, a region, or a provider. The entire coupling to the
-# environment is the variable surface in infra/README.md (ADR-0003).
+# environment is the variable surface in infra/README.md (ADR-0004, ADR-0016).
 USER cfokit
 EXPOSE 8080
 

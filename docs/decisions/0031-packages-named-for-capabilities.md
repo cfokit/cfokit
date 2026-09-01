@@ -50,12 +50,16 @@ is precisely the set of things that change.
 > Name a package for the capability it provides — not for the vendor it talks to, and not for the
 > mechanism by which it does so.
 
-Distributions are `cfokit-<capability>`, importing as `cfokit.<capability>` through PEP 420 implicit
-namespace packages.
+There is **one distribution**, `cfokit`, and each capability is a package inside it importing as
+`cfokit.<capability>`. Nothing is versioned, installed, or released separately, because ADR-0023
+ships one image with many entrypoints — so a per-capability distribution would carry the ceremony of
+independent packaging while forbidding the independence that is its only benefit. `src/cfokit/` stays
+a PEP 420 implicit namespace package, which costs nothing and keeps a genuinely separate
+`cfokit-<capability>` possible later without a migration.
 
 Applying the rule to the package that prompted it: **`connectors` was removed rather than renamed.**
 It held no code — two `__init__.py` files of docstrings — while carrying an `import-linter` contract,
-a rules file, and entries in the Dockerfile, the dev overlay, and the workspace manifest.
+a rules file, and entries in the Dockerfile, the dev overlay, and the root manifest.
 
 Removal is the better form of the rename. Bank feeds, payment processing and transactional email are
 three capabilities rather than one, so any single new name would be a second guess; and a package
@@ -79,8 +83,9 @@ Not gated, and it could not usefully be: no check can tell a capability name fro
 This is enforced by review, and by `CLAUDE.md` carrying the rule where an agent proposing a package
 will read it.
 
-The one mechanical part is that `packages/` holds distributions only, which `uv sync` enforces
-(ADR-0020).
+There is no mechanical part. `uv sync` once rejected a non-installable placed among the workspace
+members, and with a single distribution there is no workspace and no such check — so this record is
+review-enforced end to end, and `CLAUDE.md` is where the rule has to be readable.
 
 ## Pros and Cons of the Options
 

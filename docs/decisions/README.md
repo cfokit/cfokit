@@ -12,13 +12,13 @@ reasoning; `adr-template.md` is the starting point.
 ## How these are used
 
 `CLAUDE.md` files hold the rules; these files hold the reasoning. Root `CLAUDE.md` carries what is
-true across every package; `packages/*/CLAUDE.md` carries package-specific rules and loads only when
-working in that directory. Both cite record numbers. Read the cited record before proposing a change
-to a rule.
+true across every capability; `src/cfokit/*/CLAUDE.md` carries capability-specific rules and
+loads only when working in that directory. Both cite record numbers. Read the cited record before
+proposing a change to a rule.
 
-Records live at the repository root rather than per package, because decisions frequently bind more
-than one package — the tool contract, the storage choice, and the skill/ledger boundary all span
-packages.
+Records live at the repository root rather than beside a capability, because decisions frequently
+bind more than one — the tool contract, the storage choice, and the skill/ledger boundary all span
+capabilities.
 
 **These files are not auto-loaded.** Claude Code loads `CLAUDE.md` at session start; records are read
 on demand. Do not `@`-import this directory into `CLAUDE.md` — imports are pulled in at load time and

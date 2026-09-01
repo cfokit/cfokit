@@ -14,12 +14,11 @@ misplaced `README.md`, and five accepted decision records. `CLAUDE.md` already d
 `packages/ledger`, `packages/skill`, `packages/plaid-sync`, `infra/` — none of which existed.
 Committing to that map without examining it would have made two problems structural.
 
-**`packages/skill` conflates two artifact kinds.** A `packages/` directory in a `uv` workspace holds
-Python distributions; `uv sync` installs its members. An agent skill is a `SKILL.md` bundle with
-resources. It is not installable, has no dependency graph, and its presence in the workspace globs
-would break `uv sync`. ADR-0014 goes further: the skill and the ledger are separate systems that
-share only a tool contract. Housing them in one installable tree works against a boundary the project
-treats as hard.
+**`packages/skill` conflates two artifact kinds.** Python source is installable and has a
+dependency graph. An agent skill is a `SKILL.md` bundle with resources: not installable, no
+dependency graph, and nothing for a packaging tool to do with it. ADR-0014 goes further — the skill
+and the ledger are separate systems that share only a tool contract. Housing them in one installable
+tree works against a boundary the project treats as hard.
 
 **`packages/skill` is singular.** The product vision covers bookkeeping, tax preparation, cash flow
 monitoring, compliance tracking, and reporting. Whether these become separate skills or one skill with
@@ -32,35 +31,40 @@ tree.
 
 ## Decision Drivers
 
-* A `uv` workspace globs `packages/*`, so anything non-installable placed there breaks `uv sync`.
+* Installable Python and non-installable bundles have different lifecycles, so a directory holding
+  both teaches the wrong thing about each.
 * Immutable records must not sit inside the working area an agent edits constantly.
 * The skill/ledger boundary (ADR-0014) should be structural, not merely stated.
 * Directories that exist but hold nothing teach a contributor the wrong map.
 
 ## Considered Options
 
-* Directories organised by artifact kind, with `packages/` reserved for distributions
+* Directories organised by artifact kind, with Python source under `src/`
 * One tree under `docs/`, with `docs/specs/`
 * Everything under `specs/`, including decision records
-* Keep skills under `packages/`
+* Keep skills inside the Python source tree
 * Ship skills as a Claude plugin bundle
 * Everything is a decision record; no separate policy document
 * Split the bundled records into pure requirements and pure decisions
 
 ## Decision Outcome
 
-Chosen option: "Directories organised by artifact kind, with `packages/` reserved for distributions",
+Chosen option: "Directories organised by artifact kind, with Python source under `src/`",
 because artifact kind is what determines whether a thing is installable, immutable, or shipped — and
 those are the properties that break when a directory holds two kinds at once.
 
 ```
-packages/         Python distributions; the uv workspace, and nothing else
+src/cfokit/       Python source; one package per capability, and nothing else
 skills/           Shipped SKILL.md bundles; plural
 docs/decisions/   Decision records; immutable once accepted
 docs/product/     vision.md, requirements.md
 infra/            OpenTofu for the one maintained cloud target
 .claude/          Tooling for developing this repo; never shipped
 ```
+
+How Python source is *packaged* within `src/` is a separate question, answered in
+[ADR-0031](0031-packages-named-for-capabilities.md): one distribution, capabilities as sibling
+packages, because ADR-0023 ships one image and nothing is ever installed separately.
 
 Two artifact kinds carry authority in different ways, and confusing them is what the layout prevents:
 
@@ -71,7 +75,7 @@ Two artifact kinds carry authority in different ways, and confusing them is what
 
 Consequent moves:
 
-- `packages/skill` becomes `skills/bookkeeper/`.
+- `packages/skill` becomes `skills/bookkeeper/`; Python source lives at `src/cfokit/`.
 - The decision-record index lives at `docs/decisions/README.md`, where `CLAUDE.md` already said it was
   and where its relative links resolve.
 
@@ -79,20 +83,24 @@ Consequent moves:
 
 ### Consequences
 
-* Good, because `packages/*` can be globbed rather than enumerated, so a new distribution installs
-  without anyone remembering to edit the root manifest.
+* Good, because a new capability is a directory under `src/cfokit/` and needs no manifest edit at
+  all.
 * Good, because immutable records live outside the working tree an agent edits, making the mistake
   structurally awkward rather than merely forbidden.
-* Good, because the skill/ledger boundary has no import path to cross: skills are not distributions at
+* Good, because the skill/ledger boundary has no import path to cross: skills are not Python at
   all.
 * Bad, because there are two top-level documentation trees rather than one.
-* Bad, because namespace packages mean no `src/cfokit/__init__.py`; a contributor who adds one breaks
-  the other distribution's imports in a way that is confusing to diagnose.
+* Bad, because the PEP 420 namespace means no `src/cfokit/__init__.py`, and nothing fails loudly if
+  a contributor adds one — it bites only if a second distribution is ever split out.
 
 ### Confirmation
 
-`uv sync` fails if something non-installable is added under `packages/`, which makes the main rule
-self-enforcing. `import-linter` enforces the ADR-0014 boundary as a contract rather than a convention,
+**The main rule is not mechanically enforced.** Nothing fails if a `SKILL.md` bundle is dropped
+into `src/cfokit/`; it is dead weight the build backend packages and nothing imports. This rule is
+carried by review and by `CLAUDE.md`, and the record says so rather than implying a gate it does not
+have.
+
+What is enforced: `import-linter` holds the ADR-0014 boundary as a contract rather than a convention,
 inside `uv run task lint`.
 
 `scripts/check_decisions.py` (CI gate 6) asserts that `docs/decisions/` and its index agree, which is
@@ -100,11 +108,13 @@ the one part of this layout that could drift silently (ADR-0001).
 
 ## Pros and Cons of the Options
 
-### Directories organised by artifact kind, with `packages/` reserved for distributions
+### Directories organised by artifact kind, with Python source under `src/`
 
 * Good, because it splits on the property that actually differs — installable, immutable, shipped.
-* Good, because each rule is enforced by tooling that already exists.
+* Good, because the boundary that matters most — skills never importing ledger code — is enforced by
+  tooling that already exists.
 * Bad, because it is more top-level directories than a small repository strictly needs.
+* Bad, because what may sit in each directory is review-enforced rather than gated.
 
 ### One tree under `docs/`, with `docs/specs/`
 
@@ -124,13 +134,13 @@ Considered because specifications are the primary agentic input and deserve prom
   specifications, so nesting decisions inside specifications gets the relationship backwards.
 * Bad, because it mixes lifecycles in a worse position than the option above.
 
-### Keep skills under `packages/`
+### Keep skills inside the Python source tree
 
 Preserves one tree.
 
 * Good, because everything the project ships would live in one place.
-* Bad, because it requires enumerating workspace members instead of globbing them, so every new
-  package silently fails to install until someone remembers to edit the root manifest.
+* Bad, because the build backend would package a `SKILL.md` bundle into the wheel, shipping to every
+  deployment an artifact only an agent runtime can use.
 * Bad, because it keeps the category error that ADR-0014's boundary exists to prevent.
 
 ### Ship skills as a Claude plugin bundle
@@ -172,7 +182,7 @@ requirements and leave only the mechanism behind.
 
 **Follow-on obligations.**
 
-- `packages/*` globbing stays valid, so nothing non-installable may be added under it.
+- `src/cfokit/` holds Python source only; nothing non-installable may be added under it.
 - `import-linter` enforces the ADR-0014 boundary as a contract rather than a convention.
 - The skills layout is provisional pending the delivery-surface decision and the question of whether
   agent roles split.

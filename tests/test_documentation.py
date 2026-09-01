@@ -43,7 +43,11 @@ EXCLUDED = {
 
 # Anything that can carry an ADR citation. The drift lived in the last three.
 CITING_SUFFIXES = {".md", ".py", ".toml", ".yaml", ".yml", ".sql"}
-CITING_NAMES = {".gitkeep"}
+# Suffixless files the suffix set cannot reach. The Dockerfile cites records and was
+# unreadable to this scan for as long as it was suffix-based. It brings the dangling-citation
+# check to a file that had none; the three wrong-but-existing numbers it carried were the
+# semantic kind this module already says it cannot detect.
+CITING_NAMES = {".gitkeep", "Dockerfile", ".dockerignore"}
 
 # Inline markdown links, excluding images.
 LINK = re.compile(r"(?<!!)\[[^\]]*\]\(([^)]+)\)")
