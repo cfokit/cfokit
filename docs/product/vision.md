@@ -266,6 +266,13 @@ a slogan; these are the statements CFOKit can be held to.
 | **OBJ-8** | Only the people an entity has authorised reach its books | Cross-entity access does not occur, and is prevented at the data layer rather than by convention. Every access resolves to the principal that made it — the person, and the skill acting for them where one did — and to the role held at the time. Authority is determined server-side, whatever the caller asserts |
 | **OBJ-9** | The company can prove all of this to an examiner | The system supplies, from its own records, the access, change, and processing evidence a SOC 1 and a SOC 2 Type II examination require, over a period of operation rather than at a moment. What the software cannot evidence — the operator's own controls — is stated rather than implied |
 
+**OBJ-9 is gated on demand, not on a date.** It becomes work when a commercial offering is
+substantial enough for an examination to be worth pursuing, which the market signals rather than
+the roadmap. Until then the requirements serving it are recorded and unreviewed, and the only
+thing that matters is that nothing built in the meantime forecloses it — which is why the parts
+of it that are architectural, and cannot be retrofitted, are stated as ordinary requirements
+instead.
+
 **Independence.**
 
 | | Objective | Measure of success |
@@ -345,8 +352,14 @@ Two things follow, and they bind the product:
 need to trust them, and the return on your own time in them stops the moment they are correct.
 Nothing you do above that threshold makes the business better. CFOKit keeps them current and
 shows you why every transaction landed where it did, so trusting them is not an act of faith.
-It costs nothing to try. Move to the hosted service when you would rather not run your own
-Postgres.
+It costs nothing to try.
+
+Move to the hosted service when running it yourself stops being the thing you want to spend
+attention on — not only the Postgres, but being the person accountable for how the books are
+operated. Self-hosting means you hold the operator's controls as well as the company's, and
+you cannot attest to your own deployment. When someone downstream needs assurance about how
+the books are kept — a lender, an acquirer, a customer's auditor — that is what the hosted
+service sells, and it is the one thing a self-hosted build cannot produce for itself.
 
 **For the owner-operator.** You already pay for QuickBooks and still do the work. CFOKit does
 the work: transactions categorised as they arrive, books that are current rather than
