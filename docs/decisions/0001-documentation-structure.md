@@ -102,7 +102,7 @@ vision.md  →  requirements.md  →  decision records  →  CLAUDE.md rules
 ```
 
 The vision states why CFOKit exists. Requirements state what it must do, carrying stable
-domain-prefixed ids — `LED-`, `BKP-`, `IAM-`, `PLT-`, `RPT-`, `MIG-`, `AR-`, `NFR-`, `SOC1-`,
+domain-prefixed ids — `LED-`, `BKP-`, `IAM-`, `PLT-`, `RPT-`, `IMP-`, `EXP-`, `AR-`, `NFR-`, `SOC1-`,
 `SOC2-` — each traceable to the vision. Decision records that answer a question the product forces cite the
 requirement ids they serve; records that settle a choice the product does not force cite none — see
 Two kinds of decision record below. Rules in `CLAUDE.md` cite the record holding their reasoning.
