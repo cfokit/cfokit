@@ -47,17 +47,17 @@ cost the same context as inlining, while diluting adherence to the rules that ma
 |---|---|---|
 | [0001](0001-documentation-structure.md) | Documentation structure | Draft |
 | [0002](0002-build-the-ledger-rather-than-adopt-one.md) | Build the ledger rather than adopt an existing accounting system | Draft |
-| [0003](0003-postgres-as-sole-storage-backend.md) | Use Postgres as the sole storage backend | Draft |
+| [0003](0003-postgres-as-sole-storage-backend.md) | Use Postgres as the sole storage backend | Accepted |
 | [0004](0004-portability-as-a-build-gate.md) | Portability is a build gate; configuration is env vars only | Draft |
-| [0005](0005-decimal-throughout-numeric-28-10.md) | `Decimal` in the app, `NUMERIC(28,10)` in the database, floats nowhere | Draft |
-| [0006](0006-zero-sum-deferred-constraint-trigger.md) | Zero-sum enforced by a deferred constraint trigger | Draft |
-| [0007](0007-append-only-from-posting-reversing-corrections.md) | Records become immutable at posting; corrections are reversing entries | Draft |
+| [0005](0005-decimal-throughout-numeric-28-10.md) | `Decimal` in the app, `NUMERIC(28,10)` in the database, floats nowhere | Accepted |
+| [0006](0006-zero-sum-deferred-constraint-trigger.md) | Zero-sum enforced by a deferred constraint trigger | Accepted |
+| [0007](0007-append-only-from-posting-reversing-corrections.md) | Records become immutable at posting; corrections are reversing entries | Accepted |
 | [0008](0008-layered-architecture-pure-engine.md) | Four layers, with a pure booking engine at the bottom | Draft |
 | [0009](0009-one-app-two-protocol-adapters.md) | One application, two protocol adapters; MCP calls the service in-process | Draft |
 | [0010](0010-beancount-as-test-oracle.md) | Beancount is a differential test oracle, never a runtime dependency | Draft |
 | [0011](0011-entity-advisory-lock.md) | Writes serialise on a per-entity advisory lock | Draft |
 | [0012](0012-binding-non-goals-and-scope-discipline.md) | Binding non-goals, enforced as a gate rather than a ban | Draft |
-| [0013](0013-two-dates-bitemporality.md) | Two dates per transaction, and bitemporality for free | Draft |
+| [0013](0013-two-dates-bitemporality.md) | Two dates per transaction, and bitemporality for free | Accepted |
 | [0014](0014-single-tool-surface-hosted-backend-only.md) | One tool surface; skills target the hosted backend only | Draft |
 | [0015](0015-three-published-interfaces-stability-obligations.md) | Three published interfaces, each with a committed artifact and diff gate | Draft |
 | [0016](0016-opentofu-single-cloud-target-iac.md) | OpenTofu, one cloud target, written deployment contract | Draft |
@@ -73,15 +73,15 @@ cost the same context as inlining, while diluting adherence to the rules that ma
 | [0026](0026-apache-2-0-as-the-project-licence.md) | Apache 2.0 is the project licence | Draft |
 | [0027](0027-reopening-does-not-cascade.md) | Reopening does not cascade; a stale year-end close is re-run | Draft |
 | [0028](0028-hand-written-sql-no-orm.md) | Hand-written SQL in the repository layer, rather than an ORM | Draft |
-| [0029](0029-mandatory-idempotency-keys.md) | Idempotency keys are mandatory on every write | Draft |
+| [0029](0029-mandatory-idempotency-keys.md) | Idempotency keys are mandatory on every write | Accepted |
 | [0030](0030-closed-period-reopen.md) | A closed period is reopened, never overridden | Draft |
 | [0031](0031-packages-named-for-capabilities.md) | Packages are named for the capability they provide | Draft |
 | [0032](0032-component-authentication-and-configuration.md) | Components authenticate as OAuth clients | Draft |
-| [0033](0033-provenance-captured-at-the-tool-boundary.md) | Provenance is captured at the tool boundary, never self-reported by the agent | Draft |
+| [0033](0033-provenance-captured-at-the-tool-boundary.md) | Provenance is captured at the tool boundary, never self-reported by the agent | Accepted |
 | [0034](0034-cfokit-operated-agent-runtime.md) | CFOKit ships an agent runtime, and the SOC 1 boundary is drawn at it | Draft |
 | [0035](0035-inference-for-the-attested-runtime.md) | CFOKit holds the inference relationship for the attested runtime | Draft |
 | [0036](0036-correctness-is-tested-in-four-layers.md) | Correctness is tested in four layers, and only the top one needs a model | Draft |
-| [0037](0037-accounting-basis-is-a-presentation-property.md) | The ledger records obligation and settlement; accounting basis is a presentation property | Draft |
+| [0037](0037-accounting-basis-is-a-presentation-property.md) | The ledger records obligation and settlement; accounting basis is a presentation property | Accepted |
 
 ## Deferred — decided in principle, waiting on a need
 
@@ -119,9 +119,22 @@ Every other record is `kind: requirement-driven` and must cite at least one requ
 
 ## Status of this corpus
 
-**Every record is `draft`.** This corpus is a first pass and has not been reviewed to a standard
-that would justify accepting any of it. `draft` is the template's own word for pre-acceptance:
-still being written, freely editable, and the immutability rule does not bind. Records move to
+**Eight records are `accepted`; the rest are `draft`.**
+
+Acceptance is not a claim of confidence. It means changes from here leave a trail: a changed mind
+becomes a superseding record, and the superseded one stays in place with its reasoning intact. The
+cost of accepting a record that later proves wrong is one more record. The cost of leaving it
+`draft` is that a rewrite leaves nothing behind at all.
+
+So the trigger is not "reviewed enough" — it is **about to become irreversible**. The eight accepted
+are the ones the first migration and the booking engine embody in something that cannot be taken
+back: `ADR-0003` Postgres-specific mechanisms in the schema, `ADR-0005` `NUMERIC(28,10)`, `ADR-0006`
+the deferred zero-sum trigger, `ADR-0007` append-only enforcement and every row written under it,
+`ADR-0013` `recorded_at`, `ADR-0029` the idempotency key in schema and published contract, `ADR-0033`
+the attribution columns, and `ADR-0037` obligation and settlement as linked postings. Each was read
+for staleness before acceptance rather than accepted in a batch.
+
+Everything else stays `draft` because building the ledger does not embody it. Records move to
 `accepted` deliberately, one at a time, and not before.
 
 **Every record follows the template**, and `uv run task check-decisions` fails the build if one
