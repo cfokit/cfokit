@@ -159,8 +159,11 @@ smell.
 
 ### Confirmation
 
-Layers 1 to 3 run inside the ordinary suite and gate every commit; CI gate 5 covers the contract half
-of layer 3 (ADR-0015). Layer 4 sits behind its own pytest marker, alongside the `oracle` marker that
+Layer 1 runs inside the ordinary suite and gates every commit, as do the schema invariants of layer 3
+that have a database to run against. **Layer 2, the conformance corpus, does not exist**, which
+matters because it is what carries `NFR-01` while the oracle stays deferred. The protocol half of
+layer 3 arrives with the adapters, and CI gate 5 which covers it is scaffolded and commented out
+(ADR-0015). Layer 4 sits behind its own pytest marker, alongside the `oracle` marker that
 already exists for the same reason, so it cannot accidentally join the per-commit gate.
 
 **Two rules here are not gated and cannot easily be.** Nothing detects an assertion a model wrote,

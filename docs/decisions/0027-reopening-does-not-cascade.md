@@ -100,9 +100,10 @@ expects. Reopening a prior fiscal year is deliberate and rare, and the cost abov
 
 ### Confirmation
 
-A test posts into a fiscal year after its close, and asserts that the close is reported stale and
-that the first-day trial balance shows income and expense at zero only after the close is re-run.
-`LED-12`'s acceptance criterion is the assertion.
+**Nothing enforces this yet: period close is not built.** When it is, a test posts into a fiscal
+year after its close and asserts that the close is reported stale, and that the first-day trial
+balance shows income and expense at zero only after the close is re-run. `LED-12`'s acceptance
+criterion is the assertion.
 
 ## Pros and Cons of the Options
 

@@ -92,7 +92,7 @@ change procedures.
 
 CI gate 5: regenerate the OpenAPI document and the MCP tool descriptions, then `git diff
 --exit-code`. **Scaffolded and commented out** in `.github/workflows/ci.yml`, pending the adapters
-existing (M4). Until it is switched on, this record is enforced by review.
+existing. Until it is switched on, this record is enforced by review.
 
 The gate depends on the generator being deterministic — nondeterministic ordering in the generated
 output would make the diff meaningless rather than merely noisy.

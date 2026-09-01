@@ -71,6 +71,69 @@ def app_conn() -> Iterator[psycopg.Connection[Any]]:
 
 
 @pytest.fixture
+def books(owner_conn: psycopg.Connection[Any]) -> Iterator[tuple[str, str, str]]:
+    """One entity with two accounts. Returns (entity_id, cash_id, revenue_id).
+
+    Arranged with the owner connection so the schema invariants can be tested independently
+    of the privilege layer: as the application role a refused DELETE raises
+    InsufficientPrivilege before any trigger runs, which would test the grant rather than the
+    trigger it is meant to back up.
+    """
+    suffix = uuid.uuid4().hex[:12]
+    with owner_conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO entity
+                (slug, name, accounting_basis, fiscal_year_end_month, fiscal_year_end_day,
+                 functional_currency, time_zone)
+            VALUES (%s, 'Books', 'accrual', 12, 31, 'USD', 'UTC')
+            RETURNING id
+            """,
+            (f"books-{suffix}",),
+        )
+        row = cur.fetchone()
+        assert row is not None
+        entity_id = row[0]
+
+        account_ids = []
+        for code, name, account_type in (
+            ("1000", "Cash", "asset"),
+            ("4000", "Revenue", "income"),
+        ):
+            cur.execute(
+                "INSERT INTO account (entity_id, code, name, type)"
+                " VALUES (%s, %s, %s, %s) RETURNING id",
+                (entity_id, code, name, account_type),
+            )
+            account_row = cur.fetchone()
+            assert account_row is not None
+            account_ids.append(account_row[0])
+
+    yield str(entity_id), str(account_ids[0]), str(account_ids[1])
+
+    # The append-only triggers refuse to delete a transaction or a posted transaction's
+    # postings — which is the guarantee under test, working. An append-only ledger cannot
+    # have its rows removed, so cleaning up after a test that proves that requires the one
+    # hatch Postgres provides.
+    #
+    # `session_replication_role = replica` suppresses user triggers for this session only.
+    # It needs superuser, which is exactly why the application role can never do this: the
+    # application connects as `cfokit_app`, which is NOSUPERUSER, so this escape is
+    # unavailable to it by construction rather than by policy.
+    #
+    # This is the only place in the repository that bypasses an append-only trigger, and it
+    # runs against a disposable test database.
+    with owner_conn.cursor() as cur:
+        cur.execute("SET session_replication_role = replica")
+        cur.execute("DELETE FROM posting WHERE entity_id = %s", (entity_id,))
+        cur.execute("DELETE FROM ledger_transaction WHERE entity_id = %s", (entity_id,))
+        cur.execute("DELETE FROM audit_log WHERE entity_id = %s", (entity_id,))
+        cur.execute("DELETE FROM account WHERE entity_id = %s", (entity_id,))
+        cur.execute("DELETE FROM entity WHERE id = %s", (entity_id,))
+        cur.execute("SET session_replication_role = origin")
+
+
+@pytest.fixture
 def two_entities(owner_conn: psycopg.Connection[Any]) -> Iterator[tuple[str, str]]:
     """Two entities with one account each, created outside RLS. Returns their ids.
 

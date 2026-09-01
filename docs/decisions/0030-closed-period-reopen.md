@@ -119,6 +119,9 @@ which is what makes "an agent cannot reopen" a property rather than a request. E
 validated server-side regardless of token contents (ADR-0011), so the same check covers both
 adapters.
 
+**None of this is built: there is no period close, so there is nothing to reopen.** What follows is
+what the mechanism must do when it exists, not what it does today.
+
 A reopen writes an `audit_log` row carrying the actor, the period, and the stated reason; the matching
 re-close writes another. That is the evidence `NFR-18` requires, and its absence on a state change is
 a bug by the rule in `CLAUDE.md`.

@@ -199,6 +199,57 @@ def check_record(path: Path, text: str, live: set[str], numbers: set[str]) -> li
     return bad
 
 
+# Artifacts a record can name in its Confirmation: a gate script, a task, a test file. Each
+# is a claim about something that exists, and each is checkable.
+CITED_SCRIPT = re.compile(r"`(scripts/[A-Za-z0-9_./-]+\.py)`")
+CITED_TASK = re.compile(r"`uv run task ([a-z][a-z0-9-]*)")
+CITED_TEST = re.compile(r"`(tests/[A-Za-z0-9_./-]+\.py)`")
+
+
+def defined_tasks() -> set[str]:
+    """Task names from the taskipy table, which is the only place they are defined."""
+    text = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    block = re.search(r"\[tool\.taskipy\.tasks\]\n(.*?)(?=\n\[|\Z)", text, re.S)
+    if not block:
+        return set()
+    return set(re.findall(r'^"?([a-z][a-z0-9-]*)"?\s*=', block.group(1), re.M))
+
+
+def check_cited_artifacts(path: Path, text: str, tasks: set[str]) -> list[str]:
+    """Every script, task and test a record names must actually exist.
+
+    ADR-0001's template says a Confirmation records "how compliance is verified: a CI gate, a
+    linter contract, a test, a review step. If nothing enforces this, say so plainly — an
+    unenforced decision is a convention, not a constraint."
+
+    A record naming a gate that does not exist is worse than one admitting the gap, because
+    it stops the next reader going to look for the real protection. Four such claims were
+    found by hand before this check existed: ADR-0020's Confirmation, ADR-0028's driver
+    contract, `CLAUDE.md`'s `cfokit.connectors` contract, and a `uv sync` check that a
+    layout change had removed.
+
+    This cannot tell whether a *test* proves what a record says it proves — only that the
+    thing named is there at all. That is the mechanical half; the rest is review.
+    """
+    problems: list[str] = []
+
+    for cited in sorted(set(CITED_SCRIPT.findall(text))):
+        if not (REPO_ROOT / cited).is_file():
+            problems.append(f"{path.name}: cites `{cited}`, which does not exist")
+
+    for cited in sorted(set(CITED_TEST.findall(text))):
+        if not (REPO_ROOT / cited).is_file():
+            problems.append(f"{path.name}: cites `{cited}`, which does not exist")
+
+    for cited in sorted(set(CITED_TASK.findall(text))):
+        if cited not in tasks:
+            problems.append(
+                f"{path.name}: cites `uv run task {cited}`, undefined in pyproject.toml"
+            )
+
+    return problems
+
+
 def check_index(records: dict[str, Path], statuses: dict[str, str]) -> list[str]:
     """Assertion 5: the index lists exactly the records present."""
     bad: list[str] = []
@@ -312,12 +363,14 @@ def main() -> int:
 
     bad: list[str] = []
     statuses: dict[str, str] = {}
+    tasks = defined_tasks()
 
     for number, path in records.items():
         text = path.read_text()
         front = parse_frontmatter(text) or {}
         statuses[number] = front.get("status", "")
         bad.extend(check_record(path, text, live, set(records)))
+        bad.extend(check_cited_artifacts(path, text, tasks))
 
     bad.extend(check_index(records, statuses))
     bad.extend(check_derivation())

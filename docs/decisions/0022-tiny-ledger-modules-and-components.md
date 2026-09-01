@@ -141,9 +141,10 @@ not yet made.
 
 ### Confirmation
 
-`import-linter` contracts encode "modules depend on the ledger, never on each other, and the ledger
-depends on no module", and run inside `uv run task lint`. The mechanism is already in place and
-observed to fail on violation; the module-to-module contracts are added as the first module lands.
+`import-linter` runs inside `uv run task lint`, and the layering contracts it already holds have been
+observed to fail on violation. **The contracts encoding "modules depend on the ledger, never on each
+other, and the ledger depends on no module" do not exist yet** — there is no module to constrain —
+and they are added as the first one lands.
 
 **The tiny-ledger test itself is not gated.** No check asserts that the ledger does not know what a
 customer is — that is review, and the signal is a ledger module acquiring a domain noun.
