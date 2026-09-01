@@ -46,13 +46,18 @@ In-process is the default; separation must be earned.
 **Name things for the capability they provide** — not for a vendor, and not for the mechanism.
 `plaid-sync` named a vendor; `connectors` names a mechanism. Both are wrong.
 
+**`migration` means a change to the database schema, and nothing else.** Moving a company's books
+between accounting systems is import and export (`IMP-`, `EXP-`). One word held both senses once;
+keeping them apart costs a line here, and separating them again cost a corpus-wide rename.
+
 **The hard boundary:** the skills and the ledger are separate systems with separate
 dependency graphs that share a tool contract. Never add a code dependency between
 them, in either direction, for any reason. (ADR-0014)
 
-This is enforced, not merely asserted: `import-linter` contracts in `pyproject.toml`
-fail the build on a layer violation, and on any import from `cfokit.connectors` to
-`cfokit.ledger`. If a contract blocks you, that is the rule working — stop and ask.
+This one is structural rather than gated: a skill is not Python, so there is no import path
+to cross in either direction and nothing for a linter to check. What `import-linter` does
+enforce, in `pyproject.toml` and failing `uv run task lint`, is the ledger's internal layering
+and the purity of its engine. If a contract blocks you, that is the rule working — stop and ask.
 
 Shared code between packages requires an ADR. Default to duplication.
 

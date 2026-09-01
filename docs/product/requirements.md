@@ -925,9 +925,11 @@ Terms carrying a specific meaning in this document.
 | **Draft** | A candidate transaction, freely editable, not yet part of the books. |
 | **Entity** | A set of books for one legal or reporting unit. The isolation boundary throughout. |
 | **Exception** | An item that could not be processed, held in a durable queue until someone or something dispositions it. Never a silent failure. |
+| **Export** | Books leaving CFOKit, in one of two forms that are not interchangeable: an *interchange* export another accounting system can read, or a *complete* export carrying everything the entity holds, attribution and audit trail included. |
 | **Functional currency** | The single currency an entity's books are denominated in, declared when the entity is created. |
 | **Grant** | A role held by an identity in an entity, and the act of assigning one. A grant may lapse. |
 | **Identity** | A person, authenticated by the organisation's identity provider. |
+| **Import** | Records entering CFOKit from the system a company ran before. Validated and reconciled against the source before anything posts, and identifiable as imported, with the system it came from, for the life of the record. |
 | **Invitation** | A role granted to someone who has no identity yet. It confers nothing until they authenticate, and binds to their identity when they do. |
 | **Obligation** | A commitment to receive or pay, recorded when it arises, separately from its settlement. |
 | **Posting** | Committing a transaction to the books. Irreversible; the point after which corrections are new entries. |
