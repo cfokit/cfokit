@@ -82,9 +82,18 @@ If you make a decision future work should be bound by, propose an ADR rather tha
 in a code comment. Copy [`docs/decisions/adr-template.md`](docs/decisions/adr-template.md) to the next
 free number.
 
-The **Alternatives rejected** section is mandatory and is the most important part of the
-file. An ADR without it does not prevent re-litigation, which is the main thing an ADR is
-for. "Didn't feel right" is not a rejection reason; cite specifics.
+The **Pros and Cons of the Options** section is mandatory and is the most important part of
+the file. MADR marks it optional; here it is not. An ADR that names alternatives without
+refuting each one does not prevent re-litigation, which is the main thing an ADR is for.
+"Didn't feel right" is not a rejection reason; cite specifics.
+
+**One decision per record.** A record may state a decision in several clauses when they stand
+or fall together. The test: could one clause be superseded without reopening the others? If it
+could, they are two decisions — write two records. A title containing "and" is a signal to
+apply the test, not a violation by itself.
+
+`uv run task check-decisions` checks the mechanical parts — frontmatter, mandatory sections,
+requirement ids, and index agreement — before CI does. Run it after writing a record.
 
 ADRs are immutable once accepted. Fix typos; never rewrite reasoning. A changed mind is a
 new ADR that supersedes the old one.

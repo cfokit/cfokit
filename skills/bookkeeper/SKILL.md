@@ -42,7 +42,7 @@ something was booked wrongly, record a reversing entry and then the correct one,
 history stays complete. (ADR-0007)
 
 **Every write is idempotent.** Reuse the idempotency key when retrying, so a retry cannot
-double-book. (ADR-0011)
+double-book. (ADR-0029)
 
 **Report faithfully.** If some transactions booked and others did not, say which and why,
 quoting the error `code` the ledger returned. Never summarise a partial failure as success.

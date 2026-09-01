@@ -19,6 +19,13 @@ the main thing an ADR is for. See ADR-0001.
 
 "Revisit when" is a local addition. MADR permits added sections.
 
+ONE DECISION PER RECORD. Several clauses are fine when they stand or fall
+together. The test: could one clause be superseded without reopening the others?
+If it could, they are two decisions — write two records. A title containing "and"
+is a signal to apply the test, not a violation by itself.
+
+`uv run task check-decisions` checks the mechanical parts of all this.
+
 `status: draft` means pre-initial-commit: still being written, not yet offered
 for review, and freely editable. The immutability rule does not bind until a
 record is accepted. `proposed` means finished and awaiting a decision.

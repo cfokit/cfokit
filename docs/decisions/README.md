@@ -30,7 +30,10 @@ cost the same context as inlining, while diluting adherence to the rules that ma
    record that supersedes the old one.
 2. **Supersede, don't delete.** Set the old record's `status` to `superseded by ADR-NNNN` and leave
    it in place. The rejected-alternatives history is most of the value.
-3. **One decision per file.** If the title needs "and", split it.
+3. **One decision per file, tested by supersession.** A record may state a decision in several
+   clauses when they stand or fall together. The test: *could one clause be superseded without
+   reopening the others?* If it could, they are two decisions — split them. A title containing
+   "and" is a signal to apply the test, not a violation by itself. (ADR-0001)
 4. **Number sequentially, never reuse.** Gaps are fine. Numbers are identifiers, not chronology —
    the `date` field is authoritative for sequence.
 5. **Written when the decision is made,** not reconstructed later.
@@ -49,26 +52,31 @@ cost the same context as inlining, while diluting adherence to the rules that ma
 | [0005](0005-decimal-throughout-numeric-28-10.md) | `Decimal` in the app, `NUMERIC(28,10)` in the database, floats nowhere | Draft |
 | [0006](0006-zero-sum-deferred-constraint-trigger.md) | Zero-sum enforced by a deferred constraint trigger | Draft |
 | [0007](0007-append-only-from-posting-reversing-corrections.md) | Records become immutable at posting; corrections are reversing entries | Draft |
-| [0008](0008-layered-architecture-pure-engine-no-orm.md) | Four layers with a pure booking engine; hand-written SQL, no ORM | Draft |
+| [0008](0008-layered-architecture-pure-engine.md) | Four layers, with a pure booking engine at the bottom | Draft |
 | [0009](0009-one-app-two-protocol-adapters.md) | One application, two protocol adapters; MCP calls the service in-process | Draft |
 | [0010](0010-beancount-as-test-oracle.md) | Beancount is a differential test oracle, never a runtime dependency | Draft |
-| [0011](0011-entity-advisory-lock-idempotency-keys.md) | Per-entity advisory lock on writes; mandatory idempotency keys | Draft |
+| [0011](0011-entity-advisory-lock.md) | Writes serialise on a per-entity advisory lock | Draft |
 | [0012](0012-binding-non-goals-and-scope-discipline.md) | Binding non-goals, enforced as a gate rather than a ban | Draft |
-| [0013](0013-two-dates-and-period-reopen.md) | Two dates per transaction; a closed period is reopened, never overridden | Draft |
+| [0013](0013-two-dates-bitemporality.md) | Two dates per transaction, and bitemporality for free | Draft |
 | [0014](0014-single-tool-surface-hosted-backend-only.md) | One tool surface; skills target the hosted backend only | Draft |
 | [0015](0015-three-published-interfaces-stability-obligations.md) | Three published interfaces, each with a committed artifact and diff gate | Draft |
 | [0016](0016-opentofu-single-cloud-target-iac.md) | OpenTofu, one cloud target, written deployment contract | Draft |
 | [0017](0017-gcp-initial-cloud-target.md) | GCP (Cloud Run + Cloud SQL) as the initial cloud target | Draft |
 | [0018](0018-local-compose-dev-and-production.md) | One compose stack for local development and local production | Draft |
 | [0019](0019-identity-provider-conformance-contract.md) | Identity provider as a swappable dependency behind a conformance contract | Draft |
-| [0020](0020-repository-layout-and-artifact-taxonomy.md) | Repository layout separates artifact kinds; packages named for capabilities | Draft |
+| [0020](0020-repository-layout-artifact-kinds.md) | Repository directories are organised by artifact kind | Draft |
 | [0021](0021-slack-as-a-delivery-surface.md) | Slack is a delivery surface, built as a separate component over HTTP events | Draft |
 | [0022](0022-tiny-ledger-modules-and-components.md) | The ledger stays tiny; everything else is an in-process module or a separate component | Draft |
-| [0023](0023-component-deployment-and-authentication.md) | Components ship as one image with many entrypoints; authenticate as OAuth clients | Draft |
+| [0023](0023-one-image-many-entrypoints.md) | Components ship as one image with many entrypoints | Draft |
 | [0024](0024-synchronous-application-code.md) | The ledger is synchronous; async is permitted outside it | Draft |
 | [0025](0025-rounding-and-allocation.md) | The ledger never rounds; presentation rounds half-up, allocation uses largest remainder | Draft |
 | [0026](0026-apache-2-0-as-the-project-licence.md) | Apache 2.0 is the project licence | Draft |
 | [0027](0027-reopening-does-not-cascade.md) | Reopening does not cascade; a stale year-end close is re-run | Draft |
+| [0028](0028-hand-written-sql-no-orm.md) | Hand-written SQL in the repository layer, rather than an ORM | Draft |
+| [0029](0029-mandatory-idempotency-keys.md) | Idempotency keys are mandatory on every write | Draft |
+| [0030](0030-closed-period-reopen.md) | A closed period is reopened, never overridden | Draft |
+| [0031](0031-packages-named-for-capabilities.md) | Packages are named for the capability they provide | Draft |
+| [0032](0032-component-authentication-and-configuration.md) | Components authenticate as OAuth clients | Draft |
 
 ## Deferred — decided in principle, waiting on a need
 
@@ -95,10 +103,12 @@ this shape, and they cite no requirement (ADR-0001).
 | ADR | Choice |
 |---|---|
 | 0001 | Documentation structure |
-| 0013 | Binding non-goals as a gate |
-| 0017 | OpenTofu, one cloud target |
-| 0018 | GCP as the initial target |
-| 0021 | Repository layout |
+| 0012 | Binding non-goals as a gate |
+| 0016 | OpenTofu, one cloud target |
+| 0017 | GCP as the initial target |
+| 0020 | Repository layout by artifact kind |
+| 0024 | The ledger is synchronous |
+| 0031 | Packages named for capabilities |
 
 Every other record is `kind: requirement-driven` and must cite at least one requirement id.
 
@@ -109,15 +119,18 @@ that would justify accepting any of it. `draft` is the template's own word for p
 still being written, freely editable, and the immutability rule does not bind. Records move to
 `accepted` deliberately, one at a time, and not before.
 
-ADR-0001 is the only record written to the current standard. Records 0002 to 0013 carry their
-original reasoning in MADR form; 0014 to 0027 have MADR frontmatter but the previous section
-structure — no `Decision Drivers`, no flat `Considered Options` list, and no `Confirmation`.
-Their `Alternatives rejected` sections do give each rejected option its own subsection, which
-carries the substance of `Pros and Cons of the Options` without the heading.
+**Every record follows the template**, and `uv run task check-decisions` fails the build if one
+does not. The thirteen records that carried the earlier section structure — no `Decision Drivers`,
+no flat `Considered Options` list, no `Confirmation` — were re-derived rather than reformatted:
+their `Alternatives rejected` subsections already held the substance of `Pros and Cons of the
+Options`, and the drivers were recovered from reasoning each record already stated rather than
+invented. Nothing was accepted at the time, so rule 1 did not bind.
 
-**Bringing those fourteen to the template means writing reasoning that was never written**, which
-rule 1 forbids. Either the template applies prospectively and this stays documented, or the
-records are re-derived rather than reformatted. That is undecided.
+Five records stated two decisions each and were split under rule 3: ADR-0028 (no ORM) out of
+ADR-0008, ADR-0029 (idempotency keys) out of ADR-0011, ADR-0030 (closed-period reopen) out of
+ADR-0013, ADR-0031 (capability naming) out of ADR-0020, and ADR-0032 (component authentication)
+out of ADR-0023. Each half could have been superseded without reopening the other, which is the
+test.
 
 **Every requirement-driven record now traces.** Each carries a `Requirements served:` line naming
 live domain-prefixed ids, and the retired `REQ-` scheme is gone from the repository entirely —
@@ -134,16 +147,16 @@ its reasoning rests on workload and on the MCP SDK, and a different product of t
 face the same question. Its scope has been corrected: the boundary is the ledger, not the MCP
 module, so ingestion, delivery and AR are free to be async. The record also no longer implies
 that synchronous code makes the ledger concurrency-safe — it removes an `await` mid-transaction,
-and the guarantees come from ADR-0006 and ADR-0011.
+and the guarantees come from ADR-0006, ADR-0011 and ADR-0029.
 
-**Resolved.** The period-close contradiction between ADR-0007, ADR-0013 and `LED-11` is settled in
+**Resolved.** The period-close contradiction between ADR-0007, ADR-0030 and `LED-11` is settled in
 favour of `LED-11`: a closed period is reopened, never overridden. The licence is settled in
 ADR-0026.
 
 ### The SOC 1 and SOC 2 sections were never swept
 
 Sections 7 and 8 of `requirements.md` carry about seventy `Must` requirements, and **no decision
-record cites one of them**. That disconnection is how ADR-0013 came to specify an acknowledgement
+record cites one of them**. That disconnection is how the reopen model came to specify an acknowledgement
 parameter while `SOC1-17` already required an administrative reopen with no privileged path around
 it — neither document was wrong on its own terms, and nothing compared them.
 
@@ -153,7 +166,7 @@ A sweep found five conflicts and eight unserved requirements. None is fixed.
 
 | Conflict | Where |
 |---|---|
-| `SOC1-25` requires the acting principal's own credential to flow through, "never against a shared credential with the real actor passed as a parameter". Components authenticate by client credentials and assert which user is acting — the intersection of grants mitigates this but does not satisfy it. The fix is OAuth token exchange (RFC 8693), which ADR-0019's conformance contract also does not require | ADR-0021, ADR-0023, ADR-0019 |
+| `SOC1-25` requires the acting principal's own credential to flow through, "never against a shared credential with the real actor passed as a parameter". Components authenticate by client credentials and assert which user is acting — the intersection of grants mitigates this but does not satisfy it. The fix is OAuth token exchange (RFC 8693), which ADR-0019's conformance contract also does not require | ADR-0021, ADR-0032, ADR-0019 |
 | `SOC1-15` puts actor class on the entry "in the data itself, not only in an audit record", and `SOC1-06`, `SOC1-34` and `SOC1-35` add model and skill versions against it. ADR-0022 says the ledger knows nothing about agents. Its boundary test has no answer for this | ADR-0022 |
 | `SOC2-19` requires refusing a session where the issuer does not assert MFA, and `SOC2-20` requires central session revocation reaching skills. ADR-0019's conformance contract enumerates six issuer capabilities and includes neither, so a conforming issuer satisfies neither requirement | ADR-0019 |
 | `SOC1-22` requires audit records in storage the application cannot modify or delete by any code path, administrative ones included. ADR-0003 permits only Postgres and does not address how | ADR-0003 |

@@ -256,7 +256,7 @@ verified in its repository:
 | **Money precision** | `accounts_transactions.credit`/`debit` is `DECIMAL(13,3)`; `accounts.amount` is `DECIMAL(15,5)` | Conflicts with ADR-0005 |
 | **GL mutability** | `LedgerEntriesStorage.deleteEntries()` issues a hard `.delete()` on `accounts_transactions` | Conflicts with ADR-0007 |
 | **Audit trail** | `audit_logs` added April 2026: `action`, `subject`, `subject_id`, nullable JSON `metadata`. No before/after columns | Does not compensate |
-| **Data access** | Objection.js ORM | Conflicts with ADR-0008 |
+| **Data access** | Objection.js ORM | Conflicts with ADR-0028 |
 
 Three of these are material rather than stylistic.
 

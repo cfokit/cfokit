@@ -70,12 +70,25 @@ folder.
 
 ### Decision records
 
-MADR 4.0.0, full template, in `docs/decisions/`, with two local rules:
+MADR 4.0.0, full template, in `docs/decisions/`, with three local rules:
 
 1. **`Considered Options` and `Pros and Cons of the Options` are mandatory.** MADR marks the second
    optional. A record that names alternatives without refuting each one does not prevent
    re-litigation, which is the main thing a decision record is for.
 2. **`Revisit when` is added**, naming concrete triggers. MADR permits added sections.
+3. **One decision per record, tested by supersession.** A record may state a decision in several
+   clauses when they stand or fall together. The test is: *could one clause be superseded without
+   reopening the others?* If it could, they are two decisions and belong in two records.
+
+   A title containing "and" is a signal to apply the test, not a violation by itself. ADR-0007
+   couples immutability at posting with corrections as reversing entries; neither half can be
+   superseded alone, because reversal is what immutability leaves as the only correction mechanism.
+   ADR-0008 originally also decided against an ORM, which *could* have been reversed without
+   touching the layering — so that became ADR-0028.
+
+   The cost of getting this wrong is paid at supersession, which is exactly when a corpus is
+   under the most pressure: a bundled record forces a reader to re-open settled reasoning to change
+   one part of it.
 
 Records are numbered sequentially and never reused. Numbers are identifiers, not chronology; the
 `date` field is authoritative for sequence. A record is immutable once accepted — a changed mind is
@@ -180,9 +193,14 @@ live requirement id.
 The `kind` field is what makes the last assertion checkable. Without it the rule is a judgement
 call, and a judgement call is not a gate.
 
-**That check is not yet written**, and `kind:` is not yet set on records 0002 to 0027 — until both
-exist, this record is enforced by review alone, which is weaker than every other gate in this
-repository.
+That check is `scripts/check_decisions.py`, run as `uv run task check-decisions` and as CI gate 6.
+It additionally asserts that the mandatory sections above are present and that `Pros and Cons of the
+Options` refutes at least as many options as `Considered Options` names — the local rules are
+otherwise the easiest part of this record to let slide, because a record missing them still reads
+like a record.
+
+**Rule 3 is not checkable and is not gated.** No check can tell one decision from two; a title
+containing "and" is a signal for review, not a failure condition.
 
 ## Pros and Cons of the Options
 
@@ -250,7 +268,7 @@ something that enforces them.
 
 **Follow-on obligations.**
 
-* Write the CI check named under Confirmation. Until then this record is unenforced.
+* `scripts/check_decisions.py` stays current as the corpus grows. **Already in place**, as CI gate 6.
 * `CONTRIBUTING.md` carries the table above, so a human contributor finds it without reading the
   decision corpus.
 * A record deciding whether CFOKit uses a specification workflow.

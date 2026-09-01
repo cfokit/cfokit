@@ -15,7 +15,7 @@ shared dependency graph, which is exactly what ADR-0014 exists to prevent.
 
 The package is named for the **capability**, not the vendor. It was `plaid-sync`; that made
 one provider structural. Plaid is a provider. So is Stripe. Neither is the package.
-(ADR-0020)
+(ADR-0031)
 
 Do not add `plaid` or `stripe` to a module name outside `providers/`.
 
@@ -56,7 +56,7 @@ is in the wrong package.
   amounts as JSON numbers or as integer minor units — **convert deliberately**, and never via
   `float`. This is the single most likely place for a float to enter the system. (ADR-0005)
 - Ingestion is idempotent. Re-running a sync must never double-book, which means carrying a
-  stable idempotency key derived from the provider's own transaction identifier. (ADR-0011)
+  stable idempotency key derived from the provider's own transaction identifier. (ADR-0029)
 - Never log account numbers, tokens, or payee names at info level. Log counts and identifiers.
 - A provider that returns a transaction you cannot map is a reported error, not a silently
   dropped row.
