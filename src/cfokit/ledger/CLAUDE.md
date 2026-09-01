@@ -36,7 +36,11 @@ step. This is an auditability requirement, not a taste preference. (ADR-0028)
   `MONEY` — `uv run task check-money` fails the build on any of them. (ADR-0005)
 - **No `UPDATE` on financial fields. No `DELETE`.** Corrections are reversing entries.
   (ADR-0007)
-- Every write takes `pg_advisory_xact_lock` for its entity. (ADR-0011)
+- Every write takes `pg_advisory_xact_lock` for its entity. **Lock on `entity.lock_key`, never
+  on a hash of `entity.id`.** ADR-0011 requires a documented, collision-free scheme; the advisory
+  namespace is a global `bigint` and entity ids are uuids, so a hash is collision-*resistant* at
+  best, and a collision silently serialises two unrelated entities against each other.
+  `lock_key` is an identity column, so it is collision-free by construction. (ADR-0011)
 - Row-level security keyed on `entity_id`, **plus** explicit service-layer filtering. Two
   layers, because RLS misconfiguration is silent.
 - Zero-sum per commodity is a deferred constraint trigger, not only an application check.

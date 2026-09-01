@@ -55,7 +55,7 @@ one exists.**
 | Requirements | `docs/product/requirements.md` | Product, contributors, auditors | Churns until agreed; requirement ids are stable | — |
 | Decision records | `docs/decisions/NNNN-*.md` | Contributors, future maintainers | Immutable once accepted | [MADR 4.0.0](https://adr.github.io/madr/) |
 | User documentation | `docs/tutorials/`, `docs/how-to/`, `docs/reference/`, `docs/explanation/` | Users | Churns | [Diátaxis](https://diataxis.fr) |
-| Agent and contributor rules | `CLAUDE.md`, `packages/*/CLAUDE.md` | Every session | Churns | — |
+| Agent and contributor rules | `CLAUDE.md`, `src/cfokit/*/CLAUDE.md` | Every session | Churns | — |
 | Contributor guide | `CONTRIBUTING.md` | Human contributors | Churns | — |
 
 `requirements.md` serves the auditor as well as the contributor. There is no separate policy

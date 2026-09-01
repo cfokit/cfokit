@@ -56,6 +56,18 @@ dev = [
     "pytest>=8.4",
     "import-linter>=2.3",
     "taskipy>=1.14",
+    # Property testing. ADR-0025 requires allocation to be property-tested and ADR-0036
+    # layer 1 names four arithmetic invariants; shrinking a counterexample to its minimal
+    # form is the part that makes a failure diagnosable, and is why this is a dependency
+    # rather than a hand-rolled generator.
+    #
+    # MPL-2.0 (verified 2026-09-01 from the installed artifact's License-Expression, not
+    # from memory). Weak copyleft, triggering on distribution of the covered files — which
+    # never happens: it is dev-group only, the image builds with `uv sync --no-dev`, and
+    # `uv export --no-dev` does not contain it. CLAUDE.md scopes the licence question by
+    # what triggers the obligation, and CI-only tooling is fine including copyleft.
+    # Pulls sortedcontainers (Apache-2.0), likewise dev-only.
+    "hypothesis>=6.167.1",
 ]
 
 # ---------------------------------------------------------------------------
