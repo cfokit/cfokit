@@ -40,9 +40,10 @@ from pydantic import BaseModel, Field
 
 from cfokit.ledger.config import Settings
 from cfokit.ledger.engine import Entry, Posting
-from cfokit.ledger.errors import LedgerError, TransactionNotFound
+from cfokit.ledger.errors import LedgerError
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.principal import Principal
+from cfokit.ledger.service.read import read_transaction
 from cfokit.ledger.service.write import (
     WriteContext,
     post_transaction,
@@ -231,11 +232,12 @@ def create_server(settings: Settings, principal: Principal | None = None) -> MCP
     )
     def read(entity_id: str, transaction_id: str) -> dict[str, Any]:
         def work() -> dict[str, Any]:
-            acting()  # refuse an unidentified caller before touching the books
-            with database.entity_write(entity_id) as write:
-                stored = write.load_transaction(transaction_id)
-            if stored is None:
-                raise TransactionNotFound(f"no transaction {transaction_id}")
+            stored = read_transaction(
+                database,
+                entity_id=entity_id,
+                principal=acting(),
+                transaction_id=transaction_id,
+            )
             return {
                 "ok": True,
                 "id": stored.id,

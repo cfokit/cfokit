@@ -32,6 +32,10 @@
     "error": "NotAuthenticated"
   },
   {
+    "code": "not_authorised",
+    "error": "NotAuthorised"
+  },
+  {
     "code": "transaction_already_posted",
     "error": "TransactionAlreadyPosted"
   },

@@ -132,6 +132,16 @@ def books(owner_conn: psycopg.Connection[Any]) -> Iterator[tuple[str, str, str]]
             assert account_row is not None
             account_ids.append(account_row[0])
 
+        # Writes are authorised now (`IAM-01`), so the fixture grants what the tests use.
+        # `poster` rather than `administrator`: a test should hold the least that lets it
+        # work, or it stops being able to notice a capability check that is missing.
+        for principal_id in ("user:geoff", "skill:bookkeeper"):
+            cur.execute(
+                "INSERT INTO entity_grant (entity_id, principal_id, role, granted_by)"
+                " VALUES (%s, %s, 'poster', 'test-fixture')",
+                (entity_id, principal_id),
+            )
+
     yield str(entity_id), str(account_ids[0]), str(account_ids[1])
 
     # The append-only triggers refuse to delete a transaction or a posted transaction's
@@ -148,6 +158,7 @@ def books(owner_conn: psycopg.Connection[Any]) -> Iterator[tuple[str, str, str]]
     # runs against a disposable test database.
     with owner_conn.cursor() as cur:
         cur.execute("SET session_replication_role = replica")
+        cur.execute("DELETE FROM entity_grant WHERE entity_id = %s", (entity_id,))
         cur.execute("DELETE FROM posting WHERE entity_id = %s", (entity_id,))
         cur.execute("DELETE FROM ledger_transaction WHERE entity_id = %s", (entity_id,))
         cur.execute("DELETE FROM audit_log WHERE entity_id = %s", (entity_id,))
@@ -190,5 +201,8 @@ def two_entities(owner_conn: psycopg.Connection[Any]) -> Iterator[tuple[str, str
     yield str(first), str(second)
 
     with owner_conn.cursor() as cur:
+        cur.execute("SET session_replication_role = replica")
+        cur.execute("DELETE FROM entity_grant WHERE entity_id IN (%s, %s)", (first, second))
         cur.execute("DELETE FROM account WHERE entity_id IN (%s, %s)", (first, second))
         cur.execute("DELETE FROM entity WHERE id IN (%s, %s)", (first, second))
+        cur.execute("SET session_replication_role = origin")

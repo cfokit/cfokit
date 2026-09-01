@@ -16,10 +16,12 @@ The order is not arbitrary. The lock comes first so the idempotency check cannot
 idempotency check comes before the work so a replay does no work; the audit row goes inside
 the same transaction as the change so the two cannot be separated by a failure.
 
-**Entity grants are not validated here yet.** ADR-0011 and ADR-0019 require them to be checked
-server-side regardless of token contents, and there is no grant model in the schema to check
-against. Until there is, this layer enforces isolation and not authorisation, and it is stated
-here rather than implied.
+**Entity grants are validated here**, inside the locked transaction and before any work, which
+is what ADR-0011 means by "server-side regardless of token contents". Reading them inside the
+transaction is also what makes `IAM-15` true — a revocation committed a moment ago is already
+in force, because the check is a query rather than something cached at the edge.
+
+For an agent the check is over **two** principals and takes the intersection (`IAM-11`).
 """
 
 from __future__ import annotations
@@ -27,7 +29,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass
-from datetime import date
+from datetime import UTC, date, datetime
 from typing import Any
 
 from cfokit.ledger.engine import Entry, build_reversal, check_postable
@@ -36,7 +38,8 @@ from cfokit.ledger.errors import (
     TransactionAlreadyPosted,
     TransactionNotFound,
 )
-from cfokit.ledger.repository.unit_of_work import Database
+from cfokit.ledger.repository.unit_of_work import Database, EntityWrite
+from cfokit.ledger.service.authorisation import Capability, require
 from cfokit.ledger.service.principal import Principal
 
 __all__ = [
@@ -91,6 +94,23 @@ def _require_key(context: WriteContext) -> None:
         raise IdempotencyKeyRequired("every write requires an idempotency key")
 
 
+def _authorise(write: EntityWrite, context: WriteContext, capability: Capability) -> None:
+    """Check the capability is in force, inside the transaction that will do the work.
+
+    Both principals are looked up for an agent, because `IAM-11` makes effective authority the
+    intersection of the skill's and the person's, and "no shared credential, service account,
+    or ambient authority stands in for either".
+    """
+    now = datetime.now(UTC)
+    actor_roles = write.roles_in_force(context.principal.id, now)
+    acted_for_roles = (
+        write.roles_in_force(context.principal.acting_for, now)
+        if context.principal.acting_for is not None
+        else frozenset()
+    )
+    require(capability, context.principal, actor_roles, acted_for_roles)
+
+
 def record_transaction(
     database: Database,
     context: WriteContext,
@@ -130,6 +150,8 @@ def record_transaction(
                 status=str(replay["status"]),
                 replayed=True,
             )
+
+        _authorise(write, context, Capability.POST if post else Capability.RECORD)
 
         if post:
             # The ergonomic check, so the caller gets a stable code and a readable message
@@ -188,6 +210,8 @@ def post_transaction(
                 status=str(replay["status"]),
                 replayed=True,
             )
+
+        _authorise(write, context, Capability.POST)
 
         stored = write.load_transaction(transaction_id)
         if stored is None:
@@ -251,6 +275,10 @@ def reverse_transaction(
                 status=str(replay["status"]),
                 replayed=True,
             )
+
+        # A reversal posts immediately, so it needs the capability to post rather than only
+        # to record (`LED-08`, ADR-0007).
+        _authorise(write, context, Capability.POST)
 
         stored = write.load_transaction(transaction_id)
         if stored is None:

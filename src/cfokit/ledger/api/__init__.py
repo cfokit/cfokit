@@ -27,7 +27,6 @@ from typing import Annotated, Any
 from fastapi import Depends, FastAPI, Header, Path, Request, Response, status
 from fastapi.responses import JSONResponse
 
-from cfokit.ledger.api.auth import Authenticator, DenyAll
 from cfokit.ledger.api.models import (
     ErrorResponse,
     PostingModel,
@@ -38,9 +37,11 @@ from cfokit.ledger.api.models import (
 from cfokit.ledger.api.problems import status_for
 from cfokit.ledger.config import Settings
 from cfokit.ledger.engine import Entry, Posting
-from cfokit.ledger.errors import LedgerError, TransactionNotFound
+from cfokit.ledger.errors import LedgerError
 from cfokit.ledger.repository.unit_of_work import Database
+from cfokit.ledger.service.authentication import Authenticator, TokenAuthenticator
 from cfokit.ledger.service.principal import Principal
+from cfokit.ledger.service.read import read_transaction
 from cfokit.ledger.service.readiness import check_readiness
 from cfokit.ledger.service.write import (
     WriteContext,
@@ -55,6 +56,7 @@ __all__ = ["create_app"]
 # so a new error code shows up as a contract diff (ADR-0015).
 ERRORS: dict[int | str, dict[str, Any]] = {
     401: {"model": ErrorResponse},
+    403: {"model": ErrorResponse},
     404: {"model": ErrorResponse},
     409: {"model": ErrorResponse},
     422: {"model": ErrorResponse},
@@ -99,15 +101,20 @@ def create_app(settings: Settings, authenticator: Authenticator | None = None) -
     Takes settings as an argument rather than reading the environment, so the app is
     constructible in a test without one (ADR-0004 keeps `config` the only reader).
 
-    `authenticator` defaults to denying everything, so a deployment that has not wired
-    authentication returns 401 rather than booking for an anonymous caller — see `auth.py`.
+    `authenticator` defaults to validating bearer tokens against the configured issuer
+    (ADR-0019). It is injectable so a test can supply a principal without an issuer, never so
+    a caller can.
     """
     app = FastAPI(
         title="CFOKit Ledger",
         version="0.0.0",
         summary="Multi-tenant double-entry accounting engine.",
     )
-    app.state.authenticator = DenyAll() if authenticator is None else authenticator
+    app.state.authenticator = (
+        TokenAuthenticator(settings.auth_issuer_url, settings.auth_audience)
+        if authenticator is None
+        else authenticator
+    )
     app.state.database = Database(settings.database_url)
 
     @app.exception_handler(LedgerError)
@@ -243,7 +250,7 @@ def create_app(settings: Settings, authenticator: Authenticator | None = None) -
         entity_id: Annotated[str, Path()],
         transaction_id: Annotated[str, Path()],
         database: Annotated[Database, Depends(get_database)],
-        _acting: Annotated[Principal, Depends(get_principal)],
+        acting: Annotated[Principal, Depends(get_principal)],
     ) -> TransactionResponse:
         """Read a transaction and its postings.
 
@@ -251,10 +258,9 @@ def create_app(settings: Settings, authenticator: Authenticator | None = None) -
         forbidden: row-level security makes absent and invisible the same answer, and
         distinguishing them would leak the other entity's existence (`NFR-04`).
         """
-        with database.entity_write(entity_id) as write:
-            stored = write.load_transaction(transaction_id)
-        if stored is None:
-            raise TransactionNotFound(f"no transaction {transaction_id}")
+        stored = read_transaction(
+            database, entity_id=entity_id, principal=acting, transaction_id=transaction_id
+        )
         return TransactionResponse(
             id=stored.id,
             status=stored.status,
