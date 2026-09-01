@@ -177,9 +177,13 @@ accountant will accept.
 
 The ledger is reachable over MCP and a documented HTTP API, so the questions do not have to be
 anticipated in advance. An owner can ask what they spent on contractors last quarter. A CFO
-can ask something considerably harder. Guardrails live in the skill: entity scope is enforced
-server-side regardless of what is asked, answers come from the books rather than from
-estimation, and the skill declines what the data cannot support.
+can ask something considerably harder.
+
+Two kinds of guardrail apply, and only one of them is trustworthy. Entity scope and authority
+are enforced by the server, whatever a skill asserts about itself and whatever it is asked to
+do; no prompt or instruction participates in that. What the skill contributes is weaker by
+nature and is stated as such: it answers from the books rather than from estimation, and
+declines what the data cannot support.
 
 The CFO seat is never empty. Where no professional holds it, the founder or the owner-operator
 does, on top of running the business, and a guidance skill answers the questions that person
@@ -242,9 +246,9 @@ a slogan; these are the statements CFOKit can be held to.
 
 | | Objective | Measure of success |
 |---|---|---|
-| **OBJ-1** | The company's books are kept without the company keeping them | Transactions are recorded, classified, and reconciled with no person performing the recording. A person is involved only to answer what the stored rules cannot resolve, and to approve the rule that settles it; an approved pattern is not asked about again |
+| **OBJ-1** | The company's books are kept without the company keeping them | Transactions reaching the system are recorded, classified, and reconciled with no person performing the recording. A person is involved to answer what the stored rules cannot resolve and to approve the rule that settles it — an approved pattern is not asked about again — and to enter what no feed will ever carry, such as an accrual or a depreciation charge |
 | **OBJ-2** | The books are current, and a close is never waiting on CFOKit | A transaction is recorded within one day of reaching the system, rather than of its transaction date. Anything the rules cannot resolve is asked as it arrives, not discovered at period end. A period is ready to close on the day the entity scheduled, with nothing left to decide; where it is not, an unanswered question is the only permissible cause, and what is outstanding and how long it has waited are visible throughout |
-| **OBJ-3** | The numbers are exact, and nothing posted changes afterwards | Every amount is recorded exactly: no representation error, no accumulated drift, a balance that is the exact sum of its postings. Booking agrees with an independent implementation of double-entry, with every divergence documented. A posted record is never altered or deleted — a correction is a new entry, and both remain visible. An operation repeated or retried books once |
+| **OBJ-3** | The numbers are exact, and nothing posted changes afterwards | Every amount is recorded exactly: no representation error, no accumulated drift, a balance that is the exact sum of its postings. Booking is demonstrably correct against a source of truth CFOKit did not author, and every disagreement with it is resolved rather than carried. A posted record is never altered or deleted — a correction is a new entry, and both remain visible. An operation repeated or retried books once |
 | **OBJ-4** | Every number explains itself | Any posting resolves to what caused it and what decided it — the source transaction and the rule that assigned it, the person who entered it, the entry it reverses, or the migration that carried it in — and that attribution survives for the life of the record |
 
 **What they are worth.**
@@ -261,6 +265,13 @@ a slogan; these are the statements CFOKit can be held to.
 |---|---|---|
 | **OBJ-8** | Only the people an entity has authorised reach its books | Cross-entity access does not occur, and is prevented at the data layer rather than by convention. Every access resolves to the principal that made it — the person, and the skill acting for them where one did — and to the role held at the time. Authority is determined server-side, whatever the caller asserts |
 | **OBJ-9** | The company can prove all of this to an examiner | The system supplies, from its own records, the access, change, and processing evidence a SOC 1 and a SOC 2 Type II examination require, over a period of operation rather than at a moment. What the software cannot evidence — the operator's own controls — is stated rather than implied |
+
+**OBJ-9 is gated on demand, not on a date.** It becomes work when a commercial offering is
+substantial enough for an examination to be worth pursuing, which the market signals rather than
+the roadmap. Until then the requirements serving it are recorded and unreviewed, and the only
+thing that matters is that nothing built in the meantime forecloses it — which is why the parts
+of it that are architectural, and cannot be retrofitted, are stated as ordinary requirements
+instead.
 
 **Independence.**
 
@@ -341,8 +352,14 @@ Two things follow, and they bind the product:
 need to trust them, and the return on your own time in them stops the moment they are correct.
 Nothing you do above that threshold makes the business better. CFOKit keeps them current and
 shows you why every transaction landed where it did, so trusting them is not an act of faith.
-It costs nothing to try. Move to the hosted service when you would rather not run your own
-Postgres.
+It costs nothing to try.
+
+Move to the hosted service when running it yourself stops being the thing you want to spend
+attention on — not only the Postgres, but being the person accountable for how the books are
+operated. Self-hosting means you hold the operator's controls as well as the company's, and
+you cannot attest to your own deployment. When someone downstream needs assurance about how
+the books are kept — a lender, an acquirer, a customer's auditor — that is what the hosted
+service sells, and it is the one thing a self-hosted build cannot produce for itself.
 
 **For the owner-operator.** You already pay for QuickBooks and still do the work. CFOKit does
 the work: transactions categorised as they arrive, books that are current rather than
@@ -354,8 +371,8 @@ arrives closed, current, and traceable, so the engagement is the work you sell.
 
 **For the developer.** Apache 2.0 licensed, so you can run it, fork it, or build on it without asking
 anyone. It comes up in one command with no cloud account and no signup, the booking engine is
-tested against an independent implementation rather than against its own assumptions, and
-adding a bank or a payment provider is an additive change against a stable extension point.
+tested against published worked examples rather than against its own assumptions, and adding a
+bank or a payment provider is an additive change against a stable extension point.
 
 ## Community identity
 
@@ -394,7 +411,7 @@ open source agents – here's the ledger design"
 > Open source, agent-maintained books.
 >
 > • Bank and card feeds in, categorised by rules you approve once
-> • Real double-entry, append-only, tested against Beancount
+> • Real double-entry, append-only, tested against worked examples with published answers
 > • Statements a lender or your accountant will accept
 > • Apache 2.0 licensed, runs on your laptop, no cloud account
 >
