@@ -79,7 +79,7 @@ Business conditions this document relies on.
 | **A-2** | A commercial email delivery service is available on ordinary terms. |
 | **A-3** | The company has, or can obtain, an identity provider. CFOKit does not become one. |
 | **A-4** | Where a company uses a tax preparer, that preparer works from what CFOKit produces. Many owner-operators prepare and file their own returns. |
-| **A-5** | Inference cost is carried by the runtime the user already operates, not by CFOKit. |
+| **A-5** | On the default path, inference cost is carried by the runtime the user already operates, not by CFOKit. Where CFOKit operates the runtime itself, it carries that cost and the assumption does not hold. |
 | **A-6** | An independent auditor can be engaged, and the operating history an attestation requires accumulates only from the date the practice begins. |
 | **A-7** | Companies migrating in are most often leaving a small-business accounting package whose export fidelity is outside our control. |
 | **A-8** | A customer will open an invoice from an unauthenticated link, and neither they nor their supplier regards that as a risk. The incumbents work this way and the market has accepted it. |

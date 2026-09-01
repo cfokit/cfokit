@@ -79,6 +79,7 @@ cost the same context as inlining, while diluting adherence to the rules that ma
 | [0032](0032-component-authentication-and-configuration.md) | Components authenticate as OAuth clients | Draft |
 | [0033](0033-provenance-captured-at-the-tool-boundary.md) | Provenance is captured at the tool boundary, never self-reported by the agent | Draft |
 | [0034](0034-cfokit-operated-agent-runtime.md) | CFOKit ships an agent runtime, and the SOC 1 boundary is drawn at it | Draft |
+| [0035](0035-inference-for-the-attested-runtime.md) | CFOKit holds the inference relationship for the attested runtime | Draft |
 
 ## Deferred — decided in principle, waiting on a need
 
