@@ -101,7 +101,6 @@ def test_a_draft_is_recorded_with_attribution_from_the_principal(
         database,
         context(entity_id, AGENT),
         entry=balanced(cash, revenue),
-        functional_currency="USD",
         post=False,
     )
 
@@ -125,7 +124,6 @@ def test_a_balanced_entry_can_be_posted_straight_through(
         database,
         context(entity_id),
         entry=balanced(cash, revenue),
-        functional_currency="USD",
         post=True,
     )
 
@@ -156,9 +154,7 @@ def test_an_unbalanced_entry_is_refused_before_it_reaches_the_database(
     )
 
     with pytest.raises(UnbalancedTransaction) as caught:
-        record_transaction(
-            database, context(entity_id), entry=entry, functional_currency="USD", post=True
-        )
+        record_transaction(database, context(entity_id), entry=entry, post=True)
 
     assert caught.value.code == "unbalanced_transaction"
     assert transaction_count(owner_conn, entity_id) == 0
@@ -170,7 +166,6 @@ def test_a_draft_can_be_posted_later(database: Database, books: tuple[str, str, 
         database,
         context(entity_id),
         entry=balanced(cash, revenue),
-        functional_currency="USD",
         post=False,
     )
 
@@ -178,7 +173,6 @@ def test_a_draft_can_be_posted_later(database: Database, books: tuple[str, str, 
         database,
         context(entity_id),
         transaction_id=draft.transaction_id,
-        functional_currency="USD",
     )
 
     assert posted.transaction_id == draft.transaction_id
@@ -192,7 +186,6 @@ def test_posting_twice_is_refused(database: Database, books: tuple[str, str, str
         database,
         context(entity_id),
         entry=balanced(cash, revenue),
-        functional_currency="USD",
         post=True,
     )
 
@@ -201,7 +194,6 @@ def test_posting_twice_is_refused(database: Database, books: tuple[str, str, str
             database,
             context(entity_id),
             transaction_id=written.transaction_id,
-            functional_currency="USD",
         )
 
     assert caught.value.code == "transaction_already_posted"
@@ -220,9 +212,7 @@ def test_a_write_without_a_key_is_rejected(
     )
 
     with pytest.raises(IdempotencyKeyRequired) as caught:
-        record_transaction(
-            database, ctx, entry=balanced(cash, revenue), functional_currency="USD", post=True
-        )
+        record_transaction(database, ctx, entry=balanced(cash, revenue), post=True)
 
     assert caught.value.code == "idempotency_key_required"
 
@@ -235,10 +225,8 @@ def test_a_replay_returns_the_original_and_books_nothing_further(
     ctx = context(entity_id)
     entry = balanced(cash, revenue)
 
-    first = record_transaction(database, ctx, entry=entry, functional_currency="USD", post=True)
-    second = record_transaction(
-        database, ctx, entry=entry, functional_currency="USD", post=True
-    )
+    first = record_transaction(database, ctx, entry=entry, post=True)
+    second = record_transaction(database, ctx, entry=entry, post=True)
 
     assert second.transaction_id == first.transaction_id
     assert second.replayed is True
@@ -255,8 +243,8 @@ def test_a_replay_writes_no_second_audit_row(
     ctx = context(entity_id)
     entry = balanced(cash, revenue)
 
-    record_transaction(database, ctx, entry=entry, functional_currency="USD", post=True)
-    record_transaction(database, ctx, entry=entry, functional_currency="USD", post=True)
+    record_transaction(database, ctx, entry=entry, post=True)
+    record_transaction(database, ctx, entry=entry, post=True)
 
     assert len(audit_rows(owner_conn, entity_id)) == 1
 
@@ -273,7 +261,6 @@ def test_a_key_reused_with_different_parameters_is_refused(
         database,
         ctx,
         entry=balanced(cash, revenue, "100.00"),
-        functional_currency="USD",
         post=True,
     )
 
@@ -282,7 +269,6 @@ def test_a_key_reused_with_different_parameters_is_refused(
             database,
             ctx,
             entry=balanced(cash, revenue, "250.00"),
-            functional_currency="USD",
             post=True,
         )
 
@@ -297,12 +283,8 @@ def test_two_identical_transactions_under_different_keys_both_book(
     entity_id, cash, revenue = books
     entry = balanced(cash, revenue, "5.00")
 
-    record_transaction(
-        database, context(entity_id), entry=entry, functional_currency="USD", post=True
-    )
-    record_transaction(
-        database, context(entity_id), entry=entry, functional_currency="USD", post=True
-    )
+    record_transaction(database, context(entity_id), entry=entry, post=True)
+    record_transaction(database, context(entity_id), entry=entry, post=True)
 
     assert transaction_count(owner_conn, entity_id) == 2
 
@@ -319,14 +301,12 @@ def test_exactly_one_audit_row_per_state_change(
         database,
         context(entity_id),
         entry=balanced(cash, revenue),
-        functional_currency="USD",
         post=False,
     )
     post_transaction(
         database,
         context(entity_id),
         transaction_id=draft.transaction_id,
-        functional_currency="USD",
     )
 
     rows = audit_rows(owner_conn, entity_id)
@@ -340,9 +320,7 @@ def test_the_audit_row_names_the_principal_and_the_request(
     entity_id, cash, revenue = books
     ctx = context(entity_id, AGENT)
 
-    record_transaction(
-        database, ctx, entry=balanced(cash, revenue), functional_currency="USD", post=True
-    )
+    record_transaction(database, ctx, entry=balanced(cash, revenue), post=True)
 
     (row,) = audit_rows(owner_conn, entity_id)
     assert row[1] == "skill:bookkeeper for user:geoff"
@@ -360,7 +338,6 @@ def test_the_audit_detail_carries_no_amounts(
         database,
         context(entity_id),
         entry=balanced(cash, revenue, "1234.56"),
-        functional_currency="USD",
         post=True,
     )
 
@@ -386,9 +363,7 @@ def test_a_failed_write_leaves_no_audit_row(
     )
 
     with pytest.raises(UnbalancedTransaction):
-        record_transaction(
-            database, context(entity_id), entry=entry, functional_currency="USD", post=True
-        )
+        record_transaction(database, context(entity_id), entry=entry, post=True)
 
     assert audit_rows(owner_conn, entity_id) == []
 
@@ -404,7 +379,6 @@ def test_a_reversal_is_posted_linked_and_nets_to_zero(
         database,
         context(entity_id),
         entry=balanced(cash, revenue),
-        functional_currency="USD",
         post=True,
     )
 
@@ -412,7 +386,6 @@ def test_a_reversal_is_posted_linked_and_nets_to_zero(
         database,
         context(entity_id),
         transaction_id=original.transaction_id,
-        functional_currency="USD",
         original_period_closed=False,
         current_period_date=TODAY,
     )
@@ -445,7 +418,6 @@ def test_both_entries_remain_visible_after_a_correction(
         database,
         context(entity_id),
         entry=balanced(cash, revenue),
-        functional_currency="USD",
         post=True,
     )
     before = None
@@ -462,7 +434,6 @@ def test_both_entries_remain_visible_after_a_correction(
         database,
         context(entity_id),
         transaction_id=original.transaction_id,
-        functional_currency="USD",
         original_period_closed=False,
         current_period_date=TODAY,
     )
@@ -517,7 +488,6 @@ def test_writes_to_one_entity_serialise(
                 database,
                 context(entity_id),
                 entry=balanced(cash, revenue),
-                functional_currency="USD",
                 post=True,
             )
             finished.set()

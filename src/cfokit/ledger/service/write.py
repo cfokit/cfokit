@@ -96,7 +96,6 @@ def record_transaction(
     context: WriteContext,
     *,
     entry: Entry,
-    functional_currency: str,
     post: bool,
     entry_kind: str = "ordinary",
 ) -> WrittenTransaction:
@@ -111,11 +110,6 @@ def record_transaction(
     something this function can infer from `actor_class`.
     """
     _require_key(context)
-
-    if post:
-        # The ergonomic check, so the caller gets a stable code and a readable message before
-        # the deferred trigger produces a blunt one at COMMIT (ADR-0006).
-        check_postable(entry, functional_currency=functional_currency)
 
     digest = _request_hash(
         "record_transaction",
@@ -136,6 +130,13 @@ def record_transaction(
                 status=str(replay["status"]),
                 replayed=True,
             )
+
+        if post:
+            # The ergonomic check, so the caller gets a stable code and a readable message
+            # before the deferred trigger produces a blunt one at COMMIT (ADR-0006). Inside
+            # the transaction because the functional currency it checks against is read from
+            # the entity, and a refused write rolls back leaving nothing behind.
+            check_postable(entry, functional_currency=write.functional_currency)
 
         transaction_id = write.insert_draft(
             transaction_date=entry.transaction_date,
@@ -174,7 +175,6 @@ def post_transaction(
     context: WriteContext,
     *,
     transaction_id: str,
-    functional_currency: str,
 ) -> WrittenTransaction:
     """Move a draft to posted. The point of no return (`LED-07`)."""
     _require_key(context)
@@ -204,7 +204,7 @@ def post_transaction(
                 description=stored.description,
                 reverses_id=stored.reverses_id,
             ),
-            functional_currency=functional_currency,
+            functional_currency=write.functional_currency,
         )
         write.mark_posted(transaction_id)
 
@@ -228,7 +228,6 @@ def reverse_transaction(
     context: WriteContext,
     *,
     transaction_id: str,
-    functional_currency: str,
     original_period_closed: bool,
     current_period_date: date,
     description: str | None = None,
@@ -268,7 +267,7 @@ def reverse_transaction(
             current_period_date=current_period_date,
             description=description,
         )
-        check_postable(reversal, functional_currency=functional_currency)
+        check_postable(reversal, functional_currency=write.functional_currency)
 
         reversal_id = write.insert_draft(
             transaction_date=reversal.transaction_date,

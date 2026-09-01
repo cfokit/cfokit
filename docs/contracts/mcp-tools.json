@@ -1,0 +1,172 @@
+[
+  {
+    "description": "Post a draft transaction. Posting is the point of no return: a posted transaction is never edited or deleted, only reversed.",
+    "inputSchema": {
+      "properties": {
+        "entity_id": {
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "idempotency_key": {
+          "title": "Idempotency Key",
+          "type": "string"
+        },
+        "transaction_id": {
+          "title": "Transaction Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity_id",
+        "transaction_id",
+        "idempotency_key"
+      ],
+      "title": "post_draftArguments",
+      "type": "object"
+    },
+    "name": "post_transaction"
+  },
+  {
+    "description": "Read a transaction and its postings, including what wrote it.",
+    "inputSchema": {
+      "properties": {
+        "entity_id": {
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "transaction_id": {
+          "title": "Transaction Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity_id",
+        "transaction_id"
+      ],
+      "title": "readArguments",
+      "type": "object"
+    },
+    "name": "read_transaction"
+  },
+  {
+    "description": "Record a transaction in an entity's books, as a draft or posted straight through. Postings must sum to zero per commodity to post. Requires an idempotency key; replaying one books nothing further.",
+    "inputSchema": {
+      "$defs": {
+        "PostingArgument": {
+          "description": "One side of a transaction.\n\n`amount` is a string for the same reason it is on REST: a JSON number cannot carry the\nscale the amount was written at, and `100.00` would arrive as `100`.",
+          "properties": {
+            "account_id": {
+              "description": "The account this posting hits.",
+              "title": "Account Id",
+              "type": "string"
+            },
+            "amount": {
+              "description": "Signed decimal string. Positive debits the account.",
+              "title": "Amount",
+              "type": "string"
+            },
+            "commodity": {
+              "description": "The unit the amount is denominated in, e.g. USD.",
+              "title": "Commodity",
+              "type": "string"
+            }
+          },
+          "required": [
+            "account_id",
+            "amount",
+            "commodity"
+          ],
+          "title": "PostingArgument",
+          "type": "object"
+        }
+      },
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "entity_id": {
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "idempotency_key": {
+          "title": "Idempotency Key",
+          "type": "string"
+        },
+        "post": {
+          "default": false,
+          "title": "Post",
+          "type": "boolean"
+        },
+        "postings": {
+          "items": {
+            "$ref": "#/$defs/PostingArgument"
+          },
+          "title": "Postings",
+          "type": "array"
+        },
+        "transaction_date": {
+          "format": "date",
+          "title": "Transaction Date",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity_id",
+        "transaction_date",
+        "postings",
+        "idempotency_key"
+      ],
+      "title": "recordArguments",
+      "type": "object"
+    },
+    "name": "record_transaction"
+  },
+  {
+    "description": "Correct a posted transaction by reversing it. Both the original and the reversal remain visible; nothing is edited or removed.",
+    "inputSchema": {
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "entity_id": {
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "idempotency_key": {
+          "title": "Idempotency Key",
+          "type": "string"
+        },
+        "transaction_id": {
+          "title": "Transaction Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity_id",
+        "transaction_id",
+        "idempotency_key"
+      ],
+      "title": "reverseArguments",
+      "type": "object"
+    },
+    "name": "reverse_transaction"
+  }
+]

@@ -165,27 +165,28 @@ jobs:
   #     - run: uv sync --locked --group oracle
   #     - run: uv run pytest -m oracle
 
-  # Gate 5 — generated OpenAPI and MCP tool descriptions match what is committed; a diff
-  # means a contract change and needs review (ADR-0015).
-  #
-  # Enabled when the adapters exist and there is a committed artifact to diff against.
-  #
-  # contracts:
-  #   name: "Gate 5: published interfaces unchanged"
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v5
-  #     - uses: astral-sh/setup-uv@v7
-  #     - run: uv sync --locked
-  #     - run: uv run task generate-contracts
-  #     - run: git diff --exit-code -- docs/contracts/
+  # Gate 5 — generated OpenAPI, MCP tool descriptions and error codes match what is
+  # committed; a diff means a contract change and needs review (ADR-0015).
+  contracts:
+    name: "Gate 5: published interfaces unchanged"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - run: uv python install ${{ env.PYTHON_VERSION }}
+      - run: uv sync --locked
+      - run: uv run task generate-contracts
+      # No database is touched to generate these, so this job needs no services.
+      - run: git diff --exit-code -- docs/contracts/
 
   # A single required check, so the branch protection rule does not need editing every time
   # a gate is added.
   gates:
     name: All gates
     if: always()
-    needs: [lint, money, decisions, test, portability]
+    needs: [lint, money, decisions, test, portability, contracts]
     runs-on: ubuntu-latest
     steps:
       - name: Fail if any gate failed

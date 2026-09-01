@@ -82,6 +82,12 @@ def owner_dsn() -> str:
 
 
 @pytest.fixture
+def app_dsn() -> str:
+    """The application role's connection string, as the service layer is configured with."""
+    return APP_URL
+
+
+@pytest.fixture
 def database() -> Database:
     """The database as the service layer sees it, connecting as the application role."""
     return Database(APP_URL)
