@@ -67,7 +67,7 @@ cannot have two implementations.
 ### Scope: this record governs skills
 
 Skills are unambiguously separate, and this record binds them. It does **not** settle whether
-first-party in-repository packages must also use HTTP.
+first-party in-repository capabilities must also use HTTP.
 [ADR-0022](0022-tiny-ledger-modules-and-components.md) holds the criteria for classifying such a
 package as an in-process module or a separate component. There was an `import-linter` contract
 standing as a provisional default for ingestion; the package it guarded held no code and has been
@@ -92,7 +92,7 @@ removed, so the question is open with nothing pre-empting it.
 
 Enforced, and observed to fail when deliberately violated. `import-linter` contracts in
 `pyproject.toml` fail `uv run task lint` on a layer violation. Structurally, skills live outside
-`packages/` and are not distributions (ADR-0020), so a skill has no dependency graph through which
+`src/` and are not Python (ADR-0020), so a skill has no dependency graph through which
 to couple — the lint contract is a second line rather than the only one.
 
 ## Pros and Cons of the Options
@@ -170,7 +170,7 @@ Would remove the expressiveness objection permanently by making the tool surface
 * The tool contract is a published interface: committed descriptions, diffed in CI, changes reviewed
   (ADR-0015).
 * `import-linter` enforces the boundary. Already in place.
-* Skills live outside `packages/` so they have no dependency graph to couple through (ADR-0020).
+* Skills live outside `src/` so they have no dependency graph to couple through (ADR-0020).
 * `skills/CLAUDE.md` states the rule where an agent working on a skill will read it.
 * The local compose stack must make a working ledger trivially available, since skills cannot
   function without one (ADR-0018).
