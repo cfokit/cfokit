@@ -41,8 +41,8 @@ what takes the place of that.
   disabled.
 * ADR-0009 makes both adapters thin over one service layer, so most behaviour is reachable without a
   protocol or a model.
-* The ledger's output is a trial balance, so agent behaviour can be asserted against state rather
-  than judged as prose.
+* An agent's turn leaves records rather than prose, so its behaviour can be asserted against those
+  records rather than judged.
 * A contributor runs the full suite from a clean checkout with no credentials and no accounts
   (`NFR-21`).
 
@@ -101,18 +101,29 @@ Evals answer a question the layers below cannot: whether the tool surface is goo
 to use correctly. That is a property of the descriptions and the capability model, not of the
 service.
 
-**Evals assert on state, never on prose.** The ledger's output is a trial balance, and the records the
-provenance requirements already oblige — the audit trail, and the decision record of ADR-0033 — carry
-the trajectory. So the questions worth asking are all state questions:
+**Evals assert on records, never on prose.** What an agent's turn leaves behind is a set of records:
+the transaction and whether it is draft or posted, the postings under it and the accounts they hit,
+any reversal link, the audit row, and the decision record of ADR-0033. Every one is directly
+assertable, and together they carry the trajectory as well as the result.
+
+**Not the trial balance.** That is a report (`RPT-09`), it is derived, and it is an aggregate — two
+materially different behaviours can produce an identical one, such as drafting then posting versus
+posting directly, or a posting plus a reversal that nets out. Asserting on it would be weaker than
+asserting on the records, and would couple a behaviour eval to the reporting layer so that a
+reporting defect failed an agent eval. Its place is layer 1, where "it ties" is an invariant, and
+`MIG-09`, where it verifies an export.
+
+So the questions worth asking are all record questions:
 
 - Did it draft rather than post directly?
 - Did it stop and ask when it met a closed period, rather than working around it (ADR-0030)?
 - Given a document carrying an embedded instruction, did it post anything (`PLT-23`)?
 - What did it actually call, and in what order?
 
-LLM-as-judge is permitted only where no state assertion exists, which for this product should be
-rare. General guidance puts deterministic checks at 60–70% of an eval surface; a ledger should sit
-well above that, and a judge appearing where a state assertion was available is a design smell.
+LLM-as-judge is permitted only where no assertion on the records is possible, which for this product
+should be rare. General guidance puts deterministic checks at 60–70% of an eval surface; a ledger
+should sit well above that, and a judge appearing where a record assertion was available is a design
+smell.
 
 ### 5. The rules that make the layers hold
 
@@ -203,9 +214,9 @@ The cheapest option, and the one that looks sufficient.
 ### LLM-as-judge as the primary check on agent behaviour
 
 * Good, because it needs no state model and can score things no assertion can express.
-* Bad, because it is unnecessary here. The output is a trial balance, so nearly every question worth
-  asking is a state question, and a judge introduces non-determinism into the check as well as the
-  thing being checked.
+* Bad, because it is unnecessary here. An agent's turn leaves records rather than prose, so nearly
+  every question worth asking is answerable by reading them, and a judge introduces non-determinism
+  into the check as well as into the thing being checked.
 * Bad, because a judge is itself a model that can be wrong in the same direction as the agent.
 
 ## More Information
