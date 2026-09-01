@@ -15,8 +15,13 @@
 --   ADR-0011  Per-entity advisory lock; one audit_log row per state change
 --   ADR-0029  Idempotency keys, mandatory on every write
 --   ADR-0013  Two dates per transaction, so backdating is self-identifying
+--   ADR-0033  Attribution on the entry itself; four columns and no more
 --   LED-18    Lots deferred, but the shape is reserved
 --   LED-14    Accounting basis and fiscal year are entity properties
+--   LED-15    Functional currency is declared at creation
+--   LED-20    Every transaction records the principal that wrote it
+--   BKP-19    A transaction records what it was derived from
+--   PLT-08    Period boundaries are determined in the entity's time zone
 
 -- ---------------------------------------------------------------------------
 -- Migration bookkeeping. The runner creates this if absent, but declaring it
@@ -41,6 +46,20 @@ CREATE TABLE entity (
     accounting_basis      text        NOT NULL CHECK (accounting_basis IN ('cash', 'accrual')),
     fiscal_year_end_month smallint    NOT NULL CHECK (fiscal_year_end_month BETWEEN 1 AND 12),
     fiscal_year_end_day   smallint    NOT NULL CHECK (fiscal_year_end_day BETWEEN 1 AND 31),
+    -- LED-15: declared at creation, no undeclared state. Every posting is denominated in a
+    -- commodity, and until LED-16 activates for this entity anything other than this one is
+    -- refused rather than converted.
+    functional_currency   text        NOT NULL,
+    -- PLT-08: period boundaries, fiscal year ends and transaction dates are all determined
+    -- in the entity's zone, so it cannot be a deployment-wide setting or a report option.
+    time_zone             text        NOT NULL,
+    -- ADR-0011 requires advisory lock keys derived from the entity by a "documented,
+    -- collision-free scheme". pg_advisory_xact_lock takes a bigint and entity ids are uuids,
+    -- so any hash-based scheme is collision-*resistant* at best — and a collision silently
+    -- serialises two unrelated entities against each other. An identity column is exactly
+    -- collision-free, and the advisory namespace is global, so this is the whole scheme:
+    -- lock on entity.lock_key, never on a hash of entity.id.
+    lock_key              bigint      NOT NULL GENERATED ALWAYS AS IDENTITY UNIQUE,
     created_at            timestamptz NOT NULL DEFAULT now()
 );
 
@@ -79,6 +98,42 @@ CREATE TABLE ledger_transaction (
     description      text,
     -- ADR-0007: corrections are reversing entries, and a reversal says what it reverses.
     reverses_id      uuid        REFERENCES ledger_transaction (id),
+
+    -- ADR-0033 § 2: attribution on the entry itself, four columns and no more. These ship
+    -- here rather than in a later migration for the same reason recorded_at did (ADR-0013):
+    -- records are append-only, so a transaction written before it carries its principal can
+    -- never be attributed afterwards (LED-20's acceptance clause turns on "however old").
+    --
+    -- Attribution in audit_log alone was considered and rejected: audit_log has a retention
+    -- schedule (PLT-20) and the entry does not, so attribution would expire while the entry
+    -- it describes remained.
+    --
+    -- actor_principal_id and actor_class are derived server-side from the authenticated
+    -- principal. No write path accepts them as parameters — same device as recorded_at.
+    actor_principal_id      text NOT NULL,
+    -- ADR-0033 § 3: three values, not two. A rule-assigned coding is deterministic and
+    -- re-derivable; an agent judgement is neither. Collapsing them into "non-human" discards
+    -- the distinction that most reduces examination cost.
+    actor_class             text NOT NULL CHECK (actor_class IN ('person', 'rule', 'agent')),
+    -- IAM-11, SOC1-15: the person an agent acted for. Null when the principal acted for
+    -- itself.
+    acting_for_principal_id text,
+    -- ADR-0033 § 5: opaque pointer to the decision record for the run that produced this
+    -- entry. Deliberately not a foreign key — the decision record is a separate module and
+    -- the ledger holds the identifier without importing it (ADR-0022).
+    decision_record_id      uuid,
+    -- BKP-19: what this was derived from outside the books — a feed record, an uploaded
+    -- statement, a document. Same lifetime as the entry, for the same reason as the columns
+    -- above. Shape is left open because the sources are not enumerable yet.
+    derived_from            jsonb,
+
+    -- LED-10 and LED-12 require opening and closing entries to be "identifiable as such".
+    -- Under append-only that cannot be established after the fact, so the discriminator
+    -- ships with the table rather than with the period-close work that will populate it.
+    -- Both remain ordinary postings; this says what kind, not how they behave.
+    entry_kind       text        NOT NULL DEFAULT 'ordinary'
+                                 CHECK (entry_kind IN ('ordinary', 'opening', 'closing')),
+
     CONSTRAINT posted_at_iff_posted CHECK ((status = 'posted') = (posted_at IS NOT NULL))
 );
 
@@ -86,6 +141,9 @@ CREATE INDEX ledger_transaction_entity_date_idx
     ON ledger_transaction (entity_id, transaction_date);
 -- Supports "as known at T" reporting (ADR-0013).
 CREATE INDEX ledger_transaction_recorded_idx ON ledger_transaction (entity_id, recorded_at);
+-- Stratifying a population by who wrote an entry is the query LED-20 and SOC1-15 exist for.
+CREATE INDEX ledger_transaction_actor_idx
+    ON ledger_transaction (entity_id, actor_class, actor_principal_id);
 
 -- ---------------------------------------------------------------------------
 -- Postings. Every decimal column is NUMERIC(28,10) (ADR-0005).
