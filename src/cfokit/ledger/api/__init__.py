@@ -28,7 +28,11 @@ from fastapi import Depends, FastAPI, Header, Path, Request, Response, status
 from fastapi.responses import JSONResponse
 
 from cfokit.ledger.api.models import (
+    CreateEntityRequest,
+    EntityCreatedResponse,
     ErrorResponse,
+    GrantResponse,
+    GrantRoleRequest,
     PostingModel,
     RecordTransactionRequest,
     TransactionResponse,
@@ -39,6 +43,7 @@ from cfokit.ledger.config import Settings
 from cfokit.ledger.engine import Entry, Posting
 from cfokit.ledger.errors import LedgerError
 from cfokit.ledger.repository.unit_of_work import Database
+from cfokit.ledger.service.administration import create_entity, grant_role, revoke_grant
 from cfokit.ledger.service.authentication import Authenticator, TokenAuthenticator
 from cfokit.ledger.service.principal import Principal
 from cfokit.ledger.service.read import read_transaction
@@ -153,6 +158,103 @@ def create_app(settings: Settings, authenticator: Authenticator | None = None) -
             "migrations_current": result.migrations_current,
             "detail": result.detail,
         }
+
+    # -----------------------------------------------------------------------------------
+    # Administration. `IAM-03` makes granting, revoking and changing a role assignment
+    # administrative capabilities "available to no other role", and `IAM-13` requires every
+    # one of them recorded with who made it and when — which the service layer does.
+    #
+    # Creating an entity is the exception: `IAM-06` makes it the one act requiring an
+    # authenticated identity and no prior role, so the deployment is usable as it stands.
+    # -----------------------------------------------------------------------------------
+
+    @app.post(
+        "/entities",
+        tags=["administration"],
+        summary="Create an entity and assign its first administrator",
+        status_code=status.HTTP_201_CREATED,
+        responses=ERRORS,
+    )
+    def create(
+        body: CreateEntityRequest,
+        acting: Annotated[Principal, Depends(get_principal)],
+        database: Annotated[Database, Depends(get_database)],
+        request_id: Annotated[str | None, Header(alias="X-Request-Id")] = None,
+    ) -> EntityCreatedResponse:
+        """Requires authentication and no prior role (`IAM-06`).
+
+        The entity and its first administrator are written in one transaction, or neither is
+        (`IAM-05`).
+        """
+        created = create_entity(
+            database,
+            principal=acting,
+            request_id=request_id or f"req-{uuid.uuid4().hex}",
+            slug=body.slug,
+            name=body.name,
+            accounting_basis=body.accounting_basis,
+            fiscal_year_end_month=body.fiscal_year_end_month,
+            fiscal_year_end_day=body.fiscal_year_end_day,
+            functional_currency=body.functional_currency,
+            time_zone=body.time_zone,
+            administrator=body.administrator,
+        )
+        return EntityCreatedResponse(
+            entity_id=created.entity_id,
+            administrator_grant_id=created.administrator_grant_id,
+        )
+
+    @app.post(
+        "/entities/{entity_id}/grants",
+        tags=["administration"],
+        summary="Grant a role in this entity",
+        status_code=status.HTTP_201_CREATED,
+        responses=ERRORS,
+    )
+    def grant(
+        entity_id: Annotated[str, Path()],
+        body: GrantRoleRequest,
+        acting: Annotated[Principal, Depends(get_principal)],
+        database: Annotated[Database, Depends(get_database)],
+        request_id: Annotated[str | None, Header(alias="X-Request-Id")] = None,
+    ) -> GrantResponse:
+        grant_id = grant_role(
+            database,
+            entity_id=entity_id,
+            principal=acting,
+            request_id=request_id or f"req-{uuid.uuid4().hex}",
+            to_principal=body.principal_id,
+            role=body.role,
+            lapses_at=body.lapses_at,
+        )
+        return GrantResponse(grant_id=grant_id)
+
+    @app.delete(
+        "/entities/{entity_id}/grants/{grant_id}",
+        tags=["administration"],
+        summary="Revoke a grant",
+        status_code=status.HTTP_204_NO_CONTENT,
+        responses=ERRORS,
+    )
+    def revoke(
+        entity_id: Annotated[str, Path()],
+        grant_id: Annotated[str, Path()],
+        acting: Annotated[Principal, Depends(get_principal)],
+        database: Annotated[Database, Depends(get_database)],
+        request_id: Annotated[str | None, Header(alias="X-Request-Id")] = None,
+    ) -> None:
+        """Revoking is `DELETE` on the route and an update in the schema.
+
+        The grant row is never removed — `IAM-14` has to be able to report what was held before
+        it ended — so the verb describes the effect on access rather than on storage.
+        """
+        revoke_grant(
+            database,
+            entity_id=entity_id,
+            principal=acting,
+            request_id=request_id or f"req-{uuid.uuid4().hex}",
+            grant_id=grant_id,
+        )
 
     @app.post(
         "/entities/{entity_id}/transactions",

@@ -21,7 +21,7 @@ __all__ = ["record"]
 def record(
     conn: psycopg.Connection[Any],
     *,
-    entity_id: str,
+    entity_id: str | None,
     request_id: str,
     actor: str,
     action: str,
@@ -33,6 +33,10 @@ def record(
 
     `request_id` is the inbound request's id, propagated so a row in the trail can be joined
     to the call that produced it (CLAUDE.md, Observability).
+
+    `entity_id` is nullable because the column has always allowed it and this annotation
+    lagged the schema. Every act that reaches here does carry one: creating an entity starts
+    unscoped, but the row it writes belongs to the entity it created.
     """
     with conn.cursor() as cur:
         cur.execute(

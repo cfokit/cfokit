@@ -27,11 +27,11 @@ import psycopg
 
 from cfokit.ledger.engine import Posting
 from cfokit.ledger.errors import EntityNotFound
-from cfokit.ledger.repository import audit, grants, idempotency, transactions
+from cfokit.ledger.repository import administration, audit, grants, idempotency, transactions
 from cfokit.ledger.repository.connection import connect
 from cfokit.ledger.repository.transactions import StoredTransaction
 
-__all__ = ["Database", "EntityWrite"]
+__all__ = ["Database", "EntityWrite", "UnscopedWrite"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -84,6 +84,34 @@ class EntityWrite:
         """Roles this principal holds here at `at`. Read inside the locked transaction, so a
         revocation committed a moment ago is already in force (`IAM-15`)."""
         return grants.roles_in_force(self._conn, self._entity_id, principal_id, at)
+
+    def grant_role(
+        self, *, principal_id: str, role: str, granted_by: str, lapses_at: datetime | None
+    ) -> str:
+        return administration.grant_entity_role(
+            self._conn,
+            entity_id=self._entity_id,
+            principal_id=principal_id,
+            role=role,
+            granted_by=granted_by,
+            lapses_at=lapses_at,
+        )
+
+    def revoke_grant(self, grant_id: str, *, revoked_by: str) -> bool:
+        return administration.revoke_entity_grant(
+            self._conn, grant_id=grant_id, revoked_by=revoked_by
+        )
+
+    def would_remove_last_administrator(self, grant_id: str, at: datetime) -> bool:
+        """Whether revoking this grant would leave the entity with no administrator.
+
+        `IAM-04`: "An entity always has at least one identity holding the administrative role.
+        The last administrator cannot be removed or demoted." Counted inside the locked
+        transaction, so two concurrent revocations cannot each see the other's administrator.
+        """
+        return administration.would_remove_last_administrator(
+            self._conn, entity_id=self._entity_id, grant_id=grant_id, at=at
+        )
 
     # --- the books -----------------------------------------------------------------------
 
@@ -148,11 +176,100 @@ class EntityWrite:
         )
 
 
+class UnscopedWrite:
+    """The operations available in one transaction that is not scoped to an entity.
+
+    Creating an entity is the only act with no entity to scope to or lock on, because the
+    entity does not exist until it commits (`IAM-06`). Separate from `EntityWrite` so neither
+    offers the other's operations by accident.
+    """
+
+    def __init__(self, conn: psycopg.Connection[Any]) -> None:
+        self._conn = conn
+
+    def create_entity(
+        self,
+        *,
+        slug: str,
+        name: str,
+        accounting_basis: str,
+        fiscal_year_end_month: int,
+        fiscal_year_end_day: int,
+        functional_currency: str,
+        time_zone: str,
+    ) -> str:
+        return administration.insert_entity(
+            self._conn,
+            slug=slug,
+            name=name,
+            accounting_basis=accounting_basis,
+            fiscal_year_end_month=fiscal_year_end_month,
+            fiscal_year_end_day=fiscal_year_end_day,
+            functional_currency=functional_currency,
+            time_zone=time_zone,
+        )
+
+    def scope_to(self, entity_id: str) -> None:
+        """Scope the rest of this transaction to an entity that now exists.
+
+        Creating an entity starts unscoped — there is nothing to scope to — and the audit row
+        that records it belongs to the entity it created. Row-level security applies to the
+        insert as well as to reads, so the scope has to be set before it (ADR-0003).
+        """
+        with self._conn.cursor() as cur:
+            cur.execute("SELECT set_config('cfokit.entity_id', %s, true)", (entity_id,))
+
+    def grant_entity_role(
+        self, *, entity_id: str, principal_id: str, role: str, granted_by: str
+    ) -> str:
+        return administration.grant_entity_role(
+            self._conn,
+            entity_id=entity_id,
+            principal_id=principal_id,
+            role=role,
+            granted_by=granted_by,
+            lapses_at=None,
+        )
+
+    def record_audit(
+        self,
+        *,
+        entity_id: str | None,
+        request_id: str,
+        actor: str,
+        action: str,
+        subject_type: str,
+        subject_id: str | None,
+        detail: dict[str, Any] | None = None,
+    ) -> None:
+        audit.record(
+            self._conn,
+            entity_id=entity_id,
+            request_id=request_id,
+            actor=actor,
+            action=action,
+            subject_type=subject_type,
+            subject_id=subject_id,
+            detail=detail,
+        )
+
+
 class Database:
     """The database, as everything above `repository` sees it."""
 
     def __init__(self, dsn: str) -> None:
         self._dsn = dsn
+
+    @contextmanager
+    def unscoped_write(self) -> Iterator[UnscopedWrite]:
+        """One transaction, scoped to nothing and locking nothing.
+
+        There is no entity to scope to and no per-entity lock to take. That is not a gap: the
+        one act this serves — creating an entity — cannot contend on an entity, and a lock
+        keyed on one that does not exist yet would be theatre.
+        """
+        with connect(self._dsn) as conn, conn.transaction():
+            yield UnscopedWrite(conn)
 
     @contextmanager
     def entity_write(self, entity_id: str) -> Iterator[EntityWrite]:

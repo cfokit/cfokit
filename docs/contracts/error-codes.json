@@ -24,6 +24,10 @@
     "error": "IdempotencyKeyReused"
   },
   {
+    "code": "last_administrator",
+    "error": "LastAdministrator"
+  },
+  {
     "code": "migration_failed",
     "error": "MigrationError"
   },

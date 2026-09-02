@@ -1,6 +1,92 @@
 {
   "components": {
     "schemas": {
+      "CreateEntityRequest": {
+        "description": "Everything an entity declares at creation, all of it required.\n\n`LED-14` and `LED-15` say the basis, the fiscal year end and the functional currency have\nno undeclared state, and `PLT-08` says the same for the time zone. There are no defaults\nhere for that reason: a default would be an undeclared state wearing a value.",
+        "properties": {
+          "accounting_basis": {
+            "description": "Fixes what every report defaults to. A property of the entity, not a per-report option, and never a posting rule (ADR-0037).",
+            "enum": [
+              "cash",
+              "accrual"
+            ],
+            "title": "Accounting Basis",
+            "type": "string"
+          },
+          "administrator": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The entity's first administrator. Defaults to the creating principal; an entity never exists without one (IAM-05).",
+            "title": "Administrator"
+          },
+          "fiscal_year_end_day": {
+            "maximum": 31.0,
+            "minimum": 1.0,
+            "title": "Fiscal Year End Day",
+            "type": "integer"
+          },
+          "fiscal_year_end_month": {
+            "maximum": 12.0,
+            "minimum": 1.0,
+            "title": "Fiscal Year End Month",
+            "type": "integer"
+          },
+          "functional_currency": {
+            "description": "Amounts in any other commodity are refused until LED-16 activates.",
+            "title": "Functional Currency",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "description": "Stable identifier, unique in this deployment.",
+            "title": "Slug",
+            "type": "string"
+          },
+          "time_zone": {
+            "description": "Period boundaries are determined in it (PLT-08).",
+            "title": "Time Zone",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "accounting_basis",
+          "fiscal_year_end_month",
+          "fiscal_year_end_day",
+          "functional_currency",
+          "time_zone"
+        ],
+        "title": "CreateEntityRequest",
+        "type": "object"
+      },
+      "EntityCreatedResponse": {
+        "properties": {
+          "administrator_grant_id": {
+            "title": "Administrator Grant Id",
+            "type": "string"
+          },
+          "entity_id": {
+            "title": "Entity Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entity_id",
+          "administrator_grant_id"
+        ],
+        "title": "EntityCreatedResponse",
+        "type": "object"
+      },
       "ErrorResponse": {
         "description": "Every error, on both adapters, in this shape.\n\n`code` is the contract; `message` is not and may be reworded at will (ADR-0015).",
         "properties": {
@@ -18,6 +104,57 @@
           "message"
         ],
         "title": "ErrorResponse",
+        "type": "object"
+      },
+      "GrantResponse": {
+        "properties": {
+          "grant_id": {
+            "title": "Grant Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "grant_id"
+        ],
+        "title": "GrantResponse",
+        "type": "object"
+      },
+      "GrantRoleRequest": {
+        "description": "Grant a role in this entity. Administrative only (IAM-03).",
+        "properties": {
+          "lapses_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the role lapses without anyone acting (IAM-09). Null is open-ended.",
+            "title": "Lapses At"
+          },
+          "principal_id": {
+            "title": "Principal Id",
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "reader",
+              "recorder",
+              "poster",
+              "administrator"
+            ],
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "principal_id",
+          "role"
+        ],
+        "title": "GrantRoleRequest",
         "type": "object"
       },
       "PostingModel": {
@@ -211,6 +348,363 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/entities": {
+      "post": {
+        "description": "Requires authentication and no prior role (`IAM-06`).\n\nThe entity and its first administrator are written in one transaction, or neither is\n(`IAM-05`).",
+        "operationId": "create_entities_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Request-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateEntityRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityCreatedResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Create an entity and assign its first administrator",
+        "tags": [
+          "administration"
+        ]
+      }
+    },
+    "/entities/{entity_id}/grants": {
+      "post": {
+        "operationId": "grant_entities__entity_id__grants_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Request-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GrantRoleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GrantResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Grant a role in this entity",
+        "tags": [
+          "administration"
+        ]
+      }
+    },
+    "/entities/{entity_id}/grants/{grant_id}": {
+      "delete": {
+        "description": "Revoking is `DELETE` on the route and an update in the schema.\n\nThe grant row is never removed — `IAM-14` has to be able to report what was held before\nit ended — so the verb describes the effect on access rather than on storage.",
+        "operationId": "revoke_entities__entity_id__grants__grant_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "grant_id",
+            "required": true,
+            "schema": {
+              "title": "Grant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Request-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Revoke a grant",
+        "tags": [
+          "administration"
+        ]
+      }
+    },
     "/entities/{entity_id}/transactions": {
       "post": {
         "description": "Record a transaction as a draft, or post it straight through.\n\nRequires an `Idempotency-Key` header. Replaying one returns the original result and\nbooks nothing further (ADR-0029).",
