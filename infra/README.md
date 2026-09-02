@@ -174,6 +174,11 @@ enable OpenTofu state encryption. (ADR-0016)
 | `/healthz` | Liveness only. Does not touch the database. |
 | `/readyz` | Database reachable **and** migrations current. |
 
+**Both services serve both endpoints**, so each is probed independently — one surface can be
+ready while the other is not, and a deployment that probed only the REST service would not know.
+Neither endpoint requires a token: a platform probe holds no credential, and a readiness check
+that could fail for want of one would report the wrong thing.
+
 Point your platform's liveness probe at `/healthz` and its readiness probe at `/readyz`.
 Getting these the wrong way round will restart a healthy container during a migration.
 

@@ -33,12 +33,15 @@ import uuid
 from collections.abc import Callable
 from datetime import date
 from decimal import Decimal, InvalidOperation
+from http import HTTPStatus
 from typing import Any
 
 from mcp.server import MCPServer
 from mcp.server.auth.middleware.auth_context import get_access_token
 from mcp.server.auth.settings import AuthSettings
 from pydantic import AnyHttpUrl, BaseModel, Field
+from starlette.requests import Request
+from starlette.responses import JSONResponse, Response
 
 from cfokit.ledger.config import Settings
 from cfokit.ledger.engine import Entry, Posting
@@ -52,6 +55,7 @@ from cfokit.ledger.service.authentication import (
 )
 from cfokit.ledger.service.principal import Principal
 from cfokit.ledger.service.read import read_transaction
+from cfokit.ledger.service.readiness import check_readiness
 from cfokit.ledger.service.write import (
     WriteContext,
     post_transaction,
@@ -144,6 +148,41 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
             "means the ledger refused the operation and 'code' says why."
         ),
     )
+
+    # Liveness and readiness, unauthenticated on both surfaces: a platform probe holds no
+    # token, and a readiness check that could fail for want of one would report the wrong
+    # thing. `custom_route` is outside the bearer middleware for exactly this reason.
+    #
+    # The same two questions the REST surface answers, through the same service call, so a
+    # deployment cannot have one surface ready and the other silently not (ADR-0008).
+
+    # The SDK's decorator is untyped, so mypy --strict would infer these as untyped.
+    @server.custom_route("/healthz", methods=["GET"])  # type: ignore[untyped-decorator]
+    async def healthz(request: Request) -> Response:
+        """Liveness only. Deliberately touches nothing.
+
+        If this checked the database, a database blip would restart every healthy container —
+        turning a recoverable outage into a rolling one.
+        """
+        return JSONResponse({"status": "ok"})
+
+    @server.custom_route("/readyz", methods=["GET"])  # type: ignore[untyped-decorator]
+    async def readyz(request: Request) -> Response:
+        """Database reachable, and migrations current.
+
+        503 when not ready, so a rollout stops rather than serving traffic against a schema
+        older than the code.
+        """
+        result = check_readiness(settings.database_url)
+        return JSONResponse(
+            {
+                "status": "ready" if result.ready else "not_ready",
+                "database_reachable": result.database_reachable,
+                "migrations_current": result.migrations_current,
+                "detail": result.detail,
+            },
+            status_code=HTTPStatus.OK if result.ready else HTTPStatus.SERVICE_UNAVAILABLE,
+        )
 
     def acting() -> Principal:
         """The caller, from the verified token on this request.

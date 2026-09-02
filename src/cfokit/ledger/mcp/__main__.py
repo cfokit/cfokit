@@ -49,6 +49,13 @@ def main() -> int:
     )
 
     # Binding all interfaces is correct inside a container; the platform controls ingress.
+    #
+    # It also decides the SDK's DNS rebinding protection, which auto-enables only for a
+    # localhost bind — so it is off here. That is the right posture and not an accident of the
+    # address: the protection guards a server a browser can reach with ambient authority, and
+    # this one has none. Every request must carry a bearer token, no cookie is issued, and an
+    # attacker's page gets 401. Turning it on means an allowed-host list that must match what
+    # clients send through the ingress, and a mismatch answers 421 to everything.
     create_server(settings).run(
         "streamable-http",
         host="0.0.0.0",  # noqa: S104

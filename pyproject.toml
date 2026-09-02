@@ -68,6 +68,11 @@ dev = [
     # what triggers the obligation, and CI-only tooling is fine including copyleft.
     # Pulls sortedcontainers (Apache-2.0), likewise dev-only.
     "hypothesis>=6.167.1",
+    # Drives the MCP SDK's own client against the app in process, so ADR-0036 layer 3 can
+    # exercise the real transport rather than `call_tool` dispatch. It arrives anyway as an
+    # `mcp` transitive; declared here so the suite depends on something stated rather than
+    # borrowed. BSD-3-Clause (verified 2026-09-02 from the installed artifact's metadata).
+    "httpx2>=0.29",
 ]
 
 # ---------------------------------------------------------------------------

@@ -7,10 +7,13 @@ either side alone.
 **REST** goes through FastAPI's `TestClient`, so request validation, dependency resolution,
 the exception handler and JSON serialisation all run.
 
-**MCP** goes through `MCPServer.call_tool`, which is the SDK's own dispatch: argument
-validation against the generated schema, and the error wrapping that turns an exception into
-an error result. It is not the wire transport, so `stdio` framing is not covered here — ADR-0036
-asks for "a real MCP client from the SDK over the real transport", and that half remains.
+**MCP** goes two ways. Most cases go through `MCPServer.call_tool`, the SDK's own dispatch:
+argument validation against the generated schema, and the error wrapping that turns an
+exception into an error result. One case drives the SDK's real client over streamable HTTP
+against the app in process, which is ADR-0036's "a real MCP client from the SDK over the real
+transport" — the handshake, the JSON-RPC framing and the bearer middleware, none of which
+dispatch exercises. The transport is asserted on its own in `tests/test_mcp_transport.py`;
+what this adds is a tool that reaches the database through it.
 """
 
 from __future__ import annotations
@@ -20,9 +23,12 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import Any
 
+import httpx2 as httpx
 import psycopg
 import pytest
 from fastapi.testclient import TestClient
+from mcp import ClientSession
+from mcp.client.streamable_http import streamable_http_client
 from mcp.server.auth.middleware.auth_context import auth_context_var
 from mcp.server.auth.middleware.bearer_auth import AuthenticatedUser
 from mcp.server.auth.provider import AccessToken
@@ -417,3 +423,64 @@ async def test_mcp_attributes_a_delegated_write_to_both_principals(
     assert read.structured_content["actor_principal_id"] == "skill:bookkeeper"
     assert read.structured_content["actor_class"] == "agent"
     assert read.structured_content["acting_for_principal_id"] == PERSON.id
+
+
+@pytest.mark.anyio
+async def test_a_real_client_books_over_the_transport(
+    settings: Settings, books: tuple[str, str, str]
+) -> None:
+    """ADR-0036 layer 3, end to end: a client session, a tool call, and the books changed.
+
+    Everything between a client and a posting runs — the streamable-HTTP handshake, JSON-RPC
+    framing, the bearer middleware, argument validation, the service layer and the database.
+    `call_tool` starts after the first three, so a break in any of them would not show there.
+
+    `host="0.0.0.0"` because that is how `__main__` binds it; the SDK auto-enables DNS
+    rebinding protection only for a localhost bind, and building it any other way would test a
+    configuration that never ships.
+    """
+    entity_id, cash, revenue = books
+    app = create_server(settings, authenticator=StubAuthenticator()).streamable_http_app(
+        stateless_http=True,
+        json_response=True,
+        host="0.0.0.0",  # noqa: S104
+    )
+
+    async with (
+        app.router.lifespan_context(app),
+        httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app),
+            base_url="http://ledger",
+            headers={"Authorization": "Bearer stub"},
+        ) as http,
+        streamable_http_client("http://ledger/mcp", http_client=http) as (read, write),
+        ClientSession(read, write) as client,
+    ):
+        await client.initialize()
+        written = await client.call_tool(
+            "record_transaction",
+            {
+                "entity_id": entity_id,
+                "transaction_date": "2026-09-01",
+                "idempotency_key": uuid.uuid4().hex,
+                "post": True,
+                "postings": [
+                    {"account_id": cash, "amount": "100.00", "commodity": "USD"},
+                    {"account_id": revenue, "amount": "-100.00", "commodity": "USD"},
+                ],
+            },
+        )
+        assert written.structured_content is not None
+        assert written.structured_content["ok"] is True
+        assert written.structured_content["status"] == "posted"
+
+        read_back = await client.call_tool(
+            "read_transaction",
+            {
+                "entity_id": entity_id,
+                "transaction_id": written.structured_content["transaction_id"],
+            },
+        )
+
+    assert read_back.structured_content is not None
+    assert read_back.structured_content["actor_principal_id"] == PERSON.id
