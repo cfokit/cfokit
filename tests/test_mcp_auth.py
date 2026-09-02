@@ -148,3 +148,38 @@ def test_the_advertised_resource_comes_from_public_base_url(settings: Settings) 
         ).json()
 
     assert metadata["resource"].startswith(settings.public_base_url)
+
+
+# --- Operations ---------------------------------------------------------------------------
+
+
+def test_liveness_needs_no_token(settings: Settings) -> None:
+    """A platform probe holds no credential, and liveness must not depend on one."""
+    with TestClient(_app(settings)) as client:
+        response = client.get("/healthz")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
+def test_liveness_touches_nothing(settings: Settings) -> None:
+    """The DSN is unroutable. If liveness reached the database this would not answer.
+
+    A database blip must not restart every healthy container, which is what turns a
+    recoverable outage into a rolling one.
+    """
+    with TestClient(_app(settings)) as client:
+        assert client.get("/healthz").status_code == 200
+
+
+def test_readiness_reports_not_ready_when_the_database_is_unreachable(
+    settings: Settings,
+) -> None:
+    """503 so a rollout stops, rather than serving against a schema older than the code."""
+    with TestClient(_app(settings)) as client:
+        response = client.get("/readyz")
+
+    assert response.status_code == 503
+    body = response.json()
+    assert body["status"] == "not_ready"
+    assert body["database_reachable"] is False

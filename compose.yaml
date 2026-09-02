@@ -145,6 +145,13 @@ services:
       PORT: "8081"
     ports:
       - "${MCP_PORT:-8081}:8081"
+    healthcheck:
+      # Liveness only, for the same reason as the REST service: /readyz would restart the
+      # container whenever the database blipped or a migration was outstanding (ADR-0004).
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8081/healthz')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
 
   # The suite, run inside the compose network (ADR-0023: one image, many entrypoints).
   # compose.yaml deliberately publishes no database port, so a host-run integration test
