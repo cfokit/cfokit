@@ -28,7 +28,7 @@ __all__ = ["Capability", "effective", "require"]
 class Capability(StrEnum):
     """One flag per thing a caller can do. `IAM-02` names the distinctions these must make.
 
-    **Privileges are code; roles are rows** (ADR-0040). A flag means something only because
+    **Privileges are code; roles are rows** (ADR-0039). A flag means something only because
     something checks it, so the set lives here. Which roles exist and which flags each carries
     is data, seeded and changed by migration — see `0004-ownership.sql`.
 

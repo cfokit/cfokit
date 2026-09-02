@@ -5,7 +5,7 @@ date: 2026-09-02
 decision-makers: [Geoff]
 ---
 
-# ADR-0039: An entity is held by one or more mutually equivalent owners
+# ADR-0038: An entity is held by one or more mutually equivalent owners
 
 **Requirements served:** `IAM-21`, `IAM-04`, `IAM-05`.
 

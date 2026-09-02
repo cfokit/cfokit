@@ -31,7 +31,7 @@ CREATE TABLE entity_grant (
     -- identity provider's business, and the ledger never learns what a skill is (ADR-0022).
     principal_id text        NOT NULL,
     -- Superseded by 0004: the catalogue in `role` replaced this enumeration, because which
-    -- roles exist is data rather than a fixed list (ADR-0040). Left as written; a migration
+    -- roles exist is data rather than a fixed list (ADR-0039). Left as written; a migration
     -- is a record of what was applied.
     role         text        NOT NULL CHECK (role IN ('reader', 'recorder', 'poster', 'administrator')),
     -- IAM-13: who made it, and when.

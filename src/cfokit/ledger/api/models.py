@@ -156,7 +156,7 @@ class GrantRoleRequest(BaseModel):
     role: str = Field(
         description="A role name from this deployment's catalogue. Roles are rows rather than "
         "a fixed enumeration, so the set is not enumerable here; an unknown name is refused "
-        "with `unknown_role` (ADR-0040).",
+        "with `unknown_role` (ADR-0039).",
     )
     lapses_at: datetime | None = Field(
         default=None,

@@ -39,11 +39,9 @@ cost the same context as inlining, while diluting adherence to the rules that ma
    clauses when they stand or fall together. The test: *could one clause be superseded without
    reopening the others?* If it could, they are two decisions — split them. A title containing
    "and" is a signal to apply the test, not a violation by itself. (ADR-0001)
-4. **Number sequentially, never reuse.** Gaps are fine. Numbers are identifiers, not chronology —
-   the `date` field is authoritative for sequence.
-5. **Written when the decision is made,** not reconstructed later.
-6. **Rejected alternatives are mandatory.** A record without them does not prevent re-litigation.
-7. **State what is,** not the history of how the decision was reached. The reasoning belongs in the
+4. **Written when the decision is made,** not reconstructed later.
+5. **Rejected alternatives are mandatory.** A record without them does not prevent re-litigation.
+6. **State what is,** not the history of how the decision was reached. The reasoning belongs in the
    record; the story of how the thinking evolved belongs nowhere.
 
 ## Index
@@ -87,8 +85,8 @@ cost the same context as inlining, while diluting adherence to the rules that ma
 | [0035](0035-inference-for-the-attested-runtime.md) | CFOKit holds the inference relationship for the attested runtime | Draft |
 | [0036](0036-correctness-is-tested-in-four-layers.md) | Correctness is tested in four layers, and only the top one needs a model | Draft |
 | [0037](0037-accounting-basis-is-a-presentation-property.md) | The ledger records obligation and settlement; accounting basis is a presentation property | Accepted |
-| [0039](0039-an-entity-is-held-by-its-owners.md) | An entity is held by one or more mutually equivalent owners | Proposed |
-| [0040](0040-roles-are-rows-privileges-are-code.md) | Roles are rows, privileges are code, and only `owner` exists yet | Proposed |
+| [0038](0038-an-entity-is-held-by-its-owners.md) | An entity is held by one or more mutually equivalent owners | Proposed |
+| [0039](0039-roles-are-rows-privileges-are-code.md) | Roles are rows, privileges are code, and only `owner` exists yet | Proposed |
 
 ## Deferred — decided in principle, waiting on a need
 

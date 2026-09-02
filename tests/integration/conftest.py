@@ -58,7 +58,7 @@ def _connect(dsn: str) -> psycopg.Connection[Any]:
     return conn
 
 
-# What a deployment adds when it has somebody to hold it (ADR-0040). Only `owner` ships, so
+# What a deployment adds when it has somebody to hold it (ADR-0039). Only `owner` ships, so
 # these are defined the way a real deployment would define them — by inserting catalogue rows —
 # which is also the only test that the mechanism works. Session-scoped and never removed:
 # `entity_grant.role` references `role.name`, so a role a test has granted cannot be deleted.

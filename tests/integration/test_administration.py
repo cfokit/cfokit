@@ -381,7 +381,7 @@ def test_revoking_a_non_owner_is_never_the_last_owner(
     )
 
 
-# --- The catalogue (IAM-01, IAM-02, ADR-0040) ---------------------------------------------
+# --- The catalogue (IAM-01, IAM-02, ADR-0039) ---------------------------------------------
 
 
 def test_owner_is_the_only_role_this_deployment_ships(
@@ -413,7 +413,7 @@ def test_owner_carries_every_privilege_the_code_defines(
 
 
 def test_a_role_added_by_insert_confers_what_it_maps(database: Database) -> None:
-    """Adding a role is inserting rows (ADR-0040), which is what the suite's own roles are.
+    """Adding a role is inserting rows (ADR-0039), which is what the suite's own roles are.
 
     A recorder drafts and cannot post — the distinction `IAM-16` needs — and nothing about
     that required a release.

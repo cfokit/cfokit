@@ -56,7 +56,7 @@ class NotAuthorised(LedgerError):
 
 
 class UnknownRole(LedgerError):
-    """No such role in the catalogue (`IAM-01`, ADR-0040).
+    """No such role in the catalogue (`IAM-01`, ADR-0039).
 
     Roles are rows, so the set of valid names is not fixed at build time and the API cannot
     enumerate them in its schema. This is what a caller gets instead of a constraint violation.

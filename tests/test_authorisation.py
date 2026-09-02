@@ -30,7 +30,7 @@ def test_a_persons_authority_is_simply_what_it_holds() -> None:
 
 
 def test_an_unknown_privilege_confers_nothing() -> None:
-    """A row naming a privilege the code does not define fails closed (ADR-0040).
+    """A row naming a privilege the code does not define fails closed (ADR-0039).
 
     A typo in a migration must not widen anyone's authority, and it must not crash the request
     either — the name is simply not a capability anything checks.

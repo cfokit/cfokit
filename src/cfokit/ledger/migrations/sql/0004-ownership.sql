@@ -1,4 +1,4 @@
--- Roles are rows; privileges are code (ADR-0040). Ownership (`IAM-21`, ADR-0039).
+-- Roles are rows; privileges are code (ADR-0039). Ownership (`IAM-21`, ADR-0038).
 --
 -- `IAM-01` makes a role "a defined set of capabilities", and `IAM-02` requires those
 -- capabilities to distinguish reading, recording, posting, administering and holding. Which

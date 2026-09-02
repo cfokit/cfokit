@@ -5,7 +5,7 @@ date: 2026-09-02
 decision-makers: [Geoff]
 ---
 
-# ADR-0040: Roles are rows, privileges are code, and only `owner` exists yet
+# ADR-0039: Roles are rows, privileges are code, and only `owner` exists yet
 
 **Requirements served:** `IAM-01`, `IAM-02`, `IAM-07`.
 

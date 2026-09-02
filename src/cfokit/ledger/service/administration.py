@@ -13,7 +13,7 @@ Three obligations that are easy to state and easy to miss:
 - **`IAM-04`**: "An entity always has at least one identity holding it. The last owner cannot
   be revoked or demoted."
 - **`IAM-21`**: granting or revoking ownership is an owner's alone, so a role carrying only
-  `GRANT` cannot revoke an owner (ADR-0039).
+  `GRANT` cannot revoke an owner (ADR-0038).
 
 Every one of these writes an `audit_log` row, which is what `IAM-13` requires — "every grant,
 invitation, revocation, lapse and role change is recorded, with who made it and when" — and
