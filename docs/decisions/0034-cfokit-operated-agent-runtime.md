@@ -139,8 +139,8 @@ Owning inference buys commercial control and a negotiable provider agreement, wh
 `SOC2-09` and `SOC2-10`. It buys little additional evidence: neither arrangement prevents a provider
 changing a model behind a stable identifier.
 
-These are separable — either could be superseded without reopening the other — so under ADR-0001's
-rule 3 they are two records. This one decides the runtime.
+These are separable — either could be superseded without reopening the other — so under
+ADR-0001's one-decision-per-file rule they are two records. This one decides the runtime.
 
 **What the runtime is.** Desktop, mobile, terminal, or something else is a product-surface question,
 and a user-facing interaction surface is adjacent enough to the "web UI or admin console" non-goal
@@ -284,7 +284,7 @@ it distinguishable in the data.
   the only shape. It is now the default shape, and that paragraph needs revising to say so — a
   positioning change, not a record's to make.
 
-**On rule 3.** The licence clause is kept here rather than split out because shipping a runtime is
+**On one decision per file.** The licence clause is kept here rather than split out because shipping a runtime is
 what raises the question — there is nothing to license otherwise — and because flipping it would
 require amending `NFR-17` and `NFR-14`, which is a superseding record on this one either way.
 

@@ -19,7 +19,7 @@ Directories are organised by **artifact kind**, and packages are named for
 | `skills/` | Shipped Agent Skills, as `SKILL.md` bundles | Talk to the ledger over HTTP only. Never import ledger code. |
 | `infra/` | OpenTofu for the one maintained cloud target, plus the deployment contract | Supplies env vars only. No app coupling. |
 | `docs/product/` | Vision and numbered requirements | The source for positioning; the README derives from it. |
-| `docs/decisions/` | Decision records, MADR 4.0.0. Immutable once accepted. | Not auto-loaded. Read on demand. |
+| `docs/decisions/` | Decision records, MADR 4.0.0. Corrected in place when wrong; nothing is final. | Not auto-loaded. Read on demand. |
 | `.claude/` | Tooling for developing *this repo* | Never shipped. Distinct from `skills/`. |
 
 **One distribution, rooted at `src/cfokit/`.** Every capability is a sibling package inside

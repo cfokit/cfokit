@@ -9,7 +9,7 @@ Draft a new decision record for: **$ARGUMENTS**
 ## Steps
 
 1. **Find the next free number.** List `docs/decisions/` and take the highest existing number plus
-   one. Numbers are sequential and never reused; gaps are fine. Note that some numbers are
+   one. Numbers are sequential with no gaps. Note that some numbers are
    listed in the deferred table of `docs/decisions/README.md` without having files yet — if
    `$ARGUMENTS` matches a deferred entry, **use that reserved number** rather than a new one.
 
