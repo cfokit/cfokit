@@ -350,7 +350,7 @@
   "paths": {
     "/entities": {
       "post": {
-        "description": "Requires a deployment-scoped administrative role (`IAM-18`, ADR-0038).\n\nThe entity and its first administrator are written in one transaction, or neither is\n(`IAM-05`).",
+        "description": "Requires authentication and no prior role (`IAM-06`).\n\nThe entity and its first administrator are written in one transaction, or neither is\n(`IAM-05`).",
         "operationId": "create_entities_post",
         "parameters": [
           {

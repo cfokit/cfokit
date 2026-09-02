@@ -87,7 +87,6 @@ cost the same context as inlining, while diluting adherence to the rules that ma
 | [0035](0035-inference-for-the-attested-runtime.md) | CFOKit holds the inference relationship for the attested runtime | Draft |
 | [0036](0036-correctness-is-tested-in-four-layers.md) | Correctness is tested in four layers, and only the top one needs a model | Draft |
 | [0037](0037-accounting-basis-is-a-presentation-property.md) | The ledger records obligation and settlement; accounting basis is a presentation property | Accepted |
-| [0038](0038-deployment-bootstrap-by-operator-command.md) | A deployment is bootstrapped by an explicit operator command, never over the API | Proposed |
 
 ## Deferred — decided in principle, waiting on a need
 

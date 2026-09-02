@@ -7,7 +7,6 @@
 #
 #   docker run … python -m cfokit.ledger.migrations    migrations, explicit only
 #   docker run … python -m cfokit.ledger.api           REST service (default)
-#   docker run … python -m cfokit.ledger.bootstrap     first administrator, once
 #
 # There is deliberately no MCP entrypoint yet: the adapter exists and is tested, but
 # nothing authenticates an MCP caller, and a runnable server that booked for an

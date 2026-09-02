@@ -164,9 +164,8 @@ def create_app(settings: Settings, authenticator: Authenticator | None = None) -
     # administrative capabilities "available to no other role", and `IAM-13` requires every
     # one of them recorded with who made it and when — which the service layer does.
     #
-    # There is deliberately no route that establishes a deployment administrator. That act
-    # requires no prior role, so it is unreachable from the network by construction rather
-    # than guarded: `python -m cfokit.ledger.bootstrap` (ADR-0038).
+    # Creating an entity is the exception: `IAM-06` makes it the one act requiring an
+    # authenticated identity and no prior role, so the deployment is usable as it stands.
     # -----------------------------------------------------------------------------------
 
     @app.post(
@@ -182,7 +181,7 @@ def create_app(settings: Settings, authenticator: Authenticator | None = None) -
         database: Annotated[Database, Depends(get_database)],
         request_id: Annotated[str | None, Header(alias="X-Request-Id")] = None,
     ) -> EntityCreatedResponse:
-        """Requires a deployment-scoped administrative role (`IAM-18`, ADR-0038).
+        """Requires authentication and no prior role (`IAM-06`).
 
         The entity and its first administrator are written in one transaction, or neither is
         (`IAM-05`).

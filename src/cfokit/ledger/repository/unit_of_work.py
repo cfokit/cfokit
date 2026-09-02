@@ -31,7 +31,7 @@ from cfokit.ledger.repository import administration, audit, grants, idempotency,
 from cfokit.ledger.repository.connection import connect
 from cfokit.ledger.repository.transactions import StoredTransaction
 
-__all__ = ["Database", "DeploymentWrite", "EntityWrite"]
+__all__ = ["Database", "EntityWrite", "UnscopedWrite"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -176,29 +176,16 @@ class EntityWrite:
         )
 
 
-class DeploymentWrite:
+class UnscopedWrite:
     """The operations available in one transaction that is not scoped to an entity.
 
-    Creating an entity happens before there is an entity to scope to or lock on, and a
-    deployment grant is not scoped to one at all (`IAM-18`). Separate from `EntityWrite` so
-    neither offers the other's operations by accident.
+    Creating an entity is the only act with no entity to scope to or lock on, because the
+    entity does not exist until it commits (`IAM-06`). Separate from `EntityWrite` so neither
+    offers the other's operations by accident.
     """
 
     def __init__(self, conn: psycopg.Connection[Any]) -> None:
         self._conn = conn
-
-    def deployment_roles_in_force(self, principal_id: str, at: datetime) -> frozenset[str]:
-        return administration.deployment_roles_in_force(self._conn, principal_id, at)
-
-    def any_deployment_administrator(self, at: datetime) -> bool:
-        """Whether any deployment administrator is in force.
-
-        What makes the bootstrap a bootstrap rather than a standing backdoor (ADR-0038).
-        """
-        return administration.any_deployment_administrator(self._conn, at)
-
-    def grant_deployment_role(self, principal_id: str, role: str, granted_by: str) -> str:
-        return administration.grant_deployment_role(self._conn, principal_id, role, granted_by)
 
     def create_entity(
         self,
@@ -274,15 +261,15 @@ class Database:
         self._dsn = dsn
 
     @contextmanager
-    def deployment_write(self) -> Iterator[DeploymentWrite]:
+    def unscoped_write(self) -> Iterator[UnscopedWrite]:
         """One transaction, scoped to nothing and locking nothing.
 
         There is no entity to scope to and no per-entity lock to take. That is not a gap: the
-        acts this serves — bootstrapping, creating an entity — do not contend on an entity,
-        and taking a lock keyed on one that does not exist yet would be theatre.
+        one act this serves — creating an entity — cannot contend on an entity, and a lock
+        keyed on one that does not exist yet would be theatre.
         """
         with connect(self._dsn) as conn, conn.transaction():
-            yield DeploymentWrite(conn)
+            yield UnscopedWrite(conn)
 
     @contextmanager
     def entity_write(self, entity_id: str) -> Iterator[EntityWrite]:

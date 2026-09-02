@@ -5,6 +5,9 @@ Three obligations that are easy to state and easy to miss:
 - **`IAM-05`**: "Creating an entity assigns its first administrator in the same act. An entity
   never exists without one, and no separate step is required to make it usable." So the entity
   and its first grant are written in one transaction, or neither is.
+- **`IAM-06`**: creating an entity requires an authenticated identity and no prior role. It is
+  the only act with that property, and it is what makes a running deployment usable as it
+  stands.
 - **`IAM-03`**: granting, revoking and changing a role assignment are administrative
   capabilities "available to no other role".
 - **`IAM-04`**: "An entity always has at least one identity holding the administrative role. The
@@ -26,14 +29,11 @@ from cfokit.ledger.service.authorisation import Capability, require
 from cfokit.ledger.service.principal import Principal
 
 __all__ = [
-    "DEPLOYMENT_ADMINISTRATOR",
     "EntityCreated",
     "create_entity",
     "grant_role",
     "revoke_grant",
 ]
-
-DEPLOYMENT_ADMINISTRATOR = "administrator"
 
 
 @dataclass(frozen=True, slots=True)
@@ -58,22 +58,20 @@ def create_entity(
 ) -> EntityCreated:
     """Create an entity and assign its first administrator, atomically (`IAM-05`).
 
-    Requires a deployment-scoped administrative role (`IAM-18`, ADR-0038): an entity role
-    cannot confer this, because there is no entity yet to hold one in.
+    Authentication is the whole of the requirement (`IAM-06`). No prior role is asked for,
+    because there is no entity to hold one in and a role in some other entity confers nothing
+    here — a caller the issuer has authenticated may create an entity and, in the same act,
+    becomes the identity administering it.
 
     `administrator` defaults to the creating principal, which is the ordinary case. Naming
-    someone else is the case where an operator provisions on a customer's behalf.
+    someone else is the case where one person provisions on another's behalf.
 
     Not entity-scoped, so it does not use `Database.entity_write`: there is no entity to scope
     to or lock on until this commits.
     """
-    now = datetime.now(UTC)
     first_administrator = administrator or principal.id
 
-    with database.deployment_write() as write:
-        if DEPLOYMENT_ADMINISTRATOR not in write.deployment_roles_in_force(principal.id, now):
-            raise NotAuthorised("creating an entity requires a deployment administrator")
-
+    with database.unscoped_write() as write:
         entity_id = write.create_entity(
             slug=slug,
             name=name,

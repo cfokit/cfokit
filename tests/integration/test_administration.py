@@ -1,11 +1,12 @@
-"""The administrative path: bringing a deployment into service, and provisioning access.
+"""The administrative path: creating entities, and provisioning access within them.
 
 Until this existed nothing in `src/` created an entity, an account or a grant — only test
 fixtures did, with owner-role SQL. So the system authenticated and authorised callers into a
 state no legitimate path could produce.
 
-Three requirements carry this file:
+Four requirements carry this file:
 
+- **`IAM-06`**: creating an entity requires an authenticated identity and no prior role.
 - **`IAM-05`**: "Creating an entity assigns its first administrator in the same act. An entity
   never exists without one."
 - **`IAM-04`**: "The last administrator cannot be removed or demoted."
@@ -21,7 +22,6 @@ from typing import Any
 import psycopg
 import pytest
 
-from cfokit.ledger.bootstrap import AlreadyBootstrapped, bootstrap
 from cfokit.ledger.errors import LastAdministrator, NotAuthorised
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.administration import create_entity, grant_role, revoke_grant
@@ -29,30 +29,9 @@ from cfokit.ledger.service.principal import ActorClass, Principal
 
 pytestmark = pytest.mark.integration
 
-OPERATOR = "operator:test"
-
 
 def person(name: str) -> Principal:
     return Principal(id=name, actor_class=ActorClass.PERSON)
-
-
-@pytest.fixture
-def clean_deployment(owner_conn: psycopg.Connection[Any]) -> Any:
-    """A deployment with no administrator, and none left behind afterwards.
-
-    Deployment grants are not entity-scoped, so unlike everything else in this suite they are
-    global state and have to be cleared explicitly.
-    """
-    with owner_conn.cursor() as cur:
-        cur.execute("SET session_replication_role = replica")
-        cur.execute("DELETE FROM deployment_grant")
-        cur.execute("SET session_replication_role = origin")
-    yield
-    with owner_conn.cursor() as cur:
-        cur.execute("SET session_replication_role = replica")
-        cur.execute("DELETE FROM deployment_grant")
-        cur.execute("DELETE FROM audit_log WHERE entity_id IS NULL")
-        cur.execute("SET session_replication_role = origin")
 
 
 def new_entity(database: Database, admin: Principal, slug: str | None = None) -> str:
@@ -71,93 +50,53 @@ def new_entity(database: Database, admin: Principal, slug: str | None = None) ->
     return created.entity_id
 
 
-# --- Bootstrap (IAM-06, ADR-0038) ---------------------------------------------------------
+# --- Creating an entity (IAM-05, IAM-06) --------------------------------------------------
 
 
-def test_bootstrap_establishes_the_first_administrator(
-    owner_database: Database, clean_deployment: None
+def test_any_authenticated_identity_can_create_an_entity(
+    database: Database, owner_conn: psycopg.Connection[Any]
 ) -> None:
-    result = bootstrap(owner_database, principal_id="user:root", operator=OPERATOR)
+    """`IAM-06`: authentication is the whole of the requirement.
 
-    assert result.principal_id == "user:root"
-
-
-def test_bootstrap_refuses_once_an_administrator_exists(
-    owner_database: Database, clean_deployment: None
-) -> None:
-    """What makes it a bootstrap rather than a standing backdoor (ADR-0038)."""
-    bootstrap(owner_database, principal_id="user:root", operator=OPERATOR)
-
-    with pytest.raises(AlreadyBootstrapped):
-        bootstrap(owner_database, principal_id="user:usurper", operator=OPERATOR)
-
-
-def test_running_it_twice_leaves_one_administrator(
-    owner_database: Database, owner_conn: psycopg.Connection[Any], clean_deployment: None
-) -> None:
-    bootstrap(owner_database, principal_id="user:root", operator=OPERATOR)
-    with pytest.raises(AlreadyBootstrapped):
-        bootstrap(owner_database, principal_id="user:usurper", operator=OPERATOR)
-
-    with owner_conn.cursor() as cur:
-        cur.execute("SELECT count(*), min(principal_id) FROM deployment_grant")
-        row = cur.fetchone()
-    assert row == (1, "user:root")
-
-
-def test_bootstrap_is_recorded(
-    owner_database: Database, owner_conn: psycopg.Connection[Any], clean_deployment: None
-) -> None:
-    """`IAM-13` has no gap at the origin: the first act is evidenced like every other."""
-    bootstrap(owner_database, principal_id="user:root", operator=OPERATOR)
-
-    with owner_conn.cursor() as cur:
-        cur.execute(
-            "SELECT actor, action, detail->>'principal' FROM audit_log"
-            " WHERE entity_id IS NULL AND action = 'bootstrap_deployment'"
-        )
-        row = cur.fetchone()
-    assert row == (OPERATOR, "bootstrap_deployment", "user:root")
-
-
-# --- Creating an entity (IAM-05, IAM-18) --------------------------------------------------
-
-
-def test_creating_an_entity_requires_a_deployment_administrator(
-    database: Database, clean_deployment: None
-) -> None:
-    """`IAM-18`: an entity role confers nothing at deployment scope — and there is no entity
-    to hold one in yet, so this authority can only come from the other scope."""
-    with pytest.raises(NotAuthorised):
-        new_entity(database, person("user:nobody"))
-
-
-def test_an_entity_never_exists_without_an_administrator(
-    database: Database,
-    owner_database: Database,
-    owner_conn: psycopg.Connection[Any],
-    clean_deployment: None,
-) -> None:
-    """`IAM-05`, and the reason both writes are in one transaction."""
-    bootstrap(owner_database, principal_id="user:root", operator=OPERATOR)
-
-    entity_id = new_entity(database, person("user:root"))
+    A caller holding no role anywhere creates an entity and, in the same act, becomes the
+    identity administering it. This is what makes a running deployment usable as it stands,
+    and the grant it asserts is `IAM-05`: "an entity never exists without one".
+    """
+    entity_id = new_entity(database, person("user:newcomer"))
 
     with owner_conn.cursor() as cur:
         cur.execute(
             "SELECT principal_id, role FROM entity_grant WHERE entity_id = %s", (entity_id,)
         )
-        assert cur.fetchall() == [("user:root", "administrator")]
+        assert cur.fetchall() == [("user:newcomer", "administrator")]
+
+
+def test_creating_an_entity_confers_nothing_in_any_other_entity(database: Database) -> None:
+    """The counterweight: `IAM-08` gives one identity independent roles per entity.
+
+    Creating an entity requires no prior role, so the test that it grants no *further* reach
+    is what keeps that from being a way in. The creator of one entity is a stranger to the
+    next.
+    """
+    theirs = new_entity(database, person("user:incumbent"))
+    new_entity(database, person("user:newcomer"))
+
+    with pytest.raises(NotAuthorised):
+        grant_role(
+            database,
+            entity_id=theirs,
+            principal=person("user:newcomer"),
+            request_id="req",
+            to_principal="user:newcomer",
+            role="administrator",
+        )
 
 
 def test_the_first_administrator_can_be_someone_else(
     database: Database,
     owner_conn: psycopg.Connection[Any],
-    clean_deployment: None,
-    owner_database: Database,
 ) -> None:
-    """The case where an operator provisions on a customer's behalf."""
-    bootstrap(owner_database, principal_id="user:root", operator=OPERATOR)
+    """The case where one person provisions on another's behalf."""
 
     entity_id = create_entity(
         database,
@@ -181,11 +120,8 @@ def test_the_first_administrator_can_be_someone_else(
 def test_a_failed_entity_creation_leaves_nothing(
     database: Database,
     owner_conn: psycopg.Connection[Any],
-    clean_deployment: None,
-    owner_database: Database,
 ) -> None:
     """The entity and its administrator are one act, so a failure leaves neither."""
-    bootstrap(owner_database, principal_id="user:root", operator=OPERATOR)
     slug = f"clash-{uuid.uuid4().hex[:8]}"
     new_entity(database, person("user:root"), slug=slug)
 
@@ -202,13 +138,8 @@ def test_a_failed_entity_creation_leaves_nothing(
 # --- Granting and revoking (IAM-03, IAM-04, IAM-13) ---------------------------------------
 
 
-def test_granting_requires_the_administrative_capability(
-    database: Database,
-    clean_deployment: None,
-    owner_database: Database,
-) -> None:
+def test_granting_requires_the_administrative_capability(database: Database) -> None:
     """`IAM-03`: granting is "available to no other role"."""
-    bootstrap(owner_database, principal_id="user:root", operator=OPERATOR)
     entity_id = new_entity(database, person("user:root"))
     grant_role(
         database,
@@ -233,11 +164,8 @@ def test_granting_requires_the_administrative_capability(
 def test_every_grant_is_recorded_with_who_and_when(
     database: Database,
     owner_conn: psycopg.Connection[Any],
-    clean_deployment: None,
-    owner_database: Database,
 ) -> None:
     """`IAM-13`, which nothing satisfied while grants were raw inserts."""
-    bootstrap(owner_database, principal_id="user:root", operator=OPERATOR)
     entity_id = new_entity(database, person("user:root"))
 
     grant_role(
@@ -261,10 +189,7 @@ def test_every_grant_is_recorded_with_who_and_when(
 def test_a_revocation_is_recorded(
     database: Database,
     owner_conn: psycopg.Connection[Any],
-    clean_deployment: None,
-    owner_database: Database,
 ) -> None:
-    bootstrap(owner_database, principal_id="user:root", operator=OPERATOR)
     entity_id = new_entity(database, person("user:root"))
     grant_id = grant_role(
         database,
@@ -293,14 +218,9 @@ def test_a_revocation_is_recorded(
     assert row[0] == 1
 
 
-def test_the_last_administrator_cannot_be_revoked(
-    database: Database,
-    clean_deployment: None,
-    owner_database: Database,
-) -> None:
+def test_the_last_administrator_cannot_be_revoked(database: Database) -> None:
     """`IAM-04`: an entity always has at least one identity holding the administrative role,
     and the last one cannot be removed or demoted."""
-    bootstrap(owner_database, principal_id="user:root", operator=OPERATOR)
     created = create_entity(
         database,
         principal=person("user:root"),
@@ -326,13 +246,8 @@ def test_the_last_administrator_cannot_be_revoked(
     assert caught.value.code == "last_administrator"
 
 
-def test_an_administrator_can_be_revoked_once_another_exists(
-    database: Database,
-    clean_deployment: None,
-    owner_database: Database,
-) -> None:
+def test_an_administrator_can_be_revoked_once_another_exists(database: Database) -> None:
     """The positive control. Without it, a rule refusing every revocation would pass."""
-    bootstrap(owner_database, principal_id="user:root", operator=OPERATOR)
     created = create_entity(
         database,
         principal=person("user:root"),
@@ -365,11 +280,8 @@ def test_an_administrator_can_be_revoked_once_another_exists(
 
 def test_revoking_a_non_administrator_is_never_the_last_administrator(
     database: Database,
-    clean_deployment: None,
-    owner_database: Database,
 ) -> None:
     """The check must not refuse an ordinary revocation in a single-administrator entity."""
-    bootstrap(owner_database, principal_id="user:root", operator=OPERATOR)
     entity_id = new_entity(database, person("user:root"))
     grant_id = grant_role(
         database,

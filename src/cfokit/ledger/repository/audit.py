@@ -34,9 +34,9 @@ def record(
     `request_id` is the inbound request's id, propagated so a row in the trail can be joined
     to the call that produced it (CLAUDE.md, Observability).
 
-    `entity_id` is nullable because a deployment-scoped act — the bootstrap, or creating an
-    entity — happens before there is an entity to attribute it to. The column has always
-    allowed it; this annotation lagged the schema.
+    `entity_id` is nullable because the column has always allowed it and this annotation
+    lagged the schema. Every act that reaches here does carry one: creating an entity starts
+    unscoped, but the row it writes belongs to the entity it created.
     """
     with conn.cursor() as cur:
         cur.execute(
