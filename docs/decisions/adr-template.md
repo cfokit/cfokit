@@ -75,8 +75,13 @@ imperative, in one or two sentences}.
 ### Confirmation
 
 How compliance is verified: a CI gate, a linter contract, a test, a review step.
-If nothing enforces this, say so plainly — an unenforced decision is a convention,
+If nothing enforces it, say so plainly — an unenforced decision is a convention,
 not a constraint.
+
+State the criterion, never the schedule. "Enforced by review" is a durable fact
+about the decision; "not built yet" is a status report that is wrong as soon as it
+is built, and nobody comes back to correct it. Whether something is automated today
+is a fact about the test suite, discoverable there.
 
 ## Pros and Cons of the Options
 

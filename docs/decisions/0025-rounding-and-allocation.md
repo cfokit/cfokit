@@ -89,7 +89,7 @@ call appears in `engine`, `repository`, or `service`, the boundary has been misp
   "the parts sum to the whole" true rather than intended.
 * Good, because the oracle comparison has a determinate expected answer, so the harness can be built.
 * Bad, because a commodity needs a **display scale** — USD 2, JPY 0, some currencies 3. That is a
-  registry the system does not yet have, defaulting to 2.
+  registry, defaulting to 2, which the alternatives avoid needing.
 * Bad, because stored values can carry more precision than any report shows, so a user summing
   displayed figures by hand may find a penny the totals do not. Reports must total the *unrounded*
   values and round the total, never sum rounded parts.

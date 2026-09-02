@@ -67,14 +67,13 @@ transaction as the write, so both adapters reach it.
 
 ### Confirmation
 
-To be enforced at the service boundary: a write without a key is rejected with a stable error
-`code` (ADR-0015), which makes it testable from either adapter. **The service layer does not exist
-yet**, so nothing enforces this today — the key is in the schema and in the published contract, and
-that is all.
+Enforced at the service boundary: a write without a key is rejected with the stable code
+`idempotency_key_required` (ADR-0015), asserted through both adapters so neither can drift from the
+other.
 
-**The retention policy is not yet written**, so nothing currently prunes idempotency records.
-`PLT-20` sets the retention schedule per record class at deployment scope, and this record class needs
-an entry before the first production deployment rather than before the first release.
+Pruning stored idempotency records is a retention question rather than a mechanism here. `PLT-20`
+sets the schedule per record class at deployment scope, and this class needs an entry there before
+the first production deployment rather than before the first release.
 
 ## Pros and Cons of the Options
 

@@ -91,9 +91,9 @@ property actually wanted, and ADR-0030 provides it.
 `recorded_at` is `NOT NULL` and server-assigned in the first migration, so the property is a schema
 constraint rather than a convention — a caller cannot supply it because no write path accepts it.
 
-Reproducibility is **not yet confirmed by test**, because no report exists to run twice. When one
-does, the test is that the same report over the same watermark returns the same figures, and that two
-runs differ by exactly the postings recorded between them, which is `RPT-11`'s stated acceptance.
+Reproducibility is confirmed by running the same report over the same watermark twice and
+asserting the same figures, and that two runs differ by exactly the postings recorded between them.
+`RPT-11`'s acceptance criterion is the assertion.
 
 ## Pros and Cons of the Options
 

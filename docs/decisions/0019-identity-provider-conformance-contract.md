@@ -100,9 +100,9 @@ issuer we claim to support. Because the application reads only `AUTH_ISSUER_URL`
 `AUTH_AUDIENCE`, an issuer-specific import would also be visible to review as a new
 dependency.
 
-**The suite is not yet written.** Until it is, "swappable" is a design property argued here
-rather than a verified one, and the contract above is enforced by review. This is the same
-gap ADR-0001 names for the decision corpus, and it is stated rather than implied.
+Absent that suite, "swappable" is a design property argued here rather than a verified one, and
+the contract above is enforced by review. An unenforced decision is a convention, and saying so is
+better than implying a gate.
 
 ## Pros and Cons of the Options
 

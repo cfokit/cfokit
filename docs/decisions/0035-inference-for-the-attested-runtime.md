@@ -126,9 +126,8 @@ contracting party: a provider absent from the registry, or present without zero-
 no-training terms recorded, cannot be selected in configuration. That is a validation rule, not a
 review step.
 
-**Neither the registry (`SOC2-09`) nor the validation exists yet**, so today this is a decision about
-who holds the contract and nothing enforces the rest of it. The registry is named as a follow-on rather
-than implied.
+This record decides who holds the contract. The registry (`SOC2-09`) and the validation that reads
+it are named as follow-ons rather than implied, and nothing here enforces them.
 
 ## Pros and Cons of the Options
 
