@@ -24,8 +24,8 @@
     "error": "IdempotencyKeyReused"
   },
   {
-    "code": "last_administrator",
-    "error": "LastAdministrator"
+    "code": "last_owner",
+    "error": "LastOwner"
   },
   {
     "code": "migration_failed",
@@ -54,5 +54,9 @@
   {
     "code": "unbalanced_transaction",
     "error": "UnbalancedTransaction"
+  },
+  {
+    "code": "unknown_role",
+    "error": "UnknownRole"
   }
 ]

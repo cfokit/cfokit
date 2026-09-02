@@ -13,18 +13,6 @@
             "title": "Accounting Basis",
             "type": "string"
           },
-          "administrator": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "The entity's first administrator. Defaults to the creating principal; an entity never exists without one (IAM-05).",
-            "title": "Administrator"
-          },
           "fiscal_year_end_day": {
             "maximum": 31.0,
             "minimum": 1.0,
@@ -45,6 +33,18 @@
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "owner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The entity's first owner. Defaults to the creating principal; an entity never exists without one (IAM-05).",
+            "title": "Owner"
           },
           "slug": {
             "description": "Stable identifier, unique in this deployment.",
@@ -71,18 +71,18 @@
       },
       "EntityCreatedResponse": {
         "properties": {
-          "administrator_grant_id": {
-            "title": "Administrator Grant Id",
-            "type": "string"
-          },
           "entity_id": {
             "title": "Entity Id",
+            "type": "string"
+          },
+          "owner_grant_id": {
+            "title": "Owner Grant Id",
             "type": "string"
           }
         },
         "required": [
           "entity_id",
-          "administrator_grant_id"
+          "owner_grant_id"
         ],
         "title": "EntityCreatedResponse",
         "type": "object"
@@ -140,12 +140,7 @@
             "type": "string"
           },
           "role": {
-            "enum": [
-              "reader",
-              "recorder",
-              "poster",
-              "administrator"
-            ],
+            "description": "A role name from this deployment's catalogue. Roles are rows rather than a fixed enumeration, so the set is not enumerable here; an unknown name is refused with `unknown_role` (ADR-0039).",
             "title": "Role",
             "type": "string"
           }
@@ -350,7 +345,7 @@
   "paths": {
     "/entities": {
       "post": {
-        "description": "Requires authentication and no prior role (`IAM-06`).\n\nThe entity and its first administrator are written in one transaction, or neither is\n(`IAM-05`).",
+        "description": "Requires authentication and no prior role (`IAM-06`).\n\nThe entity and its first owner are written in one transaction, or neither is\n(`IAM-05`).",
         "operationId": "create_entities_post",
         "parameters": [
           {
@@ -458,7 +453,7 @@
             "description": "Unprocessable Entity"
           }
         },
-        "summary": "Create an entity and assign its first administrator",
+        "summary": "Create an entity and assign its first owner",
         "tags": [
           "administration"
         ]

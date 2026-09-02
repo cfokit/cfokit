@@ -55,15 +55,25 @@ class NotAuthorised(LedgerError):
     code = "not_authorised"
 
 
-class LastAdministrator(LedgerError):
-    """The last administrator cannot be removed or demoted (`IAM-04`).
+class UnknownRole(LedgerError):
+    """No such role in the catalogue (`IAM-01`, ADR-0039).
 
-    Distinct from `not_authorised`: the caller is permitted to revoke grants, and this
-    particular one would leave the entity with nobody able to administer it. Telling them
-    "not permitted" would send them to ask for a capability they already hold.
+    Roles are rows, so the set of valid names is not fixed at build time and the API cannot
+    enumerate them in its schema. This is what a caller gets instead of a constraint violation.
     """
 
-    code = "last_administrator"
+    code = "unknown_role"
+
+
+class LastOwner(LedgerError):
+    """The last owner cannot be revoked or demoted (`IAM-04`, `IAM-21`).
+
+    Distinct from `not_authorised`: the caller is permitted to revoke grants, and this
+    particular one would leave the entity unheld. Telling them "not permitted" would send them
+    to ask for a capability they already hold.
+    """
+
+    code = "last_owner"
 
 
 # --- Booking ---------------------------------------------------------------------------

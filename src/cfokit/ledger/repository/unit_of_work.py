@@ -80,10 +80,12 @@ class EntityWrite:
 
     # --- grants (IAM-01, ADR-0011) -------------------------------------------------------
 
-    def roles_in_force(self, principal_id: str, at: datetime) -> frozenset[str]:
-        """Roles this principal holds here at `at`. Read inside the locked transaction, so a
-        revocation committed a moment ago is already in force (`IAM-15`)."""
-        return grants.roles_in_force(self._conn, self._entity_id, principal_id, at)
+    def privileges_in_force(self, principal_id: str, at: datetime) -> frozenset[str]:
+        """Every privilege this principal holds here at `at`, across all its roles.
+
+        Read inside the locked transaction, so a revocation committed a moment ago is already
+        in force (`IAM-15`)."""
+        return grants.privileges_in_force(self._conn, self._entity_id, principal_id, at)
 
     def grant_role(
         self, *, principal_id: str, role: str, granted_by: str, lapses_at: datetime | None
@@ -102,14 +104,24 @@ class EntityWrite:
             self._conn, grant_id=grant_id, revoked_by=revoked_by
         )
 
-    def would_remove_last_administrator(self, grant_id: str, at: datetime) -> bool:
-        """Whether revoking this grant would leave the entity with no administrator.
+    def role_definition(self, name: str) -> grants.RoleDefinition | None:
+        """The catalogue entry for a role, or None if this deployment defines no such role."""
+        return grants.role_definition(self._conn, name)
 
-        `IAM-04`: "An entity always has at least one identity holding the administrative role.
-        The last administrator cannot be removed or demoted." Counted inside the locked
-        transaction, so two concurrent revocations cannot each see the other's administrator.
+    def role_of_grant(self, grant_id: str) -> str | None:
+        """The role an unrevoked grant in this entity carries, or None if there is none."""
+        return administration.role_of_grant(
+            self._conn, entity_id=self._entity_id, grant_id=grant_id
+        )
+
+    def would_remove_last_owner(self, grant_id: str, at: datetime) -> bool:
+        """Whether revoking this grant would leave the entity unheld.
+
+        `IAM-04`: "An entity always has at least one identity holding it. The last owner cannot
+        be revoked or demoted." Counted inside the locked transaction, so two concurrent
+        revocations cannot each see the other's owner.
         """
-        return administration.would_remove_last_administrator(
+        return administration.would_remove_last_owner(
             self._conn, entity_id=self._entity_id, grant_id=grant_id, at=at
         )
 

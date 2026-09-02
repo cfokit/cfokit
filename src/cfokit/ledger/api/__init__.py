@@ -171,7 +171,7 @@ def create_app(settings: Settings, authenticator: Authenticator | None = None) -
     @app.post(
         "/entities",
         tags=["administration"],
-        summary="Create an entity and assign its first administrator",
+        summary="Create an entity and assign its first owner",
         status_code=status.HTTP_201_CREATED,
         responses=ERRORS,
     )
@@ -183,7 +183,7 @@ def create_app(settings: Settings, authenticator: Authenticator | None = None) -
     ) -> EntityCreatedResponse:
         """Requires authentication and no prior role (`IAM-06`).
 
-        The entity and its first administrator are written in one transaction, or neither is
+        The entity and its first owner are written in one transaction, or neither is
         (`IAM-05`).
         """
         created = create_entity(
@@ -197,11 +197,11 @@ def create_app(settings: Settings, authenticator: Authenticator | None = None) -
             fiscal_year_end_day=body.fiscal_year_end_day,
             functional_currency=body.functional_currency,
             time_zone=body.time_zone,
-            administrator=body.administrator,
+            owner=body.owner,
         )
         return EntityCreatedResponse(
             entity_id=created.entity_id,
-            administrator_grant_id=created.administrator_grant_id,
+            owner_grant_id=created.owner_grant_id,
         )
 
     @app.post(

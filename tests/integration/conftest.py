@@ -58,6 +58,43 @@ def _connect(dsn: str) -> psycopg.Connection[Any]:
     return conn
 
 
+# What a deployment adds when it has somebody to hold it (ADR-0039). Only `owner` ships, so
+# these are defined the way a real deployment would define them — by inserting catalogue rows —
+# which is also the only test that the mechanism works. Session-scoped and never removed:
+# `entity_grant.role` references `role.name`, so a role a test has granted cannot be deleted.
+DELEGATED_ROLES: dict[str, frozenset[str]] = {
+    "reader": frozenset({"read"}),
+    "recorder": frozenset({"read", "record"}),
+    "poster": frozenset({"read", "record", "post"}),
+    "administrator": frozenset({"grant"}),
+}
+
+
+@pytest.fixture(scope="session", autouse=True)
+def delegated_roles() -> dict[str, frozenset[str]]:
+    """Define the delegated roles this suite exercises, once for the run.
+
+    Returned as well as seeded, because `tests` is not a package and a test that needs the
+    names has no import path to them.
+    """
+    if not OWNER_URL:
+        return DELEGATED_ROLES
+    with _connect(OWNER_URL) as conn, conn.cursor() as cur:
+        for name, privileges in DELEGATED_ROLES.items():
+            cur.execute(
+                "INSERT INTO role (name, description) VALUES (%s, %s)"
+                " ON CONFLICT (name) DO NOTHING",
+                (name, f"Defined by the integration suite: {', '.join(sorted(privileges))}."),
+            )
+            for privilege in sorted(privileges):
+                cur.execute(
+                    "INSERT INTO role_privilege (role_name, privilege) VALUES (%s, %s)"
+                    " ON CONFLICT DO NOTHING",
+                    (name, privilege),
+                )
+    return DELEGATED_ROLES
+
+
 @pytest.fixture
 def owner_conn() -> Iterator[psycopg.Connection[Any]]:
     """A connection as the schema owner. Bypasses RLS; use only to arrange fixtures."""

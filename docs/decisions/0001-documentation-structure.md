@@ -13,12 +13,12 @@ CFOKit needs documentation, and it needs a structure decided once rather than re
 whoever writes the next document.
 
 Every kind of writing a software project produces has a different audience and a different
-lifecycle. Requirements churn until they are agreed. Decisions are immutable once accepted.
-Instructions to an agent are read every session and cost context on every request. User
-instructions are read by people who will never see the source. Put them in one undifferentiated
-tree and each erodes the others: an agent edits an immutable record while working on the file
-beside it, a reader looking for what the system does finds an argument about what it might have
-done, and the rules file grows until nothing in it is followed.
+lifecycle. Requirements churn until they are agreed. Decisions churn until the system has users
+who depend on them. Instructions to an agent are read every session and cost context on every
+request. User instructions are read by people who will never see the source. Put them in one
+undifferentiated tree and each erodes the others: a reader looking for what the system does
+finds an argument about what it might have done, and the rules file grows until nothing in it
+is followed.
 
 The repository is developed by agents and is intended to take contributors. Both need the same
 thing: a defined place for every kind of document, and a strong enough point of view that the
@@ -27,8 +27,8 @@ question does not get reopened.
 ## Decision Drivers
 
 * One home per kind of writing, chosen by audience and lifecycle.
-* Immutable records separated from the working area, so immutability is structurally awkward to
-  violate rather than merely forbidden.
+* Records separated from the working area, so an argument about what the system might have been
+  is never mistaken for a description of what it is.
 * A published standard in preference to a local invention, for each kind — the same reasoning that
   selects OpenTofu, Conventional Commits and Semantic Versioning elsewhere.
 * Machine-readable metadata where a document has structure, so CI can check what review otherwise
@@ -53,7 +53,7 @@ one exists.**
 | Entry point | `README.md` | Anyone arriving | Churns | — |
 | Vision | `docs/product/vision.md` | Product, contributors | Churns | — |
 | Requirements | `docs/product/requirements.md` | Product, contributors, auditors | Churns until agreed; requirement ids are stable | — |
-| Decision records | `docs/decisions/NNNN-*.md` | Contributors, future maintainers | Immutable once accepted | [MADR 4.0.0](https://adr.github.io/madr/) |
+| Decision records | `docs/decisions/NNNN-*.md` | Contributors, future maintainers | Churns until the system has users who depend on them | [MADR 4.0.0](https://adr.github.io/madr/) |
 | User documentation | `docs/tutorials/`, `docs/how-to/`, `docs/reference/`, `docs/explanation/` | Users | Churns | [Diátaxis](https://diataxis.fr) |
 | Agent and contributor rules | `CLAUDE.md`, `src/cfokit/*/CLAUDE.md` | Every session | Churns | — |
 | Contributor guide | `CONTRIBUTING.md` | Human contributors | Churns | — |
@@ -90,10 +90,11 @@ MADR 4.0.0, full template, in `docs/decisions/`, with three local rules:
    under the most pressure: a bundled record forces a reader to re-open settled reasoning to change
    one part of it.
 
-Records are numbered sequentially and never reused. Numbers are identifiers, not chronology; the
-`date` field is authoritative for sequence. A record is immutable once accepted — a changed mind is
-a new record that supersedes the old one, and the superseded record stays in place with its status
-updated.
+Records are numbered sequentially with no gaps. Numbers are identifiers, not chronology; the
+`date` field is authoritative for sequence. A record that turns out to be wrong is corrected in
+place, and one describing a problem the system does not have is deleted and the numbering
+closed up. Supersession is available where the earlier reasoning is worth keeping beside the
+new; it is not required. These loosen when something outside this repository cites a record.
 
 ### How the documents derive
 
@@ -171,8 +172,8 @@ write. Until then nothing assumes a location for one.
   has never seen the repository.
 * Good, because each home follows a standard already known to contributors and to agents, so no
   local format has to be learned from a template file.
-* Good, because immutable records live in their own tree, so editing one while working nearby is
-  structurally awkward rather than merely forbidden.
+* Good, because records live in their own tree, so an argument about a decision never sits in
+  the middle of a description of the system.
 * Good, because decision-record frontmatter is YAML, making status values, `superseded by` links,
   and index-to-file agreement checkable in CI rather than by review.
 * Good, because `decision-makers` / `consulted` / `informed` record decision authority, which the
@@ -218,9 +219,8 @@ containing "and" is a signal for review, not a failure condition.
 ### One documentation tree — everything under `docs/`
 
 * Good, because it is the simplest taxonomy and there is one place to look.
-* Bad, because it houses an append-only immutable store inside the working area an agent edits
-  constantly. Immutability is a rule an agent can read and still violate while editing neighbouring
-  files; separate trees make the mistake structurally awkward.
+* Bad, because it houses the decision corpus inside the working area an agent edits constantly,
+  so a record and the documents deriving from it are edited together and drift silently.
 * Bad, because it mixes lifecycles: documents that churn sit beside documents that must never
   change, and a reader cannot tell which is which from the location.
 
@@ -230,9 +230,9 @@ containing "and" is a signal for review, not a failure condition.
   already the right answer for user documentation.
 * Bad, because it classifies by *user need* — learning, doing, looking up, understanding — which is
   the wrong axis for decision records and requirements. An ADR is not a tutorial, a how-to, a
-  reference or an explanation; forcing it into "explanation" loses its immutability and its
-  numbering.
-* Bad, because it has no concept of a document that must not be edited.
+  reference or an explanation; forcing it into "explanation" loses its numbering and its
+  status.
+* Bad, because it has no concept of a document whose lifecycle differs from the rest.
 
 ### No prescribed structure; per-document judgement
 

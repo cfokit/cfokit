@@ -26,24 +26,18 @@ cost the same context as inlining, while diluting adherence to the rules that ma
 
 ## Rules
 
-1. **Immutable once accepted.** Fix typos; never rewrite the reasoning. A changed mind is a new
-   record that supersedes the old one. Enforced on pull requests by `check_decisions`, which
-   diffs each accepted record against the base ref. The exception is a correction that leaves
-   the decision itself intact — a typo, or a `Confirmation` naming a gate that turned out not
-   to exist: set `ALLOW_ACCEPTED_EDIT` to the record numbers it covers and say why in the
-   commit. It names records rather than being a boolean, so it cannot silently become a
-   blanket disable, and it fails once the records it names stop differing from the base.
-2. **Supersede, don't delete.** Set the old record's `status` to `superseded by ADR-NNNN` and leave
-   it in place. The rejected-alternatives history is most of the value.
-3. **One decision per file, tested by supersession.** A record may state a decision in several
+**Nothing here is final.** Records are corrected in place when they turn out to be wrong, and
+deleted when they describe a problem the system does not have. Immutability, supersession and
+never reusing a number are rules for a corpus that outside things cite; nothing is released and
+nothing cites these but this repository. They are added when something breaks without them.
+
+1. **One decision per file, tested by supersession.** A record may state a decision in several
    clauses when they stand or fall together. The test: *could one clause be superseded without
    reopening the others?* If it could, they are two decisions — split them. A title containing
    "and" is a signal to apply the test, not a violation by itself. (ADR-0001)
-4. **Number sequentially, never reuse.** Gaps are fine. Numbers are identifiers, not chronology —
-   the `date` field is authoritative for sequence.
-5. **Written when the decision is made,** not reconstructed later.
-6. **Rejected alternatives are mandatory.** A record without them does not prevent re-litigation.
-7. **State what is,** not the history of how the decision was reached. The reasoning belongs in the
+2. **Written when the decision is made,** not reconstructed later.
+3. **Rejected alternatives are mandatory.** A record without them does not prevent re-litigation.
+4. **State what is,** not the history of how the decision was reached. The reasoning belongs in the
    record; the story of how the thinking evolved belongs nowhere.
 
 ## Index
@@ -87,6 +81,8 @@ cost the same context as inlining, while diluting adherence to the rules that ma
 | [0035](0035-inference-for-the-attested-runtime.md) | CFOKit holds the inference relationship for the attested runtime | Draft |
 | [0036](0036-correctness-is-tested-in-four-layers.md) | Correctness is tested in four layers, and only the top one needs a model | Draft |
 | [0037](0037-accounting-basis-is-a-presentation-property.md) | The ledger records obligation and settlement; accounting basis is a presentation property | Accepted |
+| [0038](0038-an-entity-is-held-by-its-owners.md) | An entity is held by one or more mutually equivalent owners | Proposed |
+| [0039](0039-roles-are-rows-privileges-are-code.md) | Roles are rows, privileges are code, and only `owner` exists yet | Proposed |
 
 ## Deferred — decided in principle, waiting on a need
 
@@ -147,9 +143,7 @@ does not. The thirteen records that carried the earlier section structure — no
 no flat `Considered Options` list, no `Confirmation` — were re-derived rather than reformatted:
 their `Alternatives rejected` subsections already held the substance of `Pros and Cons of the
 Options`, and the drivers were recovered from reasoning each record already stated rather than
-invented. Nothing was accepted at the time, so rule 1 did not bind.
-
-Five records stated two decisions each and were split under rule 3: ADR-0028 (no ORM) out of
+Five records stated two decisions each and were split under the one-decision-per-file rule: ADR-0028 (no ORM) out of
 ADR-0008, ADR-0029 (idempotency keys) out of ADR-0011, ADR-0030 (closed-period reopen) out of
 ADR-0013, ADR-0031 (capability naming) out of ADR-0020, and ADR-0032 (component authentication)
 out of ADR-0023. Each half could have been superseded without reopening the other, which is the

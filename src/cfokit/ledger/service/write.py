@@ -102,13 +102,13 @@ def _authorise(write: EntityWrite, context: WriteContext, capability: Capability
     or ambient authority stands in for either".
     """
     now = datetime.now(UTC)
-    actor_roles = write.roles_in_force(context.principal.id, now)
-    acted_for_roles = (
-        write.roles_in_force(context.principal.acting_for, now)
+    actor = write.privileges_in_force(context.principal.id, now)
+    acted_for = (
+        write.privileges_in_force(context.principal.acting_for, now)
         if context.principal.acting_for is not None
         else frozenset()
     )
-    require(capability, context.principal, actor_roles, acted_for_roles)
+    require(capability, context.principal, actor, acted_for)
 
 
 def record_transaction(

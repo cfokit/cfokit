@@ -31,13 +31,13 @@ def read_transaction(
     """
     now = datetime.now(UTC)
     with database.entity_write(entity_id) as write:
-        actor_roles = write.roles_in_force(principal.id, now)
-        acted_for_roles = (
-            write.roles_in_force(principal.acting_for, now)
+        actor = write.privileges_in_force(principal.id, now)
+        acted_for = (
+            write.privileges_in_force(principal.acting_for, now)
             if principal.acting_for is not None
             else frozenset()
         )
-        require(Capability.READ, principal, actor_roles, acted_for_roles)
+        require(Capability.READ, principal, actor, acted_for)
 
         stored = write.load_transaction(transaction_id)
 

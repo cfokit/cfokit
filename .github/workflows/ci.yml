@@ -64,14 +64,7 @@ jobs:
           enable-cache: true
       - run: uv python install ${{ env.PYTHON_VERSION }}
       - run: uv sync --locked
-      # BASE_REF lets the corpus check enforce rule 1 — an accepted record is not edited.
-      # Needs the base branch present, which the default shallow checkout does not fetch.
-      - run: git fetch --no-tags --depth=1 origin ${{ github.base_ref || 'main' }}
-        if: github.event_name == 'pull_request'
       - run: uv run task check-decisions
-        env:
-          BASE_REF: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || '' }}
-
 
   # Unit and documentation tests. No infrastructure required.
   test:

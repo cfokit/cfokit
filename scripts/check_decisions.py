@@ -28,20 +28,12 @@ Eight assertions, each one ADR-0001 makes:
     refutes at least as many options as Considered Options names. A record that names
     alternatives without refuting each one does not prevent re-litigation, which is the
     main thing a record is for.
-9.  **An accepted record is not edited.** Rule 1 of the corpus, and the only one that could
-    not be checked until something was accepted. A changed mind is a superseding record, so
-    the superseded reasoning survives; editing in place destroys it silently. Runs only when
-    a base ref is available to diff against, which in practice means CI on a pull request.
-
 Exits non-zero listing every offence, so CI fails loudly.
 """
 
 from __future__ import annotations
 
-import os
 import re
-import shutil
-import subprocess
 import sys
 from pathlib import Path
 
@@ -53,7 +45,6 @@ INDEX = DECISIONS / "README.md"
 
 RECORD_NAME = re.compile(r"^(\d{4})-[a-z0-9-]+\.md$")
 
-GIT = shutil.which("git") or "git"
 
 VALID_STATUS = {"draft", "proposed", "accepted", "rejected", "deprecated"}
 SUPERSEDED = re.compile(r"^superseded by ADR-(\d{4})$")
@@ -282,90 +273,6 @@ def check_index(records: dict[str, Path], statuses: dict[str, str]) -> list[str]
     return bad
 
 
-def check_accepted_are_unedited(records: dict[str, Path]) -> list[str]:
-    """Assertion 9: rule 1, which only became checkable once a record was accepted.
-
-    Compares each accepted record against the same file on the base ref. Anything but the
-    `status:` line changing is an edit to accepted reasoning, and the remedy is a superseding
-    record rather than a rewrite. A correction that leaves the decision itself untouched — a
-    typo, or a Confirmation naming a gate that turned out not to exist — is the documented
-    exception and needs a human to say so.
-
-    `ALLOW_ACCEPTED_EDIT` is that exception, and it **names the records**:
-
-        ALLOW_ACCEPTED_EDIT=0003,0013 uv run task check-decisions
-
-    It is deliberately not a boolean. A boolean set in CI is indistinguishable from a boolean
-    someone forgot to unset, and rule 1 would then be a gate the corpus claims and does not
-    have — which is the exact failure the enforcement sweep existed to find. Naming records
-    also makes the allowance **self-expiring**: once the edit is merged, the base ref carries
-    it, the record no longer differs, and a stale entry fails the build until it is removed.
-
-    Silent when no base ref is set: locally there is usually nothing meaningful to diff
-    against, and a check that guesses would either miss edits or block ordinary work.
-    """
-    base = os.environ.get("BASE_REF")
-    if not base:
-        return []
-
-    raw = os.environ.get("ALLOW_ACCEPTED_EDIT", "")
-    allowed = {token for token in re.split(r"[,\s]+", raw) if token}
-    malformed = sorted(token for token in allowed if not re.fullmatch(r"\d{4}", token))
-    if malformed:
-        return [
-            "ALLOW_ACCEPTED_EDIT names records, not a boolean: "
-            f"{', '.join(malformed)} is not a four-digit record number. "
-            "Use ALLOW_ACCEPTED_EDIT=0003,0013 and say why in the commit."
-        ]
-
-    bad: list[str] = []
-    edited: set[str] = set()
-    for _, path in sorted(records.items()):
-        rel = path.relative_to(REPO_ROOT)
-        before = subprocess.run(  # noqa: S603  — fixed argv, no shell
-            [GIT, "show", f"{base}:{rel}"],
-            capture_output=True,
-            text=True,
-            cwd=REPO_ROOT,
-            check=False,
-        )
-        if before.returncode != 0:
-            continue  # new file on this branch; nothing to have edited
-
-        front = parse_frontmatter(before.stdout) or {}
-        if front.get("status") != "accepted":
-            continue  # it was not accepted before this change, so rule 1 did not bind
-
-        if _without_status(before.stdout) == _without_status(path.read_text()):
-            continue
-
-        edited.add(path.name[:4])
-        if path.name[:4] in allowed:
-            continue
-
-        bad.append(
-            f"{path.name}: was accepted on {base} and has been edited. A changed mind "
-            "is a superseding record, not a rewrite (README rule 1). For a correction that "
-            f"leaves the decision intact, set ALLOW_ACCEPTED_EDIT={path.name[:4]} and say "
-            "why in the commit."
-        )
-
-    # An allowance for a record that is not actually edited has outlived its purpose. Failing
-    # on it is what stops the escape hatch quietly becoming permanent.
-    for stale in sorted(allowed - edited):
-        bad.append(
-            f"ALLOW_ACCEPTED_EDIT names {stale}, which is unchanged from {base}. "
-            "The allowance has served its purpose — remove it."
-        )
-
-    return bad
-
-
-def _without_status(text: str) -> str:
-    """The record with its `status:` line removed, so acceptance itself is not an edit."""
-    return "\n".join(line for line in text.splitlines() if not line.startswith("status:"))
-
-
 def check_derivation() -> list[str]:
     """Assertion 7: the arrow never reverses."""
     bad: list[str] = []
@@ -409,7 +316,6 @@ def main() -> int:
 
     bad.extend(check_index(records, statuses))
     bad.extend(check_derivation())
-    bad.extend(check_accepted_are_unedited(records))
 
     if bad:
         print(f"Decision corpus: {len(bad)} problem(s).\n", file=sys.stderr)

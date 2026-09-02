@@ -20,7 +20,7 @@ from cfokit.ledger.errors import (
     EntityNotFound,
     IdempotencyKeyRequired,
     IdempotencyKeyReused,
-    LastAdministrator,
+    LastOwner,
     LedgerError,
     NotAuthenticated,
     NotAuthorised,
@@ -28,6 +28,7 @@ from cfokit.ledger.errors import (
     TransactionIncomplete,
     TransactionNotFound,
     UnbalancedTransaction,
+    UnknownRole,
 )
 
 __all__ = ["STATUS_FOR_CODE", "status_for"]
@@ -36,8 +37,9 @@ STATUS_FOR_CODE: dict[str, int] = {
     NotAuthenticated.code: HTTPStatus.UNAUTHORIZED,
     NotAuthorised.code: HTTPStatus.FORBIDDEN,
     # 409, not 403: the caller holds the capability, and this particular revocation would
-    # leave the entity with nobody able to administer it (`IAM-04`).
-    LastAdministrator.code: HTTPStatus.CONFLICT,
+    # leave the entity unheld (`IAM-04`).
+    LastOwner.code: HTTPStatus.CONFLICT,
+    UnknownRole.code: HTTPStatus.UNPROCESSABLE_ENTITY,
     EntityNotFound.code: HTTPStatus.NOT_FOUND,
     TransactionNotFound.code: HTTPStatus.NOT_FOUND,
     # 409 rather than 422: the request is well-formed and would have been valid earlier. The

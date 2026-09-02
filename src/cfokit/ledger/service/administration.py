@@ -2,7 +2,7 @@
 
 Three obligations that are easy to state and easy to miss:
 
-- **`IAM-05`**: "Creating an entity assigns its first administrator in the same act. An entity
+- **`IAM-05`**: "Creating an entity assigns its first owner in the same act. An entity
   never exists without one, and no separate step is required to make it usable." So the entity
   and its first grant are written in one transaction, or neither is.
 - **`IAM-06`**: creating an entity requires an authenticated identity and no prior role. It is
@@ -10,8 +10,10 @@ Three obligations that are easy to state and easy to miss:
   stands.
 - **`IAM-03`**: granting, revoking and changing a role assignment are administrative
   capabilities "available to no other role".
-- **`IAM-04`**: "An entity always has at least one identity holding the administrative role. The
-  last administrator cannot be removed or demoted."
+- **`IAM-04`**: "An entity always has at least one identity holding it. The last owner cannot
+  be revoked or demoted."
+- **`IAM-21`**: granting or revoking ownership is an owner's alone, so a role carrying only
+  `GRANT` cannot revoke an owner (ADR-0038).
 
 Every one of these writes an `audit_log` row, which is what `IAM-13` requires — "every grant,
 invitation, revocation, lapse and role change is recorded, with who made it and when" — and
@@ -23,7 +25,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from cfokit.ledger.errors import LastAdministrator, NotAuthorised
+from cfokit.ledger.errors import LastOwner, NotAuthorised, UnknownRole
 from cfokit.ledger.repository.unit_of_work import Database, EntityWrite
 from cfokit.ledger.service.authorisation import Capability, require
 from cfokit.ledger.service.principal import Principal
@@ -39,7 +41,7 @@ __all__ = [
 @dataclass(frozen=True, slots=True)
 class EntityCreated:
     entity_id: str
-    administrator_grant_id: str
+    owner_grant_id: str
 
 
 def create_entity(
@@ -54,22 +56,22 @@ def create_entity(
     fiscal_year_end_day: int,
     functional_currency: str,
     time_zone: str,
-    administrator: str | None = None,
+    owner: str | None = None,
 ) -> EntityCreated:
-    """Create an entity and assign its first administrator, atomically (`IAM-05`).
+    """Create an entity and assign its first owner, atomically (`IAM-05`).
 
     Authentication is the whole of the requirement (`IAM-06`). No prior role is asked for,
     because there is no entity to hold one in and a role in some other entity confers nothing
     here — a caller the issuer has authenticated may create an entity and, in the same act,
-    becomes the identity administering it.
+    becomes the identity holding it (`IAM-05`, `IAM-21`).
 
-    `administrator` defaults to the creating principal, which is the ordinary case. Naming
-    someone else is the case where one person provisions on another's behalf.
+    `owner` defaults to the creating principal, which is the ordinary case. Naming someone
+    else is the case where one person provisions on another's behalf.
 
     Not entity-scoped, so it does not use `Database.entity_write`: there is no entity to scope
     to or lock on until this commits.
     """
-    first_administrator = administrator or principal.id
+    first_owner = owner or principal.id
 
     with database.unscoped_write() as write:
         entity_id = write.create_entity(
@@ -88,8 +90,8 @@ def create_entity(
         # Same transaction as the entity. IAM-05: "An entity never exists without one."
         grant_id = write.grant_entity_role(
             entity_id=entity_id,
-            principal_id=first_administrator,
-            role="administrator",
+            principal_id=first_owner,
+            role="owner",
             granted_by=principal.id,
         )
         write.record_audit(
@@ -99,10 +101,10 @@ def create_entity(
             action="create_entity",
             subject_type="entity",
             subject_id=entity_id,
-            detail={"administrator": first_administrator},
+            detail={"owner": first_owner},
         )
 
-    return EntityCreated(entity_id=entity_id, administrator_grant_id=grant_id)
+    return EntityCreated(entity_id=entity_id, owner_grant_id=grant_id)
 
 
 def grant_role(
@@ -115,10 +117,25 @@ def grant_role(
     role: str,
     lapses_at: datetime | None = None,
 ) -> str:
-    """Grant a role in an entity. Administrative only (`IAM-03`)."""
+    """Grant a role in an entity (`IAM-03`, `IAM-21`).
+
+    Granting a role that carries `OWN` takes `OWN`; granting anything else takes `GRANT`, so a
+    role that staffs an entity cannot hand it away.
+    """
     now = datetime.now(UTC)
     with database.entity_write(entity_id) as write:
-        _require_administrator(write, principal, now)
+        definition = write.role_definition(role)
+        if definition is None:
+            raise UnknownRole(f"no role {role!r} in this deployment")
+        # Granting a role that carries `own` is itself an owner's act: handing the entity away
+        # is not part of staffing it (`IAM-21`).
+        confers_ownership = Capability.OWN in definition.privileges
+        _require(
+            write, principal, now, Capability.OWN if confers_ownership else Capability.GRANT
+        )
+        if definition.never_lapses and lapses_at is not None:
+            # IAM-09's lapse happens without anyone acting, and must never unhold an entity.
+            raise NotAuthorised(f"the {role!r} role cannot be granted for a stated period")
         grant_id = write.grant_role(
             principal_id=to_principal, role=role, granted_by=principal.id, lapses_at=lapses_at
         )
@@ -143,20 +160,28 @@ def revoke_grant(
     request_id: str,
     grant_id: str,
 ) -> None:
-    """Revoke a grant, unless it is the last administrator's (`IAM-03`, `IAM-04`).
+    """Revoke a grant, unless it is the last owner's (`IAM-03`, `IAM-04`, `IAM-21`).
 
-    The last-administrator check runs inside the locked transaction, so two concurrent
-    revocations cannot each see the other's administrator and leave the entity with none — the
-    per-entity advisory lock is what makes that a check rather than a race (ADR-0011).
+    Revoking a role that carries `OWN` takes `OWN`, so a role that only staffs an entity cannot
+    remove the people whose entity it is.
+
+    The last-owner check runs inside the locked transaction, so two concurrent revocations
+    cannot each see the other's owner and leave the entity unheld — the per-entity advisory
+    lock is what makes that a check rather than a race (ADR-0011).
     """
     now = datetime.now(UTC)
     with database.entity_write(entity_id) as write:
-        _require_administrator(write, principal, now)
+        target = write.role_of_grant(grant_id)
+        held = write.role_definition(target) if target is not None else None
+        # Revoking a role that holds the entity takes `own`; revoking anyone else takes
+        # `grant`. An administrative role cannot remove the people whose entity it is.
+        confers_ownership = held is not None and Capability.OWN in held.privileges
+        _require(
+            write, principal, now, Capability.OWN if confers_ownership else Capability.GRANT
+        )
 
-        if write.would_remove_last_administrator(grant_id, now):
-            raise LastAdministrator(
-                "an entity always has at least one administrator; grant another first"
-            )
+        if write.would_remove_last_owner(grant_id, now):
+            raise LastOwner("an entity always has at least one owner; grant another first")
 
         if not write.revoke_grant(grant_id, revoked_by=principal.id):
             raise NotAuthorised("no such grant in this entity, or it is already revoked")
@@ -171,12 +196,14 @@ def revoke_grant(
         )
 
 
-def _require_administrator(write: EntityWrite, principal: Principal, now: datetime) -> None:
+def _require(
+    write: EntityWrite, principal: Principal, now: datetime, capability: Capability
+) -> None:
     """`IAM-03`: administering is available to no other role."""
-    roles = write.roles_in_force(principal.id, now)
+    actor = write.privileges_in_force(principal.id, now)
     acted_for = (
-        write.roles_in_force(principal.acting_for, now)
+        write.privileges_in_force(principal.acting_for, now)
         if principal.acting_for is not None
         else frozenset()
     )
-    require(Capability.ADMINISTER, principal, roles, acted_for)
+    require(capability, principal, actor, acted_for)

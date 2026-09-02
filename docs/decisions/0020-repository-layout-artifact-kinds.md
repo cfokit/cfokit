@@ -56,7 +56,7 @@ those are the properties that break when a directory holds two kinds at once.
 ```
 src/cfokit/       Python source; one package per capability, and nothing else
 skills/           Shipped SKILL.md bundles; plural
-docs/decisions/   Decision records; immutable once accepted
+docs/decisions/   Decision records
 docs/product/     vision.md, requirements.md
 infra/            OpenTofu for the one maintained cloud target
 .claude/          Tooling for developing this repo; never shipped
@@ -175,8 +175,8 @@ requirements and leave only the mechanism behind.
 * Bad, because the requirement halves already exist and are cited by id; splitting further would
   double the documents and create two places to keep in sync.
 * Bad, because the mechanism is most comprehensible directly beside the obligation it satisfies. This
-  is a different question from whether one record holds two *decisions*, which ADR-0001's rule 3
-  governs.
+  is a different question from whether one record holds two *decisions*, which ADR-0001's
+  one-decision-per-file rule governs.
 
 ## More Information
 
