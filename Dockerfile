@@ -7,10 +7,10 @@
 #
 #   docker run … python -m cfokit.ledger.migrations    migrations, explicit only
 #   docker run … python -m cfokit.ledger.api           REST service (default)
+#   docker run … python -m cfokit.ledger.mcp           MCP service, streamable HTTP
 #
-# There is deliberately no MCP entrypoint yet: the adapter exists and is tested, but
-# nothing authenticates an MCP caller, and a runnable server that booked for an
-# unidentified principal would be worse than none (LED-20).
+# Both surfaces validate bearer tokens against the same issuer and the same audience
+# (ADR-0019). They listen on PORT, so a deployment runs one per service.
 #
 # Migrations never run at startup (ADR-0004). There is deliberately no entrypoint
 # script that applies them before starting the service.

@@ -16,11 +16,16 @@ asks for "a real MCP client from the SDK over the real transport", and that half
 from __future__ import annotations
 
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Any
 
 import psycopg
 import pytest
 from fastapi.testclient import TestClient
+from mcp.server.auth.middleware.auth_context import auth_context_var
+from mcp.server.auth.middleware.bearer_auth import AuthenticatedUser
+from mcp.server.auth.provider import AccessToken
 from mcp.types import CallToolResult
 
 from cfokit.ledger.api import create_app
@@ -33,15 +38,45 @@ pytestmark = pytest.mark.integration
 PERSON = Principal(id="user:geoff", actor_class=ActorClass.PERSON)
 
 
-class StubAuthenticator:
-    """Stands in for the token validation that ADR-0019 requires and nothing implements.
+CLAIMS: dict[str, Any] = {
+    "sub": PERSON.id,
+    "iss": "http://localhost:4444",
+    "aud": "cfokit-ledger",
+}
 
-    A test double for a seam, not for a mechanism: there is no authenticator to fake, which
-    is the gap `api/auth.py` states.
+
+class StubAuthenticator:
+    """Stands in for the issuer, not for the verification.
+
+    Both adapters compose `claims_for` with `principal_from_claims`, so faking the first still
+    exercises the derivation ADR-0033 turns on — a token's *shape* decides `actor_class`, and
+    nothing here can assert one.
     """
 
-    def principal_for(self, credential: str | None) -> Principal:
-        return PERSON
+    def claims_for(self, credential: str | None) -> dict[str, Any]:
+        return CLAIMS
+
+
+@contextmanager
+def authenticated(claims: dict[str, Any]) -> Iterator[None]:
+    """Present a verified token to the MCP tools, as the SDK's bearer middleware does.
+
+    `call_tool` is dispatch rather than transport, so the middleware that would set this on a
+    real request does not run. Setting the SDK's own contextvar is what keeps the tools reading
+    their principal from exactly one place in tests and in production.
+    """
+    token = AccessToken(
+        token="stub",  # noqa: S106 — a stand-in, never validated
+        client_id=str(claims["sub"]),
+        scopes=[],
+        subject=str(claims["sub"]),
+        claims=claims,
+    )
+    reset = auth_context_var.set(AuthenticatedUser(token))
+    try:
+        yield
+    finally:
+        auth_context_var.reset(reset)
 
 
 @pytest.fixture
@@ -57,6 +92,13 @@ def settings(owner_dsn: str, app_dsn: str) -> Settings:
         auth_issuer_url="http://localhost:4444",
         auth_audience="cfokit-ledger",
     )
+
+
+@pytest.fixture
+def authenticated_caller() -> Iterator[None]:
+    """Every MCP test acts as a verified caller, because every tool now requires one."""
+    with authenticated(CLAIMS):
+        yield
 
 
 @pytest.fixture
@@ -241,10 +283,10 @@ def test_rest_hides_another_entitys_transaction_from_someone_who_may_read_here(
 
 @pytest.mark.anyio
 async def test_mcp_records_and_reads_back(
-    settings: Settings, books: tuple[str, str, str]
+    authenticated_caller: None, settings: Settings, books: tuple[str, str, str]
 ) -> None:
     entity_id, cash, revenue = books
-    server = create_server(settings, principal=PERSON)
+    server = create_server(settings, authenticator=StubAuthenticator())
 
     result = await server.call_tool(
         "record_transaction",
@@ -278,7 +320,7 @@ async def test_mcp_records_and_reads_back(
 
 @pytest.mark.anyio
 async def test_mcp_surfaces_the_same_code_as_rest(
-    settings: Settings, books: tuple[str, str, str]
+    authenticated_caller: None, settings: Settings, books: tuple[str, str, str]
 ) -> None:
     """ADR-0009: "Errors surface the same stable code through both protocols."
 
@@ -287,7 +329,7 @@ async def test_mcp_surfaces_the_same_code_as_rest(
     that is not a contract.
     """
     entity_id, cash, revenue = books
-    server = create_server(settings, principal=PERSON)
+    server = create_server(settings, authenticator=StubAuthenticator())
 
     result = await server.call_tool(
         "record_transaction",
@@ -311,12 +353,18 @@ async def test_mcp_surfaces_the_same_code_as_rest(
 
 
 @pytest.mark.anyio
-async def test_mcp_refuses_when_no_principal_is_configured(
+async def test_mcp_refuses_a_caller_with_no_verified_token(
     settings: Settings, books: tuple[str, str, str]
 ) -> None:
-    """The default server writes nothing, for the same reason the REST default returns 401."""
+    """No `authenticated_caller` fixture, so no token is in force.
+
+    On the wire the SDK's bearer middleware would have answered 401 before dispatch. This is
+    the layer beneath that: even reached directly, a tool refuses rather than acting for an
+    unidentified caller. `LED-20` requires every transaction to record what wrote it, and
+    there would be nothing true to record.
+    """
     entity_id, _, _ = books
-    server = create_server(settings)
+    server = create_server(settings, authenticator=StubAuthenticator())
 
     result = await server.call_tool(
         "read_transaction", {"entity_id": entity_id, "transaction_id": str(uuid.uuid4())}
@@ -327,3 +375,45 @@ async def test_mcp_refuses_when_no_principal_is_configured(
     assert reported is not None
     assert reported["ok"] is False
     assert reported["code"] == "not_authenticated"
+
+
+@pytest.mark.anyio
+async def test_mcp_attributes_a_delegated_write_to_both_principals(
+    settings: Settings, books: tuple[str, str, str]
+) -> None:
+    """`IAM-11`: a skill acts for a person and the write records both (ADR-0033).
+
+    The delegation is derived from the token's shape — an RFC 8693 `act` claim — never from a
+    tool argument, so a skill cannot describe itself as someone else.
+    """
+    entity_id, cash, revenue = books
+    server = create_server(settings, authenticator=StubAuthenticator())
+    delegated = {**CLAIMS, "sub": "skill:bookkeeper", "act": {"sub": PERSON.id}}
+
+    with authenticated(delegated):
+        result = await server.call_tool(
+            "record_transaction",
+            {
+                "entity_id": entity_id,
+                "transaction_date": "2026-09-01",
+                "idempotency_key": uuid.uuid4().hex,
+                "postings": [
+                    {"account_id": cash, "amount": "100.00", "commodity": "USD"},
+                    {"account_id": revenue, "amount": "-100.00", "commodity": "USD"},
+                ],
+            },
+        )
+        assert isinstance(result, CallToolResult)
+        written = result.structured_content
+        assert written is not None
+
+        read = await server.call_tool(
+            "read_transaction",
+            {"entity_id": entity_id, "transaction_id": written["transaction_id"]},
+        )
+
+    assert isinstance(read, CallToolResult)
+    assert read.structured_content is not None
+    assert read.structured_content["actor_principal_id"] == "skill:bookkeeper"
+    assert read.structured_content["actor_class"] == "agent"
+    assert read.structured_content["acting_for_principal_id"] == PERSON.id
