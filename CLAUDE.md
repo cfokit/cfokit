@@ -73,9 +73,9 @@ second source of truth, and it diverges silently.
 Requirements carry stable domain-prefixed ids in `docs/product/requirements.md`. Derivation runs vision →
 requirements → decision records → these rules, and citation never runs against it. (ADR-0001)
 
-There is no roadmap file and no specifications directory. Work sequencing lives in GitHub
-Milestones and Projects. Whether CFOKit adopts a specification workflow is undecided and
-needs its own record. (ADR-0001)
+There is no roadmap file and no specifications directory. **Where work sequencing lives is
+undecided** — no milestones, projects or issues exist, and none is assumed. Whether CFOKit
+adopts a specification workflow is undecided and needs its own record. (ADR-0001)
 
 ## Commands
 

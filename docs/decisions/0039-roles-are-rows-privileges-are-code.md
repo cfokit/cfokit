@@ -71,8 +71,8 @@ than a constraint violation.
 * Bad, because the role catalogue is no longer visible in the code that enforces it. Reading
   `authorisation.py` no longer tells you what `owner` can do; the migration does.
 * Bad, because the OpenAPI document can no longer enumerate valid roles, so a client cannot
-  discover them from the contract. Nothing enumerates them yet — `IAM-19` asks for that at
-  deployment scope and is unbuilt.
+  discover them from the contract. `IAM-19` asks for enumerable capabilities at deployment
+  scope, and the same question one scope down would answer this.
 * Neutral, because privileges could later become rows too. Nothing here prevents it; the
   argument against is that a checked flag is code by nature.
 
@@ -115,16 +115,9 @@ stays testable without a database (ADR-0036, layer 1).
 
 ## More Information
 
-**Follow-on obligations.**
-
-* `IAM-07` invitations refer to "an administrator"; no such role exists yet. The requirement
-  describes an identity that can grant, which `owner` satisfies today.
-* `IAM-19` requires deployment-scoped capabilities to be enumerable and individually
-  assignable. Whether the entity-scoped catalogue should be enumerable through the API is the
-  same question one scope down, and neither is built.
-* Changing the catalogue is a state change nothing records. `IAM-13` covers grants rather than
-  the definitions they reference, and a migration is evidence of a different kind. Worth
-  closing before a second role exists.
+**Scope.** `IAM-07` describes an identity that can grant, which any role carrying `grant`
+satisfies; it names no particular one. Whether the catalogue should be enumerable through the
+API is `IAM-19`'s question one scope down, and this record does not answer it.
 
 **Reversal cost. Low.** The catalogue is two small tables and a seed. Compiling it back into
 code is a migration and a dictionary.

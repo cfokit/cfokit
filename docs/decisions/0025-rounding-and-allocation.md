@@ -117,7 +117,7 @@ Not gated: nothing mechanically prevents a rounding call appearing in `engine`, 
 
 * Good, because capture is lossless and the displayed figure still matches what a reader expects.
 * Good, because it gives the oracle a single determinate expectation: exact.
-* Bad, because it needs a display-scale registry that does not exist yet.
+* Bad, because it needs a display-scale registry, which is machinery the alternatives avoid.
 * Bad, because displayed figures and stored figures can differ, which has to be explained to users
   once.
 

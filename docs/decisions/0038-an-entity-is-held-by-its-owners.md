@@ -93,9 +93,9 @@ be revoked whoever attempts it, and that a grant of ownership carrying `lapses_a
 
 ## More Information
 
-**Follow-on obligations.** `PLT-13` deletion is unbuilt; this fixes who may ask for it, not
-what it does. `IAM-07` invitations are unbuilt, and an invitation to ownership needs the same
-no-lapse treatment. Succession — an owner that is an estate or a trustee — is not addressed.
+**Scope.** This record fixes who may delete an entity, not what deletion does (`PLT-13`).
+An invitation to ownership carries the same no-lapse rule as a grant of it (`IAM-07`).
+Succession — an owner that is an estate or a trustee rather than a person — is not addressed.
 
 **Reversal cost. Moderate.** Grants are append-only, so ownership once granted stays visible in
 `IAM-14` whatever the model becomes.
