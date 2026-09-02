@@ -118,6 +118,30 @@ services:
     environment:
       DATABASE_URL: postgresql://cfokit:${POSTGRES_PASSWORD:-cfokit}@postgres:5432/cfokit
 
+  # Bringing the deployment into service (IAM-06, ADR-0038). Behind a profile, like the
+  # migrate job and for the same reason: it is an explicit operator act, not a startup step.
+  #
+  #   docker compose --profile bootstrap run --rm bootstrap user:geoff
+  #
+  # Owner credentials, not the application role. The authority to perform this *is* possession
+  # of the database credentials — that is what makes it unreachable from the network — and the
+  # audit row it writes has no entity_id, which the application role's row-level security
+  # correctly refuses.
+  bootstrap:
+    profiles: ["bootstrap"]
+    build:
+      context: .
+      target: runtime
+    entrypoint: ["python", "-m", "cfokit.ledger.bootstrap"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://cfokit:${POSTGRES_PASSWORD:-cfokit}@postgres:5432/cfokit
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
+      AUTH_ISSUER_URL: ${AUTH_ISSUER_URL:-http://hydra:4444}
+      AUTH_AUDIENCE: ${AUTH_AUDIENCE:-cfokit-ledger}
+
   # The suite, run inside the compose network (ADR-0023: one image, many entrypoints).
   # compose.yaml deliberately publishes no database port, so a host-run integration test
   # cannot reach Postgres — and CI gate 2 runs this file without the dev overlay. Running

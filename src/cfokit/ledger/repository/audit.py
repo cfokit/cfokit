@@ -21,7 +21,7 @@ __all__ = ["record"]
 def record(
     conn: psycopg.Connection[Any],
     *,
-    entity_id: str,
+    entity_id: str | None,
     request_id: str,
     actor: str,
     action: str,
@@ -33,6 +33,10 @@ def record(
 
     `request_id` is the inbound request's id, propagated so a row in the trail can be joined
     to the call that produced it (CLAUDE.md, Observability).
+
+    `entity_id` is nullable because a deployment-scoped act — the bootstrap, or creating an
+    entity — happens before there is an entity to attribute it to. The column has always
+    allowed it; this annotation lagged the schema.
     """
     with conn.cursor() as cur:
         cur.execute(

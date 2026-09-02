@@ -94,6 +94,17 @@ def database() -> Database:
 
 
 @pytest.fixture
+def owner_database() -> Database:
+    """The database as an operator command sees it.
+
+    Only the bootstrap uses this. Its authority *is* possession of the database credentials
+    (ADR-0038), and it writes an audit row with no entity, which the application role's
+    row-level security correctly refuses.
+    """
+    return Database(OWNER_URL)
+
+
+@pytest.fixture
 def books(owner_conn: psycopg.Connection[Any]) -> Iterator[tuple[str, str, str]]:
     """One entity with two accounts. Returns (entity_id, cash_id, revenue_id).
 

@@ -16,13 +16,22 @@ Nothing here is a `float`, at any point, including in transit (ADR-0005).
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, BeforeValidator, Field, WithJsonSchema
 
-__all__ = ["Money", "PostingModel", "RecordTransactionRequest", "TransactionResponse"]
+__all__ = [
+    "CreateEntityRequest",
+    "EntityCreatedResponse",
+    "GrantResponse",
+    "GrantRoleRequest",
+    "Money",
+    "PostingModel",
+    "RecordTransactionRequest",
+    "TransactionResponse",
+]
 
 
 def _decimal_string(value: Any) -> Decimal:
@@ -106,3 +115,50 @@ class ErrorResponse(BaseModel):
 
     code: str
     message: str
+
+
+class CreateEntityRequest(BaseModel):
+    """Everything an entity declares at creation, all of it required.
+
+    `LED-14` and `LED-15` say the basis, the fiscal year end and the functional currency have
+    no undeclared state, and `PLT-08` says the same for the time zone. There are no defaults
+    here for that reason: a default would be an undeclared state wearing a value.
+    """
+
+    slug: str = Field(description="Stable identifier, unique in this deployment.")
+    name: str
+    accounting_basis: Literal["cash", "accrual"] = Field(
+        description="Fixes what every report defaults to. A property of the entity, not a "
+        "per-report option, and never a posting rule (ADR-0037)."
+    )
+    fiscal_year_end_month: int = Field(ge=1, le=12)
+    fiscal_year_end_day: int = Field(ge=1, le=31)
+    functional_currency: str = Field(
+        description="Amounts in any other commodity are refused until LED-16 activates."
+    )
+    time_zone: str = Field(description="Period boundaries are determined in it (PLT-08).")
+    administrator: str | None = Field(
+        default=None,
+        description="The entity's first administrator. Defaults to the creating principal; an "
+        "entity never exists without one (IAM-05).",
+    )
+
+
+class EntityCreatedResponse(BaseModel):
+    entity_id: str
+    administrator_grant_id: str
+
+
+class GrantRoleRequest(BaseModel):
+    """Grant a role in this entity. Administrative only (IAM-03)."""
+
+    principal_id: str
+    role: Literal["reader", "recorder", "poster", "administrator"]
+    lapses_at: datetime | None = Field(
+        default=None,
+        description="When the role lapses without anyone acting (IAM-09). Null is open-ended.",
+    )
+
+
+class GrantResponse(BaseModel):
+    grant_id: str

@@ -80,6 +80,26 @@ deployment missing the role would otherwise run with isolation silently halved.
 `infra/postgres/init-app-role.sh` does this for the compose stack, on first initialisation of
 an empty data directory.
 
+#### Bringing a deployment into service
+
+After migrations, before anything can be used:
+
+```
+python -m cfokit.ledger.bootstrap <principal-id>
+```
+
+This establishes the first deployment-scoped administrator, from whom every other role
+descends (`IAM-06`). It is the only privileged act that requires no prior role, and it is
+**deliberately not reachable over the API** — its authority is possession of the database
+credentials, so it runs with the owner connection, like migrations (ADR-0038).
+
+It refuses if an administrator already exists, which is what makes it a bootstrap rather than a
+standing backdoor. Losing every deployment administrator therefore requires database access to
+recover from; that is the cost of having no backdoor, and it is the trade ADR-0038 argues.
+
+The principal id is whatever the identity provider puts in a token's `sub`. CFOKit never issues
+credentials (`IAM-10`), so this names a principal, it does not create one.
+
 Verified rather than assumed: `tests/integration/test_entity_isolation.py` asserts the
 property from the outside, as the application role, and CI gate 2 runs it inside the compose
 network on every pull request.

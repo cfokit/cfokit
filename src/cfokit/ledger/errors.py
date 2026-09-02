@@ -55,6 +55,17 @@ class NotAuthorised(LedgerError):
     code = "not_authorised"
 
 
+class LastAdministrator(LedgerError):
+    """The last administrator cannot be removed or demoted (`IAM-04`).
+
+    Distinct from `not_authorised`: the caller is permitted to revoke grants, and this
+    particular one would leave the entity with nobody able to administer it. Telling them
+    "not permitted" would send them to ask for a capability they already hold.
+    """
+
+    code = "last_administrator"
+
+
 # --- Booking ---------------------------------------------------------------------------
 # Raised by the pure engine, so both adapters surface the same code for the same condition
 # (ADR-0009). Messages carry amounts and commodities and are therefore error detail, not
