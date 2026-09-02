@@ -158,10 +158,12 @@ to CFOKit is only which homes exist and what they are called.
 **There is no roadmap file and no specifications directory.** Neither is absent by oversight, and
 neither should be re-added without a record superseding this one.
 
-Work sequencing lives in GitHub Milestones and Projects, which are attached to the issues and pull
-requests that move it. A plan committed to git is reviewed on a different cadence than the code
-around it and no test covers it, so it goes stale silently — and a plan nobody trusts is worse than
-no plan, because it is still cited.
+**Where work sequencing lives is undecided**, and this record does not decide it. The argument
+against a plan committed to git — reviewed on a different cadence than the code around it, covered
+by no test, stale silently, and still cited — applies to a plan kept anywhere nobody reads while
+reviewing a diff. That includes GitHub Milestones and Projects, which have the additional property
+of living on a server rather than in the repository: not in a clone, not in a fork, and not
+reviewable in a pull request. Until the need names its own answer, nothing here assumes one.
 
 Whether CFOKit uses a specification workflow at all is a separate question with its own record to
 write. Until then nothing assumes a location for one.
@@ -261,10 +263,9 @@ derived from Nygard's original, or Nygard's template unextended.
 
 **On the roadmap.** No published specification or platform convention governs a roadmap file.
 `ROADMAP.md` is folk convention, not standard: it is not among GitHub's community health files and
-no spec body defines it. The two adjacent artifacts that do have backing —
-[Keep a Changelog](https://keepachangelog.com) for what shipped, GitHub Milestones and Projects for
-what is sequenced — cover the content a roadmap file usually carries, and both are attached to
-something that enforces them.
+no spec body defines it. [Keep a Changelog](https://keepachangelog.com) has backing and covers
+what shipped, which is half of what a roadmap file usually carries. The other half is what is
+sequenced, and this record leaves that open rather than naming a home for it.
 
 **Follow-on obligations.**
 
