@@ -90,6 +90,6 @@ def test_malformed_claims_are_refused(claims: dict[str, object]) -> None:
 def test_deny_all_refuses_even_a_credential() -> None:
     """The default wherever an authenticator is not supplied."""
     with pytest.raises(NotAuthenticated) as caught:
-        DenyAll().principal_for("Bearer anything")
+        DenyAll().claims_for("Bearer anything")
 
     assert caught.value.code == "not_authenticated"

@@ -44,7 +44,11 @@ from cfokit.ledger.engine import Entry, Posting
 from cfokit.ledger.errors import LedgerError
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.administration import create_entity, grant_role, revoke_grant
-from cfokit.ledger.service.authentication import Authenticator, TokenAuthenticator
+from cfokit.ledger.service.authentication import (
+    Authenticator,
+    TokenAuthenticator,
+    principal_from_claims,
+)
 from cfokit.ledger.service.principal import Principal
 from cfokit.ledger.service.read import read_transaction
 from cfokit.ledger.service.readiness import check_readiness
@@ -76,9 +80,13 @@ def get_principal(
     request: Request,
     authorization: Annotated[str | None, Header()] = None,
 ) -> Principal:
-    """The acting principal, from the credential and never from the body (ADR-0033)."""
+    """The acting principal, from the credential and never from the body (ADR-0033).
+
+    Verification and derivation are separate calls so the MCP adapter composes the same two
+    (ADR-0019). A claim the caller sets never reaches this.
+    """
     authenticator: Authenticator = request.app.state.authenticator
-    return authenticator.principal_for(authorization)
+    return principal_from_claims(authenticator.claims_for(authorization))
 
 
 def get_write_context(

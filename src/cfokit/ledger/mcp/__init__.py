@@ -36,12 +36,20 @@ from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from mcp.server import MCPServer
-from pydantic import BaseModel, Field
+from mcp.server.auth.middleware.auth_context import get_access_token
+from mcp.server.auth.settings import AuthSettings
+from pydantic import AnyHttpUrl, BaseModel, Field
 
 from cfokit.ledger.config import Settings
 from cfokit.ledger.engine import Entry, Posting
-from cfokit.ledger.errors import LedgerError
+from cfokit.ledger.errors import LedgerError, NotAuthenticated
+from cfokit.ledger.mcp.auth import LedgerTokenVerifier
 from cfokit.ledger.repository.unit_of_work import Database
+from cfokit.ledger.service.authentication import (
+    Authenticator,
+    TokenAuthenticator,
+    principal_from_claims,
+)
 from cfokit.ledger.service.principal import Principal
 from cfokit.ledger.service.read import read_transaction
 from cfokit.ledger.service.write import (
@@ -104,18 +112,30 @@ def _refusals(work: Callable[[], dict[str, Any]]) -> dict[str, Any]:
         return refused(exc.code, exc.message)
 
 
-def create_server(settings: Settings, principal: Principal | None = None) -> MCPServer:
+def create_server(settings: Settings, authenticator: Authenticator | None = None) -> MCPServer:
     """Build the MCP server.
 
-    `principal` is injected rather than derived, and defaults to `None`, which refuses every
-    tool call. Authentication is not built (see `api/auth.py`), and an MCP surface that booked
-    transactions for an unidentified caller would be worse than one that refuses: `LED-20`
-    requires every transaction to record what wrote it, and there would be nothing true to
-    record.
+    The caller is derived from the bearer token on the request, never injected and never taken
+    from a tool argument (ADR-0033). `authenticator` exists so a test can supply verification
+    without an issuer; a deployment gets `TokenAuthenticator` against `AUTH_ISSUER_URL` and
+    `AUTH_AUDIENCE`, which is the same issuer and the same audience the REST surface uses
+    (ADR-0019).
+
+    `resource_server_url` comes from `PUBLIC_BASE_URL` and never from a request header. Behind
+    a proxy or a tunnel the headers lie, and this URL is what a client fetches metadata from
+    (ADR-0004).
     """
     database = Database(settings.database_url)
+    verifier = LedgerTokenVerifier(
+        authenticator or TokenAuthenticator(settings.auth_issuer_url, settings.auth_audience)
+    )
     server = MCPServer(
         name="cfokit-ledger",
+        token_verifier=verifier,
+        auth=AuthSettings(
+            issuer_url=AnyHttpUrl(settings.auth_issuer_url),
+            resource_server_url=AnyHttpUrl(settings.public_base_url),
+        ),
         instructions=(
             "The double-entry ledger. Every write names the entity it acts on and carries an "
             "idempotency key; replaying a key returns the original result rather than booking "
@@ -126,11 +146,22 @@ def create_server(settings: Settings, principal: Principal | None = None) -> MCP
     )
 
     def acting() -> Principal:
-        if principal is None:
+        """The caller, from the verified token on this request.
+
+        The SDK's bearer middleware has already rejected an absent or invalid token with a
+        401, so reaching here without one means the server is running on a transport that
+        carries no credential. Refusing is the only safe answer: `LED-20` requires every
+        transaction to record what wrote it, and there would be nothing true to record.
+        """
+        token = get_access_token()
+        if token is None or token.claims is None:
             raise LedgerToolError(
-                "not_authenticated", "no principal is configured; this server cannot write"
+                "not_authenticated", "this request carries no verified credential"
             )
-        return principal
+        try:
+            return principal_from_claims(token.claims)
+        except NotAuthenticated as exc:
+            raise LedgerToolError(exc.code, exc.message) from exc
 
     def context(entity_id: str, idempotency_key: str) -> WriteContext:
         return WriteContext(

@@ -46,10 +46,17 @@ DISCOVERY_TIMEOUT_SECONDS = 5
 
 
 class Authenticator(Protocol):
-    """Turns a credential into the principal a write is attributed to."""
+    """Verifies a credential and returns its claims.
 
-    def principal_for(self, credential: str | None) -> Principal:
-        """Return the authenticated principal, or raise `NotAuthenticated`."""
+    Verification only. Deriving the principal is `principal_from_claims`, deliberately
+    separate: both adapters compose the two, so the rule that turns claims into an actor
+    exists once. The MCP SDK also wants the claims themselves — its `AccessToken` carries
+    them — and an authenticator that returned only a `Principal` could not supply that
+    without the adapter inventing a second derivation.
+    """
+
+    def claims_for(self, credential: str | None) -> dict[str, Any]:
+        """Return the validated claims, or raise `NotAuthenticated`."""
         ...
 
 
@@ -61,7 +68,7 @@ class DenyAll:
     to record what wrote it, and there would be nothing true to record.
     """
 
-    def principal_for(self, credential: str | None) -> Principal:
+    def claims_for(self, credential: str | None) -> dict[str, Any]:
         raise NotAuthenticated(
             "no authenticator is configured; this deployment cannot accept writes"
         )
@@ -92,7 +99,7 @@ def principal_from_claims(claims: dict[str, Any]) -> Principal:
 
 
 class TokenAuthenticator:
-    """Validates a bearer token against the issuer's JWKS, then derives the principal."""
+    """Validates a bearer token against the issuer's JWKS and returns its claims."""
 
     def __init__(self, issuer_url: str, audience: str) -> None:
         self._issuer_url = issuer_url.rstrip("/")
@@ -129,8 +136,8 @@ class TokenAuthenticator:
 
         raise NotAuthenticated(f"issuer metadata unavailable: {', '.join(errors)}")
 
-    def principal_for(self, credential: str | None) -> Principal:
-        """Validate the token and return its principal.
+    def claims_for(self, credential: str | None) -> dict[str, Any]:
+        """Validate the token and return its claims.
 
         The message never quotes the token or the reason a signature failed. A validation
         message is a useful oracle to an attacker and useless to a legitimate caller.
@@ -144,7 +151,7 @@ class TokenAuthenticator:
 
         try:
             key = self._jwks_client().get_signing_key_from_jwt(token).key
-            claims = jwt.decode(
+            claims: dict[str, Any] = jwt.decode(
                 token,
                 key=key,
                 algorithms=ALGORITHMS,
@@ -155,4 +162,4 @@ class TokenAuthenticator:
         except jwt.PyJWTError as exc:
             raise NotAuthenticated(f"token rejected: {exc.__class__.__name__}") from exc
 
-        return principal_from_claims(claims)
+        return claims

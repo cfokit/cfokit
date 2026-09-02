@@ -122,6 +122,22 @@ Any target must provide both (ADR-0023):
 | **Service** | Request-serving with HTTPS ingress. May scale to zero. |
 | **Job** | One-shot execution, invoked explicitly, **with no request timeout**. |
 
+Two services run from this image, and each needs its own ingress and its own
+`PUBLIC_BASE_URL`:
+
+| Command | Surface |
+|---|---|
+| `python -m cfokit.ledger.api` | REST, with the OpenAPI document |
+| `python -m cfokit.ledger.mcp` | MCP over streamable HTTP at `/mcp`, stateless |
+
+Both validate bearer tokens against the same `AUTH_ISSUER_URL` and `AUTH_AUDIENCE`, so a
+deployment configures one issuer and both surfaces accept its tokens (ADR-0019). The MCP
+service publishes OAuth protected-resource metadata at
+`/.well-known/oauth-protected-resource`, derived from its own `PUBLIC_BASE_URL` — an MCP
+client reads it from the `WWW-Authenticate` challenge on an unauthenticated request to find
+the issuer. Point `PUBLIC_BASE_URL` at the wrong host and clients are sent to the wrong place,
+which is why it is never derived from a request header.
+
 All entrypoints run from the **same image**, differing only in command — this is what prevents a
 component running against an API version it was not built for. Scheduling a job is the target's
 concern, not the application's: the component only knows how to run once. Locally there is no

@@ -118,6 +118,34 @@ services:
     environment:
       DATABASE_URL: postgresql://cfokit:${POSTGRES_PASSWORD:-cfokit}@postgres:5432/cfokit
 
+  # The MCP surface (ADR-0023: one image, many entrypoints). Streamable HTTP, stateless, so
+  # it survives a scale-to-zero platform without holding a session (ADR-0012, ADR-0017).
+  # Every request carries its own bearer token, which is what makes that free.
+  mcp:
+    build:
+      context: .
+      target: runtime
+    command: ["python", "-m", "cfokit.ledger.mcp"]
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      hydra:
+        condition: service_healthy
+    environment:
+      # The same surface the REST service reads, and the same issuer and audience: one
+      # authentication path, exercised by both (ADR-0019, ADR-0032).
+      DATABASE_URL: postgresql://cfokit_app:${POSTGRES_APP_PASSWORD:-cfokit_app}@postgres:5432/cfokit
+      # PUBLIC_BASE_URL is what a client fetches protected-resource metadata from, so it is
+      # this service's own address rather than the REST service's (ADR-0004).
+      PUBLIC_BASE_URL: ${MCP_PUBLIC_BASE_URL:-http://localhost:8081}
+      AUTH_ISSUER_URL: ${AUTH_ISSUER_URL:-http://hydra:4444}
+      AUTH_AUDIENCE: ${AUTH_AUDIENCE:-cfokit-ledger}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      PORT: "8081"
+    ports:
+      - "${MCP_PORT:-8081}:8081"
+
   # The suite, run inside the compose network (ADR-0023: one image, many entrypoints).
   # compose.yaml deliberately publishes no database port, so a host-run integration test
   # cannot reach Postgres — and CI gate 2 runs this file without the dev overlay. Running
