@@ -96,8 +96,8 @@ error code** (ADR-0015) rather than hanging or retrying — that behaviour is re
 gate cannot hang.
 
 The client credentials grant is part of the issuer conformance contract (ADR-0019), and the
-conformance suite covers it. **That suite is not yet written**, so this is enforced by the default
-issuer happening to support the grant rather than by a check.
+conformance suite covers it. Absent that suite, support rests on the chosen issuer offering the
+grant rather than on a check.
 
 ## Pros and Cons of the Options
 

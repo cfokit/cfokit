@@ -159,12 +159,12 @@ smell.
 
 ### Confirmation
 
-Layer 1 runs inside the ordinary suite and gates every commit, as do the schema invariants of layer 3
-that have a database to run against. **Layer 2, the conformance corpus, does not exist**, which
-matters because it is what carries `NFR-01` while the oracle stays deferred. The protocol half of
-layer 3 arrives with the adapters, and CI gate 5 which covers it is scaffolded and commented out
-(ADR-0015). Layer 4 sits behind its own pytest marker, alongside the `oracle` marker that
-already exists for the same reason, so it cannot accidentally join the per-commit gate.
+Layer 1 runs inside the ordinary suite and gates every commit, as do the schema invariants of
+layer 3. Layer 2 carries `NFR-01` while the oracle stays deferred, which is why every case cites
+its published source: a case without one is a unit test that has been misfiled. The protocol half
+of layer 3 drives both adapters as a client does, and CI gate 5 diffs what they publish against
+the committed copies (ADR-0015). Layer 4 sits behind its own pytest marker, alongside the `oracle`
+marker, so it cannot accidentally join the per-commit gate.
 
 **Two rules here are not gated and cannot easily be.** Nothing detects an assertion a model wrote,
 and nothing detects a judge used where a state assertion was available. Both are review rules, and

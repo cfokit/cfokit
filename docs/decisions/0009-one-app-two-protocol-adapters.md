@@ -67,10 +67,9 @@ because it then exists in one protocol and not the other.
 
 ### Confirmation
 
-CI gate 5 will regenerate the OpenAPI document and the MCP tool descriptions and fail on any diff
-against committed copies (ADR-0015). **It is scaffolded and commented out**, and neither adapter nor
-committed artifact exists, so nothing enforces that half today. `import-linter` keeps `api` and `mcp` as siblings that cannot import
-each other — **already in place** and observed to fail when violated.
+CI gate 5 regenerates the OpenAPI document and the MCP tool descriptions and fails on any diff
+against the copies committed in `docs/contracts/` (ADR-0015). `import-linter` keeps `api` and `mcp`
+as siblings that cannot import each other, and is observed to fail when violated.
 
 ## Pros and Cons of the Options
 
