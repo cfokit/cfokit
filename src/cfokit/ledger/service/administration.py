@@ -32,6 +32,7 @@ from cfokit.ledger.service.principal import Principal
 
 __all__ = [
     "EntityCreated",
+    "create_account",
     "create_entity",
     "grant_role",
     "revoke_grant",
@@ -105,6 +106,51 @@ def create_entity(
         )
 
     return EntityCreated(entity_id=entity_id, owner_grant_id=grant_id)
+
+
+def create_account(
+    database: Database,
+    *,
+    entity_id: str,
+    principal: Principal,
+    request_id: str,
+    code: str,
+    name: str,
+    account_type: str,
+    parent_id: str | None = None,
+    retained_earnings: bool = False,
+) -> str:
+    """Add an account to the entity's chart (`LED-01`, `LED-02`).
+
+    Administrative rather than a posting capability: the chart is the shape of the books, and
+    someone who may record a transaction is not thereby deciding what the books are made of.
+
+    `retained_earnings` names this account as the one a fiscal year closes to (`LED-12`). It
+    must be an equity account, because closing income and expense anywhere else would not be
+    closing them to retained earnings.
+    """
+    now = datetime.now(UTC)
+    with database.entity_write(entity_id) as write:
+        _require(write, principal, now, Capability.GRANT)
+
+        if retained_earnings and account_type != "equity":
+            raise NotAuthorised("retained earnings must be an equity account")
+
+        account_id = write.create_account(
+            code=code, name=name, account_type=account_type, parent_id=parent_id
+        )
+        if retained_earnings:
+            write.set_retained_earnings_account(account_id)
+
+        write.record_audit(
+            request_id=request_id,
+            actor=principal.audit_actor,
+            action="create_account",
+            subject_type="account",
+            subject_id=account_id,
+            detail={"code": code, "type": account_type, "retained_earnings": retained_earnings},
+        )
+    return account_id
 
 
 def grant_role(

@@ -28,27 +28,41 @@ from fastapi import Depends, FastAPI, Header, Path, Request, Response, status
 from fastapi.responses import JSONResponse
 
 from cfokit.ledger.api.models import (
+    AccountCreatedResponse,
+    ClosePeriodRequest,
+    CloseYearRequest,
+    CreateAccountRequest,
     CreateEntityRequest,
     EntityCreatedResponse,
     ErrorResponse,
     GrantResponse,
     GrantRoleRequest,
+    PeriodCloseResponse,
     PostingModel,
     RecordTransactionRequest,
+    ReopenPeriodRequest,
     TransactionResponse,
     WriteResponse,
+    YearClosedResponse,
 )
 from cfokit.ledger.api.problems import status_for
 from cfokit.ledger.config import Settings
 from cfokit.ledger.engine import Entry, Posting
+from cfokit.ledger.engine.periods import Period
 from cfokit.ledger.errors import LedgerError
 from cfokit.ledger.repository.unit_of_work import Database
-from cfokit.ledger.service.administration import create_entity, grant_role, revoke_grant
+from cfokit.ledger.service.administration import (
+    create_account,
+    create_entity,
+    grant_role,
+    revoke_grant,
+)
 from cfokit.ledger.service.authentication import (
     Authenticator,
     TokenAuthenticator,
     principal_from_claims,
 )
+from cfokit.ledger.service.periods import close_period, reopen_period
 from cfokit.ledger.service.principal import Principal
 from cfokit.ledger.service.read import read_transaction
 from cfokit.ledger.service.readiness import check_readiness
@@ -58,6 +72,7 @@ from cfokit.ledger.service.write import (
     record_transaction,
     reverse_transaction,
 )
+from cfokit.ledger.service.year_end import close_fiscal_year
 
 __all__ = ["create_app"]
 
@@ -265,6 +280,125 @@ def create_app(settings: Settings, authenticator: Authenticator | None = None) -
         )
 
     @app.post(
+        "/entities/{entity_id}/accounts",
+        tags=["administration"],
+        summary="Add an account to the chart",
+        status_code=status.HTTP_201_CREATED,
+        responses=ERRORS,
+    )
+    def add_account(
+        entity_id: Annotated[str, Path()],
+        body: CreateAccountRequest,
+        acting: Annotated[Principal, Depends(get_principal)],
+        database: Annotated[Database, Depends(get_database)],
+        request_id: Annotated[str | None, Header(alias="X-Request-Id")] = None,
+    ) -> AccountCreatedResponse:
+        """The chart is the shape of the books, so adding to it is administrative rather than
+        a posting capability (`LED-01`)."""
+        account_id = create_account(
+            database,
+            entity_id=entity_id,
+            principal=acting,
+            request_id=request_id or f"req-{uuid.uuid4().hex}",
+            code=body.code,
+            name=body.name,
+            account_type=body.account_type,
+            parent_id=body.parent_id,
+            retained_earnings=body.retained_earnings,
+        )
+        return AccountCreatedResponse(account_id=account_id)
+
+    # -----------------------------------------------------------------------------------
+    # Periods. `LED-11` makes a closed period admit no posting except through a recorded
+    # reopening, and ADR-0030 makes that reopening a person's act rather than a skill's.
+    # -----------------------------------------------------------------------------------
+
+    @app.post(
+        "/entities/{entity_id}/period-closes",
+        tags=["periods"],
+        summary="Mark a period closed",
+        status_code=status.HTTP_201_CREATED,
+        responses=ERRORS,
+    )
+    def close(
+        entity_id: Annotated[str, Path()],
+        body: ClosePeriodRequest,
+        acting: Annotated[Principal, Depends(get_principal)],
+        database: Annotated[Database, Depends(get_database)],
+        request_id: Annotated[str | None, Header(alias="X-Request-Id")] = None,
+    ) -> PeriodCloseResponse:
+        """Signifies the period has been reviewed. An agent may do this."""
+        close_id = close_period(
+            database,
+            entity_id=entity_id,
+            principal=acting,
+            request_id=request_id or f"req-{uuid.uuid4().hex}",
+            period=Period(year=body.year, month=body.month),
+        )
+        return PeriodCloseResponse(close_id=close_id)
+
+    @app.post(
+        "/entities/{entity_id}/period-reopenings",
+        tags=["periods"],
+        summary="Reopen a closed period",
+        status_code=status.HTTP_201_CREATED,
+        responses=ERRORS,
+    )
+    def reopen(
+        entity_id: Annotated[str, Path()],
+        body: ReopenPeriodRequest,
+        acting: Annotated[Principal, Depends(get_principal)],
+        database: Annotated[Database, Depends(get_database)],
+        request_id: Annotated[str | None, Header(alias="X-Request-Id")] = None,
+    ) -> PeriodCloseResponse:
+        """A person's act. An agent is refused with `not_a_person`, whatever it holds.
+
+        `POST` rather than `DELETE` on the close: the close row is never removed, and the
+        reopening is itself a recorded event that `LED-11` requires to be identifiable.
+        """
+        close_id = reopen_period(
+            database,
+            entity_id=entity_id,
+            principal=acting,
+            request_id=request_id or f"req-{uuid.uuid4().hex}",
+            period=Period(year=body.year, month=body.month),
+            reason=body.reason,
+        )
+        return PeriodCloseResponse(close_id=close_id)
+
+    @app.post(
+        "/entities/{entity_id}/year-end-closes",
+        tags=["periods"],
+        summary="Close a fiscal year",
+        status_code=status.HTTP_201_CREATED,
+        responses=ERRORS,
+    )
+    def close_year(
+        entity_id: Annotated[str, Path()],
+        body: CloseYearRequest,
+        acting: Annotated[Principal, Depends(get_principal)],
+        database: Annotated[Database, Depends(get_database)],
+        request_id: Annotated[str | None, Header(alias="X-Request-Id")] = None,
+    ) -> YearClosedResponse:
+        """Income and expense to retained earnings, so the new year opens at zero (`LED-12`).
+
+        Re-runs a close that a later posting made stale, reversing the old entries rather than
+        editing them (ADR-0027, `LED-08`). A close that is still current is refused.
+        """
+        closed = close_fiscal_year(
+            database,
+            entity_id=entity_id,
+            principal=acting,
+            request_id=request_id or f"req-{uuid.uuid4().hex}",
+            day_in_year=body.day_in_year,
+        )
+        return YearClosedResponse(
+            fiscal_year=str(closed.fiscal_year),
+            transaction_id=closed.transaction_id,
+            reversed_transaction_ids=closed.reversed_transaction_ids,
+        )
+
+    @app.post(
         "/entities/{entity_id}/transactions",
         tags=["transactions"],
         summary="Record a transaction",
@@ -333,14 +467,15 @@ def create_app(settings: Settings, authenticator: Authenticator | None = None) -
         There is deliberately no endpoint that edits or deletes a posted transaction. The
         schema refuses both, and offering the route would be offering a way to find out.
 
-        `original_period_closed` is hardcoded false because period close does not exist yet
-        (ADR-0030). When it does, this is where the reopen question is asked.
+        Where the reversal lands follows ADR-0030 rule 4 and is decided by the ledger from
+        the original's period state, not by this adapter: an open original period is restated
+        in place, and a closed one is corrected in the current period so figures already
+        reported stand.
         """
         written = reverse_transaction(
             database,
             context,
             transaction_id=transaction_id,
-            original_period_closed=False,
             current_period_date=date.today(),  # noqa: DTZ011
             description=description,
         )

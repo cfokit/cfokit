@@ -32,12 +32,32 @@
     "error": "MigrationError"
   },
   {
+    "code": "not_a_person",
+    "error": "NotAPerson"
+  },
+  {
     "code": "not_authenticated",
     "error": "NotAuthenticated"
   },
   {
     "code": "not_authorised",
     "error": "NotAuthorised"
+  },
+  {
+    "code": "nothing_to_close",
+    "error": "NothingToClose"
+  },
+  {
+    "code": "period_closed",
+    "error": "PeriodClosed"
+  },
+  {
+    "code": "period_not_closed",
+    "error": "PeriodNotClosed"
+  },
+  {
+    "code": "retained_earnings_unset",
+    "error": "RetainedEarningsUnset"
   },
   {
     "code": "transaction_already_posted",
@@ -58,5 +78,9 @@
   {
     "code": "unknown_role",
     "error": "UnknownRole"
+  },
+  {
+    "code": "year_already_closed",
+    "error": "YearAlreadyClosed"
   }
 ]

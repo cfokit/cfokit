@@ -22,13 +22,19 @@ from cfokit.ledger.errors import (
     IdempotencyKeyReused,
     LastOwner,
     LedgerError,
+    NotAPerson,
     NotAuthenticated,
     NotAuthorised,
+    NothingToClose,
+    PeriodClosed,
+    PeriodNotClosed,
+    RetainedEarningsUnset,
     TransactionAlreadyPosted,
     TransactionIncomplete,
     TransactionNotFound,
     UnbalancedTransaction,
     UnknownRole,
+    YearAlreadyClosed,
 )
 
 __all__ = ["STATUS_FOR_CODE", "status_for"]
@@ -40,6 +46,15 @@ STATUS_FOR_CODE: dict[str, int] = {
     # leave the entity unheld (`IAM-04`).
     LastOwner.code: HTTPStatus.CONFLICT,
     UnknownRole.code: HTTPStatus.UNPROCESSABLE_ENTITY,
+    # 409: the request was well-formed and the caller may post. The period is not open
+    # to anyone, and reopening it is a separate act (`LED-11`, ADR-0030).
+    PeriodClosed.code: HTTPStatus.CONFLICT,
+    PeriodNotClosed.code: HTTPStatus.CONFLICT,
+    YearAlreadyClosed.code: HTTPStatus.CONFLICT,
+    NothingToClose.code: HTTPStatus.CONFLICT,
+    RetainedEarningsUnset.code: HTTPStatus.UNPROCESSABLE_ENTITY,
+    # 403: a capability reserved to people. No credential an agent can present changes it.
+    NotAPerson.code: HTTPStatus.FORBIDDEN,
     EntityNotFound.code: HTTPStatus.NOT_FOUND,
     TransactionNotFound.code: HTTPStatus.NOT_FOUND,
     # 409 rather than 422: the request is well-formed and would have been valid earlier. The

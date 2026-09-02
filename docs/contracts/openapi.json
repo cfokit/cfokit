@@ -1,6 +1,109 @@
 {
   "components": {
     "schemas": {
+      "AccountCreatedResponse": {
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id"
+        ],
+        "title": "AccountCreatedResponse",
+        "type": "object"
+      },
+      "ClosePeriodRequest": {
+        "description": "Mark a period reviewed (LED-11).",
+        "properties": {
+          "month": {
+            "maximum": 12.0,
+            "minimum": 1.0,
+            "title": "Month",
+            "type": "integer"
+          },
+          "year": {
+            "maximum": 9999.0,
+            "minimum": 1.0,
+            "title": "Year",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "year",
+          "month"
+        ],
+        "title": "ClosePeriodRequest",
+        "type": "object"
+      },
+      "CloseYearRequest": {
+        "description": "Close the fiscal year containing this date (LED-12).\n\nA date rather than a year, because a fiscal year is named by the calendar year its end\nfalls in and the entity decides where that boundary sits.",
+        "properties": {
+          "day_in_year": {
+            "format": "date",
+            "title": "Day In Year",
+            "type": "string"
+          }
+        },
+        "required": [
+          "day_in_year"
+        ],
+        "title": "CloseYearRequest",
+        "type": "object"
+      },
+      "CreateAccountRequest": {
+        "description": "Add an account to the entity's chart (LED-01, LED-02).",
+        "properties": {
+          "account_type": {
+            "description": "Fixed at creation and never changed (LED-02).",
+            "enum": [
+              "asset",
+              "liability",
+              "equity",
+              "income",
+              "expense"
+            ],
+            "title": "Account Type",
+            "type": "string"
+          },
+          "code": {
+            "minLength": 1,
+            "title": "Code",
+            "type": "string"
+          },
+          "name": {
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Charts are hierarchical (LED-01).",
+            "title": "Parent Id"
+          },
+          "retained_earnings": {
+            "default": false,
+            "description": "Name this account as the one a fiscal year closes to (LED-12). Equity accounts only.",
+            "title": "Retained Earnings",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "account_type"
+        ],
+        "title": "CreateAccountRequest",
+        "type": "object"
+      },
       "CreateEntityRequest": {
         "description": "Everything an entity declares at creation, all of it required.\n\n`LED-14` and `LED-15` say the basis, the fiscal year end and the functional currency have\nno undeclared state, and `PLT-08` says the same for the time zone. There are no defaults\nhere for that reason: a default would be an undeclared state wearing a value.",
         "properties": {
@@ -152,6 +255,19 @@
         "title": "GrantRoleRequest",
         "type": "object"
       },
+      "PeriodCloseResponse": {
+        "properties": {
+          "close_id": {
+            "title": "Close Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "close_id"
+        ],
+        "title": "PeriodCloseResponse",
+        "type": "object"
+      },
       "PostingModel": {
         "description": "One side of a transaction. Positive is a debit, negative a credit.",
         "properties": {
@@ -223,6 +339,35 @@
           "postings"
         ],
         "title": "RecordTransactionRequest",
+        "type": "object"
+      },
+      "ReopenPeriodRequest": {
+        "description": "Reopen a closed period (LED-11, ADR-0030).\n\nA person's act, never a skill's. `reason` is required: SOC1-17 asks the reopen to capture\none, and a reopen without a reason is indistinguishable from a mistake afterwards.",
+        "properties": {
+          "month": {
+            "maximum": 12.0,
+            "minimum": 1.0,
+            "title": "Month",
+            "type": "integer"
+          },
+          "reason": {
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "year": {
+            "maximum": 9999.0,
+            "minimum": 1.0,
+            "title": "Year",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "year",
+          "month",
+          "reason"
+        ],
+        "title": "ReopenPeriodRequest",
         "type": "object"
       },
       "TransactionResponse": {
@@ -332,6 +477,33 @@
           "replayed"
         ],
         "title": "WriteResponse",
+        "type": "object"
+      },
+      "YearClosedResponse": {
+        "properties": {
+          "fiscal_year": {
+            "title": "Fiscal Year",
+            "type": "string"
+          },
+          "reversed_transaction_ids": {
+            "description": "Stale closing entries reversed by this run (ADR-0027). Empty for a first close.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Reversed Transaction Ids",
+            "type": "array"
+          },
+          "transaction_id": {
+            "title": "Transaction Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fiscal_year",
+          "transaction_id",
+          "reversed_transaction_ids"
+        ],
+        "title": "YearClosedResponse",
         "type": "object"
       }
     }
@@ -454,6 +626,131 @@
           }
         },
         "summary": "Create an entity and assign its first owner",
+        "tags": [
+          "administration"
+        ]
+      }
+    },
+    "/entities/{entity_id}/accounts": {
+      "post": {
+        "description": "The chart is the shape of the books, so adding to it is administrative rather than\na posting capability (`LED-01`).",
+        "operationId": "add_account_entities__entity_id__accounts_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Request-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAccountRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountCreatedResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Add an account to the chart",
         "tags": [
           "administration"
         ]
@@ -697,6 +994,256 @@
         "summary": "Revoke a grant",
         "tags": [
           "administration"
+        ]
+      }
+    },
+    "/entities/{entity_id}/period-closes": {
+      "post": {
+        "description": "Signifies the period has been reviewed. An agent may do this.",
+        "operationId": "close_entities__entity_id__period_closes_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Request-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClosePeriodRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PeriodCloseResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Mark a period closed",
+        "tags": [
+          "periods"
+        ]
+      }
+    },
+    "/entities/{entity_id}/period-reopenings": {
+      "post": {
+        "description": "A person's act. An agent is refused with `not_a_person`, whatever it holds.\n\n`POST` rather than `DELETE` on the close: the close row is never removed, and the\nreopening is itself a recorded event that `LED-11` requires to be identifiable.",
+        "operationId": "reopen_entities__entity_id__period_reopenings_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Request-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReopenPeriodRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PeriodCloseResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Reopen a closed period",
+        "tags": [
+          "periods"
         ]
       }
     },
@@ -1079,7 +1626,7 @@
     },
     "/entities/{entity_id}/transactions/{transaction_id}/reversal": {
       "post": {
-        "description": "Correct a posted transaction by reversing it, leaving both visible (`LED-08`).\n\nThere is deliberately no endpoint that edits or deletes a posted transaction. The\nschema refuses both, and offering the route would be offering a way to find out.\n\n`original_period_closed` is hardcoded false because period close does not exist yet\n(ADR-0030). When it does, this is where the reopen question is asked.",
+        "description": "Correct a posted transaction by reversing it, leaving both visible (`LED-08`).\n\nThere is deliberately no endpoint that edits or deletes a posted transaction. The\nschema refuses both, and offering the route would be offering a way to find out.\n\nWhere the reversal lands follows ADR-0030 rule 4 and is decided by the ledger from\nthe original's period state, not by this adapter: an open original period is restated\nin place, and a closed one is corrected in the current period so figures already\nreported stand.",
         "operationId": "reverse_entities__entity_id__transactions__transaction_id__reversal_post",
         "parameters": [
           {
@@ -1224,6 +1771,131 @@
         "summary": "Reverse a posted transaction",
         "tags": [
           "transactions"
+        ]
+      }
+    },
+    "/entities/{entity_id}/year-end-closes": {
+      "post": {
+        "description": "Income and expense to retained earnings, so the new year opens at zero (`LED-12`).\n\nRe-runs a close that a later posting made stale, reversing the old entries rather than\nediting them (ADR-0027, `LED-08`). A close that is still current is refused.",
+        "operationId": "close_year_entities__entity_id__year_end_closes_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Request-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CloseYearRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/YearClosedResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Close a fiscal year",
+        "tags": [
+          "periods"
         ]
       }
     },

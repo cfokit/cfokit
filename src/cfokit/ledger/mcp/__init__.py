@@ -283,7 +283,6 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
                 database,
                 context(entity_id, idempotency_key),
                 transaction_id=transaction_id,
-                original_period_closed=False,
                 current_period_date=date.today(),  # noqa: DTZ011
                 description=description,
             )
