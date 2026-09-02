@@ -31,6 +31,8 @@ import psycopg
 import pytest
 
 from cfokit.ledger.repository.unit_of_work import Database
+from cfokit.ledger.service.administration import create_account, create_entity
+from cfokit.ledger.service.principal import ActorClass, Principal
 
 APP_URL = os.environ.get("DATABASE_URL", "")
 OWNER_URL = os.environ.get("DATABASE_OWNER_URL", "")
@@ -128,6 +130,51 @@ def app_dsn() -> str:
 def database() -> Database:
     """The database as the service layer sees it, connecting as the application role."""
     return Database(APP_URL)
+
+
+@pytest.fixture
+def owned_books(database: Database) -> tuple[str, str, str]:
+    """One entity with two accounts, created the way a customer creates them.
+
+    Everything here goes through the service layer: `create_entity` makes the caller the
+    entity's owner (`IAM-05`), and `create_account` builds the chart (`LED-01`). Distinct from
+    `books`, which arranges the same shape with owner-role SQL so schema invariants can be
+    tested independently of the privilege layer.
+
+    Use this wherever the test is about a capability, because the fixture holding `owner` is
+    what makes the privilege checks reachable at all.
+    """
+    suffix = uuid.uuid4().hex[:12]
+    person = Principal(id="user:geoff", actor_class=ActorClass.PERSON)
+    entity_id = create_entity(
+        database,
+        principal=person,
+        request_id="fixture",
+        slug=f"owned-{suffix}",
+        name="Books",
+        accounting_basis="accrual",
+        fiscal_year_end_month=12,
+        fiscal_year_end_day=31,
+        functional_currency="USD",
+        time_zone="UTC",
+    ).entity_id
+
+    accounts = [
+        create_account(
+            database,
+            entity_id=entity_id,
+            principal=person,
+            request_id="fixture",
+            code=code,
+            name=name,
+            account_type=account_type,
+        )
+        for code, name, account_type in (
+            ("1000", "Cash", "asset"),
+            ("4000", "Revenue", "income"),
+        )
+    ]
+    return entity_id, accounts[0], accounts[1]
 
 
 @pytest.fixture

@@ -21,17 +21,28 @@ from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import date, datetime
+from decimal import Decimal
 from typing import Any
 
 import psycopg
 
 from cfokit.ledger.engine import Posting
+from cfokit.ledger.engine.periods import FiscalYear, Period
 from cfokit.ledger.errors import EntityNotFound
-from cfokit.ledger.repository import administration, audit, grants, idempotency, transactions
+from cfokit.ledger.repository import (
+    accounts,
+    administration,
+    audit,
+    closes,
+    grants,
+    idempotency,
+    periods,
+    transactions,
+)
 from cfokit.ledger.repository.connection import connect
 from cfokit.ledger.repository.transactions import StoredTransaction
 
-__all__ = ["Database", "EntityWrite", "UnscopedWrite"]
+__all__ = ["Database", "EntitySettings", "EntityWrite", "UnscopedWrite"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -42,6 +53,21 @@ class Recorded:
     status: str
 
 
+@dataclass(frozen=True, slots=True)
+class EntitySettings:
+    """What the entity declared at creation, read inside the transaction that uses it.
+
+    Never taken from the caller. A caller who could state the currency could state its way
+    past `LED-15`'s refusal, and one who could state the fiscal year end could choose which
+    year a close applied to.
+    """
+
+    functional_currency: str
+    fiscal_year_end_month: int
+    fiscal_year_end_day: int
+    retained_earnings_account_id: str | None
+
+
 class EntityWrite:
     """The operations available inside one locked, entity-scoped transaction.
 
@@ -50,25 +76,24 @@ class EntityWrite:
     """
 
     def __init__(
-        self, conn: psycopg.Connection[Any], entity_id: str, functional_currency: str
+        self, conn: psycopg.Connection[Any], entity_id: str, settings: EntitySettings
     ) -> None:
         self._conn = conn
         self._entity_id = entity_id
-        self._functional_currency = functional_currency
+        self._settings = settings
 
     @property
     def entity_id(self) -> str:
         return self._entity_id
 
     @property
-    def functional_currency(self) -> str:
-        """The entity's declared currency (`LED-15`).
+    def settings(self) -> EntitySettings:
+        return self._settings
 
-        Read from the entity inside this transaction, never taken from the caller. An amount
-        in any other commodity is refused until `LED-16` activates, and a caller who could
-        state the currency could state its way past that refusal.
-        """
-        return self._functional_currency
+    @property
+    def functional_currency(self) -> str:
+        """The entity's declared currency (`LED-15`)."""
+        return self._settings.functional_currency
 
     # --- idempotency (ADR-0029) ----------------------------------------------------------
 
@@ -123,6 +148,66 @@ class EntityWrite:
         """
         return administration.would_remove_last_owner(
             self._conn, entity_id=self._entity_id, grant_id=grant_id, at=at
+        )
+
+    # --- periods (LED-11, ADR-0030) ------------------------------------------------------
+
+    def close_in_force(self, period: Period) -> str | None:
+        """The id of the close in force for this period, or None if it is open.
+
+        Read inside the locked transaction, so a close committed a moment ago already refuses
+        a posting and two concurrent writes cannot disagree about it (ADR-0011).
+        """
+        return periods.close_in_force(self._conn, entity_id=self._entity_id, period=period)
+
+    def close_period(self, period: Period, *, closed_by: str) -> str:
+        return periods.insert_close(
+            self._conn, entity_id=self._entity_id, period=period, closed_by=closed_by
+        )
+
+    def reopen_close(self, close_id: str, *, reopened_by: str, reason: str) -> bool:
+        return periods.reopen(
+            self._conn, close_id=close_id, reopened_by=reopened_by, reason=reason
+        )
+
+    # --- accounts and the year-end close (LED-01, LED-12, ADR-0027) ----------------------
+
+    def create_account(
+        self, *, code: str, name: str, account_type: str, parent_id: str | None
+    ) -> str:
+        return accounts.insert_account(
+            self._conn,
+            entity_id=self._entity_id,
+            code=code,
+            name=name,
+            account_type=account_type,
+            parent_id=parent_id,
+        )
+
+    def set_retained_earnings_account(self, account_id: str) -> None:
+        accounts.set_retained_earnings_account(
+            self._conn, entity_id=self._entity_id, account_id=account_id
+        )
+
+    def income_statement_balances(self, year: FiscalYear) -> list[tuple[str, Decimal, str]]:
+        """Income and expense balances for the fiscal year, as (account, balance, commodity)."""
+        return accounts.income_statement_balances(
+            self._conn, entity_id=self._entity_id, start=year.start, end=year.end
+        )
+
+    def closing_entries(self, year: FiscalYear) -> list[str]:
+        return closes.closing_entries(
+            self._conn, entity_id=self._entity_id, start=year.start, end=year.end
+        )
+
+    def posted_after(self, year: FiscalYear, close_id: str) -> int:
+        """How many ordinary postings entered this year after `close_id` was computed."""
+        return closes.posted_after(
+            self._conn,
+            entity_id=self._entity_id,
+            start=year.start,
+            end=year.end,
+            close_id=close_id,
         )
 
     # --- the books -----------------------------------------------------------------------
@@ -296,11 +381,11 @@ class Database:
         per entity (ADR-0003), so this is not the thing to optimise first.
         """
         with connect(self._dsn) as conn, conn.transaction():
-            currency = self._scope_and_lock(conn, entity_id)
-            yield EntityWrite(conn, entity_id, currency)
+            settings = self._scope_and_lock(conn, entity_id)
+            yield EntityWrite(conn, entity_id, settings)
 
     @staticmethod
-    def _scope_and_lock(conn: psycopg.Connection[Any], entity_id: str) -> str:
+    def _scope_and_lock(conn: psycopg.Connection[Any], entity_id: str) -> EntitySettings:
         """Set the RLS scope, then take the entity's lock. Order matters.
 
         The scope is transaction-local (`set_config(..., true)`) rather than session-level, so
@@ -311,15 +396,23 @@ class Database:
         hash of a uuid is collision-*resistant* at best; a collision would not fail, it would
         silently serialise two unrelated entities against each other.
 
-        Returns the entity's functional currency, which this query fetches anyway.
+        Returns what the entity declared, which this query fetches anyway.
         """
         with conn.cursor() as cur:
             cur.execute("SELECT set_config('cfokit.entity_id', %s, true)", (entity_id,))
             cur.execute(
-                "SELECT lock_key, functional_currency FROM entity WHERE id = %s", (entity_id,)
+                "SELECT lock_key, functional_currency, fiscal_year_end_month,"
+                "       fiscal_year_end_day, retained_earnings_account_id"
+                "  FROM entity WHERE id = %s",
+                (entity_id,),
             )
             row = cur.fetchone()
             if row is None:
                 raise EntityNotFound(f"no entity {entity_id}")
             cur.execute("SELECT pg_advisory_xact_lock(%s)", (row[0],))
-        return str(row[1])
+        return EntitySettings(
+            functional_currency=str(row[1]),
+            fiscal_year_end_month=int(row[2]),
+            fiscal_year_end_day=int(row[3]),
+            retained_earnings_account_id=str(row[4]) if row[4] is not None else None,
+        )

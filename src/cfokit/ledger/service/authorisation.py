@@ -36,6 +36,9 @@ class Capability(StrEnum):
     transaction not to be the person who posts it where an entity segregates duties. A single
     "writer" flag would make that unexpressible.
 
+    Closing a period is separate from posting because the control in `LED-11` is that someone
+    who may write the books does not thereby decide they have been reviewed.
+
     Managing ownership is separate from managing other grants because `IAM-21` reserves
     granting and revoking ownership to owners. Nothing carries `GRANT` without `OWN` today —
     `owner` is the only role — and the split is what lets a role that delegates staffing
@@ -46,6 +49,7 @@ class Capability(StrEnum):
     RECORD = "record"
     POST = "post"
     GRANT = "grant"
+    CLOSE = "close"
     OWN = "own"
 
 

@@ -33,8 +33,10 @@ from datetime import UTC, date, datetime
 from typing import Any
 
 from cfokit.ledger.engine import Entry, build_reversal, check_postable
+from cfokit.ledger.engine.periods import period_of
 from cfokit.ledger.errors import (
     IdempotencyKeyRequired,
+    PeriodClosed,
     TransactionAlreadyPosted,
     TransactionNotFound,
 )
@@ -111,6 +113,20 @@ def _authorise(write: EntityWrite, context: WriteContext, capability: Capability
     require(capability, context.principal, actor, acted_for)
 
 
+def _require_open(write: EntityWrite, when: date) -> None:
+    """Refuse a posting into a closed period (`LED-11`, ADR-0030).
+
+    Inside the locked transaction, so a close committed a moment ago already refuses and two
+    concurrent writes cannot disagree about whether the period was open (ADR-0011).
+
+    Drafts are not checked. `LED-11` says no *posting* enters a closed period, and a draft is
+    not in the books — refusing it would stop an operator preparing the entry they are about
+    to ask to have the period reopened for.
+    """
+    if write.close_in_force(period_of(when)) is not None:
+        raise PeriodClosed(f"period {period_of(when)} is closed; reopen it to post into it")
+
+
 def record_transaction(
     database: Database,
     context: WriteContext,
@@ -154,6 +170,7 @@ def record_transaction(
         _authorise(write, context, Capability.POST if post else Capability.RECORD)
 
         if post:
+            _require_open(write, entry.transaction_date)
             # The ergonomic check, so the caller gets a stable code and a readable message
             # before the deferred trigger produces a blunt one at COMMIT (ADR-0006). Inside
             # the transaction because the functional currency it checks against is read from
@@ -220,6 +237,7 @@ def post_transaction(
             raise TransactionAlreadyPosted(
                 f"transaction {transaction_id} is posted; correct it with a reversal"
             )
+        _require_open(write, stored.transaction_date)
 
         check_postable(
             Entry(
@@ -252,7 +270,6 @@ def reverse_transaction(
     context: WriteContext,
     *,
     transaction_id: str,
-    original_period_closed: bool,
     current_period_date: date,
     description: str | None = None,
 ) -> WrittenTransaction:
@@ -263,6 +280,11 @@ def reverse_transaction(
 
     The reversal is posted immediately. A draft reversal would leave the books stating
     something known to be wrong for as long as it sat unposted.
+
+    **Whether the original period is closed is read, not asserted.** ADR-0030 rule 4 dates the
+    reversal by that state — an open original is restated in place, a closed one is corrected
+    in the current period so prior reported figures stand — and a caller that supplied the
+    answer could choose which rule applied to it.
     """
     _require_key(context)
     digest = _request_hash("reverse_transaction", transaction_id, str(current_period_date))
@@ -291,10 +313,14 @@ def reverse_transaction(
                 description=stored.description,
             ),
             reverses_id=transaction_id,
-            original_period_closed=original_period_closed,
+            original_period_closed=write.close_in_force(period_of(stored.transaction_date))
+            is not None,
             current_period_date=current_period_date,
             description=description,
         )
+        # Wherever rule 4 landed it, a reversal is a posting and the period it lands in has to
+        # be open. A closed current period is the case where an operator must reopen first.
+        _require_open(write, reversal.transaction_date)
         check_postable(reversal, functional_currency=write.functional_currency)
 
         reversal_id = write.insert_draft(

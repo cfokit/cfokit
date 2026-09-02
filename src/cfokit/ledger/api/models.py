@@ -149,6 +149,66 @@ class EntityCreatedResponse(BaseModel):
     owner_grant_id: str
 
 
+class CreateAccountRequest(BaseModel):
+    """Add an account to the entity's chart (LED-01, LED-02)."""
+
+    code: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    account_type: Literal["asset", "liability", "equity", "income", "expense"] = Field(
+        description="Fixed at creation and never changed (LED-02)."
+    )
+    parent_id: str | None = Field(default=None, description="Charts are hierarchical (LED-01).")
+    retained_earnings: bool = Field(
+        default=False,
+        description="Name this account as the one a fiscal year closes to (LED-12). "
+        "Equity accounts only.",
+    )
+
+
+class AccountCreatedResponse(BaseModel):
+    account_id: str
+
+
+class CloseYearRequest(BaseModel):
+    """Close the fiscal year containing this date (LED-12).
+
+    A date rather than a year, because a fiscal year is named by the calendar year its end
+    falls in and the entity decides where that boundary sits.
+    """
+
+    day_in_year: date
+
+
+class YearClosedResponse(BaseModel):
+    fiscal_year: str
+    transaction_id: str
+    reversed_transaction_ids: list[str] = Field(
+        description="Stale closing entries reversed by this run (ADR-0027). Empty for a first "
+        "close."
+    )
+
+
+class ClosePeriodRequest(BaseModel):
+    """Mark a period reviewed (LED-11)."""
+
+    year: int = Field(ge=1, le=9999)
+    month: int = Field(ge=1, le=12)
+
+
+class ReopenPeriodRequest(ClosePeriodRequest):
+    """Reopen a closed period (LED-11, ADR-0030).
+
+    A person's act, never a skill's. `reason` is required: SOC1-17 asks the reopen to capture
+    one, and a reopen without a reason is indistinguishable from a mistake afterwards.
+    """
+
+    reason: str = Field(min_length=1)
+
+
+class PeriodCloseResponse(BaseModel):
+    close_id: str
+
+
 class GrantRoleRequest(BaseModel):
     """Grant a role in this entity. Administrative only (IAM-03)."""
 

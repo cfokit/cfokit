@@ -55,6 +55,60 @@ class NotAuthorised(LedgerError):
     code = "not_authorised"
 
 
+class PeriodClosed(LedgerError):
+    """The transaction's period is closed (`LED-11`, ADR-0030).
+
+    Distinct from `not_authorised`: the caller may post, and this period is not open to
+    anyone. Reopening it is a separate, recorded act — telling them "not permitted" would send
+    them to ask for a capability that would not help.
+    """
+
+    code = "period_closed"
+
+
+class PeriodNotClosed(LedgerError):
+    """A reopen was asked for on a period that is not closed (`LED-11`)."""
+
+    code = "period_not_closed"
+
+
+class NotAPerson(LedgerError):
+    """A capability reserved to people, attempted by an agent (ADR-0030, `SOC1-17`).
+
+    Reopening a closed period is the case: the control only survives a single-operator entity
+    because it is a capability the agent does not hold, so it cannot auto-acknowledge its way
+    through. Distinct from `not_authorised`, which would be false — the person it acts for may
+    well hold it, and saying otherwise would send them to fix the wrong thing.
+    """
+
+    code = "not_a_person"
+
+
+class RetainedEarningsUnset(LedgerError):
+    """No retained earnings account is named, so a year cannot be closed (`LED-12`)."""
+
+    code = "retained_earnings_unset"
+
+
+class YearAlreadyClosed(LedgerError):
+    """The fiscal year is closed and its close is current (`LED-12`, ADR-0027).
+
+    A close that a later posting made stale is not this: it is re-run rather than refused.
+    """
+
+    code = "year_already_closed"
+
+
+class NothingToClose(LedgerError):
+    """The fiscal year has no income or expense balance to close.
+
+    `LED-12`'s outcome — the new year opens with them at zero — already holds, so there is
+    nothing to post and a closing entry of zero would be noise in the trail.
+    """
+
+    code = "nothing_to_close"
+
+
 class UnknownRole(LedgerError):
     """No such role in the catalogue (`IAM-01`, ADR-0039).
 

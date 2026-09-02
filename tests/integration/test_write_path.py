@@ -386,7 +386,6 @@ def test_a_reversal_is_posted_linked_and_nets_to_zero(
         database,
         context(entity_id),
         transaction_id=original.transaction_id,
-        original_period_closed=False,
         current_period_date=TODAY,
     )
 
@@ -434,7 +433,6 @@ def test_both_entries_remain_visible_after_a_correction(
         database,
         context(entity_id),
         transaction_id=original.transaction_id,
-        original_period_closed=False,
         current_period_date=TODAY,
     )
 
