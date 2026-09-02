@@ -15,7 +15,8 @@ __all__ = [
     "grant_entity_role",
     "insert_entity",
     "revoke_entity_grant",
-    "would_remove_last_administrator",
+    "role_of_grant",
+    "would_remove_last_owner",
 ]
 
 
@@ -95,23 +96,40 @@ def revoke_entity_grant(
         return cur.rowcount == 1
 
 
-def would_remove_last_administrator(
+def role_of_grant(
+    conn: psycopg.Connection[Any], *, entity_id: str, grant_id: str
+) -> str | None:
+    """The role an unrevoked grant in this entity carries, or None if there is no such grant.
+
+    Revoking an owner takes a different capability from revoking anyone else (`IAM-21`), so the
+    check needs the target's role before it can decide.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT role FROM entity_grant"
+            " WHERE id = %s AND entity_id = %s AND revoked_at IS NULL",
+            (grant_id, entity_id),
+        )
+        row = cur.fetchone()
+    return str(row[0]) if row is not None else None
+
+
+def would_remove_last_owner(
     conn: psycopg.Connection[Any], *, entity_id: str, grant_id: str, at: datetime
 ) -> bool:
-    """Whether revoking `grant_id` would leave this entity with no administrator (`IAM-04`).
+    """Whether revoking `grant_id` would leave this entity unheld (`IAM-04`, `IAM-21`).
 
-    Counts distinct principals rather than grants, because one person holding `administrator`
-    twice is still one administrator, and revoking one of their grants leaves the entity with
-    an administrator.
+    Counts distinct principals rather than grants, because one person holding `owner` twice is
+    still one owner, and revoking one of their grants leaves the entity held.
     """
     with conn.cursor() as cur:
         cur.execute(
             "SELECT 1 FROM entity_grant WHERE id = %s AND entity_id = %s"
-            " AND role = 'administrator' AND revoked_at IS NULL",
+            " AND role = 'owner' AND revoked_at IS NULL",
             (grant_id, entity_id),
         )
         if cur.fetchone() is None:
-            # Revoking a non-administrator grant can never remove the last administrator.
+            # Revoking any other grant can never remove the last owner.
             return False
 
         cur.execute(
@@ -119,7 +137,7 @@ def would_remove_last_administrator(
             SELECT count(DISTINCT principal_id)
               FROM entity_grant
              WHERE entity_id = %s
-               AND role = 'administrator'
+               AND role = 'owner'
                AND id <> %s
                AND granted_at <= %s
                AND (lapses_at IS NULL OR lapses_at > %s)

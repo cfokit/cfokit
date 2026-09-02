@@ -137,23 +137,27 @@ class CreateEntityRequest(BaseModel):
         description="Amounts in any other commodity are refused until LED-16 activates."
     )
     time_zone: str = Field(description="Period boundaries are determined in it (PLT-08).")
-    administrator: str | None = Field(
+    owner: str | None = Field(
         default=None,
-        description="The entity's first administrator. Defaults to the creating principal; an "
+        description="The entity's first owner. Defaults to the creating principal; an "
         "entity never exists without one (IAM-05).",
     )
 
 
 class EntityCreatedResponse(BaseModel):
     entity_id: str
-    administrator_grant_id: str
+    owner_grant_id: str
 
 
 class GrantRoleRequest(BaseModel):
     """Grant a role in this entity. Administrative only (IAM-03)."""
 
     principal_id: str
-    role: Literal["reader", "recorder", "poster", "administrator"]
+    role: str = Field(
+        description="A role name from this deployment's catalogue. Roles are rows rather than "
+        "a fixed enumeration, so the set is not enumerable here; an unknown name is refused "
+        "with `unknown_role` (ADR-0040).",
+    )
     lapses_at: datetime | None = Field(
         default=None,
         description="When the role lapses without anyone acting (IAM-09). Null is open-ended.",

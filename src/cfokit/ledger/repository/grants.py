@@ -8,28 +8,33 @@ one parameter.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
 import psycopg
 
-__all__ = ["roles_in_force"]
+__all__ = ["RoleDefinition", "privileges_in_force", "role_definition"]
 
+# One query rather than roles-then-privileges: `IAM-01` makes authority the union over every
+# role held, and the union is what the join produces. Resolving the catalogue here also means
+# a privilege map changed by migration takes effect without a cache to invalidate.
 IN_FORCE = """
-    SELECT role
-      FROM entity_grant
-     WHERE entity_id = %s
-       AND principal_id = %s
-       AND granted_at <= %s
-       AND (lapses_at IS NULL OR lapses_at > %s)
-       AND (revoked_at IS NULL OR revoked_at > %s)
+    SELECT DISTINCT rp.privilege
+      FROM entity_grant g
+      JOIN role_privilege rp ON rp.role_name = g.role
+     WHERE g.entity_id = %s
+       AND g.principal_id = %s
+       AND g.granted_at <= %s
+       AND (g.lapses_at IS NULL OR g.lapses_at > %s)
+       AND (g.revoked_at IS NULL OR g.revoked_at > %s)
 """
 
 
-def roles_in_force(
+def privileges_in_force(
     conn: psycopg.Connection[Any], entity_id: str, principal_id: str, at: datetime
 ) -> frozenset[str]:
-    """Every role this principal holds in this entity at `at`.
+    """Every privilege this principal holds in this entity at `at`, across all its roles.
 
     An empty set is the ordinary answer for a principal with no access, and `IAM-01` makes it
     mean "can do nothing with it" rather than "can do the default".
@@ -37,3 +42,35 @@ def roles_in_force(
     with conn.cursor() as cur:
         cur.execute(IN_FORCE, (entity_id, principal_id, at, at, at))
         return frozenset(str(row[0]) for row in cur.fetchall())
+
+
+@dataclass(frozen=True, slots=True)
+class RoleDefinition:
+    """A row of the catalogue: what a role carries, and whether it may be time-bounded."""
+
+    name: str
+    privileges: frozenset[str]
+    never_lapses: bool
+
+
+def role_definition(conn: psycopg.Connection[Any], name: str) -> RoleDefinition | None:
+    """The catalogue entry for a role, or None if this deployment defines no such role.
+
+    A role with no privileges is a legitimate answer and is not None: it confers nothing, which
+    is different from not existing.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT r.never_lapses, rp.privilege"
+            "  FROM role r LEFT JOIN role_privilege rp ON rp.role_name = r.name"
+            " WHERE r.name = %s",
+            (name,),
+        )
+        rows = cur.fetchall()
+    if not rows:
+        return None
+    return RoleDefinition(
+        name=name,
+        privileges=frozenset(str(row[1]) for row in rows if row[1] is not None),
+        never_lapses=bool(rows[0][0]),
+    )

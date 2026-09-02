@@ -87,6 +87,8 @@ cost the same context as inlining, while diluting adherence to the rules that ma
 | [0035](0035-inference-for-the-attested-runtime.md) | CFOKit holds the inference relationship for the attested runtime | Draft |
 | [0036](0036-correctness-is-tested-in-four-layers.md) | Correctness is tested in four layers, and only the top one needs a model | Draft |
 | [0037](0037-accounting-basis-is-a-presentation-property.md) | The ledger records obligation and settlement; accounting basis is a presentation property | Accepted |
+| [0039](0039-an-entity-is-held-by-its-owners.md) | An entity is held by one or more mutually equivalent owners | Proposed |
+| [0040](0040-roles-are-rows-privileges-are-code.md) | Roles are rows, privileges are code, and only `owner` exists yet | Proposed |
 
 ## Deferred — decided in principle, waiting on a need
 

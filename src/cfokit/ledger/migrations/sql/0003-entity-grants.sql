@@ -30,8 +30,9 @@ CREATE TABLE entity_grant (
     -- The identity or skill this grant is for. Opaque here: resolving it to a person is the
     -- identity provider's business, and the ledger never learns what a skill is (ADR-0022).
     principal_id text        NOT NULL,
-    -- IAM-02 names three groupings and IAM-16 requires the person who drafts not to be the
-    -- person who posts, so recording and posting are separable roles rather than one.
+    -- Superseded by 0004: the catalogue in `role` replaced this enumeration, because which
+    -- roles exist is data rather than a fixed list (ADR-0040). Left as written; a migration
+    -- is a record of what was applied.
     role         text        NOT NULL CHECK (role IN ('reader', 'recorder', 'poster', 'administrator')),
     -- IAM-13: who made it, and when.
     granted_by   text        NOT NULL,

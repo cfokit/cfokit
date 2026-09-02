@@ -300,13 +300,13 @@ Who may reach an entity, what they may do there, and how that is evidenced.
 
 | | Requirement | Priority | Status |
 |---|---|---|---|
-| **IAM-01** | An identity's access to an entity is governed by a role. A role carries a defined set of capabilities, and an identity holding no role for an entity can do nothing with it. | Must | Approved |
-| **IAM-02** | Roles distinguish at minimum between reading and reporting, recording and posting, and administering the entity. | Must | Approved |
-| **IAM-03** | Suspending or deleting an entity, granting or revoking another identity's access, and changing a role assignment are administrative capabilities and are available to no other role. | Must | Approved |
-| **IAM-04** | An entity always has at least one identity holding the administrative role. The last administrator cannot be removed or demoted. | Must | Approved |
-| **IAM-05** | Creating an entity assigns its first administrator in the same act. An entity never exists without one, and no separate step is required to make it usable. | Must | Approved |
+| **IAM-01** | An identity's access to an entity is governed by the roles it holds there. A role carries a defined set of capabilities, an identity may hold more than one role in an entity and its capability is the union of them, and an identity holding no role for an entity can do nothing with it. | Must | Approved |
+| **IAM-02** | The privileges a role can carry distinguish at minimum between reading and reporting, recording and posting, administering the entity, and holding it. Which roles are defined from them is a catalogue the deployment holds, and a role is added when there is somebody to hold it. | Must | Approved |
+| **IAM-03** | Suspending an entity, granting or revoking another identity's access, and changing a role assignment are administrative capabilities and are available to no other role. Deleting an entity is not among them. | Must | Approved |
+| **IAM-04** | An entity always has at least one identity holding it. The last owner cannot be revoked or demoted, and because an owner holds every administrative capability, an entity always has someone able to administer it. | Must | Approved |
+| **IAM-05** | Creating an entity assigns its first owner in the same act. An entity never exists without one, and no separate step is required to make it usable. | Must | Approved |
 | **IAM-06** | Creating an entity requires an authenticated identity and no prior role. It is the only act with that property: every other capability is conferred by a role, and an entity's first role is conferred by the act of creating it. A running deployment is usable as it stands, with nothing provisioned into it first. | Must | Approved |
-| **IAM-07** | An administrator can grant a role to a person who has no identity yet. The grant is recorded as an invitation, confers nothing until they authenticate, and binds to their identity when they first do. | Must | Approved |
+| **IAM-07** | An identity that can grant roles can grant one to a person who has no identity yet. The grant is recorded as an invitation, confers nothing until they authenticate, and binds to their identity when they first do. | Must | Approved |
 | **IAM-08** | One identity holds independent roles in each entity it can reach, and holds none in the rest. An advisor working across many entities is the ordinary case, not an exception. | Must | Approved |
 | **IAM-09** | A role can be granted for a stated period, after which it lapses without anyone acting. An advisor's access ending with the engagement does not depend on someone remembering. | Should | Approved |
 | **IAM-10** | Identity is delegated to the identity provider the organisation already uses. CFOKit never issues credentials, stores passwords, or operates a login flow. | Must | Approved |
@@ -320,6 +320,9 @@ Who may reach an entity, what they may do there, and how that is evidenced.
 | **IAM-18** | Roles exist at two scopes, entity and deployment, and the two are independent. Holding an administrative role in an entity confers nothing at deployment scope, and holding a deployment-scoped role confers no role in any entity. | Must | Approved |
 | **IAM-19** | Deployment-scoped administrative capabilities are enumerable and individually assignable — among them configuring a provider that receives customer data, setting the retention schedule, authorising a disposal batch, reviewing security events, and approving privileged access. The set grows as capabilities are added and the system can state it at any time. Each is held by a named identity at all times, and the system can say which. | Must | Approved |
 | **IAM-20** | The read paths that require no identity are enumerable, and the system can state them. Each reaches exactly one artifact and nothing else about the entity, uses a link that cannot be guessed or arrived at by enumeration, and can be revoked. A path that exposes more than one artifact, or that cannot be revoked, is not one of them. | Must | Approved |
+| **IAM-21** | An entity is held by one or more owners, and an owner holds every capability in the entity, administering included. Two are an owner's alone: granting or revoking ownership, and deleting the entity. An administrator cannot revoke an owner. Ownership cannot be granted for a stated period — it ends only when an owner revokes it, so an entity is never left unheld by the passage of time. | Must | Approved |
+
+**Acceptance, IAM-21.** An administrator's attempt to revoke an owner is refused, an owner may revoke another owner, and an attempt to revoke the last one is refused whichever of them makes it.
 
 **Acceptance, IAM-07.** A person invited to an entity and never authenticated holds nothing,
 and appears in IAM-14's history as invited rather than as holding a role.
@@ -622,7 +625,7 @@ NFR-18 controls evidenced rather than asserted.
 
 ### 7.6 Access control and principal propagation
 
-Carried already: IAM-01 through IAM-19.
+Carried already: IAM-01 through IAM-21.
 
 | | Requirement | Priority | Status |
 |---|---|---|---|
@@ -810,7 +813,7 @@ is fully compromised and cooperative with the attacker.
 
 ### 8.5 Access control and identity
 
-Carried by IAM-01 through IAM-19 and SOC1-24 through SOC1-27. Additional SOC 2 obligations only:
+Carried by IAM-01 through IAM-21 and SOC1-24 through SOC1-27. Additional SOC 2 obligations only:
 
 | | Requirement | Priority | Status |
 |---|---|---|---|
@@ -916,7 +919,6 @@ Terms carrying a specific meaning in this document.
 | Term | Meaning |
 |---|---|
 | **Account** | A line in a chart of accounts. Always this sense, throughout. |
-| **Administrator** | An identity holding the role that permits entity lifecycle changes and changes to other identities' access. |
 | **Basis** | Whether an entity recognises revenue and expense when the obligation arises or when cash moves. A property of the entity, not a report option. |
 | **Close** | Marking a period as reviewed. A workflow milestone, distinct from the permanence a posting confers. |
 | **Commodity** | A unit an amount is denominated in. Money in a given currency today; potentially other holdings later. |
@@ -932,10 +934,12 @@ Terms carrying a specific meaning in this document.
 | **Import** | Records entering CFOKit from the system a company ran before. Validated and reconciled against the source before anything posts, and identifiable as imported, with the system it came from, for the life of the record. |
 | **Invitation** | A role granted to someone who has no identity yet. It confers nothing until they authenticate, and binds to their identity when they do. |
 | **Obligation** | A commitment to receive or pay, recorded when it arises, separately from its settlement. |
+| **Owner** | An identity holding an entity. Holds every privilege in it, including granting and revoking ownership and deleting the entity. An entity always has at least one. |
 | **Posting** | Committing a transaction to the books. Irreversible; the point after which corrections are new entries. |
 | **Principal** | Whatever an action is attributed to. A person is one; a skill is another. An agent action carries both, and its authority is the intersection. |
+| **Privilege** | One flag naming something a caller may do. Defined in code, because a flag means something only where something checks it. |
 | **Reversal** | A new entry that undoes a posted one, leaving both visible. The only form a correction takes. |
-| **Role** | A named set of capabilities. An identity's access to an entity is exactly the role it holds there, and nothing else. |
+| **Role** | A named set of privileges, held by an identity in one entity. A row in the deployment's catalogue rather than a fixed list. |
 | **Rule** | Stored, operator-approved criteria that assign an incoming transaction to an account deterministically. |
 | **Settlement** | The movement of cash against an obligation. |
 | **The CFO seat** | Whoever is accountable for the company's finances — a fractional CFO where one is engaged, and otherwise the founder or owner-operator. Never vacant. |
@@ -958,7 +962,7 @@ serving no objective does not belong here.
 | **OBJ-5** The recurring cost goes away | BKP-01–BKP-06, BKP-13–BKP-18, AR-01–AR-19, RPT-01–RPT-09, IMP-01–IMP-08, NFR-19, NFR-20 |
 | **OBJ-6** Output accepted as it stands | LED-01, LED-02, LED-14, LED-17, RPT-01–RPT-05, RPT-07, RPT-09, RPT-10, RPT-12, RPT-13, RPT-14, RPT-16, RPT-17, RPT-18, RPT-19, NFR-01, NFR-16, NFR-22 |
 | **OBJ-7** Never forced off by growing | LED-10, LED-13, LED-14, LED-15, LED-16, LED-17, LED-18, LED-19, RPT-19, RPT-20, RPT-21, IAM-08, IAM-09, PLT-04, PLT-08, NFR-09 |
-| **OBJ-8** Only authorised people reach the books | IAM-01–IAM-07, IAM-11, IAM-12, IAM-15, IAM-16, IAM-17, IAM-20, AR-08, PLT-05, PLT-23, NFR-04, NFR-05, NFR-06 |
+| **OBJ-8** Only authorised people reach the books | IAM-01–IAM-07, IAM-11, IAM-12, IAM-15, IAM-16, IAM-17, IAM-20, IAM-21, AR-08, PLT-05, PLT-23, NFR-04, NFR-05, NFR-06 |
 | **OBJ-9** Provable to an examiner | IAM-13, IAM-14, IAM-18, IAM-19, PLT-15–PLT-19, PLT-22, NFR-18, SOC1-01–SOC1-36, SOC2-01–SOC2-24, SOC2-27–SOC2-30 |
 | **OBJ-10** Leave with everything, at any time | EXP-01–EXP-04, PLT-09, PLT-10, PLT-11, PLT-12, PLT-13, PLT-21, NFR-07, NFR-17 |
 | **OBJ-11** Runs with no vendor relationship | BKP-03, IAM-10, PLT-01, PLT-02, PLT-03, PLT-06, NFR-10, NFR-11, NFR-14, NFR-17 |
