@@ -66,6 +66,7 @@ from cfokit.ledger.service.authentication import (
     TokenAuthenticator,
     principal_from_claims,
 )
+from cfokit.ledger.service.opening import CarriedBalance, open_balances
 from cfokit.ledger.service.principal import Principal
 from cfokit.ledger.service.read import read_transaction
 from cfokit.ledger.service.readiness import check_readiness
@@ -98,6 +99,18 @@ class LedgerToolError(Exception):
         super().__init__(json.dumps({"code": code, "message": message}))
         self.code = code
         self.detail = message
+
+
+class CarriedBalanceArgument(BaseModel):
+    """One account's balance as it stood in the system CFOKit is taking over from.
+
+    `amount` is a string for the same reason a posting's is: a JSON number cannot carry the
+    scale the balance was written at, and `100.00` would arrive as `100`.
+    """
+
+    account_id: str = Field(description="The account carrying this balance.")
+    amount: str = Field(description="Signed decimal string. Positive debits the account.")
+    commodity: str = Field(description="The unit the amount is denominated in, e.g. USD.")
 
 
 def _statement_lines(lines: Iterable[StatementLine]) -> list[dict[str, Any]]:
@@ -162,14 +175,20 @@ class PostingArgument(BaseModel):
     commodity: str = Field(description="The unit the amount is denominated in, e.g. USD.")
 
 
-def _to_posting(argument: PostingArgument) -> Posting:
+def _to_decimal(raw: str) -> Decimal:
+    """Parse an amount, refusing a malformed one with a code rather than a stack trace."""
     try:
-        amount = Decimal(argument.amount)
+        return Decimal(raw)
     except InvalidOperation as exc:
-        raise LedgerToolError(
-            "invalid_amount", f"not a decimal amount: {argument.amount!r}"
-        ) from exc
-    return Posting(account_id=argument.account_id, amount=amount, commodity=argument.commodity)
+        raise LedgerToolError("invalid_amount", f"not a decimal amount: {raw!r}") from exc
+
+
+def _to_posting(argument: PostingArgument) -> Posting:
+    return Posting(
+        account_id=argument.account_id,
+        amount=_to_decimal(argument.amount),
+        commodity=argument.commodity,
+    )
 
 
 def _refusals(work: Callable[[], dict[str, Any]]) -> dict[str, Any]:
@@ -369,6 +388,44 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
         except ValueError as exc:
             raise LedgerToolError("invalid_date", str(exc)) from exc
         return when, taken
+
+    @server.tool(
+        name="open_balances",
+        description=(
+            "Open the books with balances carried in from before CFOKit held them. Do not "
+            "supply the equity side: the ledger computes the counterweight, so the entry "
+            "cannot fail to balance. Books are opened once — opening them again would double "
+            "every figure, and a wrong one is corrected with an ordinary entry."
+        ),
+    )
+    def open_the_books(
+        entity_id: str, as_of: str, balances: list[CarriedBalanceArgument]
+    ) -> dict[str, Any]:
+        def work() -> dict[str, Any]:
+            when, _ = _at(as_of, None)
+            opened = open_balances(
+                database,
+                entity_id=entity_id,
+                principal=acting(),
+                request_id=f"mcp-{uuid.uuid4().hex}",
+                as_of=when,
+                balances=[
+                    CarriedBalance(
+                        account_id=carried.account_id,
+                        amount=_to_decimal(carried.amount),
+                        commodity=carried.commodity,
+                    )
+                    for carried in balances
+                ],
+            )
+            return {
+                "ok": True,
+                "transaction_id": opened.transaction_id,
+                "as_of": opened.as_of.isoformat(),
+                "equity_amount": str(opened.equity_amount),
+            }
+
+        return _refusals(work)
 
     @server.tool(
         name="trial_balance",

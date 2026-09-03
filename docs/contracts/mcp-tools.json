@@ -143,6 +143,65 @@
     "name": "comparative_profit_and_loss"
   },
   {
+    "description": "Open the books with balances carried in from before CFOKit held them. Do not supply the equity side: the ledger computes the counterweight, so the entry cannot fail to balance. Books are opened once — opening them again would double every figure, and a wrong one is corrected with an ordinary entry.",
+    "inputSchema": {
+      "$defs": {
+        "CarriedBalanceArgument": {
+          "description": "One account's balance as it stood in the system CFOKit is taking over from.\n\n`amount` is a string for the same reason a posting's is: a JSON number cannot carry the\nscale the balance was written at, and `100.00` would arrive as `100`.",
+          "properties": {
+            "account_id": {
+              "description": "The account carrying this balance.",
+              "title": "Account Id",
+              "type": "string"
+            },
+            "amount": {
+              "description": "Signed decimal string. Positive debits the account.",
+              "title": "Amount",
+              "type": "string"
+            },
+            "commodity": {
+              "description": "The unit the amount is denominated in, e.g. USD.",
+              "title": "Commodity",
+              "type": "string"
+            }
+          },
+          "required": [
+            "account_id",
+            "amount",
+            "commodity"
+          ],
+          "title": "CarriedBalanceArgument",
+          "type": "object"
+        }
+      },
+      "properties": {
+        "as_of": {
+          "title": "As Of",
+          "type": "string"
+        },
+        "balances": {
+          "items": {
+            "$ref": "#/$defs/CarriedBalanceArgument"
+          },
+          "title": "Balances",
+          "type": "array"
+        },
+        "entity_id": {
+          "title": "Entity Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity_id",
+        "as_of",
+        "balances"
+      ],
+      "title": "open_the_booksArguments",
+      "type": "object"
+    },
+    "name": "open_balances"
+  },
+  {
     "description": "Post a draft transaction. Posting is the point of no return: a posted transaction is never edited or deleted, only reversed.",
     "inputSchema": {
       "properties": {

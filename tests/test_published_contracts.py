@@ -110,6 +110,7 @@ def test_the_mcp_tool_surface_is_published() -> None:
         "account_detail",
         "balance_sheet",
         "comparative_profit_and_loss",
+        "open_balances",
         "post_transaction",
         "profit_and_loss",
         "read_transaction",

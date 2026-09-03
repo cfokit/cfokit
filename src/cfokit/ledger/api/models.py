@@ -160,6 +160,11 @@ class CreateAccountRequest(BaseModel):
         description="Fixed at creation and never changed (LED-02)."
     )
     parent_id: str | None = Field(default=None, description="Charts are hierarchical (LED-01).")
+    opening_balance: bool = Field(
+        default=False,
+        description="Name this account as the one carried-in balances balance against "
+        "(LED-10). Equity accounts only, and deliberately separate from retained earnings.",
+    )
     retained_earnings: bool = Field(
         default=False,
         description="Name this account as the one a fiscal year closes to (LED-12). "
@@ -352,6 +357,36 @@ class BalanceSheetResponse(BaseModel):
     balances: bool = Field(
         description="Whether assets equal liabilities plus equity, which is what the statement "
         "asserts."
+    )
+
+
+class CarriedBalanceModel(BaseModel):
+    """One account's balance as it stood in the system CFOKit is taking over from."""
+
+    account_id: str
+    amount: Money = Field(description="Signed decimal string. Positive debits the account.")
+    commodity: str
+
+
+class OpenBalancesRequest(BaseModel):
+    """Carry balances in from before CFOKit held the books (LED-10).
+
+    The equity side is not supplied: the ledger computes the counterweight, so an entry that
+    does not balance is impossible rather than refused.
+    """
+
+    as_of: date = Field(
+        description="The day the balances stood at — conventionally the day before the first "
+        "period CFOKit keeps, so they sit outside every period it reports on."
+    )
+    balances: list[CarriedBalanceModel] = Field(min_length=1)
+
+
+class OpenedBooksResponse(BaseModel):
+    transaction_id: str
+    as_of: date
+    equity_amount: str = Field(
+        description="What was posted to the opening balance account to make the entry balance."
     )
 
 

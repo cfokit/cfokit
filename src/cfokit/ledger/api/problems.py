@@ -17,6 +17,7 @@ from http import HTTPStatus
 from cfokit.ledger.errors import (
     AccountNotFound,
     AllocationInvalid,
+    AlreadyOpened,
     CommodityNotPermitted,
     EntityNotFound,
     IdempotencyKeyRequired,
@@ -27,6 +28,7 @@ from cfokit.ledger.errors import (
     NotAuthenticated,
     NotAuthorised,
     NothingToClose,
+    OpeningBalanceAccountUnset,
     PeriodClosed,
     PeriodNotClosed,
     RetainedEarningsUnset,
@@ -54,6 +56,8 @@ STATUS_FOR_CODE: dict[str, int] = {
     YearAlreadyClosed.code: HTTPStatus.CONFLICT,
     NothingToClose.code: HTTPStatus.CONFLICT,
     RetainedEarningsUnset.code: HTTPStatus.UNPROCESSABLE_ENTITY,
+    OpeningBalanceAccountUnset.code: HTTPStatus.UNPROCESSABLE_ENTITY,
+    AlreadyOpened.code: HTTPStatus.CONFLICT,
     # 403: a capability reserved to people. No credential an agent can present changes it.
     NotAPerson.code: HTTPStatus.FORBIDDEN,
     EntityNotFound.code: HTTPStatus.NOT_FOUND,

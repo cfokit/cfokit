@@ -13,7 +13,13 @@ from typing import Any
 
 import psycopg
 
-__all__ = ["income_statement_balances", "insert_account", "set_retained_earnings_account"]
+__all__ = [
+    "any_opening_entry",
+    "income_statement_balances",
+    "insert_account",
+    "set_opening_balance_account",
+    "set_retained_earnings_account",
+]
 
 
 def insert_account(
@@ -46,6 +52,27 @@ def set_retained_earnings_account(
             "UPDATE entity SET retained_earnings_account_id = %s WHERE id = %s",
             (account_id, entity_id),
         )
+
+
+def set_opening_balance_account(
+    conn: psycopg.Connection[Any], *, entity_id: str, account_id: str
+) -> None:
+    with conn.cursor() as cur:
+        cur.execute(
+            "UPDATE entity SET opening_balance_account_id = %s WHERE id = %s",
+            (account_id, entity_id),
+        )
+
+
+def any_opening_entry(conn: psycopg.Connection[Any], *, entity_id: str) -> bool:
+    """Whether these books already carry opening balances (`LED-10`)."""
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT 1 FROM ledger_transaction"
+            " WHERE entity_id = %s AND entry_kind = 'opening' LIMIT 1",
+            (entity_id,),
+        )
+        return cur.fetchone() is not None
 
 
 def income_statement_balances(
