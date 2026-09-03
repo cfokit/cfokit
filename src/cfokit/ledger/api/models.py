@@ -228,6 +228,58 @@ class TrialBalanceResponse(BaseModel):
     )
 
 
+class StatementLineModel(BaseModel):
+    """One line of a statement, signed so positive means more of what the account is."""
+
+    account_id: str
+    code: str
+    name: str
+    account_type: str
+    amount: str
+
+
+class ProfitAndLossResponse(BaseModel):
+    """Income and expense over a period (RPT-02)."""
+
+    since: date
+    as_of: date
+    watermark: datetime | None = None
+    accounting_basis: str = Field(description="Stated on the face of every report (RPT-10).")
+    commodity: str
+    income: list[StatementLineModel]
+    expenses: list[StatementLineModel]
+    total_income: str
+    total_expenses: str
+    net_income: str = Field(
+        description="Computed from the unrounded totals, so it cannot drift a unit from the "
+        "difference a reader takes by hand (RPT-12)."
+    )
+
+
+class BalanceSheetResponse(BaseModel):
+    """Assets, liabilities and equity as of a date (RPT-03)."""
+
+    as_of: date
+    watermark: datetime | None = None
+    accounting_basis: str = Field(description="Stated on the face of every report (RPT-10).")
+    commodity: str
+    assets: list[StatementLineModel]
+    liabilities: list[StatementLineModel]
+    equity: list[StatementLineModel]
+    unclosed_earnings: str = Field(
+        description="Income and expense not yet closed to retained earnings. LED-12 moves them "
+        "only at a fiscal year end, so mid-year they are equity that has not been moved. "
+        "Included in total_equity."
+    )
+    total_assets: str
+    total_liabilities: str
+    total_equity: str
+    balances: bool = Field(
+        description="Whether assets equal liabilities plus equity, which is what the statement "
+        "asserts."
+    )
+
+
 class ClosePeriodRequest(BaseModel):
     """Mark a period reviewed (LED-11)."""
 

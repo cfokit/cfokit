@@ -19,11 +19,21 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime
 
 from cfokit.ledger.repository.reports import AccountBalance
-from cfokit.ledger.repository.unit_of_work import Database
+from cfokit.ledger.repository.unit_of_work import Database, EntityWrite
 from cfokit.ledger.service.authorisation import Capability, require
 from cfokit.ledger.service.principal import Principal
 
-__all__ = ["TrialBalance", "trial_balance"]
+__all__ = [
+    "BalanceSheet",
+    "ProfitAndLoss",
+    "TrialBalance",
+    "balance_sheet",
+    "profit_and_loss",
+    "trial_balance",
+]
+
+INCOME_STATEMENT_TYPES = ("income", "expense")
+BALANCE_SHEET_TYPES = ("asset", "liability", "equity")
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,18 +62,10 @@ def trial_balance(
     transactions posted between them, because nothing is stored and every figure is derived
     from the postings that were in the books at that moment.
     """
-    now = datetime.now(UTC)
     with database.entity_write(entity_id) as write:
-        actor = write.privileges_in_force(principal.id, now)
-        acted_for = (
-            write.privileges_in_force(principal.acting_for, now)
-            if principal.acting_for is not None
-            else frozenset()
-        )
-        require(Capability.READ, principal, actor, acted_for)
-
+        _require_read(write, principal)
         settings = write.settings
-        rows = write.trial_balance(as_of=as_of, watermark=watermark)
+        rows = write.account_balances(as_of=as_of, watermark=watermark)
 
     return TrialBalance(
         as_of=as_of,
@@ -72,3 +74,111 @@ def trial_balance(
         functional_currency=settings.functional_currency,
         rows=tuple(rows),
     )
+
+
+@dataclass(frozen=True, slots=True)
+class ProfitAndLoss:
+    """Income and expense over a period (`RPT-02`)."""
+
+    since: date
+    as_of: date
+    watermark: datetime | None
+    accounting_basis: str
+    functional_currency: str
+    rows: tuple[AccountBalance, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class BalanceSheet:
+    """Assets, liabilities and equity as of a date (`RPT-03`).
+
+    `unclosed` is the net of every income and expense balance still standing. Those amounts
+    belong to equity and have not been moved there yet, because `LED-12` moves them only at a
+    fiscal year end. Without them the statement would not balance, and the gap would be exactly
+    the earnings nobody had closed.
+    """
+
+    as_of: date
+    watermark: datetime | None
+    accounting_basis: str
+    functional_currency: str
+    rows: tuple[AccountBalance, ...]
+    unclosed: tuple[AccountBalance, ...]
+
+
+def profit_and_loss(
+    database: Database,
+    *,
+    entity_id: str,
+    principal: Principal,
+    since: date,
+    as_of: date,
+    watermark: datetime | None = None,
+) -> ProfitAndLoss:
+    """Income and expense for the period `since`..`as_of` inclusive (`RPT-02`).
+
+    A period rather than a point, which is the whole difference from a balance sheet: income
+    and expense measure what happened between two dates, and assets and liabilities are what
+    stands at one.
+    """
+    with database.entity_write(entity_id) as write:
+        _require_read(write, principal)
+        settings = write.settings
+        rows = write.account_balances(
+            as_of=as_of, since=since, types=INCOME_STATEMENT_TYPES, watermark=watermark
+        )
+
+    return ProfitAndLoss(
+        since=since,
+        as_of=as_of,
+        watermark=watermark,
+        accounting_basis=settings.accounting_basis,
+        functional_currency=settings.functional_currency,
+        rows=tuple(rows),
+    )
+
+
+def balance_sheet(
+    database: Database,
+    *,
+    entity_id: str,
+    principal: Principal,
+    as_of: date,
+    watermark: datetime | None = None,
+) -> BalanceSheet:
+    """Assets, liabilities and equity as of `as_of` (`RPT-03`).
+
+    Cumulative from the beginning of the books, because that is what a balance sheet is.
+    """
+    with database.entity_write(entity_id) as write:
+        _require_read(write, principal)
+        settings = write.settings
+        rows = write.account_balances(
+            as_of=as_of, types=BALANCE_SHEET_TYPES, watermark=watermark
+        )
+        # Every income and expense balance still standing, whichever year it belongs to. A
+        # prior year left unclosed shows up here too, which is correct: those earnings are
+        # equity and nothing has moved them yet.
+        unclosed = write.account_balances(
+            as_of=as_of, types=INCOME_STATEMENT_TYPES, watermark=watermark
+        )
+
+    return BalanceSheet(
+        as_of=as_of,
+        watermark=watermark,
+        accounting_basis=settings.accounting_basis,
+        functional_currency=settings.functional_currency,
+        rows=tuple(rows),
+        unclosed=tuple(unclosed),
+    )
+
+
+def _require_read(write: EntityWrite, principal: Principal) -> None:
+    now = datetime.now(UTC)
+    actor = write.privileges_in_force(principal.id, now)
+    acted_for = (
+        write.privileges_in_force(principal.acting_for, now)
+        if principal.acting_for is not None
+        else frozenset()
+    )
+    require(Capability.READ, principal, actor, acted_for)

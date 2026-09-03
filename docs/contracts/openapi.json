@@ -14,6 +14,95 @@
         "title": "AccountCreatedResponse",
         "type": "object"
       },
+      "BalanceSheetResponse": {
+        "description": "Assets, liabilities and equity as of a date (RPT-03).",
+        "properties": {
+          "accounting_basis": {
+            "description": "Stated on the face of every report (RPT-10).",
+            "title": "Accounting Basis",
+            "type": "string"
+          },
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "assets": {
+            "items": {
+              "$ref": "#/components/schemas/StatementLineModel"
+            },
+            "title": "Assets",
+            "type": "array"
+          },
+          "balances": {
+            "description": "Whether assets equal liabilities plus equity, which is what the statement asserts.",
+            "title": "Balances",
+            "type": "boolean"
+          },
+          "commodity": {
+            "title": "Commodity",
+            "type": "string"
+          },
+          "equity": {
+            "items": {
+              "$ref": "#/components/schemas/StatementLineModel"
+            },
+            "title": "Equity",
+            "type": "array"
+          },
+          "liabilities": {
+            "items": {
+              "$ref": "#/components/schemas/StatementLineModel"
+            },
+            "title": "Liabilities",
+            "type": "array"
+          },
+          "total_assets": {
+            "title": "Total Assets",
+            "type": "string"
+          },
+          "total_equity": {
+            "title": "Total Equity",
+            "type": "string"
+          },
+          "total_liabilities": {
+            "title": "Total Liabilities",
+            "type": "string"
+          },
+          "unclosed_earnings": {
+            "description": "Income and expense not yet closed to retained earnings. LED-12 moves them only at a fiscal year end, so mid-year they are equity that has not been moved. Included in total_equity.",
+            "title": "Unclosed Earnings",
+            "type": "string"
+          },
+          "watermark": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Watermark"
+          }
+        },
+        "required": [
+          "as_of",
+          "accounting_basis",
+          "commodity",
+          "assets",
+          "liabilities",
+          "equity",
+          "unclosed_earnings",
+          "total_assets",
+          "total_liabilities",
+          "total_equity",
+          "balances"
+        ],
+        "title": "BalanceSheetResponse",
+        "type": "object"
+      },
       "ClosePeriodRequest": {
         "description": "Mark a period reviewed (LED-11).",
         "properties": {
@@ -299,6 +388,82 @@
         "title": "PostingModel",
         "type": "object"
       },
+      "ProfitAndLossResponse": {
+        "description": "Income and expense over a period (RPT-02).",
+        "properties": {
+          "accounting_basis": {
+            "description": "Stated on the face of every report (RPT-10).",
+            "title": "Accounting Basis",
+            "type": "string"
+          },
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "commodity": {
+            "title": "Commodity",
+            "type": "string"
+          },
+          "expenses": {
+            "items": {
+              "$ref": "#/components/schemas/StatementLineModel"
+            },
+            "title": "Expenses",
+            "type": "array"
+          },
+          "income": {
+            "items": {
+              "$ref": "#/components/schemas/StatementLineModel"
+            },
+            "title": "Income",
+            "type": "array"
+          },
+          "net_income": {
+            "description": "Computed from the unrounded totals, so it cannot drift a unit from the difference a reader takes by hand (RPT-12).",
+            "title": "Net Income",
+            "type": "string"
+          },
+          "since": {
+            "format": "date",
+            "title": "Since",
+            "type": "string"
+          },
+          "total_expenses": {
+            "title": "Total Expenses",
+            "type": "string"
+          },
+          "total_income": {
+            "title": "Total Income",
+            "type": "string"
+          },
+          "watermark": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Watermark"
+          }
+        },
+        "required": [
+          "since",
+          "as_of",
+          "accounting_basis",
+          "commodity",
+          "income",
+          "expenses",
+          "total_income",
+          "total_expenses",
+          "net_income"
+        ],
+        "title": "ProfitAndLossResponse",
+        "type": "object"
+      },
       "RecordTransactionRequest": {
         "description": "Record a transaction, as a draft or posted straight through.",
         "properties": {
@@ -368,6 +533,40 @@
           "reason"
         ],
         "title": "ReopenPeriodRequest",
+        "type": "object"
+      },
+      "StatementLineModel": {
+        "description": "One line of a statement, signed so positive means more of what the account is.",
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "string"
+          },
+          "account_type": {
+            "title": "Account Type",
+            "type": "string"
+          },
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "code",
+          "name",
+          "account_type",
+          "amount"
+        ],
+        "title": "StatementLineModel",
         "type": "object"
       },
       "TransactionResponse": {
@@ -871,6 +1070,139 @@
         ]
       }
     },
+    "/entities/{entity_id}/balance-sheet": {
+      "get": {
+        "description": "Assets, liabilities and equity as of a date (`RPT-03`).\n\nEquity includes earnings not yet closed to retained earnings: `LED-12` moves those only\nat a fiscal year end, so mid-year they are equity that has not been moved. Leaving them\nout would make the statement fail to balance by exactly that amount.",
+        "operationId": "read_balance_sheet_entities__entity_id__balance_sheet_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          },
+          {
+            "in": "query",
+            "name": "watermark",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Watermark"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BalanceSheetResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Balance sheet as of a date",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
     "/entities/{entity_id}/grants": {
       "post": {
         "operationId": "grant_entities__entity_id__grants_post",
@@ -1359,6 +1691,149 @@
         "summary": "Reopen a closed period",
         "tags": [
           "periods"
+        ]
+      }
+    },
+    "/entities/{entity_id}/profit-and-loss": {
+      "get": {
+        "description": "Income and expense between two dates, inclusive (`RPT-02`).\n\nA period rather than a point, which is the difference from a balance sheet: income and\nexpense measure what happened between two dates; assets and liabilities are what stands\nat one.",
+        "operationId": "read_profit_and_loss_entities__entity_id__profit_and_loss_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "since",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Since",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          },
+          {
+            "in": "query",
+            "name": "watermark",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Watermark"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfitAndLossResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Profit and loss for a period",
+        "tags": [
+          "reports"
         ]
       }
     },

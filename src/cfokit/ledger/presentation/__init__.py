@@ -21,14 +21,21 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import ROUND_HALF_UP, Decimal
 
-from cfokit.ledger.service.reports import TrialBalance
+from cfokit.ledger.engine.accounts import AccountType, natural_amount
+from cfokit.ledger.repository.reports import AccountBalance
+from cfokit.ledger.service.reports import BalanceSheet, ProfitAndLoss, TrialBalance
 
 __all__ = [
     "DEFAULT_DISPLAY_SCALE",
+    "PresentedBalanceSheet",
+    "PresentedProfitAndLoss",
     "PresentedTrialBalance",
+    "StatementLine",
     "TrialBalanceLine",
     "display_scale",
     "present",
+    "present_balance_sheet",
+    "present_profit_and_loss",
     "present_total",
     "present_trial_balance",
 ]
@@ -137,4 +144,133 @@ def present_trial_balance(report: TrialBalance) -> PresentedTrialBalance:
         lines=tuple(lines),
         total_debit=present_total(debits, report.functional_currency),
         total_credit=present_total(credited, report.functional_currency),
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class StatementLine:
+    """One line of a statement, signed so positive means more of what the account is."""
+
+    account_id: str
+    code: str
+    name: str
+    account_type: str
+    amount: Decimal
+
+
+@dataclass(frozen=True, slots=True)
+class PresentedProfitAndLoss:
+    """A profit and loss ready to render (`RPT-02`)."""
+
+    since: date
+    as_of: date
+    watermark: datetime | None
+    accounting_basis: str
+    commodity: str
+    income: tuple[StatementLine, ...]
+    expenses: tuple[StatementLine, ...]
+    total_income: Decimal
+    total_expenses: Decimal
+    net_income: Decimal
+
+
+@dataclass(frozen=True, slots=True)
+class PresentedBalanceSheet:
+    """A balance sheet ready to render (`RPT-03`)."""
+
+    as_of: date
+    watermark: datetime | None
+    accounting_basis: str
+    commodity: str
+    assets: tuple[StatementLine, ...]
+    liabilities: tuple[StatementLine, ...]
+    equity: tuple[StatementLine, ...]
+    unclosed_earnings: Decimal
+    total_assets: Decimal
+    total_liabilities: Decimal
+    total_equity: Decimal
+
+    @property
+    def balances(self) -> bool:
+        """Whether the accounting equation holds, which is what the statement asserts."""
+        return self.total_assets == self.total_liabilities + self.total_equity
+
+
+def _line(row: AccountBalance) -> StatementLine:
+    return StatementLine(
+        account_id=row.account_id,
+        code=row.code,
+        name=row.name,
+        account_type=row.account_type,
+        amount=present(
+            natural_amount(AccountType(row.account_type), row.balance), row.commodity
+        ),
+    )
+
+
+def _natural(rows: Iterable[AccountBalance]) -> list[Decimal]:
+    """Exact naturally-signed amounts, for a total that is rounded once (`RPT-12`)."""
+    return [natural_amount(AccountType(row.account_type), row.balance) for row in rows]
+
+
+def present_profit_and_loss(report: ProfitAndLoss) -> PresentedProfitAndLoss:
+    """Split income from expenses and total each, rounding once (`RPT-12`).
+
+    Net income is computed from the **unrounded** totals rather than from the two rounded
+    figures, so it cannot drift by a unit from the difference a reader takes by hand.
+    """
+    commodity = report.functional_currency
+    income = [row for row in report.rows if row.account_type == "income"]
+    expenses = [row for row in report.rows if row.account_type == "expense"]
+
+    return PresentedProfitAndLoss(
+        since=report.since,
+        as_of=report.as_of,
+        watermark=report.watermark,
+        accounting_basis=report.accounting_basis,
+        commodity=commodity,
+        income=tuple(_line(row) for row in income),
+        expenses=tuple(_line(row) for row in expenses),
+        total_income=present_total(_natural(income), commodity),
+        total_expenses=present_total(_natural(expenses), commodity),
+        net_income=present_total(
+            _natural(income) + [-e for e in _natural(expenses)], commodity
+        ),
+    )
+
+
+def present_balance_sheet(report: BalanceSheet) -> PresentedBalanceSheet:
+    """Group by type, and carry unclosed earnings into equity (`RPT-03`).
+
+    **Equity includes earnings not yet closed.** `LED-12` moves income and expense to retained
+    earnings only at a fiscal year end, so mid-year those balances are equity that has not been
+    moved. Leaving them out would make the statement fail to balance by exactly that amount,
+    which is a bug that looks like an accounting error.
+    """
+    commodity = report.functional_currency
+    assets = [row for row in report.rows if row.account_type == "asset"]
+    liabilities = [row for row in report.rows if row.account_type == "liability"]
+    equity = [row for row in report.rows if row.account_type == "equity"]
+
+    # Income is credit-normal and expense debit-normal, so naturally-signed income less
+    # expenses is the earnings figure equity is short by.
+    unclosed_exact = [
+        natural_amount(AccountType(row.account_type), row.balance)
+        if row.account_type == "income"
+        else -natural_amount(AccountType(row.account_type), row.balance)
+        for row in report.unclosed
+    ]
+
+    return PresentedBalanceSheet(
+        as_of=report.as_of,
+        watermark=report.watermark,
+        accounting_basis=report.accounting_basis,
+        commodity=commodity,
+        assets=tuple(_line(row) for row in assets),
+        liabilities=tuple(_line(row) for row in liabilities),
+        equity=tuple(_line(row) for row in equity),
+        unclosed_earnings=present_total(unclosed_exact, commodity),
+        total_assets=present_total(_natural(assets), commodity),
+        total_liabilities=present_total(_natural(liabilities), commodity),
+        total_equity=present_total(_natural(equity) + unclosed_exact, commodity),
     )

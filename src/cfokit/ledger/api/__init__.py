@@ -21,6 +21,7 @@ OpenAPI document fails to generate.
 from __future__ import annotations
 
 import uuid
+from collections.abc import Iterable
 from datetime import date, datetime
 from typing import Annotated, Any
 
@@ -29,6 +30,7 @@ from fastapi.responses import JSONResponse
 
 from cfokit.ledger.api.models import (
     AccountCreatedResponse,
+    BalanceSheetResponse,
     ClosePeriodRequest,
     CloseYearRequest,
     CreateAccountRequest,
@@ -39,8 +41,10 @@ from cfokit.ledger.api.models import (
     GrantRoleRequest,
     PeriodCloseResponse,
     PostingModel,
+    ProfitAndLossResponse,
     RecordTransactionRequest,
     ReopenPeriodRequest,
+    StatementLineModel,
     TransactionResponse,
     TrialBalanceLineModel,
     TrialBalanceResponse,
@@ -52,7 +56,12 @@ from cfokit.ledger.config import Settings
 from cfokit.ledger.engine import Entry, Posting
 from cfokit.ledger.engine.periods import Period
 from cfokit.ledger.errors import LedgerError
-from cfokit.ledger.presentation import present_trial_balance
+from cfokit.ledger.presentation import (
+    StatementLine,
+    present_balance_sheet,
+    present_profit_and_loss,
+    present_trial_balance,
+)
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.administration import (
     create_account,
@@ -69,7 +78,7 @@ from cfokit.ledger.service.periods import close_period, reopen_period
 from cfokit.ledger.service.principal import Principal
 from cfokit.ledger.service.read import read_transaction
 from cfokit.ledger.service.readiness import check_readiness
-from cfokit.ledger.service.reports import trial_balance
+from cfokit.ledger.service.reports import balance_sheet, profit_and_loss, trial_balance
 from cfokit.ledger.service.write import (
     WriteContext,
     post_transaction,
@@ -79,6 +88,21 @@ from cfokit.ledger.service.write import (
 from cfokit.ledger.service.year_end import close_fiscal_year
 
 __all__ = ["create_app"]
+
+
+def _lines(lines: Iterable[StatementLine]) -> list[StatementLineModel]:
+    """Render statement lines, which every statement does the same way."""
+    return [
+        StatementLineModel(
+            account_id=line.account_id,
+            code=line.code,
+            name=line.name,
+            account_type=line.account_type,
+            amount=str(line.amount),
+        )
+        for line in lines
+    ]
+
 
 # Documented on every operation so the published OpenAPI says what a caller can expect, and
 # so a new error code shows up as a contract diff (ADR-0015).
@@ -362,6 +386,92 @@ def create_app(settings: Settings, authenticator: Authenticator | None = None) -
             ],
             total_debit=str(report.total_debit),
             total_credit=str(report.total_credit),
+            balances=report.balances,
+        )
+
+    @app.get(
+        "/entities/{entity_id}/profit-and-loss",
+        tags=["reports"],
+        summary="Profit and loss for a period",
+        responses=ERRORS,
+    )
+    def read_profit_and_loss(
+        entity_id: Annotated[str, Path()],
+        since: Annotated[date, Query()],
+        acting: Annotated[Principal, Depends(get_principal)],
+        database: Annotated[Database, Depends(get_database)],
+        as_of: Annotated[date | None, Query()] = None,
+        watermark: Annotated[datetime | None, Query()] = None,
+    ) -> ProfitAndLossResponse:
+        """Income and expense between two dates, inclusive (`RPT-02`).
+
+        A period rather than a point, which is the difference from a balance sheet: income and
+        expense measure what happened between two dates; assets and liabilities are what stands
+        at one.
+        """
+        report = present_profit_and_loss(
+            profit_and_loss(
+                database,
+                entity_id=entity_id,
+                principal=acting,
+                since=since,
+                as_of=as_of or date.today(),  # noqa: DTZ011
+                watermark=watermark,
+            )
+        )
+        return ProfitAndLossResponse(
+            since=report.since,
+            as_of=report.as_of,
+            watermark=report.watermark,
+            accounting_basis=report.accounting_basis,
+            commodity=report.commodity,
+            income=_lines(report.income),
+            expenses=_lines(report.expenses),
+            total_income=str(report.total_income),
+            total_expenses=str(report.total_expenses),
+            net_income=str(report.net_income),
+        )
+
+    @app.get(
+        "/entities/{entity_id}/balance-sheet",
+        tags=["reports"],
+        summary="Balance sheet as of a date",
+        responses=ERRORS,
+    )
+    def read_balance_sheet(
+        entity_id: Annotated[str, Path()],
+        acting: Annotated[Principal, Depends(get_principal)],
+        database: Annotated[Database, Depends(get_database)],
+        as_of: Annotated[date | None, Query()] = None,
+        watermark: Annotated[datetime | None, Query()] = None,
+    ) -> BalanceSheetResponse:
+        """Assets, liabilities and equity as of a date (`RPT-03`).
+
+        Equity includes earnings not yet closed to retained earnings: `LED-12` moves those only
+        at a fiscal year end, so mid-year they are equity that has not been moved. Leaving them
+        out would make the statement fail to balance by exactly that amount.
+        """
+        report = present_balance_sheet(
+            balance_sheet(
+                database,
+                entity_id=entity_id,
+                principal=acting,
+                as_of=as_of or date.today(),  # noqa: DTZ011
+                watermark=watermark,
+            )
+        )
+        return BalanceSheetResponse(
+            as_of=report.as_of,
+            watermark=report.watermark,
+            accounting_basis=report.accounting_basis,
+            commodity=report.commodity,
+            assets=_lines(report.assets),
+            liabilities=_lines(report.liabilities),
+            equity=_lines(report.equity),
+            unclosed_earnings=str(report.unclosed_earnings),
+            total_assets=str(report.total_assets),
+            total_liabilities=str(report.total_liabilities),
+            total_equity=str(report.total_equity),
             balances=report.balances,
         )
 
