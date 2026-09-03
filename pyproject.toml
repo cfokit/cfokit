@@ -158,6 +158,10 @@ name = "Ledger is layered; the booking engine sits at the bottom (ADR-0008, ADR-
 type = "layers"
 layers = [
     "cfokit.ledger.api | cfokit.ledger.mcp",
+    # Presentation sits between the adapters and the service: both adapters render through it
+    # and nothing below it may. ADR-0025 puts rounding at presentation and forbids it in
+    # engine, repository and service — this is that boundary, gated rather than reviewed.
+    "cfokit.ledger.presentation",
     "cfokit.ledger.service",
     "cfokit.ledger.repository",
     "cfokit.ledger.engine",
@@ -171,6 +175,7 @@ forbidden_modules = [
     "cfokit.ledger.config",
     "cfokit.ledger.repository",
     "cfokit.ledger.service",
+    "cfokit.ledger.presentation",
     "cfokit.ledger.api",
     "cfokit.ledger.mcp",
 ]

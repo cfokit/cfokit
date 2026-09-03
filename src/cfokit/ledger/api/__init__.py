@@ -21,10 +21,10 @@ OpenAPI document fails to generate.
 from __future__ import annotations
 
 import uuid
-from datetime import date
+from datetime import date, datetime
 from typing import Annotated, Any
 
-from fastapi import Depends, FastAPI, Header, Path, Request, Response, status
+from fastapi import Depends, FastAPI, Header, Path, Query, Request, Response, status
 from fastapi.responses import JSONResponse
 
 from cfokit.ledger.api.models import (
@@ -42,6 +42,8 @@ from cfokit.ledger.api.models import (
     RecordTransactionRequest,
     ReopenPeriodRequest,
     TransactionResponse,
+    TrialBalanceLineModel,
+    TrialBalanceResponse,
     WriteResponse,
     YearClosedResponse,
 )
@@ -50,6 +52,7 @@ from cfokit.ledger.config import Settings
 from cfokit.ledger.engine import Entry, Posting
 from cfokit.ledger.engine.periods import Period
 from cfokit.ledger.errors import LedgerError
+from cfokit.ledger.presentation import present_trial_balance
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.administration import (
     create_account,
@@ -66,6 +69,7 @@ from cfokit.ledger.service.periods import close_period, reopen_period
 from cfokit.ledger.service.principal import Principal
 from cfokit.ledger.service.read import read_transaction
 from cfokit.ledger.service.readiness import check_readiness
+from cfokit.ledger.service.reports import trial_balance
 from cfokit.ledger.service.write import (
     WriteContext,
     post_transaction,
@@ -307,6 +311,59 @@ def create_app(settings: Settings, authenticator: Authenticator | None = None) -
             retained_earnings=body.retained_earnings,
         )
         return AccountCreatedResponse(account_id=account_id)
+
+    @app.get(
+        "/entities/{entity_id}/trial-balance",
+        tags=["reports"],
+        summary="Trial balance as of a date",
+        responses=ERRORS,
+    )
+    def read_trial_balance(
+        entity_id: Annotated[str, Path()],
+        acting: Annotated[Principal, Depends(get_principal)],
+        database: Annotated[Database, Depends(get_database)],
+        as_of: Annotated[date | None, Query()] = None,
+        watermark: Annotated[datetime | None, Query()] = None,
+    ) -> TrialBalanceResponse:
+        """Every account with a non-zero balance (`RPT-01`).
+
+        `watermark` reproduces the books as they stood at that moment (`RPT-11`): the
+        statement given to a lender in March is reproducible in December, unchanged by the
+        corrections posted in between.
+
+        Figures are rounded once here, at presentation, and the totals are computed from the
+        unrounded values (`RPT-12`, ADR-0025). A column summed by hand may differ from the
+        printed total by less than one unit of display scale; the printed total is correct.
+        """
+        report = present_trial_balance(
+            trial_balance(
+                database,
+                entity_id=entity_id,
+                principal=acting,
+                as_of=as_of or date.today(),  # noqa: DTZ011
+                watermark=watermark,
+            )
+        )
+        return TrialBalanceResponse(
+            as_of=report.as_of,
+            watermark=report.watermark,
+            accounting_basis=report.accounting_basis,
+            commodity=report.commodity,
+            lines=[
+                TrialBalanceLineModel(
+                    account_id=line.account_id,
+                    code=line.code,
+                    name=line.name,
+                    account_type=line.account_type,
+                    debit=str(line.debit) if line.debit is not None else None,
+                    credit=str(line.credit) if line.credit is not None else None,
+                )
+                for line in report.lines
+            ],
+            total_debit=str(report.total_debit),
+            total_credit=str(report.total_credit),
+            balances=report.balances,
+        )
 
     # -----------------------------------------------------------------------------------
     # Periods. `LED-11` makes a closed period admit no posting except through a recorded
