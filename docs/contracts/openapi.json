@@ -454,6 +454,121 @@
         "title": "TransactionResponse",
         "type": "object"
       },
+      "TrialBalanceLineModel": {
+        "description": "One line of a trial balance. Exactly one of debit or credit carries a figure.",
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "string"
+          },
+          "account_type": {
+            "title": "Account Type",
+            "type": "string"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "credit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credit"
+          },
+          "debit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Rounded to the commodity's display scale (RPT-12).",
+            "title": "Debit"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "code",
+          "name",
+          "account_type"
+        ],
+        "title": "TrialBalanceLineModel",
+        "type": "object"
+      },
+      "TrialBalanceResponse": {
+        "description": "A trial balance as of a date (RPT-01).\n\nAmounts are strings for the same reason they are on the way in: a JSON number cannot\ncarry the scale the figure is presented at, and `100.00` would arrive as `100`.",
+        "properties": {
+          "accounting_basis": {
+            "description": "Stated on the face of every report (RPT-10). Read from the entity, never from the caller.",
+            "title": "Accounting Basis",
+            "type": "string"
+          },
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "balances": {
+            "description": "Whether the two columns agree. False means a posting is unbalanced, which the schema should have made impossible (ADR-0006).",
+            "title": "Balances",
+            "type": "boolean"
+          },
+          "commodity": {
+            "title": "Commodity",
+            "type": "string"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/TrialBalanceLineModel"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "total_credit": {
+            "title": "Total Credit",
+            "type": "string"
+          },
+          "total_debit": {
+            "title": "Total Debit",
+            "type": "string"
+          },
+          "watermark": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The moment the books were reproduced as at, if one was asked for (RPT-11).",
+            "title": "Watermark"
+          }
+        },
+        "required": [
+          "as_of",
+          "accounting_basis",
+          "commodity",
+          "lines",
+          "total_debit",
+          "total_credit",
+          "balances"
+        ],
+        "title": "TrialBalanceResponse",
+        "type": "object"
+      },
       "WriteResponse": {
         "description": "What a write produced.",
         "properties": {
@@ -1771,6 +1886,139 @@
         "summary": "Reverse a posted transaction",
         "tags": [
           "transactions"
+        ]
+      }
+    },
+    "/entities/{entity_id}/trial-balance": {
+      "get": {
+        "description": "Every account with a non-zero balance (`RPT-01`).\n\n`watermark` reproduces the books as they stood at that moment (`RPT-11`): the\nstatement given to a lender in March is reproducible in December, unchanged by the\ncorrections posted in between.\n\nFigures are rounded once here, at presentation, and the totals are computed from the\nunrounded values (`RPT-12`, ADR-0025). A column summed by hand may differ from the\nprinted total by less than one unit of display scale; the printed total is correct.",
+        "operationId": "read_trial_balance_entities__entity_id__trial_balance_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          },
+          {
+            "in": "query",
+            "name": "watermark",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Watermark"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrialBalanceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Trial balance as of a date",
+        "tags": [
+          "reports"
         ]
       }
     },

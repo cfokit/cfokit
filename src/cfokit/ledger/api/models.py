@@ -188,6 +188,46 @@ class YearClosedResponse(BaseModel):
     )
 
 
+class TrialBalanceLineModel(BaseModel):
+    """One line of a trial balance. Exactly one of debit or credit carries a figure."""
+
+    account_id: str
+    code: str
+    name: str
+    account_type: str
+    debit: str | None = Field(
+        default=None, description="Rounded to the commodity's display scale (RPT-12)."
+    )
+    credit: str | None = None
+
+
+class TrialBalanceResponse(BaseModel):
+    """A trial balance as of a date (RPT-01).
+
+    Amounts are strings for the same reason they are on the way in: a JSON number cannot
+    carry the scale the figure is presented at, and `100.00` would arrive as `100`.
+    """
+
+    as_of: date
+    watermark: datetime | None = Field(
+        default=None,
+        description="The moment the books were reproduced as at, if one was asked for "
+        "(RPT-11).",
+    )
+    accounting_basis: str = Field(
+        description="Stated on the face of every report (RPT-10). Read from the entity, "
+        "never from the caller."
+    )
+    commodity: str
+    lines: list[TrialBalanceLineModel]
+    total_debit: str
+    total_credit: str
+    balances: bool = Field(
+        description="Whether the two columns agree. False means a posting is unbalanced, "
+        "which the schema should have made impossible (ADR-0006)."
+    )
+
+
 class ClosePeriodRequest(BaseModel):
     """Mark a period reviewed (LED-11)."""
 

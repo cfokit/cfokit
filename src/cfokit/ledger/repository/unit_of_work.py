@@ -37,6 +37,7 @@ from cfokit.ledger.repository import (
     grants,
     idempotency,
     periods,
+    reports,
     transactions,
 )
 from cfokit.ledger.repository.connection import connect
@@ -63,6 +64,7 @@ class EntitySettings:
     """
 
     functional_currency: str
+    accounting_basis: str
     fiscal_year_end_month: int
     fiscal_year_end_day: int
     retained_earnings_account_id: str | None
@@ -193,6 +195,14 @@ class EntityWrite:
         """Income and expense balances for the fiscal year, as (account, balance, commodity)."""
         return accounts.income_statement_balances(
             self._conn, entity_id=self._entity_id, start=year.start, end=year.end
+        )
+
+    def trial_balance(
+        self, *, as_of: date, watermark: datetime | None
+    ) -> list[reports.AccountBalance]:
+        """Every account with a non-zero balance as of `as_of` (`RPT-01`, `RPT-11`)."""
+        return reports.trial_balance(
+            self._conn, entity_id=self._entity_id, as_of=as_of, watermark=watermark
         )
 
     def closing_entries(self, year: FiscalYear) -> list[str]:
@@ -401,7 +411,7 @@ class Database:
         with conn.cursor() as cur:
             cur.execute("SELECT set_config('cfokit.entity_id', %s, true)", (entity_id,))
             cur.execute(
-                "SELECT lock_key, functional_currency, fiscal_year_end_month,"
+                "SELECT lock_key, functional_currency, accounting_basis, fiscal_year_end_month,"
                 "       fiscal_year_end_day, retained_earnings_account_id"
                 "  FROM entity WHERE id = %s",
                 (entity_id,),
@@ -412,7 +422,8 @@ class Database:
             cur.execute("SELECT pg_advisory_xact_lock(%s)", (row[0],))
         return EntitySettings(
             functional_currency=str(row[1]),
-            fiscal_year_end_month=int(row[2]),
-            fiscal_year_end_day=int(row[3]),
-            retained_earnings_account_id=str(row[4]) if row[4] is not None else None,
+            accounting_basis=str(row[2]),
+            fiscal_year_end_month=int(row[3]),
+            fiscal_year_end_day=int(row[4]),
+            retained_earnings_account_id=str(row[5]) if row[5] is not None else None,
         )
