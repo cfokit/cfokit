@@ -68,6 +68,7 @@ class EntitySettings:
     fiscal_year_end_month: int
     fiscal_year_end_day: int
     retained_earnings_account_id: str | None
+    opening_balance_account_id: str | None
 
 
 class EntityWrite:
@@ -185,6 +186,15 @@ class EntityWrite:
             account_type=account_type,
             parent_id=parent_id,
         )
+
+    def set_opening_balance_account(self, account_id: str) -> None:
+        accounts.set_opening_balance_account(
+            self._conn, entity_id=self._entity_id, account_id=account_id
+        )
+
+    def any_opening_entry(self) -> bool:
+        """Whether these books already carry opening balances (`LED-10`)."""
+        return accounts.any_opening_entry(self._conn, entity_id=self._entity_id)
 
     def set_retained_earnings_account(self, account_id: str) -> None:
         accounts.set_retained_earnings_account(
@@ -444,7 +454,8 @@ class Database:
             cur.execute("SELECT set_config('cfokit.entity_id', %s, true)", (entity_id,))
             cur.execute(
                 "SELECT lock_key, functional_currency, accounting_basis, fiscal_year_end_month,"
-                "       fiscal_year_end_day, retained_earnings_account_id"
+                "       fiscal_year_end_day, retained_earnings_account_id,"
+                "       opening_balance_account_id"
                 "  FROM entity WHERE id = %s",
                 (entity_id,),
             )
@@ -458,4 +469,5 @@ class Database:
             fiscal_year_end_month=int(row[3]),
             fiscal_year_end_day=int(row[4]),
             retained_earnings_account_id=str(row[5]) if row[5] is not None else None,
+            opening_balance_account_id=str(row[6]) if row[6] is not None else None,
         )

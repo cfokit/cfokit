@@ -8,6 +8,10 @@
     "error": "AllocationInvalid"
   },
   {
+    "code": "already_opened",
+    "error": "AlreadyOpened"
+  },
+  {
     "code": "commodity_not_permitted",
     "error": "CommodityNotPermitted"
   },
@@ -50,6 +54,10 @@
   {
     "code": "nothing_to_close",
     "error": "NothingToClose"
+  },
+  {
+    "code": "opening_balance_account_unset",
+    "error": "OpeningBalanceAccountUnset"
   },
   {
     "code": "period_closed",

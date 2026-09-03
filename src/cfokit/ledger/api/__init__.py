@@ -43,6 +43,8 @@ from cfokit.ledger.api.models import (
     ErrorResponse,
     GrantResponse,
     GrantRoleRequest,
+    OpenBalancesRequest,
+    OpenedBooksResponse,
     PeriodCloseResponse,
     PostingModel,
     ProfitAndLossResponse,
@@ -81,6 +83,7 @@ from cfokit.ledger.service.authentication import (
     TokenAuthenticator,
     principal_from_claims,
 )
+from cfokit.ledger.service.opening import CarriedBalance, open_balances
 from cfokit.ledger.service.periods import close_period, reopen_period
 from cfokit.ledger.service.principal import Principal
 from cfokit.ledger.service.read import read_transaction
@@ -363,6 +366,7 @@ def create_app(settings: Settings, authenticator: Authenticator | None = None) -
             account_type=body.account_type,
             parent_id=body.parent_id,
             retained_earnings=body.retained_earnings,
+            opening_balance=body.opening_balance,
         )
         return AccountCreatedResponse(account_id=account_id)
 
@@ -611,6 +615,47 @@ def create_app(settings: Settings, authenticator: Authenticator | None = None) -
                 )
                 for entry in report.entries
             ],
+        )
+
+    @app.post(
+        "/entities/{entity_id}/opening-balances",
+        tags=["administration"],
+        summary="Open the books with balances carried in",
+        status_code=status.HTTP_201_CREATED,
+        responses=ERRORS,
+    )
+    def open_the_books(
+        entity_id: Annotated[str, Path()],
+        body: OpenBalancesRequest,
+        acting: Annotated[Principal, Depends(get_principal)],
+        database: Annotated[Database, Depends(get_database)],
+        request_id: Annotated[str | None, Header(alias="X-Request-Id")] = None,
+    ) -> OpenedBooksResponse:
+        """Carry balances in from before CFOKit held the books (`LED-10`).
+
+        The equity side is computed rather than supplied, so an entry that does not balance is
+        impossible rather than refused. Books are opened once: opening them again would double
+        every carried-in figure, and a wrong one is corrected with an ordinary entry.
+        """
+        opened = open_balances(
+            database,
+            entity_id=entity_id,
+            principal=acting,
+            request_id=request_id or f"req-{uuid.uuid4().hex}",
+            as_of=body.as_of,
+            balances=[
+                CarriedBalance(
+                    account_id=carried.account_id,
+                    amount=carried.amount,
+                    commodity=carried.commodity,
+                )
+                for carried in body.balances
+            ],
+        )
+        return OpenedBooksResponse(
+            transaction_id=opened.transaction_id,
+            as_of=opened.as_of,
+            equity_amount=str(opened.equity_amount),
         )
 
     # -----------------------------------------------------------------------------------

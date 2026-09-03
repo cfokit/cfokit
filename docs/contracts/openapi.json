@@ -264,6 +264,35 @@
         "title": "BalanceSheetResponse",
         "type": "object"
       },
+      "CarriedBalanceModel": {
+        "description": "One account's balance as it stood in the system CFOKit is taking over from.",
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "string"
+          },
+          "amount": {
+            "description": "Signed decimal string. Positive debits the account.",
+            "examples": [
+              "100.00",
+              "-1250.5000000000"
+            ],
+            "title": "Amount",
+            "type": "string"
+          },
+          "commodity": {
+            "title": "Commodity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "amount",
+          "commodity"
+        ],
+        "title": "CarriedBalanceModel",
+        "type": "object"
+      },
       "ClosePeriodRequest": {
         "description": "Mark a period reviewed (LED-11).",
         "properties": {
@@ -468,6 +497,12 @@
             "title": "Name",
             "type": "string"
           },
+          "opening_balance": {
+            "default": false,
+            "description": "Name this account as the one carried-in balances balance against (LED-10). Equity accounts only, and deliberately separate from retained earnings.",
+            "title": "Opening Balance",
+            "type": "boolean"
+          },
           "parent_id": {
             "anyOf": [
               {
@@ -644,6 +679,56 @@
           "role"
         ],
         "title": "GrantRoleRequest",
+        "type": "object"
+      },
+      "OpenBalancesRequest": {
+        "description": "Carry balances in from before CFOKit held the books (LED-10).\n\nThe equity side is not supplied: the ledger computes the counterweight, so an entry that\ndoes not balance is impossible rather than refused.",
+        "properties": {
+          "as_of": {
+            "description": "The day the balances stood at — conventionally the day before the first period CFOKit keeps, so they sit outside every period it reports on.",
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "balances": {
+            "items": {
+              "$ref": "#/components/schemas/CarriedBalanceModel"
+            },
+            "minItems": 1,
+            "title": "Balances",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of",
+          "balances"
+        ],
+        "title": "OpenBalancesRequest",
+        "type": "object"
+      },
+      "OpenedBooksResponse": {
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "equity_amount": {
+            "description": "What was posted to the opening balance account to make the entry balance.",
+            "title": "Equity Amount",
+            "type": "string"
+          },
+          "transaction_id": {
+            "title": "Transaction Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "transaction_id",
+          "as_of",
+          "equity_amount"
+        ],
+        "title": "OpenedBooksResponse",
         "type": "object"
       },
       "PeriodCloseResponse": {
@@ -1893,6 +1978,131 @@
           }
         },
         "summary": "Revoke a grant",
+        "tags": [
+          "administration"
+        ]
+      }
+    },
+    "/entities/{entity_id}/opening-balances": {
+      "post": {
+        "description": "Carry balances in from before CFOKit held the books (`LED-10`).\n\nThe equity side is computed rather than supplied, so an entry that does not balance is\nimpossible rather than refused. Books are opened once: opening them again would double\nevery carried-in figure, and a wrong one is corrected with an ordinary entry.",
+        "operationId": "open_the_books_entities__entity_id__opening_balances_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Request-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpenBalancesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenedBooksResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Open the books with balances carried in",
         "tags": [
           "administration"
         ]

@@ -119,28 +119,33 @@ def create_account(
     account_type: str,
     parent_id: str | None = None,
     retained_earnings: bool = False,
+    opening_balance: bool = False,
 ) -> str:
     """Add an account to the entity's chart (`LED-01`, `LED-02`).
 
     Administrative rather than a posting capability: the chart is the shape of the books, and
     someone who may record a transaction is not thereby deciding what the books are made of.
 
-    `retained_earnings` names this account as the one a fiscal year closes to (`LED-12`). It
-    must be an equity account, because closing income and expense anywhere else would not be
-    closing them to retained earnings.
+    `retained_earnings` names this account as the one a fiscal year closes to (`LED-12`), and
+    `opening_balance` as the one carried-in balances balance against (`LED-10`). Both must be
+    equity accounts, and they are deliberately separate: retained earnings holds what the
+    business has earned, and the opening balance account holds the counterweight to figures
+    that arrived from a system CFOKit never saw.
     """
     now = datetime.now(UTC)
     with database.entity_write(entity_id) as write:
         _require(write, principal, now, Capability.GRANT)
 
-        if retained_earnings and account_type != "equity":
-            raise NotAuthorised("retained earnings must be an equity account")
+        if (retained_earnings or opening_balance) and account_type != "equity":
+            raise NotAuthorised("a named equity role must be an equity account")
 
         account_id = write.create_account(
             code=code, name=name, account_type=account_type, parent_id=parent_id
         )
         if retained_earnings:
             write.set_retained_earnings_account(account_id)
+        if opening_balance:
+            write.set_opening_balance_account(account_id)
 
         write.record_audit(
             request_id=request_id,
@@ -148,7 +153,12 @@ def create_account(
             action="create_account",
             subject_type="account",
             subject_id=account_id,
-            detail={"code": code, "type": account_type, "retained_earnings": retained_earnings},
+            detail={
+                "code": code,
+                "type": account_type,
+                "retained_earnings": retained_earnings,
+                "opening_balance": opening_balance,
+            },
         )
     return account_id
 

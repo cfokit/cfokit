@@ -94,6 +94,23 @@ class AccountNotFound(LedgerError):
     code = "account_not_found"
 
 
+class OpeningBalanceAccountUnset(LedgerError):
+    """No opening balance equity account is named, so books cannot be opened (`LED-10`)."""
+
+    code = "opening_balance_account_unset"
+
+
+class AlreadyOpened(LedgerError):
+    """These books already carry opening balances (`LED-10`).
+
+    Opening them again would double every carried-in figure. A balance that was wrong, or an
+    account missed at the time, is corrected the way every other posted mistake is: an ordinary
+    entry against the same equity account (`LED-08`).
+    """
+
+    code = "already_opened"
+
+
 class RetainedEarningsUnset(LedgerError):
     """No retained earnings account is named, so a year cannot be closed (`LED-12`)."""
 
