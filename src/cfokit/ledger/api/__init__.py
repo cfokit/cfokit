@@ -43,13 +43,17 @@ from cfokit.ledger.api.models import (
     ErrorResponse,
     GrantResponse,
     GrantRoleRequest,
+    ObligationDetailResponse,
+    ObligationModel,
     OpenBalancesRequest,
     OpenedBooksResponse,
+    OutstandingResponse,
     PeriodCloseResponse,
     PostingModel,
     ProfitAndLossResponse,
     RecordTransactionRequest,
     ReopenPeriodRequest,
+    SettlementModel,
     StatementLineModel,
     TransactionResponse,
     TrialBalanceLineModel,
@@ -71,6 +75,7 @@ from cfokit.ledger.presentation import (
     present_profit_and_loss,
     present_trial_balance,
 )
+from cfokit.ledger.repository.obligations import Obligation
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.administration import (
     create_account,
@@ -88,6 +93,7 @@ from cfokit.ledger.service.periods import close_period, reopen_period
 from cfokit.ledger.service.principal import Principal
 from cfokit.ledger.service.read import read_transaction
 from cfokit.ledger.service.readiness import check_readiness
+from cfokit.ledger.service.receivables import obligation_detail, outstanding_obligations
 from cfokit.ledger.service.reports import (
     Comparative,
     account_detail,
@@ -97,6 +103,7 @@ from cfokit.ledger.service.reports import (
     trial_balance,
 )
 from cfokit.ledger.service.write import (
+    Applied,
     WriteContext,
     post_transaction,
     record_transaction,
@@ -105,6 +112,19 @@ from cfokit.ledger.service.write import (
 from cfokit.ledger.service.year_end import close_fiscal_year
 
 __all__ = ["create_app"]
+
+
+def _obligation(found: Obligation) -> ObligationModel:
+    """Render an obligation, with its derived outstanding figure."""
+    return ObligationModel(
+        obligation_id=found.obligation_id,
+        transaction_id=found.transaction_id,
+        transaction_date=found.transaction_date,
+        amount=str(found.amount),
+        settled=str(found.settled),
+        outstanding=str(found.outstanding),
+        commodity=found.commodity,
+    )
 
 
 def _comparative(line: ComparativeLine) -> ComparativeLineModel:
@@ -658,6 +678,59 @@ def create_app(settings: Settings, authenticator: Authenticator | None = None) -
             equity_amount=str(opened.equity_amount),
         )
 
+    @app.get(
+        "/entities/{entity_id}/obligations",
+        tags=["reports"],
+        summary="Obligations and what is outstanding",
+        responses=ERRORS,
+    )
+    def read_outstanding(
+        entity_id: Annotated[str, Path()],
+        acting: Annotated[Principal, Depends(get_principal)],
+        database: Annotated[Database, Depends(get_database)],
+        as_of: Annotated[date | None, Query()] = None,
+        unsettled_only: Annotated[bool, Query()] = True,
+    ) -> OutstandingResponse:
+        """What is still owed, and what has been applied against it (`LED-17`)."""
+        found = outstanding_obligations(
+            database,
+            entity_id=entity_id,
+            principal=acting,
+            as_of=as_of,
+            unsettled_only=unsettled_only,
+        )
+        return OutstandingResponse(as_of=as_of, obligations=[_obligation(o) for o in found])
+
+    @app.get(
+        "/entities/{entity_id}/obligations/{obligation_id}",
+        tags=["reports"],
+        summary="One obligation, read as both events",
+        responses=ERRORS,
+    )
+    def read_obligation(
+        entity_id: Annotated[str, Path()],
+        obligation_id: Annotated[str, Path()],
+        acting: Annotated[Principal, Depends(get_principal)],
+        database: Annotated[Database, Depends(get_database)],
+    ) -> ObligationDetailResponse:
+        """`LED-17`: recoverable as the commitment it was, or as what has settled it."""
+        detail = obligation_detail(
+            database, entity_id=entity_id, principal=acting, obligation_id=obligation_id
+        )
+        return ObligationDetailResponse(
+            obligation=_obligation(detail.obligation),
+            settlements=[
+                SettlementModel(
+                    settlement_id=applied.settlement_id,
+                    transaction_id=applied.transaction_id,
+                    transaction_date=applied.transaction_date,
+                    amount=str(applied.amount),
+                    commodity=applied.commodity,
+                )
+                for applied in detail.settlements
+            ],
+        )
+
     # -----------------------------------------------------------------------------------
     # Periods. `LED-11` makes a closed period admit no posting except through a recorded
     # reopening, and ADR-0030 makes that reopening a person's act rather than a skill's.
@@ -773,7 +846,16 @@ def create_app(settings: Settings, authenticator: Authenticator | None = None) -
             ),
             description=body.description,
         )
-        written = record_transaction(database, context, entry=entry, post=body.post)
+        written = record_transaction(
+            database,
+            context,
+            entry=entry,
+            post=body.post,
+            raises_obligation=body.raises_obligation,
+            settles=tuple(
+                Applied(obligation_id=a.obligation_id, amount=a.amount) for a in body.settles
+            ),
+        )
         return WriteResponse(
             transaction_id=written.transaction_id,
             status=written.status,

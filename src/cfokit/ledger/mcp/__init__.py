@@ -60,6 +60,7 @@ from cfokit.ledger.presentation import (
     present_profit_and_loss,
     present_trial_balance,
 )
+from cfokit.ledger.repository.obligations import Obligation
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.authentication import (
     Authenticator,
@@ -70,6 +71,7 @@ from cfokit.ledger.service.opening import CarriedBalance, open_balances
 from cfokit.ledger.service.principal import Principal
 from cfokit.ledger.service.read import read_transaction
 from cfokit.ledger.service.readiness import check_readiness
+from cfokit.ledger.service.receivables import obligation_detail, outstanding_obligations
 from cfokit.ledger.service.reports import (
     Comparative,
     account_detail,
@@ -79,6 +81,7 @@ from cfokit.ledger.service.reports import (
     trial_balance,
 )
 from cfokit.ledger.service.write import (
+    Applied,
     WriteContext,
     post_transaction,
     record_transaction,
@@ -99,6 +102,13 @@ class LedgerToolError(Exception):
         super().__init__(json.dumps({"code": code, "message": message}))
         self.code = code
         self.detail = message
+
+
+class AppliedArgument(BaseModel):
+    """How much of a settlement goes against one obligation."""
+
+    obligation_id: str = Field(description="The obligation this payment is applied to.")
+    amount: str = Field(description="Signed decimal string, in the entity's currency.")
 
 
 class CarriedBalanceArgument(BaseModel):
@@ -140,6 +150,18 @@ def _comparative_line(line: ComparativeLine) -> dict[str, Any]:
 
 def _comparative_lines(lines: Iterable[ComparativeLine]) -> list[dict[str, Any]]:
     return [_comparative_line(line) for line in lines]
+
+
+def _obligation(found: Obligation) -> dict[str, Any]:
+    return {
+        "obligation_id": found.obligation_id,
+        "transaction_id": found.transaction_id,
+        "transaction_date": found.transaction_date.isoformat(),
+        "amount": str(found.amount),
+        "settled": str(found.settled),
+        "outstanding": str(found.outstanding),
+        "commodity": found.commodity,
+    }
 
 
 def _produced_on(
@@ -300,7 +322,9 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
         description=(
             "Record a transaction in an entity's books, as a draft or posted straight "
             "through. Postings must sum to zero per commodity to post. Requires an "
-            "idempotency key; replaying one books nothing further."
+            "idempotency key; replaying one books nothing further. Pass raises_obligation to "
+            "record it as an invoice or anything else owed, and settles to apply it against "
+            "obligations — both need post."
         ),
     )
     def record(
@@ -310,6 +334,8 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
         idempotency_key: str,
         description: str | None = None,
         post: bool = False,
+        raises_obligation: str | None = None,
+        settles: list[AppliedArgument] | None = None,
     ) -> dict[str, Any]:
         def work() -> dict[str, Any]:
             entry = Entry(
@@ -318,7 +344,20 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
                 description=description,
             )
             written = record_transaction(
-                database, context(entity_id, idempotency_key), entry=entry, post=post
+                database,
+                context(entity_id, idempotency_key),
+                entry=entry,
+                post=post,
+                raises_obligation=(
+                    _to_decimal(raises_obligation) if raises_obligation is not None else None
+                ),
+                settles=tuple(
+                    Applied(
+                        obligation_id=applied.obligation_id,
+                        amount=_to_decimal(applied.amount),
+                    )
+                    for applied in settles or ()
+                ),
             )
             return {
                 "ok": True,
@@ -423,6 +462,66 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
                 "transaction_id": opened.transaction_id,
                 "as_of": opened.as_of.isoformat(),
                 "equity_amount": str(opened.equity_amount),
+            }
+
+        return _refusals(work)
+
+    @server.tool(
+        name="outstanding_obligations",
+        description=(
+            "What is still owed, and how much has been applied against each. Outstanding is "
+            "derived from the obligation less its settlements, never stored. Pass "
+            "unsettled_only=false for the full history including what has been paid."
+        ),
+    )
+    def read_outstanding(
+        entity_id: str, as_of: str | None = None, unsettled_only: bool = True
+    ) -> dict[str, Any]:
+        def work() -> dict[str, Any]:
+            when = _at(as_of, None)[0] if as_of else None
+            found = outstanding_obligations(
+                database,
+                entity_id=entity_id,
+                principal=acting(),
+                as_of=when,
+                unsettled_only=unsettled_only,
+            )
+            return {
+                "ok": True,
+                "as_of": when.isoformat() if when else None,
+                "obligations": [_obligation(o) for o in found],
+            }
+
+        return _refusals(work)
+
+    @server.tool(
+        name="obligation_detail",
+        description=(
+            "One obligation read as both events: the commitment as it arose, and every "
+            "settlement applied to it since."
+        ),
+    )
+    def read_obligation(entity_id: str, obligation_id: str) -> dict[str, Any]:
+        def work() -> dict[str, Any]:
+            detail = obligation_detail(
+                database,
+                entity_id=entity_id,
+                principal=acting(),
+                obligation_id=obligation_id,
+            )
+            return {
+                "ok": True,
+                "obligation": _obligation(detail.obligation),
+                "settlements": [
+                    {
+                        "settlement_id": applied.settlement_id,
+                        "transaction_id": applied.transaction_id,
+                        "transaction_date": applied.transaction_date.isoformat(),
+                        "amount": str(applied.amount),
+                        "commodity": applied.commodity,
+                    }
+                    for applied in detail.settlements
+                ],
             }
 
         return _refusals(work)

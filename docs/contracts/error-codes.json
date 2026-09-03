@@ -56,6 +56,10 @@
     "error": "NothingToClose"
   },
   {
+    "code": "obligation_not_found",
+    "error": "ObligationNotFound"
+  },
+  {
     "code": "opening_balance_account_unset",
     "error": "OpeningBalanceAccountUnset"
   },

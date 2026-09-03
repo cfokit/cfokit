@@ -143,6 +143,28 @@
     "name": "comparative_profit_and_loss"
   },
   {
+    "description": "One obligation read as both events: the commitment as it arose, and every settlement applied to it since.",
+    "inputSchema": {
+      "properties": {
+        "entity_id": {
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "obligation_id": {
+          "title": "Obligation Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity_id",
+        "obligation_id"
+      ],
+      "title": "read_obligationArguments",
+      "type": "object"
+    },
+    "name": "obligation_detail"
+  },
+  {
     "description": "Open the books with balances carried in from before CFOKit held them. Do not supply the equity side: the ledger computes the counterweight, so the entry cannot fail to balance. Books are opened once — opening them again would double every figure, and a wrong one is corrected with an ordinary entry.",
     "inputSchema": {
       "$defs": {
@@ -200,6 +222,40 @@
       "type": "object"
     },
     "name": "open_balances"
+  },
+  {
+    "description": "What is still owed, and how much has been applied against each. Outstanding is derived from the obligation less its settlements, never stored. Pass unsettled_only=false for the full history including what has been paid.",
+    "inputSchema": {
+      "properties": {
+        "as_of": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "As Of"
+        },
+        "entity_id": {
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "unsettled_only": {
+          "default": true,
+          "title": "Unsettled Only",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "entity_id"
+      ],
+      "title": "read_outstandingArguments",
+      "type": "object"
+    },
+    "name": "outstanding_obligations"
   },
   {
     "description": "Post a draft transaction. Posting is the point of no return: a posted transaction is never edited or deleted, only reversed.",
@@ -297,9 +353,30 @@
     "name": "read_transaction"
   },
   {
-    "description": "Record a transaction in an entity's books, as a draft or posted straight through. Postings must sum to zero per commodity to post. Requires an idempotency key; replaying one books nothing further.",
+    "description": "Record a transaction in an entity's books, as a draft or posted straight through. Postings must sum to zero per commodity to post. Requires an idempotency key; replaying one books nothing further. Pass raises_obligation to record it as an invoice or anything else owed, and settles to apply it against obligations — both need post.",
     "inputSchema": {
       "$defs": {
+        "AppliedArgument": {
+          "description": "How much of a settlement goes against one obligation.",
+          "properties": {
+            "amount": {
+              "description": "Signed decimal string, in the entity's currency.",
+              "title": "Amount",
+              "type": "string"
+            },
+            "obligation_id": {
+              "description": "The obligation this payment is applied to.",
+              "title": "Obligation Id",
+              "type": "string"
+            }
+          },
+          "required": [
+            "obligation_id",
+            "amount"
+          ],
+          "title": "AppliedArgument",
+          "type": "object"
+        },
         "PostingArgument": {
           "description": "One side of a transaction.\n\n`amount` is a string for the same reason it is on REST: a JSON number cannot carry the\nscale the amount was written at, and `100.00` would arrive as `100`.",
           "properties": {
@@ -360,6 +437,33 @@
           },
           "title": "Postings",
           "type": "array"
+        },
+        "raises_obligation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Raises Obligation"
+        },
+        "settles": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/AppliedArgument"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Settles"
         },
         "transaction_date": {
           "format": "date",

@@ -111,6 +111,16 @@ class AlreadyOpened(LedgerError):
     code = "already_opened"
 
 
+class ObligationNotFound(LedgerError):
+    """No such obligation in this entity (`LED-17`).
+
+    Not distinguished from another entity's: row-level security makes those the same answer,
+    and telling them apart would leak that entity's receivables (`NFR-04`).
+    """
+
+    code = "obligation_not_found"
+
+
 class RetainedEarningsUnset(LedgerError):
     """No retained earnings account is named, so a year cannot be closed (`LED-12`)."""
 
