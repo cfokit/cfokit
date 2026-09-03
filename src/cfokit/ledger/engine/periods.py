@@ -20,7 +20,14 @@ from calendar import monthrange
 from dataclasses import dataclass
 from datetime import date, timedelta
 
-__all__ = ["FiscalYear", "Period", "fiscal_year_of", "period_of"]
+__all__ = [
+    "FiscalYear",
+    "Period",
+    "fiscal_year_of",
+    "period_of",
+    "preceding_window",
+    "year_earlier_window",
+]
 
 
 @dataclass(frozen=True, slots=True, order=True)
@@ -103,3 +110,57 @@ def fiscal_year_of(day: date, *, end_month: int, end_day: int) -> FiscalYear:
     return FiscalYear(
         start=_year_end(end.year - 1, end_month, end_day) + timedelta(days=1), end=end
     )
+
+
+def _shift_months(day: date, months: int) -> date:
+    """`day` moved by whole months, with the day clamped to the target month's length."""
+    index = (day.year * 12 + day.month - 1) + months
+    year, month = divmod(index, 12)
+    return date(year, month + 1, min(day.day, monthrange(year, month + 1)[1]))
+
+
+def _is_whole_months(since: date, as_of: date) -> int | None:
+    """How many whole calendar months the window spans, or None if it is not whole months.
+
+    A window is whole months when it starts on the first of a month and ends on the last of
+    one. That is what a monthly or quarterly report looks like, and it is the case where "the
+    preceding period" means the preceding *months* rather than the preceding N days.
+    """
+    if since.day != 1 or as_of != Period(as_of.year, as_of.month).end:
+        return None
+    return (as_of.year * 12 + as_of.month) - (since.year * 12 + since.month) + 1
+
+
+def preceding_window(since: date, as_of: date) -> tuple[date, date]:
+    """The period immediately before this one, for a comparative report (`RPT-07`).
+
+    **Whole-month windows shift by months**, so March compares against February and a quarter
+    against the quarter before it — including across a year boundary, where the preceding
+    quarter is in the previous year. Comparing March against the 31 days before it would give a
+    window ending mid-February, which is not a period anybody reports on.
+
+    Any other window shifts by its own length in days, which is the only rule available when
+    the window has no month boundaries to follow.
+    """
+    months = _is_whole_months(since, as_of)
+    if months is not None:
+        start = _shift_months(since, -months)
+        return start, _last_day_of_span(start, months)
+
+    length = (as_of - since).days + 1
+    return since - timedelta(days=length), since - timedelta(days=1)
+
+
+def _last_day_of_span(start: date, months: int) -> date:
+    """The last day of the window beginning at `start` and spanning `months` whole months."""
+    year, month = divmod(start.year * 12 + start.month - 1 + months - 1, 12)
+    return Period(year, month + 1).end
+
+
+def year_earlier_window(since: date, as_of: date) -> tuple[date, date]:
+    """The same period a year earlier (`RPT-07`).
+
+    Dates shift back a year with the day clamped, so 29 February compares against 28 February
+    rather than failing to exist.
+    """
+    return _shift_months(since, -12), _shift_months(as_of, -12)

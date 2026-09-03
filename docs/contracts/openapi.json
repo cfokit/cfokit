@@ -302,6 +302,147 @@
         "title": "CloseYearRequest",
         "type": "object"
       },
+      "Comparative": {
+        "description": "Which period `RPT-07` offers to compare against.",
+        "enum": [
+          "preceding",
+          "year_earlier"
+        ],
+        "title": "Comparative",
+        "type": "string"
+      },
+      "ComparativeLineModel": {
+        "description": "One account across two periods, and what changed (RPT-07).",
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "string"
+          },
+          "account_type": {
+            "title": "Account Type",
+            "type": "string"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "comparison": {
+            "title": "Comparison",
+            "type": "string"
+          },
+          "current": {
+            "title": "Current",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "variance": {
+            "description": "Current less comparison, computed from the unrounded figures rather than by subtracting the two printed ones (RPT-12). Absolute: a percentage divides by the comparison, which is zero for every line that is new.",
+            "title": "Variance",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "code",
+          "name",
+          "account_type",
+          "current",
+          "comparison",
+          "variance"
+        ],
+        "title": "ComparativeLineModel",
+        "type": "object"
+      },
+      "ComparativeProfitAndLossResponse": {
+        "description": "A profit and loss beside the preceding period or the same period a year earlier.",
+        "properties": {
+          "accounting_basis": {
+            "title": "Accounting Basis",
+            "type": "string"
+          },
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "commodity": {
+            "title": "Commodity",
+            "type": "string"
+          },
+          "comparative": {
+            "$ref": "#/components/schemas/Comparative"
+          },
+          "comparison_as_of": {
+            "format": "date",
+            "title": "Comparison As Of",
+            "type": "string"
+          },
+          "comparison_since": {
+            "format": "date",
+            "title": "Comparison Since",
+            "type": "string"
+          },
+          "expenses": {
+            "items": {
+              "$ref": "#/components/schemas/ComparativeLineModel"
+            },
+            "title": "Expenses",
+            "type": "array"
+          },
+          "income": {
+            "items": {
+              "$ref": "#/components/schemas/ComparativeLineModel"
+            },
+            "title": "Income",
+            "type": "array"
+          },
+          "net_income": {
+            "$ref": "#/components/schemas/ComparativeLineModel"
+          },
+          "since": {
+            "format": "date",
+            "title": "Since",
+            "type": "string"
+          },
+          "total_expenses": {
+            "$ref": "#/components/schemas/ComparativeLineModel"
+          },
+          "total_income": {
+            "$ref": "#/components/schemas/ComparativeLineModel"
+          },
+          "watermark": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Watermark"
+          }
+        },
+        "required": [
+          "comparative",
+          "since",
+          "as_of",
+          "comparison_since",
+          "comparison_as_of",
+          "accounting_basis",
+          "commodity",
+          "income",
+          "expenses",
+          "total_income",
+          "total_expenses",
+          "net_income"
+        ],
+        "title": "ComparativeProfitAndLossResponse",
+        "type": "object"
+      },
       "CreateAccountRequest": {
         "description": "Add an account to the entity's chart (LED-01, LED-02).",
         "properties": {
@@ -2145,6 +2286,158 @@
           }
         },
         "summary": "Profit and loss for a period",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/entities/{entity_id}/profit-and-loss/comparative": {
+      "get": {
+        "description": "Two periods side by side, with the variance between them (`RPT-07`).\n\nA whole-month window compares against whole months, so March is set against February\nand a quarter against the quarter before it. Any other window compares against its own\nlength in days, which is the only rule available with no month boundaries to follow.",
+        "operationId": "read_comparative_profit_and_loss_entities__entity_id__profit_and_loss_comparative_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "since",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Since",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "comparative",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Comparative",
+              "default": "preceding"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          },
+          {
+            "in": "query",
+            "name": "watermark",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Watermark"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComparativeProfitAndLossResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Profit and loss beside a comparative period",
         "tags": [
           "reports"
         ]

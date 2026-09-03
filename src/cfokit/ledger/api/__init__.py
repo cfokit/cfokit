@@ -35,6 +35,8 @@ from cfokit.ledger.api.models import (
     BalanceSheetResponse,
     ClosePeriodRequest,
     CloseYearRequest,
+    ComparativeLineModel,
+    ComparativeProfitAndLossResponse,
     CreateAccountRequest,
     CreateEntityRequest,
     EntityCreatedResponse,
@@ -59,9 +61,11 @@ from cfokit.ledger.engine import Entry, Posting
 from cfokit.ledger.engine.periods import Period
 from cfokit.ledger.errors import LedgerError
 from cfokit.ledger.presentation import (
+    ComparativeLine,
     StatementLine,
     present_account_detail,
     present_balance_sheet,
+    present_comparative_profit_and_loss,
     present_profit_and_loss,
     present_trial_balance,
 )
@@ -82,8 +86,10 @@ from cfokit.ledger.service.principal import Principal
 from cfokit.ledger.service.read import read_transaction
 from cfokit.ledger.service.readiness import check_readiness
 from cfokit.ledger.service.reports import (
+    Comparative,
     account_detail,
     balance_sheet,
+    comparative_profit_and_loss,
     profit_and_loss,
     trial_balance,
 )
@@ -96,6 +102,22 @@ from cfokit.ledger.service.write import (
 from cfokit.ledger.service.year_end import close_fiscal_year
 
 __all__ = ["create_app"]
+
+
+def _comparative(line: ComparativeLine) -> ComparativeLineModel:
+    return ComparativeLineModel(
+        account_id=line.account_id,
+        code=line.code,
+        name=line.name,
+        account_type=line.account_type,
+        current=str(line.current),
+        comparison=str(line.comparison),
+        variance=str(line.variance),
+    )
+
+
+def _comparatives(lines: Iterable[ComparativeLine]) -> list[ComparativeLineModel]:
+    return [_comparative(line) for line in lines]
 
 
 def _lines(lines: Iterable[StatementLine]) -> list[StatementLineModel]:
@@ -438,6 +460,54 @@ def create_app(settings: Settings, authenticator: Authenticator | None = None) -
             total_income=str(report.total_income),
             total_expenses=str(report.total_expenses),
             net_income=str(report.net_income),
+        )
+
+    @app.get(
+        "/entities/{entity_id}/profit-and-loss/comparative",
+        tags=["reports"],
+        summary="Profit and loss beside a comparative period",
+        responses=ERRORS,
+    )
+    def read_comparative_profit_and_loss(
+        entity_id: Annotated[str, Path()],
+        since: Annotated[date, Query()],
+        acting: Annotated[Principal, Depends(get_principal)],
+        database: Annotated[Database, Depends(get_database)],
+        comparative: Annotated[Comparative, Query()] = Comparative.PRECEDING,
+        as_of: Annotated[date | None, Query()] = None,
+        watermark: Annotated[datetime | None, Query()] = None,
+    ) -> ComparativeProfitAndLossResponse:
+        """Two periods side by side, with the variance between them (`RPT-07`).
+
+        A whole-month window compares against whole months, so March is set against February
+        and a quarter against the quarter before it. Any other window compares against its own
+        length in days, which is the only rule available with no month boundaries to follow.
+        """
+        report = present_comparative_profit_and_loss(
+            comparative_profit_and_loss(
+                database,
+                entity_id=entity_id,
+                principal=acting,
+                since=since,
+                as_of=as_of or date.today(),  # noqa: DTZ011
+                comparative=comparative,
+                watermark=watermark,
+            )
+        )
+        return ComparativeProfitAndLossResponse(
+            comparative=report.comparative,
+            since=report.since,
+            as_of=report.as_of,
+            comparison_since=report.comparison_since,
+            comparison_as_of=report.comparison_as_of,
+            watermark=report.watermark,
+            accounting_basis=report.accounting_basis,
+            commodity=report.commodity,
+            income=_comparatives(report.income),
+            expenses=_comparatives(report.expenses),
+            total_income=_comparative(report.total_income),
+            total_expenses=_comparative(report.total_expenses),
+            net_income=_comparative(report.net_income),
         )
 
     @app.get(

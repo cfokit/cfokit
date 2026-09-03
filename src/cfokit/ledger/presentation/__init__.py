@@ -26,14 +26,18 @@ from cfokit.ledger.repository.reports import AccountBalance
 from cfokit.ledger.service.reports import (
     AccountDetail,
     BalanceSheet,
+    Comparative,
+    ComparativeProfitAndLoss,
     ProfitAndLoss,
     TrialBalance,
 )
 
 __all__ = [
     "DEFAULT_DISPLAY_SCALE",
+    "ComparativeLine",
     "PresentedAccountDetail",
     "PresentedBalanceSheet",
+    "PresentedComparative",
     "PresentedEntry",
     "PresentedProfitAndLoss",
     "PresentedTrialBalance",
@@ -43,6 +47,7 @@ __all__ = [
     "present",
     "present_account_detail",
     "present_balance_sheet",
+    "present_comparative_profit_and_loss",
     "present_profit_and_loss",
     "present_total",
     "present_trial_balance",
@@ -361,3 +366,142 @@ def present_account_detail(report: AccountDetail) -> PresentedAccountDetail:
             for entry in report.entries
         ),
     )
+
+
+@dataclass(frozen=True, slots=True)
+class ComparativeLine:
+    """One account across two periods, and what changed between them."""
+
+    account_id: str
+    code: str
+    name: str
+    account_type: str
+    current: Decimal
+    comparison: Decimal
+    variance: Decimal
+
+
+@dataclass(frozen=True, slots=True)
+class PresentedComparative:
+    """A profit and loss beside another period (`RPT-07`)."""
+
+    comparative: Comparative
+    since: date
+    as_of: date
+    comparison_since: date
+    comparison_as_of: date
+    watermark: datetime | None
+    accounting_basis: str
+    commodity: str
+    income: tuple[ComparativeLine, ...]
+    expenses: tuple[ComparativeLine, ...]
+    total_income: ComparativeLine
+    total_expenses: ComparativeLine
+    net_income: ComparativeLine
+
+
+def _totals_line(
+    code: str,
+    name: str,
+    account_type: str,
+    current: list[Decimal],
+    comparison: list[Decimal],
+    commodity: str,
+) -> ComparativeLine:
+    """A totals row, each figure summed exactly and rounded once (`RPT-12`)."""
+    return ComparativeLine(
+        account_id="",
+        code=code,
+        name=name,
+        account_type=account_type,
+        current=present_total(current, commodity),
+        comparison=present_total(comparison, commodity),
+        variance=present_total(current + [-c for c in comparison], commodity),
+    )
+
+
+def present_comparative_profit_and_loss(
+    report: ComparativeProfitAndLoss,
+) -> PresentedComparative:
+    """Pair the two periods by account and show what changed (`RPT-07`).
+
+    **An account absent from one period counts as zero there**, not as a missing row. A cost
+    that started this quarter and a revenue stream that stopped are exactly what a reader is
+    looking for, and dropping either would hide the largest variances on the page.
+
+    **The variance is computed from the unrounded figures**, not by subtracting the two printed
+    ones, for the same reason every other total is (`RPT-12`).
+
+    Absolute only. A percentage divides by the comparison figure, which is zero for every line
+    that is new — the lines a reader most wants — so it belongs where a renderer can decide
+    what to show instead of a number.
+    """
+    commodity = report.current.functional_currency
+
+    def by_account(rows: Iterable[AccountBalance]) -> dict[str, AccountBalance]:
+        return {row.account_id: row for row in rows}
+
+    def lines(account_type: str) -> tuple[ComparativeLine, ...]:
+        current = by_account(r for r in report.current.rows if r.account_type == account_type)
+        comparison = by_account(
+            r for r in report.comparison.rows if r.account_type == account_type
+        )
+        paired: list[ComparativeLine] = []
+        for account_id in sorted(
+            current | comparison, key=lambda key: (current | comparison)[key].code
+        ):
+            row = current.get(account_id) or comparison[account_id]
+            now = _exact(current.get(account_id))
+            then = _exact(comparison.get(account_id))
+            paired.append(
+                ComparativeLine(
+                    account_id=account_id,
+                    code=row.code,
+                    name=row.name,
+                    account_type=row.account_type,
+                    current=present(now, commodity),
+                    comparison=present(then, commodity),
+                    variance=present(now - then, commodity),
+                )
+            )
+        return tuple(paired)
+
+    income, expenses = lines("income"), lines("expense")
+    current_income = [_exact(r) for r in report.current.rows if r.account_type == "income"]
+    prior_income = [_exact(r) for r in report.comparison.rows if r.account_type == "income"]
+    current_expense = [_exact(r) for r in report.current.rows if r.account_type == "expense"]
+    prior_expense = [_exact(r) for r in report.comparison.rows if r.account_type == "expense"]
+
+    return PresentedComparative(
+        comparative=report.comparative,
+        since=report.current.since,
+        as_of=report.current.as_of,
+        comparison_since=report.comparison.since,
+        comparison_as_of=report.comparison.as_of,
+        watermark=report.current.watermark,
+        accounting_basis=report.current.accounting_basis,
+        commodity=commodity,
+        income=income,
+        expenses=expenses,
+        total_income=_totals_line(
+            "", "Total income", "income", current_income, prior_income, commodity
+        ),
+        total_expenses=_totals_line(
+            "", "Total expenses", "expense", current_expense, prior_expense, commodity
+        ),
+        net_income=_totals_line(
+            "",
+            "Net income",
+            "income",
+            current_income + [-e for e in current_expense],
+            prior_income + [-e for e in prior_expense],
+            commodity,
+        ),
+    )
+
+
+def _exact(row: AccountBalance | None) -> Decimal:
+    """A row's naturally-signed amount, or zero where the account has no row this period."""
+    if row is None:
+        return Decimal(0)
+    return natural_amount(AccountType(row.account_type), row.balance)

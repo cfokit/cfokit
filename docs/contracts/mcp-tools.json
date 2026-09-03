@@ -92,6 +92,57 @@
     "name": "balance_sheet"
   },
   {
+    "description": "A profit and loss beside another period, with the variance on every line. comparative is 'preceding' or 'year_earlier'. A whole-month window compares against whole months, so March is set against February and a quarter against the quarter before it. An account absent from one period counts as zero there, so a cost that started or a revenue stream that stopped shows as the variance it is.",
+    "inputSchema": {
+      "properties": {
+        "as_of": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "As Of"
+        },
+        "comparative": {
+          "default": "preceding",
+          "title": "Comparative",
+          "type": "string"
+        },
+        "entity_id": {
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "since": {
+          "title": "Since",
+          "type": "string"
+        },
+        "watermark": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Watermark"
+        }
+      },
+      "required": [
+        "entity_id",
+        "since"
+      ],
+      "title": "read_comparative_profit_and_lossArguments",
+      "type": "object"
+    },
+    "name": "comparative_profit_and_loss"
+  },
+  {
     "description": "Post a draft transaction. Posting is the point of no return: a posted transaction is never edited or deleted, only reversed.",
     "inputSchema": {
       "properties": {
