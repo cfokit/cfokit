@@ -37,6 +37,7 @@ TOOLS = {
     # the place they stopped being that.
     "account_detail",
     "balance_sheet",
+    "comparative_profit_and_loss",
     "post_transaction",
     "profit_and_loss",
     "read_transaction",

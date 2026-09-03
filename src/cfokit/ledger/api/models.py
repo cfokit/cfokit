@@ -22,6 +22,8 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, BeforeValidator, Field, WithJsonSchema
 
+from cfokit.ledger.service.reports import Comparative
+
 __all__ = [
     "CreateEntityRequest",
     "EntityCreatedResponse",
@@ -265,6 +267,40 @@ class AccountDetailResponse(BaseModel):
     )
     closing_balance: str
     entries: list[AccountEntryModel]
+
+
+class ComparativeLineModel(BaseModel):
+    """One account across two periods, and what changed (RPT-07)."""
+
+    account_id: str
+    code: str
+    name: str
+    account_type: str
+    current: str
+    comparison: str
+    variance: str = Field(
+        description="Current less comparison, computed from the unrounded figures rather than "
+        "by subtracting the two printed ones (RPT-12). Absolute: a percentage divides by the "
+        "comparison, which is zero for every line that is new."
+    )
+
+
+class ComparativeProfitAndLossResponse(BaseModel):
+    """A profit and loss beside the preceding period or the same period a year earlier."""
+
+    comparative: Comparative
+    since: date
+    as_of: date
+    comparison_since: date
+    comparison_as_of: date
+    watermark: datetime | None = None
+    accounting_basis: str
+    commodity: str
+    income: list[ComparativeLineModel]
+    expenses: list[ComparativeLineModel]
+    total_income: ComparativeLineModel
+    total_expenses: ComparativeLineModel
+    net_income: ComparativeLineModel
 
 
 class StatementLineModel(BaseModel):

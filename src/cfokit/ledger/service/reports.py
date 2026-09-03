@@ -18,7 +18,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from decimal import Decimal
+from enum import StrEnum
 
+from cfokit.ledger.engine.periods import preceding_window, year_earlier_window
 from cfokit.ledger.errors import AccountNotFound
 from cfokit.ledger.repository.reports import Account, AccountBalance, AccountEntry
 from cfokit.ledger.repository.unit_of_work import Database, EntityWrite
@@ -28,10 +30,13 @@ from cfokit.ledger.service.principal import Principal
 __all__ = [
     "AccountDetail",
     "BalanceSheet",
+    "Comparative",
+    "ComparativeProfitAndLoss",
     "ProfitAndLoss",
     "TrialBalance",
     "account_detail",
     "balance_sheet",
+    "comparative_profit_and_loss",
     "profit_and_loss",
     "trial_balance",
 ]
@@ -245,4 +250,66 @@ def account_detail(
         functional_currency=settings.functional_currency,
         opening_balance=opening,
         entries=tuple(entries),
+    )
+
+
+class Comparative(StrEnum):
+    """Which period `RPT-07` offers to compare against."""
+
+    PRECEDING = "preceding"
+    YEAR_EARLIER = "year_earlier"
+
+
+@dataclass(frozen=True, slots=True)
+class ComparativeProfitAndLoss:
+    """One period beside another, and what changed (`RPT-07`)."""
+
+    comparative: Comparative
+    current: ProfitAndLoss
+    comparison: ProfitAndLoss
+
+
+def comparative_profit_and_loss(
+    database: Database,
+    *,
+    entity_id: str,
+    principal: Principal,
+    since: date,
+    as_of: date,
+    comparative: Comparative,
+    watermark: datetime | None = None,
+) -> ComparativeProfitAndLoss:
+    """A profit and loss beside the preceding period or the same period a year earlier.
+
+    Both halves are the same report over different dates rather than a second query shaped for
+    comparison — `RPT-09` wants one answer per question, and a comparative built by different
+    machinery than the report it compares could disagree with it.
+
+    The same `watermark` applies to both, so a comparative reproduced later reproduces whole
+    (`RPT-11`). Reading the comparison at a different moment from the current period would
+    produce a variance that never existed.
+    """
+    if comparative is Comparative.PRECEDING:
+        earlier_since, earlier_as_of = preceding_window(since, as_of)
+    else:
+        earlier_since, earlier_as_of = year_earlier_window(since, as_of)
+
+    current = profit_and_loss(
+        database,
+        entity_id=entity_id,
+        principal=principal,
+        since=since,
+        as_of=as_of,
+        watermark=watermark,
+    )
+    comparison = profit_and_loss(
+        database,
+        entity_id=entity_id,
+        principal=principal,
+        since=earlier_since,
+        as_of=earlier_as_of,
+        watermark=watermark,
+    )
+    return ComparativeProfitAndLoss(
+        comparative=comparative, current=current, comparison=comparison
     )

@@ -20,14 +20,21 @@ import pytest
 from cfokit.ledger.engine import Entry, Posting
 from cfokit.ledger.presentation import (
     PresentedBalanceSheet,
+    PresentedComparative,
     PresentedProfitAndLoss,
     present_balance_sheet,
+    present_comparative_profit_and_loss,
     present_profit_and_loss,
 )
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.administration import create_account
 from cfokit.ledger.service.principal import ActorClass, Principal
-from cfokit.ledger.service.reports import balance_sheet, profit_and_loss
+from cfokit.ledger.service.reports import (
+    Comparative,
+    balance_sheet,
+    comparative_profit_and_loss,
+    profit_and_loss,
+)
 from cfokit.ledger.service.write import WriteContext, record_transaction
 from cfokit.ledger.service.year_end import close_fiscal_year
 
@@ -245,3 +252,132 @@ def test_both_statements_state_the_basis(
 
     assert pl.accounting_basis == "accrual"
     assert sheet.accounting_basis == "accrual"
+
+
+# --- Comparative periods (RPT-07) ---------------------------------------------------------
+
+
+def comparative(
+    database: Database, entity_id: str, *, since: date, as_of: date, against: Comparative
+) -> PresentedComparative:
+    return present_comparative_profit_and_loss(
+        comparative_profit_and_loss(
+            database,
+            entity_id=entity_id,
+            principal=PERSON,
+            since=since,
+            as_of=as_of,
+            comparative=against,
+        )
+    )
+
+
+def test_a_month_is_compared_against_the_month_before(
+    database: Database, chart: tuple[str, str, str, str, str]
+) -> None:
+    """`RPT-07`: "alongside a comparative period — the preceding one"."""
+    entity_id, cash, revenue, _, _ = chart
+    book(database, entity_id, cash, revenue, date(2026, 2, 10), "100.00")
+    book(database, entity_id, cash, revenue, date(2026, 3, 10), "130.00")
+
+    report = comparative(
+        database,
+        entity_id,
+        since=date(2026, 3, 1),
+        as_of=date(2026, 3, 31),
+        against=Comparative.PRECEDING,
+    )
+
+    assert report.comparison_since == date(2026, 2, 1)
+    assert report.comparison_as_of == date(2026, 2, 28)
+    assert report.total_income.current == Decimal("130.00")
+    assert report.total_income.comparison == Decimal("100.00")
+    assert report.total_income.variance == Decimal("30.00")
+
+
+def test_the_same_period_a_year_earlier(
+    database: Database, chart: tuple[str, str, str, str, str]
+) -> None:
+    entity_id, cash, revenue, _, _ = chart
+    book(database, entity_id, cash, revenue, date(2025, 3, 10), "80.00")
+    book(database, entity_id, cash, revenue, date(2026, 3, 10), "130.00")
+
+    report = comparative(
+        database,
+        entity_id,
+        since=date(2026, 3, 1),
+        as_of=date(2026, 3, 31),
+        against=Comparative.YEAR_EARLIER,
+    )
+
+    assert (report.comparison_since, report.comparison_as_of) == (
+        date(2025, 3, 1),
+        date(2025, 3, 31),
+    )
+    assert report.total_income.variance == Decimal("50.00")
+
+
+def test_an_account_new_this_period_shows_its_whole_amount_as_the_variance(
+    database: Database, chart: tuple[str, str, str, str, str]
+) -> None:
+    """**The line a reader most wants**, and the one a naive join drops.
+
+    An account absent from the comparison counts as zero there rather than as a missing row —
+    a cost that started this month is exactly the variance worth seeing.
+    """
+    entity_id, cash, revenue, expense, _ = chart
+    book(database, entity_id, cash, revenue, date(2026, 2, 10), "100.00")
+    book(database, entity_id, expense, cash, date(2026, 3, 10), "25.00")
+
+    report = comparative(
+        database,
+        entity_id,
+        since=date(2026, 3, 1),
+        as_of=date(2026, 3, 31),
+        against=Comparative.PRECEDING,
+    )
+
+    assert [(line.current, line.comparison, line.variance) for line in report.expenses] == [
+        (Decimal("25.00"), Decimal("0.00"), Decimal("25.00"))
+    ]
+
+
+def test_a_revenue_stream_that_stopped_shows_as_a_negative_variance(
+    database: Database, chart: tuple[str, str, str, str, str]
+) -> None:
+    """The mirror case: present in the comparison and absent now."""
+    entity_id, cash, revenue, _, _ = chart
+    book(database, entity_id, cash, revenue, date(2026, 2, 10), "100.00")
+
+    report = comparative(
+        database,
+        entity_id,
+        since=date(2026, 3, 1),
+        as_of=date(2026, 3, 31),
+        against=Comparative.PRECEDING,
+    )
+
+    assert [(line.current, line.variance) for line in report.income] == [
+        (Decimal("0.00"), Decimal("-100.00"))
+    ]
+
+
+def test_the_net_income_variance_matches_the_two_periods(
+    database: Database, chart: tuple[str, str, str, str, str]
+) -> None:
+    entity_id, cash, revenue, expense, _ = chart
+    book(database, entity_id, cash, revenue, date(2026, 2, 10), "100.00")
+    book(database, entity_id, expense, cash, date(2026, 2, 15), "40.00")
+    book(database, entity_id, cash, revenue, date(2026, 3, 10), "130.00")
+
+    report = comparative(
+        database,
+        entity_id,
+        since=date(2026, 3, 1),
+        as_of=date(2026, 3, 31),
+        against=Comparative.PRECEDING,
+    )
+
+    assert report.net_income.current == Decimal("130.00")
+    assert report.net_income.comparison == Decimal("60.00")
+    assert report.net_income.variance == Decimal("70.00")

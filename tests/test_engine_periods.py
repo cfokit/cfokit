@@ -11,7 +11,13 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
-from cfokit.ledger.engine.periods import Period, fiscal_year_of, period_of
+from cfokit.ledger.engine.periods import (
+    Period,
+    fiscal_year_of,
+    period_of,
+    preceding_window,
+    year_earlier_window,
+)
 
 
 def test_a_period_is_the_calendar_month_of_the_date() -> None:
@@ -110,3 +116,57 @@ def test_every_date_falls_in_exactly_one_fiscal_year(day: date, end_month: int) 
     assert year.start <= year.end
     previous = fiscal_year_of(year.start - timedelta(days=1), end_month=end_month, end_day=28)
     assert previous.end == year.start - timedelta(days=1)
+
+
+# --- Comparative windows (RPT-07) ---------------------------------------------------------
+
+
+def test_a_month_compares_against_the_month_before() -> None:
+    """Not the 31 days before, which would end mid-February — not a period anyone reports on."""
+    assert preceding_window(date(2026, 3, 1), date(2026, 3, 31)) == (
+        date(2026, 2, 1),
+        date(2026, 2, 28),
+    )
+
+
+def test_a_quarter_compares_against_the_quarter_before_it() -> None:
+    """Including across a year boundary, where the preceding quarter is in the previous year."""
+    assert preceding_window(date(2026, 1, 1), date(2026, 3, 31)) == (
+        date(2025, 10, 1),
+        date(2025, 12, 31),
+    )
+
+
+def test_a_window_that_is_not_whole_months_shifts_by_its_own_length() -> None:
+    """The only rule available when there are no month boundaries to follow."""
+    assert preceding_window(date(2026, 3, 5), date(2026, 3, 20)) == (
+        date(2026, 2, 17),
+        date(2026, 3, 4),
+    )
+
+
+def test_a_year_earlier_is_the_same_dates_one_year_back() -> None:
+    assert year_earlier_window(date(2026, 3, 1), date(2026, 3, 31)) == (
+        date(2025, 3, 1),
+        date(2025, 3, 31),
+    )
+
+
+def test_a_leap_day_compares_against_the_end_of_february() -> None:
+    """29 February has no counterpart, so the day clamps rather than failing to exist."""
+    assert year_earlier_window(date(2028, 2, 1), date(2028, 2, 29)) == (
+        date(2027, 2, 1),
+        date(2027, 2, 28),
+    )
+
+
+@given(st.dates(min_value=date(1900, 1, 1), max_value=date(2200, 1, 1)), st.integers(0, 400))
+def test_a_preceding_window_ends_the_day_before_the_current_one_starts(
+    since: date, length: int
+) -> None:
+    """Contiguous and never overlapping, whichever rule applied."""
+    as_of = since + timedelta(days=length)
+    start, end = preceding_window(since, as_of)
+
+    assert end == since - timedelta(days=1)
+    assert start <= end

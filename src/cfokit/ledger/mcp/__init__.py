@@ -48,6 +48,7 @@ from cfokit.ledger.engine import Entry, Posting
 from cfokit.ledger.errors import LedgerError, NotAuthenticated
 from cfokit.ledger.mcp.auth import LedgerTokenVerifier
 from cfokit.ledger.presentation import (
+    ComparativeLine,
     PresentedAccountDetail,
     PresentedBalanceSheet,
     PresentedProfitAndLoss,
@@ -55,6 +56,7 @@ from cfokit.ledger.presentation import (
     StatementLine,
     present_account_detail,
     present_balance_sheet,
+    present_comparative_profit_and_loss,
     present_profit_and_loss,
     present_trial_balance,
 )
@@ -68,8 +70,10 @@ from cfokit.ledger.service.principal import Principal
 from cfokit.ledger.service.read import read_transaction
 from cfokit.ledger.service.readiness import check_readiness
 from cfokit.ledger.service.reports import (
+    Comparative,
     account_detail,
     balance_sheet,
+    comparative_profit_and_loss,
     profit_and_loss,
     trial_balance,
 )
@@ -107,6 +111,22 @@ def _statement_lines(lines: Iterable[StatementLine]) -> list[dict[str, Any]]:
         }
         for line in lines
     ]
+
+
+def _comparative_line(line: ComparativeLine) -> dict[str, Any]:
+    return {
+        "account_id": line.account_id,
+        "code": line.code,
+        "name": line.name,
+        "account_type": line.account_type,
+        "current": str(line.current),
+        "comparison": str(line.comparison),
+        "variance": str(line.variance),
+    }
+
+
+def _comparative_lines(lines: Iterable[ComparativeLine]) -> list[dict[str, Any]]:
+    return [_comparative_line(line) for line in lines]
 
 
 def _produced_on(
@@ -425,6 +445,62 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
                 "total_income": str(report.total_income),
                 "total_expenses": str(report.total_expenses),
                 "net_income": str(report.net_income),
+            }
+
+        return _refusals(work)
+
+    @server.tool(
+        name="comparative_profit_and_loss",
+        description=(
+            "A profit and loss beside another period, with the variance on every line. "
+            "comparative is 'preceding' or 'year_earlier'. A whole-month window compares "
+            "against whole months, so March is set against February and a quarter against the "
+            "quarter before it. An account absent from one period counts as zero there, so a "
+            "cost that started or a revenue stream that stopped shows as the variance it is."
+        ),
+    )
+    def read_comparative_profit_and_loss(
+        entity_id: str,
+        since: str,
+        comparative: str = "preceding",
+        as_of: str | None = None,
+        watermark: str | None = None,
+    ) -> dict[str, Any]:
+        def work() -> dict[str, Any]:
+            try:
+                against = Comparative(comparative)
+            except ValueError as exc:
+                raise LedgerToolError(
+                    "invalid_comparative", "comparative is 'preceding' or 'year_earlier'"
+                ) from exc
+            when, taken = _at(as_of, watermark)
+            start, _ = _at(since, None)
+            report = present_comparative_profit_and_loss(
+                comparative_profit_and_loss(
+                    database,
+                    entity_id=entity_id,
+                    principal=acting(),
+                    since=start,
+                    as_of=when,
+                    comparative=against,
+                    watermark=taken,
+                )
+            )
+            return {
+                "ok": True,
+                "comparative": report.comparative.value,
+                "since": report.since.isoformat(),
+                "as_of": report.as_of.isoformat(),
+                "comparison_since": report.comparison_since.isoformat(),
+                "comparison_as_of": report.comparison_as_of.isoformat(),
+                "watermark": report.watermark.isoformat() if report.watermark else None,
+                "accounting_basis": report.accounting_basis,
+                "commodity": report.commodity,
+                "income": _comparative_lines(report.income),
+                "expenses": _comparative_lines(report.expenses),
+                "total_income": _comparative_line(report.total_income),
+                "total_expenses": _comparative_line(report.total_expenses),
+                "net_income": _comparative_line(report.net_income),
             }
 
         return _refusals(work)
