@@ -23,17 +23,25 @@ from decimal import ROUND_HALF_UP, Decimal
 
 from cfokit.ledger.engine.accounts import AccountType, natural_amount
 from cfokit.ledger.repository.reports import AccountBalance
-from cfokit.ledger.service.reports import BalanceSheet, ProfitAndLoss, TrialBalance
+from cfokit.ledger.service.reports import (
+    AccountDetail,
+    BalanceSheet,
+    ProfitAndLoss,
+    TrialBalance,
+)
 
 __all__ = [
     "DEFAULT_DISPLAY_SCALE",
+    "PresentedAccountDetail",
     "PresentedBalanceSheet",
+    "PresentedEntry",
     "PresentedProfitAndLoss",
     "PresentedTrialBalance",
     "StatementLine",
     "TrialBalanceLine",
     "display_scale",
     "present",
+    "present_account_detail",
     "present_balance_sheet",
     "present_profit_and_loss",
     "present_total",
@@ -273,4 +281,83 @@ def present_balance_sheet(report: BalanceSheet) -> PresentedBalanceSheet:
         total_assets=present_total(_natural(assets), commodity),
         total_liabilities=present_total(_natural(liabilities), commodity),
         total_equity=present_total(_natural(equity) + unclosed_exact, commodity),
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class PresentedEntry:
+    """One movement against an account, with what it left the balance at."""
+
+    transaction_id: str
+    transaction_date: date
+    description: str | None
+    entry_kind: str
+    reverses_id: str | None
+    actor_principal_id: str
+    actor_class: str
+    acting_for_principal_id: str | None
+    amount: Decimal
+    running_balance: Decimal
+
+
+@dataclass(frozen=True, slots=True)
+class PresentedAccountDetail:
+    """An account's movements over a period, ready to render (`RPT-05`)."""
+
+    account_id: str
+    code: str
+    name: str
+    account_type: str
+    since: date
+    as_of: date
+    watermark: datetime | None
+    accounting_basis: str
+    commodity: str
+    opening_balance: Decimal
+    closing_balance: Decimal
+    entries: tuple[PresentedEntry, ...]
+
+
+def present_account_detail(report: AccountDetail) -> PresentedAccountDetail:
+    """Sign the movements the way the account's type reads, and round each once (`RPT-12`).
+
+    Every figure — each movement, each running balance, both ends — is rounded from its own
+    exact value rather than accumulated from rounded ones, so a reader adding the column gets
+    the last running balance to within less than one unit of display scale.
+    """
+    commodity = report.functional_currency
+    account_type = AccountType(report.account.account_type)
+    return PresentedAccountDetail(
+        account_id=report.account.account_id,
+        code=report.account.code,
+        name=report.account.name,
+        account_type=account_type.value,
+        since=report.since,
+        as_of=report.as_of,
+        watermark=report.watermark,
+        accounting_basis=report.accounting_basis,
+        commodity=commodity,
+        opening_balance=present(
+            natural_amount(account_type, report.opening_balance), commodity
+        ),
+        closing_balance=present(
+            natural_amount(account_type, report.closing_balance), commodity
+        ),
+        entries=tuple(
+            PresentedEntry(
+                transaction_id=entry.transaction_id,
+                transaction_date=entry.transaction_date,
+                description=entry.description,
+                entry_kind=entry.entry_kind,
+                reverses_id=entry.reverses_id,
+                actor_principal_id=entry.actor_principal_id,
+                actor_class=entry.actor_class,
+                acting_for_principal_id=entry.acting_for_principal_id,
+                amount=present(natural_amount(account_type, entry.amount), commodity),
+                running_balance=present(
+                    natural_amount(account_type, entry.running_balance), commodity
+                ),
+            )
+            for entry in report.entries
+        ),
     )

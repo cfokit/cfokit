@@ -1,5 +1,9 @@
 [
   {
+    "code": "account_not_found",
+    "error": "AccountNotFound"
+  },
+  {
     "code": "allocation_invalid",
     "error": "AllocationInvalid"
   },

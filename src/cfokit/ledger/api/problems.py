@@ -15,6 +15,7 @@ from __future__ import annotations
 from http import HTTPStatus
 
 from cfokit.ledger.errors import (
+    AccountNotFound,
     AllocationInvalid,
     CommodityNotPermitted,
     EntityNotFound,
@@ -56,6 +57,7 @@ STATUS_FOR_CODE: dict[str, int] = {
     # 403: a capability reserved to people. No credential an agent can present changes it.
     NotAPerson.code: HTTPStatus.FORBIDDEN,
     EntityNotFound.code: HTTPStatus.NOT_FOUND,
+    AccountNotFound.code: HTTPStatus.NOT_FOUND,
     TransactionNotFound.code: HTTPStatus.NOT_FOUND,
     # 409 rather than 422: the request is well-formed and would have been valid earlier. The
     # caller's remedy is a different operation, not a corrected body.

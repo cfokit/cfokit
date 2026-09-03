@@ -84,6 +84,16 @@ class NotAPerson(LedgerError):
     code = "not_a_person"
 
 
+class AccountNotFound(LedgerError):
+    """No such account in this entity.
+
+    Not distinguished from an account in another entity: row-level security makes those the
+    same answer, and telling them apart would leak the other entity's chart (`NFR-04`).
+    """
+
+    code = "account_not_found"
+
+
 class RetainedEarningsUnset(LedgerError):
     """No retained earnings account is named, so a year cannot be closed (`LED-12`)."""
 

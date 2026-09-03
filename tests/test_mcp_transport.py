@@ -35,6 +35,7 @@ TOOLS = {
     # The books, written and read through one surface. ADR-0009 makes the two adapters
     # siblings over the same service; a report REST could produce and MCP could not would be
     # the place they stopped being that.
+    "account_detail",
     "balance_sheet",
     "post_transaction",
     "profit_and_loss",

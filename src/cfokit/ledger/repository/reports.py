@@ -13,7 +13,14 @@ from typing import Any
 
 import psycopg
 
-__all__ = ["AccountBalance", "account_balances"]
+__all__ = [
+    "Account",
+    "AccountBalance",
+    "AccountEntry",
+    "account",
+    "account_balances",
+    "account_detail",
+]
 
 
 @dataclass(frozen=True, slots=True)
@@ -91,3 +98,130 @@ def account_balances(
             )
             for row in cur.fetchall()
         ]
+
+
+@dataclass(frozen=True, slots=True)
+class Account:
+    """An account's identity, for a report that is about one of them."""
+
+    account_id: str
+    code: str
+    name: str
+    account_type: str
+
+
+def account(
+    conn: psycopg.Connection[Any], *, entity_id: str, account_id: str
+) -> Account | None:
+    """One account in this entity, or None. Row-level security scopes it (ADR-0003)."""
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT id, code, name, type FROM account WHERE entity_id = %s AND id = %s",
+            (entity_id, account_id),
+        )
+        row = cur.fetchone()
+    if row is None:
+        return None
+    return Account(
+        account_id=str(row[0]), code=str(row[1]), name=str(row[2]), account_type=str(row[3])
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class AccountEntry:
+    """One posting against an account, with the balance after it."""
+
+    transaction_id: str
+    transaction_date: date
+    description: str | None
+    entry_kind: str
+    reverses_id: str | None
+    actor_principal_id: str
+    actor_class: str
+    acting_for_principal_id: str | None
+    amount: Decimal
+    commodity: str
+    running_balance: Decimal
+
+
+OPENING_BALANCE = """
+    SELECT COALESCE(SUM(p.amount), 0)
+      FROM posting p
+      JOIN ledger_transaction t ON t.id = p.transaction_id
+     WHERE p.entity_id = %(entity_id)s
+       AND p.account_id = %(account_id)s
+       AND t.status = 'posted'
+       AND t.transaction_date < %(since)s
+       AND (%(watermark)s::timestamptz IS NULL OR t.posted_at <= %(watermark)s)
+"""
+
+# The running balance starts from what stood before the period and accumulates in the same
+# order the rows are read. Ordering by (date, posted_at, posting id) is total: two postings on
+# one day resolve by when they entered the books, and two in one transaction by a unique id.
+# `RPT-09` needs the report to be the same every time it is asked for, and an order that can
+# tie is an order the database may return differently on a different day.
+ACCOUNT_DETAIL = """
+    SELECT t.id, t.transaction_date, t.description, t.entry_kind, t.reverses_id,
+           t.actor_principal_id, t.actor_class, t.acting_for_principal_id,
+           p.amount, p.commodity,
+           %(opening)s + SUM(p.amount) OVER (
+               ORDER BY t.transaction_date, t.posted_at, p.id
+               ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+           )
+      FROM posting p
+      JOIN ledger_transaction t ON t.id = p.transaction_id
+     WHERE p.entity_id = %(entity_id)s
+       AND p.account_id = %(account_id)s
+       AND t.status = 'posted'
+       AND t.transaction_date >= %(since)s
+       AND t.transaction_date <= %(as_of)s
+       AND (%(watermark)s::timestamptz IS NULL OR t.posted_at <= %(watermark)s)
+     ORDER BY t.transaction_date, t.posted_at, p.id
+"""
+
+
+def account_detail(
+    conn: psycopg.Connection[Any],
+    *,
+    entity_id: str,
+    account_id: str,
+    since: date,
+    as_of: date,
+    watermark: datetime | None = None,
+) -> tuple[Decimal, list[AccountEntry]]:
+    """Every posting against one account in a period, and the balance it opened with.
+
+    `RPT-05`: "every transaction against it, in order, with a running balance". The opening
+    balance is what makes the running one true — a March statement that started from zero would
+    show the right movements against the wrong figures.
+    """
+    parameters: dict[str, Any] = {
+        "entity_id": entity_id,
+        "account_id": account_id,
+        "since": since,
+        "as_of": as_of,
+        "watermark": watermark,
+    }
+    with conn.cursor() as cur:
+        cur.execute(OPENING_BALANCE, parameters)
+        row = cur.fetchone()
+        opening = Decimal(row[0]) if row is not None else Decimal(0)
+
+        cur.execute(ACCOUNT_DETAIL, {**parameters, "opening": opening})
+        entries = [
+            AccountEntry(
+                transaction_id=str(entry[0]),
+                transaction_date=entry[1],
+                description=entry[2],
+                entry_kind=str(entry[3]),
+                reverses_id=str(entry[4]) if entry[4] is not None else None,
+                actor_principal_id=str(entry[5]),
+                actor_class=str(entry[6]),
+                acting_for_principal_id=str(entry[7]) if entry[7] is not None else None,
+                amount=Decimal(entry[8]),
+                commodity=str(entry[9]),
+                running_balance=Decimal(entry[10]),
+            )
+            for entry in cur.fetchall()
+        ]
+    return opening, entries

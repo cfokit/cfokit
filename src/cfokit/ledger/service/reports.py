@@ -17,16 +17,20 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
+from decimal import Decimal
 
-from cfokit.ledger.repository.reports import AccountBalance
+from cfokit.ledger.errors import AccountNotFound
+from cfokit.ledger.repository.reports import Account, AccountBalance, AccountEntry
 from cfokit.ledger.repository.unit_of_work import Database, EntityWrite
 from cfokit.ledger.service.authorisation import Capability, require
 from cfokit.ledger.service.principal import Principal
 
 __all__ = [
+    "AccountDetail",
     "BalanceSheet",
     "ProfitAndLoss",
     "TrialBalance",
+    "account_detail",
     "balance_sheet",
     "profit_and_loss",
     "trial_balance",
@@ -182,3 +186,63 @@ def _require_read(write: EntityWrite, principal: Principal) -> None:
         else frozenset()
     )
     require(Capability.READ, principal, actor, acted_for)
+
+
+@dataclass(frozen=True, slots=True)
+class AccountDetail:
+    """One account's movements over a period (`RPT-05`)."""
+
+    account: Account
+    since: date
+    as_of: date
+    watermark: datetime | None
+    accounting_basis: str
+    functional_currency: str
+    opening_balance: Decimal
+    entries: tuple[AccountEntry, ...]
+
+    @property
+    def closing_balance(self) -> Decimal:
+        """What the account stood at when the period ended."""
+        if self.entries:
+            return self.entries[-1].running_balance
+        return self.opening_balance
+
+
+def account_detail(
+    database: Database,
+    *,
+    entity_id: str,
+    principal: Principal,
+    account_id: str,
+    since: date,
+    as_of: date,
+    watermark: datetime | None = None,
+) -> AccountDetail:
+    """Every posting against `account_id` between two dates, in order (`RPT-05`).
+
+    This is what `RPT-08` resolves down to: from a figure on a statement to the postings that
+    produced it, and from a posting to the transaction and the principal that wrote it
+    (`LED-20`). Resolving a posting to the rule that assigned it is the other half of `RPT-08`'s
+    chain, and belongs with rules rather than here.
+    """
+    with database.entity_write(entity_id) as write:
+        _require_read(write, principal)
+        settings = write.settings
+        found = write.account(account_id)
+        if found is None:
+            raise AccountNotFound(f"no account {account_id} in this entity")
+        opening, entries = write.account_detail(
+            account_id=account_id, since=since, as_of=as_of, watermark=watermark
+        )
+
+    return AccountDetail(
+        account=found,
+        since=since,
+        as_of=as_of,
+        watermark=watermark,
+        accounting_basis=settings.accounting_basis,
+        functional_currency=settings.functional_currency,
+        opening_balance=opening,
+        entries=tuple(entries),
+    )
