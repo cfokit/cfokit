@@ -228,6 +228,45 @@ class TrialBalanceResponse(BaseModel):
     )
 
 
+class AccountEntryModel(BaseModel):
+    """One movement against an account, with what it left the balance at (RPT-05).
+
+    Carries the transaction and the principal that wrote it, which is where RPT-08's chain
+    goes next and what LED-20 records.
+    """
+
+    transaction_id: str
+    transaction_date: date
+    description: str | None = None
+    entry_kind: str
+    reverses_id: str | None = None
+    actor_principal_id: str
+    actor_class: str
+    acting_for_principal_id: str | None = None
+    amount: str
+    running_balance: str
+
+
+class AccountDetailResponse(BaseModel):
+    """One account's movements over a period, in order (RPT-05)."""
+
+    account_id: str
+    code: str
+    name: str
+    account_type: str
+    since: date
+    as_of: date
+    watermark: datetime | None = None
+    accounting_basis: str = Field(description="Stated on the face of every report (RPT-10).")
+    commodity: str
+    opening_balance: str = Field(
+        description="What the account stood at before the period. Without it the running "
+        "balance would show the right movements against the wrong figures."
+    )
+    closing_balance: str
+    entries: list[AccountEntryModel]
+
+
 class StatementLineModel(BaseModel):
     """One line of a statement, signed so positive means more of what the account is."""
 

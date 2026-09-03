@@ -30,6 +30,8 @@ from fastapi.responses import JSONResponse
 
 from cfokit.ledger.api.models import (
     AccountCreatedResponse,
+    AccountDetailResponse,
+    AccountEntryModel,
     BalanceSheetResponse,
     ClosePeriodRequest,
     CloseYearRequest,
@@ -58,6 +60,7 @@ from cfokit.ledger.engine.periods import Period
 from cfokit.ledger.errors import LedgerError
 from cfokit.ledger.presentation import (
     StatementLine,
+    present_account_detail,
     present_balance_sheet,
     present_profit_and_loss,
     present_trial_balance,
@@ -78,7 +81,12 @@ from cfokit.ledger.service.periods import close_period, reopen_period
 from cfokit.ledger.service.principal import Principal
 from cfokit.ledger.service.read import read_transaction
 from cfokit.ledger.service.readiness import check_readiness
-from cfokit.ledger.service.reports import balance_sheet, profit_and_loss, trial_balance
+from cfokit.ledger.service.reports import (
+    account_detail,
+    balance_sheet,
+    profit_and_loss,
+    trial_balance,
+)
 from cfokit.ledger.service.write import (
     WriteContext,
     post_transaction,
@@ -473,6 +481,66 @@ def create_app(settings: Settings, authenticator: Authenticator | None = None) -
             total_liabilities=str(report.total_liabilities),
             total_equity=str(report.total_equity),
             balances=report.balances,
+        )
+
+    @app.get(
+        "/entities/{entity_id}/accounts/{account_id}/detail",
+        tags=["reports"],
+        summary="Account detail for a period",
+        responses=ERRORS,
+    )
+    def read_account_detail(
+        entity_id: Annotated[str, Path()],
+        account_id: Annotated[str, Path()],
+        since: Annotated[date, Query()],
+        acting: Annotated[Principal, Depends(get_principal)],
+        database: Annotated[Database, Depends(get_database)],
+        as_of: Annotated[date | None, Query()] = None,
+        watermark: Annotated[datetime | None, Query()] = None,
+    ) -> AccountDetailResponse:
+        """Every posting against one account, in order, with a running balance (`RPT-05`).
+
+        This is where `RPT-08` resolves to: from a figure on a statement to the postings that
+        produced it, and from a posting to the transaction and the principal that wrote it.
+        """
+        report = present_account_detail(
+            account_detail(
+                database,
+                entity_id=entity_id,
+                principal=acting,
+                account_id=account_id,
+                since=since,
+                as_of=as_of or date.today(),  # noqa: DTZ011
+                watermark=watermark,
+            )
+        )
+        return AccountDetailResponse(
+            account_id=report.account_id,
+            code=report.code,
+            name=report.name,
+            account_type=report.account_type,
+            since=report.since,
+            as_of=report.as_of,
+            watermark=report.watermark,
+            accounting_basis=report.accounting_basis,
+            commodity=report.commodity,
+            opening_balance=str(report.opening_balance),
+            closing_balance=str(report.closing_balance),
+            entries=[
+                AccountEntryModel(
+                    transaction_id=entry.transaction_id,
+                    transaction_date=entry.transaction_date,
+                    description=entry.description,
+                    entry_kind=entry.entry_kind,
+                    reverses_id=entry.reverses_id,
+                    actor_principal_id=entry.actor_principal_id,
+                    actor_class=entry.actor_class,
+                    acting_for_principal_id=entry.acting_for_principal_id,
+                    amount=str(entry.amount),
+                    running_balance=str(entry.running_balance),
+                )
+                for entry in report.entries
+            ],
         )
 
     # -----------------------------------------------------------------------------------

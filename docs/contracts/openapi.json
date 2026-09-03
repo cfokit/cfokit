@@ -14,6 +14,167 @@
         "title": "AccountCreatedResponse",
         "type": "object"
       },
+      "AccountDetailResponse": {
+        "description": "One account's movements over a period, in order (RPT-05).",
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "string"
+          },
+          "account_type": {
+            "title": "Account Type",
+            "type": "string"
+          },
+          "accounting_basis": {
+            "description": "Stated on the face of every report (RPT-10).",
+            "title": "Accounting Basis",
+            "type": "string"
+          },
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "closing_balance": {
+            "title": "Closing Balance",
+            "type": "string"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "commodity": {
+            "title": "Commodity",
+            "type": "string"
+          },
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/AccountEntryModel"
+            },
+            "title": "Entries",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "opening_balance": {
+            "description": "What the account stood at before the period. Without it the running balance would show the right movements against the wrong figures.",
+            "title": "Opening Balance",
+            "type": "string"
+          },
+          "since": {
+            "format": "date",
+            "title": "Since",
+            "type": "string"
+          },
+          "watermark": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Watermark"
+          }
+        },
+        "required": [
+          "account_id",
+          "code",
+          "name",
+          "account_type",
+          "since",
+          "as_of",
+          "accounting_basis",
+          "commodity",
+          "opening_balance",
+          "closing_balance",
+          "entries"
+        ],
+        "title": "AccountDetailResponse",
+        "type": "object"
+      },
+      "AccountEntryModel": {
+        "description": "One movement against an account, with what it left the balance at (RPT-05).\n\nCarries the transaction and the principal that wrote it, which is where RPT-08's chain\ngoes next and what LED-20 records.",
+        "properties": {
+          "acting_for_principal_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Acting For Principal Id"
+          },
+          "actor_class": {
+            "title": "Actor Class",
+            "type": "string"
+          },
+          "actor_principal_id": {
+            "title": "Actor Principal Id",
+            "type": "string"
+          },
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "entry_kind": {
+            "title": "Entry Kind",
+            "type": "string"
+          },
+          "reverses_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reverses Id"
+          },
+          "running_balance": {
+            "title": "Running Balance",
+            "type": "string"
+          },
+          "transaction_date": {
+            "format": "date",
+            "title": "Transaction Date",
+            "type": "string"
+          },
+          "transaction_id": {
+            "title": "Transaction Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "transaction_id",
+          "transaction_date",
+          "entry_kind",
+          "actor_principal_id",
+          "actor_class",
+          "amount",
+          "running_balance"
+        ],
+        "title": "AccountEntryModel",
+        "type": "object"
+      },
       "BalanceSheetResponse": {
         "description": "Assets, liabilities and equity as of a date (RPT-03).",
         "properties": {
@@ -1067,6 +1228,158 @@
         "summary": "Add an account to the chart",
         "tags": [
           "administration"
+        ]
+      }
+    },
+    "/entities/{entity_id}/accounts/{account_id}/detail": {
+      "get": {
+        "description": "Every posting against one account, in order, with a running balance (`RPT-05`).\n\nThis is where `RPT-08` resolves to: from a figure on a statement to the postings that\nproduced it, and from a posting to the transaction and the principal that wrote it.",
+        "operationId": "read_account_detail_entities__entity_id__accounts__account_id__detail_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "since",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Since",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          },
+          {
+            "in": "query",
+            "name": "watermark",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Watermark"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountDetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Account detail for a period",
+        "tags": [
+          "reports"
         ]
       }
     },

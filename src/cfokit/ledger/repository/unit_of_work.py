@@ -215,6 +215,28 @@ class EntityWrite:
             watermark=watermark,
         )
 
+    def account(self, account_id: str) -> reports.Account | None:
+        """One account in this entity, or None if there is no such account."""
+        return reports.account(self._conn, entity_id=self._entity_id, account_id=account_id)
+
+    def account_detail(
+        self,
+        *,
+        account_id: str,
+        since: date,
+        as_of: date,
+        watermark: datetime | None = None,
+    ) -> tuple[Decimal, list[reports.AccountEntry]]:
+        """Postings against one account in a period, and the balance it opened with."""
+        return reports.account_detail(
+            self._conn,
+            entity_id=self._entity_id,
+            account_id=account_id,
+            since=since,
+            as_of=as_of,
+            watermark=watermark,
+        )
+
     def closing_entries(self, year: FiscalYear) -> list[str]:
         return closes.closing_entries(
             self._conn, entity_id=self._entity_id, start=year.start, end=year.end

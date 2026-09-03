@@ -48,10 +48,12 @@ from cfokit.ledger.engine import Entry, Posting
 from cfokit.ledger.errors import LedgerError, NotAuthenticated
 from cfokit.ledger.mcp.auth import LedgerTokenVerifier
 from cfokit.ledger.presentation import (
+    PresentedAccountDetail,
     PresentedBalanceSheet,
     PresentedProfitAndLoss,
     PresentedTrialBalance,
     StatementLine,
+    present_account_detail,
     present_balance_sheet,
     present_profit_and_loss,
     present_trial_balance,
@@ -65,7 +67,12 @@ from cfokit.ledger.service.authentication import (
 from cfokit.ledger.service.principal import Principal
 from cfokit.ledger.service.read import read_transaction
 from cfokit.ledger.service.readiness import check_readiness
-from cfokit.ledger.service.reports import balance_sheet, profit_and_loss, trial_balance
+from cfokit.ledger.service.reports import (
+    account_detail,
+    balance_sheet,
+    profit_and_loss,
+    trial_balance,
+)
 from cfokit.ledger.service.write import (
     WriteContext,
     post_transaction,
@@ -103,7 +110,10 @@ def _statement_lines(lines: Iterable[StatementLine]) -> list[dict[str, Any]]:
 
 
 def _produced_on(
-    report: PresentedTrialBalance | PresentedProfitAndLoss | PresentedBalanceSheet,
+    report: PresentedAccountDetail
+    | PresentedTrialBalance
+    | PresentedProfitAndLoss
+    | PresentedBalanceSheet,
 ) -> dict[str, Any]:
     """What every report states on its face (`RPT-10`, `RPT-11`)."""
     return {
@@ -451,6 +461,64 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
                 "total_liabilities": str(report.total_liabilities),
                 "total_equity": str(report.total_equity),
                 "balances": report.balances,
+            }
+
+        return _refusals(work)
+
+    @server.tool(
+        name="account_detail",
+        description=(
+            "Every posting against one account between two dates, in order, with a running "
+            "balance and the balance the period opened with. Each entry names the transaction "
+            "and the principal that wrote it, so a figure on a statement can be followed to "
+            "what produced it."
+        ),
+    )
+    def read_account_detail(
+        entity_id: str,
+        account_id: str,
+        since: str,
+        as_of: str | None = None,
+        watermark: str | None = None,
+    ) -> dict[str, Any]:
+        def work() -> dict[str, Any]:
+            when, taken = _at(as_of, watermark)
+            start, _ = _at(since, None)
+            report = present_account_detail(
+                account_detail(
+                    database,
+                    entity_id=entity_id,
+                    principal=acting(),
+                    account_id=account_id,
+                    since=start,
+                    as_of=when,
+                    watermark=taken,
+                )
+            )
+            return {
+                **_produced_on(report),
+                "account_id": report.account_id,
+                "code": report.code,
+                "name": report.name,
+                "account_type": report.account_type,
+                "since": report.since.isoformat(),
+                "opening_balance": str(report.opening_balance),
+                "closing_balance": str(report.closing_balance),
+                "entries": [
+                    {
+                        "transaction_id": entry.transaction_id,
+                        "transaction_date": entry.transaction_date.isoformat(),
+                        "description": entry.description,
+                        "entry_kind": entry.entry_kind,
+                        "reverses_id": entry.reverses_id,
+                        "actor_principal_id": entry.actor_principal_id,
+                        "actor_class": entry.actor_class,
+                        "acting_for_principal_id": entry.acting_for_principal_id,
+                        "amount": str(entry.amount),
+                        "running_balance": str(entry.running_balance),
+                    }
+                    for entry in report.entries
+                ],
             }
 
         return _refusals(work)

@@ -1,5 +1,56 @@
 [
   {
+    "description": "Every posting against one account between two dates, in order, with a running balance and the balance the period opened with. Each entry names the transaction and the principal that wrote it, so a figure on a statement can be followed to what produced it.",
+    "inputSchema": {
+      "properties": {
+        "account_id": {
+          "title": "Account Id",
+          "type": "string"
+        },
+        "as_of": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "As Of"
+        },
+        "entity_id": {
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "since": {
+          "title": "Since",
+          "type": "string"
+        },
+        "watermark": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Watermark"
+        }
+      },
+      "required": [
+        "entity_id",
+        "account_id",
+        "since"
+      ],
+      "title": "read_account_detailArguments",
+      "type": "object"
+    },
+    "name": "account_detail"
+  },
+  {
     "description": "Assets, liabilities and equity as of a date. Equity includes unclosed_earnings — income and expense not yet closed to retained earnings, which happens only at a fiscal year end — so the statement balances mid-year as well as after a close.",
     "inputSchema": {
       "properties": {
