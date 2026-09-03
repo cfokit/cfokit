@@ -18,6 +18,7 @@ __all__ = [
     "NormalBalance",
     "Statement",
     "increases",
+    "natural_amount",
     "normal_balance",
     "statement",
 ]
@@ -85,3 +86,16 @@ def increases(account_type: AccountType, amount: Decimal) -> bool:
     if normal_balance(account_type) is NormalBalance.DEBIT:
         return amount > 0
     return amount < 0
+
+
+def natural_amount(account_type: AccountType, balance: Decimal) -> Decimal:
+    """A signed balance re-signed so positive means "more of what this account is".
+
+    Postings are signed with positive meaning debit, so a credit-normal account carries a
+    negative balance when it has grown. A reader expects revenue of 100 to read as 100 rather
+    than as -100, and every statement needs that flip — so the rule lives here once, with the
+    type that determines it (`LED-02`), rather than in each report.
+    """
+    if normal_balance(account_type) is NormalBalance.DEBIT:
+        return balance
+    return -balance

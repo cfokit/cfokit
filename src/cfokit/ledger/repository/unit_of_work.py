@@ -197,12 +197,22 @@ class EntityWrite:
             self._conn, entity_id=self._entity_id, start=year.start, end=year.end
         )
 
-    def trial_balance(
-        self, *, as_of: date, watermark: datetime | None
+    def account_balances(
+        self,
+        *,
+        as_of: date,
+        since: date | None = None,
+        types: tuple[str, ...] | None = None,
+        watermark: datetime | None = None,
     ) -> list[reports.AccountBalance]:
-        """Every account with a non-zero balance as of `as_of` (`RPT-01`, `RPT-11`)."""
-        return reports.trial_balance(
-            self._conn, entity_id=self._entity_id, as_of=as_of, watermark=watermark
+        """Non-zero balances, filtered to a window and a set of types (`RPT-01`, `RPT-11`)."""
+        return reports.account_balances(
+            self._conn,
+            entity_id=self._entity_id,
+            as_of=as_of,
+            since=since,
+            types=types,
+            watermark=watermark,
         )
 
     def closing_entries(self, year: FiscalYear) -> list[str]:
