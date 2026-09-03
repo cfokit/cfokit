@@ -30,8 +30,8 @@ from __future__ import annotations
 
 import json
 import uuid
-from collections.abc import Callable
-from datetime import date
+from collections.abc import Callable, Iterable
+from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from http import HTTPStatus
 from typing import Any
@@ -47,6 +47,15 @@ from cfokit.ledger.config import Settings
 from cfokit.ledger.engine import Entry, Posting
 from cfokit.ledger.errors import LedgerError, NotAuthenticated
 from cfokit.ledger.mcp.auth import LedgerTokenVerifier
+from cfokit.ledger.presentation import (
+    PresentedBalanceSheet,
+    PresentedProfitAndLoss,
+    PresentedTrialBalance,
+    StatementLine,
+    present_balance_sheet,
+    present_profit_and_loss,
+    present_trial_balance,
+)
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.authentication import (
     Authenticator,
@@ -56,6 +65,7 @@ from cfokit.ledger.service.authentication import (
 from cfokit.ledger.service.principal import Principal
 from cfokit.ledger.service.read import read_transaction
 from cfokit.ledger.service.readiness import check_readiness
+from cfokit.ledger.service.reports import balance_sheet, profit_and_loss, trial_balance
 from cfokit.ledger.service.write import (
     WriteContext,
     post_transaction,
@@ -77,6 +87,32 @@ class LedgerToolError(Exception):
         super().__init__(json.dumps({"code": code, "message": message}))
         self.code = code
         self.detail = message
+
+
+def _statement_lines(lines: Iterable[StatementLine]) -> list[dict[str, Any]]:
+    return [
+        {
+            "account_id": line.account_id,
+            "code": line.code,
+            "name": line.name,
+            "account_type": line.account_type,
+            "amount": str(line.amount),
+        }
+        for line in lines
+    ]
+
+
+def _produced_on(
+    report: PresentedTrialBalance | PresentedProfitAndLoss | PresentedBalanceSheet,
+) -> dict[str, Any]:
+    """What every report states on its face (`RPT-10`, `RPT-11`)."""
+    return {
+        "ok": True,
+        "as_of": report.as_of.isoformat(),
+        "watermark": report.watermark.isoformat() if report.watermark else None,
+        "accounting_basis": report.accounting_basis,
+        "commodity": report.commodity,
+    }
 
 
 def refused(code: str, message: str) -> dict[str, Any]:
@@ -291,6 +327,130 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
                 "transaction_id": written.transaction_id,
                 "status": written.status,
                 "replayed": written.replayed,
+            }
+
+        return _refusals(work)
+
+    def _at(as_of: str | None, watermark: str | None) -> tuple[date, datetime | None]:
+        """Parse the two moments a report is produced at, refusing a malformed one clearly."""
+        try:
+            when = date.fromisoformat(as_of) if as_of else date.today()  # noqa: DTZ011
+            taken = datetime.fromisoformat(watermark) if watermark else None
+        except ValueError as exc:
+            raise LedgerToolError("invalid_date", str(exc)) from exc
+        return when, taken
+
+    @server.tool(
+        name="trial_balance",
+        description=(
+            "Every account with a non-zero balance as of a date. Pass watermark to reproduce "
+            "the books as they stood at an earlier moment, unchanged by anything posted since. "
+            "Figures are decimal strings rounded for display; totals are computed unrounded, "
+            "so a column summed by hand may differ from the printed total."
+        ),
+    )
+    def read_trial_balance(
+        entity_id: str, as_of: str | None = None, watermark: str | None = None
+    ) -> dict[str, Any]:
+        def work() -> dict[str, Any]:
+            when, taken = _at(as_of, watermark)
+            report = present_trial_balance(
+                trial_balance(
+                    database,
+                    entity_id=entity_id,
+                    principal=acting(),
+                    as_of=when,
+                    watermark=taken,
+                )
+            )
+            return {
+                **_produced_on(report),
+                "lines": [
+                    {
+                        "account_id": line.account_id,
+                        "code": line.code,
+                        "name": line.name,
+                        "account_type": line.account_type,
+                        "debit": str(line.debit) if line.debit is not None else None,
+                        "credit": str(line.credit) if line.credit is not None else None,
+                    }
+                    for line in report.lines
+                ],
+                "total_debit": str(report.total_debit),
+                "total_credit": str(report.total_credit),
+                "balances": report.balances,
+            }
+
+        return _refusals(work)
+
+    @server.tool(
+        name="profit_and_loss",
+        description=(
+            "Income and expense between two dates, inclusive. Amounts are signed so positive "
+            "means more of what the account is: revenue reads as a positive figure. Net income "
+            "is computed from the unrounded totals rather than by subtracting the printed ones."
+        ),
+    )
+    def read_profit_and_loss(
+        entity_id: str, since: str, as_of: str | None = None, watermark: str | None = None
+    ) -> dict[str, Any]:
+        def work() -> dict[str, Any]:
+            when, taken = _at(as_of, watermark)
+            start, _ = _at(since, None)
+            report = present_profit_and_loss(
+                profit_and_loss(
+                    database,
+                    entity_id=entity_id,
+                    principal=acting(),
+                    since=start,
+                    as_of=when,
+                    watermark=taken,
+                )
+            )
+            return {
+                **_produced_on(report),
+                "since": report.since.isoformat(),
+                "income": _statement_lines(report.income),
+                "expenses": _statement_lines(report.expenses),
+                "total_income": str(report.total_income),
+                "total_expenses": str(report.total_expenses),
+                "net_income": str(report.net_income),
+            }
+
+        return _refusals(work)
+
+    @server.tool(
+        name="balance_sheet",
+        description=(
+            "Assets, liabilities and equity as of a date. Equity includes unclosed_earnings — "
+            "income and expense not yet closed to retained earnings, which happens only at a "
+            "fiscal year end — so the statement balances mid-year as well as after a close."
+        ),
+    )
+    def read_balance_sheet(
+        entity_id: str, as_of: str | None = None, watermark: str | None = None
+    ) -> dict[str, Any]:
+        def work() -> dict[str, Any]:
+            when, taken = _at(as_of, watermark)
+            report = present_balance_sheet(
+                balance_sheet(
+                    database,
+                    entity_id=entity_id,
+                    principal=acting(),
+                    as_of=when,
+                    watermark=taken,
+                )
+            )
+            return {
+                **_produced_on(report),
+                "assets": _statement_lines(report.assets),
+                "liabilities": _statement_lines(report.liabilities),
+                "equity": _statement_lines(report.equity),
+                "unclosed_earnings": str(report.unclosed_earnings),
+                "total_assets": str(report.total_assets),
+                "total_liabilities": str(report.total_liabilities),
+                "total_equity": str(report.total_equity),
+                "balances": report.balances,
             }
 
         return _refusals(work)

@@ -1,5 +1,46 @@
 [
   {
+    "description": "Assets, liabilities and equity as of a date. Equity includes unclosed_earnings — income and expense not yet closed to retained earnings, which happens only at a fiscal year end — so the statement balances mid-year as well as after a close.",
+    "inputSchema": {
+      "properties": {
+        "as_of": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "As Of"
+        },
+        "entity_id": {
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "watermark": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Watermark"
+        }
+      },
+      "required": [
+        "entity_id"
+      ],
+      "title": "read_balance_sheetArguments",
+      "type": "object"
+    },
+    "name": "balance_sheet"
+  },
+  {
     "description": "Post a draft transaction. Posting is the point of no return: a posted transaction is never edited or deleted, only reversed.",
     "inputSchema": {
       "properties": {
@@ -25,6 +66,52 @@
       "type": "object"
     },
     "name": "post_transaction"
+  },
+  {
+    "description": "Income and expense between two dates, inclusive. Amounts are signed so positive means more of what the account is: revenue reads as a positive figure. Net income is computed from the unrounded totals rather than by subtracting the printed ones.",
+    "inputSchema": {
+      "properties": {
+        "as_of": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "As Of"
+        },
+        "entity_id": {
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "since": {
+          "title": "Since",
+          "type": "string"
+        },
+        "watermark": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Watermark"
+        }
+      },
+      "required": [
+        "entity_id",
+        "since"
+      ],
+      "title": "read_profit_and_lossArguments",
+      "type": "object"
+    },
+    "name": "profit_and_loss"
   },
   {
     "description": "Read a transaction and its postings, including what wrote it.",
@@ -168,5 +255,46 @@
       "type": "object"
     },
     "name": "reverse_transaction"
+  },
+  {
+    "description": "Every account with a non-zero balance as of a date. Pass watermark to reproduce the books as they stood at an earlier moment, unchanged by anything posted since. Figures are decimal strings rounded for display; totals are computed unrounded, so a column summed by hand may differ from the printed total.",
+    "inputSchema": {
+      "properties": {
+        "as_of": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "As Of"
+        },
+        "entity_id": {
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "watermark": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Watermark"
+        }
+      },
+      "required": [
+        "entity_id"
+      ],
+      "title": "read_trial_balanceArguments",
+      "type": "object"
+    },
+    "name": "trial_balance"
   }
 ]
