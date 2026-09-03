@@ -175,6 +175,30 @@
         "title": "AccountEntryModel",
         "type": "object"
       },
+      "AppliedModel": {
+        "description": "How much of a settlement goes against one obligation (AR-12).",
+        "properties": {
+          "amount": {
+            "description": "Signed decimal string, in the entity's currency.",
+            "examples": [
+              "100.00",
+              "-1250.5000000000"
+            ],
+            "title": "Amount",
+            "type": "string"
+          },
+          "obligation_id": {
+            "title": "Obligation Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "obligation_id",
+          "amount"
+        ],
+        "title": "AppliedModel",
+        "type": "object"
+      },
       "BalanceSheetResponse": {
         "description": "Assets, liabilities and equity as of a date (RPT-03).",
         "properties": {
@@ -681,6 +705,73 @@
         "title": "GrantRoleRequest",
         "type": "object"
       },
+      "ObligationDetailResponse": {
+        "description": "One obligation read as both events (LED-17).",
+        "properties": {
+          "obligation": {
+            "$ref": "#/components/schemas/ObligationModel"
+          },
+          "settlements": {
+            "items": {
+              "$ref": "#/components/schemas/SettlementModel"
+            },
+            "title": "Settlements",
+            "type": "array"
+          }
+        },
+        "required": [
+          "obligation",
+          "settlements"
+        ],
+        "title": "ObligationDetailResponse",
+        "type": "object"
+      },
+      "ObligationModel": {
+        "description": "A commitment to receive or pay, with what has been applied to it (LED-17).",
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "commodity": {
+            "title": "Commodity",
+            "type": "string"
+          },
+          "obligation_id": {
+            "title": "Obligation Id",
+            "type": "string"
+          },
+          "outstanding": {
+            "description": "Derived, never stored: the amount less what has been applied.",
+            "title": "Outstanding",
+            "type": "string"
+          },
+          "settled": {
+            "title": "Settled",
+            "type": "string"
+          },
+          "transaction_date": {
+            "format": "date",
+            "title": "Transaction Date",
+            "type": "string"
+          },
+          "transaction_id": {
+            "title": "Transaction Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "obligation_id",
+          "transaction_id",
+          "transaction_date",
+          "amount",
+          "settled",
+          "outstanding",
+          "commodity"
+        ],
+        "title": "ObligationModel",
+        "type": "object"
+      },
       "OpenBalancesRequest": {
         "description": "Carry balances in from before CFOKit held the books (LED-10).\n\nThe equity side is not supplied: the ledger computes the counterweight, so an entry that\ndoes not balance is impossible rather than refused.",
         "properties": {
@@ -729,6 +820,34 @@
           "equity_amount"
         ],
         "title": "OpenedBooksResponse",
+        "type": "object"
+      },
+      "OutstandingResponse": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "obligations": {
+            "items": {
+              "$ref": "#/components/schemas/ObligationModel"
+            },
+            "title": "Obligations",
+            "type": "array"
+          }
+        },
+        "required": [
+          "obligations"
+        ],
+        "title": "OutstandingResponse",
         "type": "object"
       },
       "PeriodCloseResponse": {
@@ -879,6 +998,30 @@
             "title": "Postings",
             "type": "array"
           },
+          "raises_obligation": {
+            "anyOf": [
+              {
+                "examples": [
+                  "100.00",
+                  "-1250.5000000000"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Record this transaction as raising an obligation of this amount (LED-17) — an invoice, or anything else owed. Requires post: a draft is not in the books.",
+            "title": "Raises Obligation"
+          },
+          "settles": {
+            "description": "Obligations this transaction settles, and by how much (AR-12). Partial payment and overpayment are both representable. Requires post.",
+            "items": {
+              "$ref": "#/components/schemas/AppliedModel"
+            },
+            "title": "Settles",
+            "type": "array"
+          },
           "transaction_date": {
             "description": "When the event economically occurred. Not when it was recorded — that is server-assigned and cannot be supplied.",
             "format": "date",
@@ -920,6 +1063,40 @@
           "reason"
         ],
         "title": "ReopenPeriodRequest",
+        "type": "object"
+      },
+      "SettlementModel": {
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "commodity": {
+            "title": "Commodity",
+            "type": "string"
+          },
+          "settlement_id": {
+            "title": "Settlement Id",
+            "type": "string"
+          },
+          "transaction_date": {
+            "format": "date",
+            "title": "Transaction Date",
+            "type": "string"
+          },
+          "transaction_id": {
+            "title": "Transaction Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "settlement_id",
+          "transaction_id",
+          "transaction_date",
+          "amount",
+          "commodity"
+        ],
+        "title": "SettlementModel",
         "type": "object"
       },
       "StatementLineModel": {
@@ -1980,6 +2157,240 @@
         "summary": "Revoke a grant",
         "tags": [
           "administration"
+        ]
+      }
+    },
+    "/entities/{entity_id}/obligations": {
+      "get": {
+        "description": "What is still owed, and what has been applied against it (`LED-17`).",
+        "operationId": "read_outstanding_entities__entity_id__obligations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          },
+          {
+            "in": "query",
+            "name": "unsettled_only",
+            "required": false,
+            "schema": {
+              "default": true,
+              "title": "Unsettled Only",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutstandingResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Obligations and what is outstanding",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/entities/{entity_id}/obligations/{obligation_id}": {
+      "get": {
+        "description": "`LED-17`: recoverable as the commitment it was, or as what has settled it.",
+        "operationId": "read_obligation_entities__entity_id__obligations__obligation_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "obligation_id",
+            "required": true,
+            "schema": {
+              "title": "Obligation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObligationDetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "One obligation, read as both events",
+        "tags": [
+          "reports"
         ]
       }
     },

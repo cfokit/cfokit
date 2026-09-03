@@ -36,6 +36,7 @@ from cfokit.ledger.repository import (
     closes,
     grants,
     idempotency,
+    obligations,
     periods,
     reports,
     transactions,
@@ -260,6 +261,50 @@ class EntityWrite:
             start=year.start,
             end=year.end,
             close_id=close_id,
+        )
+
+    # --- obligations and settlements (LED-17, ADR-0037) ----------------------------------
+
+    def raise_obligation(self, *, transaction_id: str, amount: Decimal, commodity: str) -> str:
+        return obligations.insert_obligation(
+            self._conn,
+            entity_id=self._entity_id,
+            transaction_id=transaction_id,
+            amount=amount,
+            commodity=commodity,
+        )
+
+    def apply_settlement(
+        self, *, obligation_id: str, transaction_id: str, amount: Decimal, commodity: str
+    ) -> str:
+        return obligations.insert_settlement(
+            self._conn,
+            entity_id=self._entity_id,
+            obligation_id=obligation_id,
+            transaction_id=transaction_id,
+            amount=amount,
+            commodity=commodity,
+        )
+
+    def outstanding(
+        self,
+        *,
+        obligation_id: str | None = None,
+        as_of: date | None = None,
+        unsettled_only: bool = False,
+    ) -> list[obligations.Obligation]:
+        """Obligations and how much has been applied to each. Outstanding is derived."""
+        return obligations.outstanding(
+            self._conn,
+            entity_id=self._entity_id,
+            obligation_id=obligation_id,
+            as_of=as_of,
+            unsettled_only=unsettled_only,
+        )
+
+    def settlements_for(self, obligation_id: str) -> list[obligations.Settlement]:
+        return obligations.settlements_for(
+            self._conn, entity_id=self._entity_id, obligation_id=obligation_id
         )
 
     # --- the books -----------------------------------------------------------------------

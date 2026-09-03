@@ -76,6 +76,16 @@ class RecordTransactionRequest(BaseModel):
         description="Every side of the transaction. Must sum to zero per commodity to post."
     )
     description: str | None = None
+    raises_obligation: Money | None = Field(
+        default=None,
+        description="Record this transaction as raising an obligation of this amount (LED-17) "
+        "— an invoice, or anything else owed. Requires post: a draft is not in the books.",
+    )
+    settles: list[AppliedModel] = Field(
+        default_factory=list,
+        description="Obligations this transaction settles, and by how much (AR-12). Partial "
+        "payment and overpayment are both representable. Requires post.",
+    )
     post: bool = Field(
         default=False,
         description="Post immediately. A draft is freely editable; posting is the point of no "
@@ -358,6 +368,47 @@ class BalanceSheetResponse(BaseModel):
         description="Whether assets equal liabilities plus equity, which is what the statement "
         "asserts."
     )
+
+
+class AppliedModel(BaseModel):
+    """How much of a settlement goes against one obligation (AR-12)."""
+
+    obligation_id: str
+    amount: Money = Field(description="Signed decimal string, in the entity's currency.")
+
+
+class ObligationModel(BaseModel):
+    """A commitment to receive or pay, with what has been applied to it (LED-17)."""
+
+    obligation_id: str
+    transaction_id: str
+    transaction_date: date
+    amount: str
+    settled: str
+    outstanding: str = Field(
+        description="Derived, never stored: the amount less what has been applied."
+    )
+    commodity: str
+
+
+class SettlementModel(BaseModel):
+    settlement_id: str
+    transaction_id: str
+    transaction_date: date
+    amount: str
+    commodity: str
+
+
+class ObligationDetailResponse(BaseModel):
+    """One obligation read as both events (LED-17)."""
+
+    obligation: ObligationModel
+    settlements: list[SettlementModel]
+
+
+class OutstandingResponse(BaseModel):
+    as_of: date | None = None
+    obligations: list[ObligationModel]
 
 
 class CarriedBalanceModel(BaseModel):

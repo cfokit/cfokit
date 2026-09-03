@@ -30,14 +30,17 @@ import hashlib
 import json
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
+from decimal import Decimal
 from typing import Any
 
 from cfokit.ledger.engine import Entry, build_reversal, check_postable
 from cfokit.ledger.engine.periods import period_of
 from cfokit.ledger.errors import (
     IdempotencyKeyRequired,
+    ObligationNotFound,
     PeriodClosed,
     TransactionAlreadyPosted,
+    TransactionIncomplete,
     TransactionNotFound,
 )
 from cfokit.ledger.repository.unit_of_work import Database, EntityWrite
@@ -65,6 +68,19 @@ class WriteContext:
     principal: Principal
     request_id: str
     idempotency_key: str
+
+
+@dataclass(frozen=True, slots=True)
+class Applied:
+    """How much of a settlement goes against one obligation (`AR-12`).
+
+    Stated per obligation rather than split by the ledger: a payment covering three invoices is
+    applied the way the person paying meant it, and no rule the system invents would be right
+    more often than being told.
+    """
+
+    obligation_id: str
+    amount: Decimal
 
 
 @dataclass(frozen=True, slots=True)
@@ -134,6 +150,8 @@ def record_transaction(
     entry: Entry,
     post: bool,
     entry_kind: str = "ordinary",
+    raises_obligation: Decimal | None = None,
+    settles: tuple[Applied, ...] = (),
 ) -> WrittenTransaction:
     """Record a transaction, as a draft or posted straight through.
 
@@ -144,6 +162,15 @@ def record_transaction(
     An agent's writes are drafts by default — ADR-0007: "the agent proposes; a person's
     confirmation posts" — but that is a decision for the caller and its grant model, not
     something this function can infer from `actor_class`.
+
+    **`raises_obligation` and `settles` record the link `LED-17` requires**, in the same
+    transaction as the postings. ADR-0037 § 3 makes storing that link the decision's whole
+    substance: inferring it later from account and transaction type is what the incumbents do,
+    and a journal entry touching receivables defeats it. Recorded here it cannot be lost, and
+    it cannot describe a transaction that does not exist.
+
+    Both need the transaction posted. A draft is not in the books (`LED-07`), so an obligation
+    raised by one would be owed by nobody and a settlement against one would apply to nothing.
     """
     _require_key(context)
 
@@ -169,6 +196,12 @@ def record_transaction(
 
         _authorise(write, context, Capability.POST if post else Capability.RECORD)
 
+        if (raises_obligation is not None or settles) and not post:
+            raise TransactionIncomplete(
+                "an obligation or a settlement needs the transaction posted; a draft is not "
+                "in the books"
+            )
+
         if post:
             _require_open(write, entry.transaction_date)
             # The ergonomic check, so the caller gets a stable code and a readable message
@@ -187,6 +220,24 @@ def record_transaction(
             acting_for_principal_id=context.principal.acting_for,
         )
         write.add_postings(transaction_id, entry.postings)
+
+        if raises_obligation is not None:
+            write.raise_obligation(
+                transaction_id=transaction_id,
+                amount=raises_obligation,
+                commodity=write.functional_currency,
+            )
+        for applied in settles:
+            if write.outstanding(obligation_id=applied.obligation_id) == []:
+                raise ObligationNotFound(
+                    f"no obligation {applied.obligation_id} in this entity"
+                )
+            write.apply_settlement(
+                obligation_id=applied.obligation_id,
+                transaction_id=transaction_id,
+                amount=applied.amount,
+                commodity=write.functional_currency,
+            )
 
         status = "draft"
         if post:
