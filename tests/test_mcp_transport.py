@@ -31,7 +31,18 @@ from cfokit.ledger.mcp import create_server
 
 pytestmark = pytest.mark.anyio
 
-TOOLS = {"post_transaction", "read_transaction", "record_transaction", "reverse_transaction"}
+TOOLS = {
+    # The books, written and read through one surface. ADR-0009 makes the two adapters
+    # siblings over the same service; a report REST could produce and MCP could not would be
+    # the place they stopped being that.
+    "balance_sheet",
+    "post_transaction",
+    "profit_and_loss",
+    "read_transaction",
+    "record_transaction",
+    "reverse_transaction",
+    "trial_balance",
+}
 
 
 @pytest.fixture

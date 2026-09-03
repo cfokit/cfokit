@@ -484,3 +484,103 @@ async def test_a_real_client_books_over_the_transport(
 
     assert read_back.structured_content is not None
     assert read_back.structured_content["actor_principal_id"] == PERSON.id
+
+
+# --- Reports through both surfaces (ADR-0009, RPT-09) -------------------------------------
+
+
+@pytest.mark.anyio
+async def test_both_surfaces_report_the_same_trial_balance(
+    authenticated_caller: None,
+    settings: Settings,
+    books: tuple[str, str, str],
+    client: TestClient,
+) -> None:
+    """ADR-0009: one service, two adapters, and the same books either way.
+
+    `RPT-09` asks for exactly this — "the same books, queried twice by different callers
+    phrasing the request differently, produce identical figures" — and it cannot be checked
+    from either side alone, which is why it lives here.
+    """
+    entity_id, cash, revenue = books
+    client.post(
+        f"/entities/{entity_id}/transactions", json=body(cash, revenue), headers=headers()
+    )
+    server = create_server(settings, authenticator=StubAuthenticator())
+
+    rest = client.get(f"/entities/{entity_id}/trial-balance", params={"as_of": "2026-12-31"})
+    result = await server.call_tool(
+        "trial_balance", {"entity_id": entity_id, "as_of": "2026-12-31"}
+    )
+
+    assert isinstance(result, CallToolResult)
+    mcp = result.structured_content
+    assert mcp is not None
+    assert rest.status_code == 200
+    assert mcp["total_debit"] == rest.json()["total_debit"] == "100.00"
+    assert mcp["total_credit"] == rest.json()["total_credit"] == "100.00"
+    assert [line["code"] for line in mcp["lines"]] == [
+        line["code"] for line in rest.json()["lines"]
+    ]
+
+
+@pytest.mark.anyio
+async def test_both_surfaces_report_the_same_statements(
+    authenticated_caller: None,
+    settings: Settings,
+    books: tuple[str, str, str],
+    client: TestClient,
+) -> None:
+    """The same again for the two statements, including the basis each states on its face."""
+    entity_id, cash, revenue = books
+    client.post(
+        f"/entities/{entity_id}/transactions", json=body(cash, revenue), headers=headers()
+    )
+    server = create_server(settings, authenticator=StubAuthenticator())
+
+    rest_pl = client.get(
+        f"/entities/{entity_id}/profit-and-loss",
+        params={"since": "2026-01-01", "as_of": "2026-12-31"},
+    ).json()
+    pl_result = await server.call_tool(
+        "profit_and_loss",
+        {"entity_id": entity_id, "since": "2026-01-01", "as_of": "2026-12-31"},
+    )
+    rest_bs = client.get(
+        f"/entities/{entity_id}/balance-sheet", params={"as_of": "2026-12-31"}
+    ).json()
+    bs_result = await server.call_tool(
+        "balance_sheet", {"entity_id": entity_id, "as_of": "2026-12-31"}
+    )
+
+    assert isinstance(pl_result, CallToolResult)
+    assert isinstance(bs_result, CallToolResult)
+    mcp_pl, mcp_bs = pl_result.structured_content, bs_result.structured_content
+    assert mcp_pl is not None and mcp_bs is not None
+
+    assert mcp_pl["net_income"] == rest_pl["net_income"] == "100.00"
+    assert mcp_pl["accounting_basis"] == rest_pl["accounting_basis"] == "accrual"
+    assert mcp_bs["unclosed_earnings"] == rest_bs["unclosed_earnings"] == "100.00"
+    assert mcp_bs["balances"] is rest_bs["balances"] is True
+
+
+@pytest.mark.anyio
+async def test_a_report_refuses_a_malformed_date_with_a_code(
+    authenticated_caller: None, settings: Settings, books: tuple[str, str, str]
+) -> None:
+    """A refusal is a result carrying `ok: false`, not an exception the SDK stringifies.
+
+    ADR-0015 makes the code a published contract callers branch on, and a code recoverable
+    only by substring-parsing a formatted message is not one.
+    """
+    entity_id, _, _ = books
+    server = create_server(settings, authenticator=StubAuthenticator())
+
+    result = await server.call_tool(
+        "trial_balance", {"entity_id": entity_id, "as_of": "not-a-date"}
+    )
+
+    assert isinstance(result, CallToolResult)
+    assert result.structured_content is not None
+    assert result.structured_content["ok"] is False
+    assert result.structured_content["code"] == "invalid_date"

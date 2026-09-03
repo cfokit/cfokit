@@ -107,10 +107,13 @@ def test_the_mcp_tool_surface_is_published() -> None:
     published = json.loads((CONTRACTS / "mcp-tools.json").read_text(encoding="utf-8"))
 
     assert [tool["name"] for tool in published] == [
+        "balance_sheet",
         "post_transaction",
+        "profit_and_loss",
         "read_transaction",
         "record_transaction",
         "reverse_transaction",
+        "trial_balance",
     ]
     assert all(tool["description"] for tool in published), "every tool describes itself"
 
