@@ -67,6 +67,7 @@ from cfokit.ledger.service.authentication import (
     TokenAuthenticator,
     principal_from_claims,
 )
+from cfokit.ledger.service.issuance import Issued, issue_statement, issued
 from cfokit.ledger.service.opening import CarriedBalance, open_balances
 from cfokit.ledger.service.principal import Principal
 from cfokit.ledger.service.read import read_transaction
@@ -150,6 +151,21 @@ def _comparative_line(line: ComparativeLine) -> dict[str, Any]:
 
 def _comparative_lines(lines: Iterable[ComparativeLine]) -> list[dict[str, Any]]:
     return [_comparative_line(line) for line in lines]
+
+
+def _issued(record: Issued) -> dict[str, Any]:
+    return {
+        "issuance_id": record.statement.issuance_id,
+        "report": record.statement.report,
+        "since": record.statement.since.isoformat() if record.statement.since else None,
+        "as_of": record.statement.as_of.isoformat(),
+        "watermark": record.statement.watermark.isoformat(),
+        "issued_by": record.statement.issued_by,
+        "issued_at": record.statement.issued_at.isoformat(),
+        "issued_to": record.statement.issued_to,
+        "superseded": record.superseded,
+        "superseded_by": record.superseded_by,
+    }
 
 
 def _obligation(found: Obligation) -> dict[str, Any]:
@@ -462,6 +478,61 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
                 "transaction_id": opened.transaction_id,
                 "as_of": opened.as_of.isoformat(),
                 "equity_amount": str(opened.equity_amount),
+            }
+
+        return _refusals(work)
+
+    @server.tool(
+        name="issue_statement",
+        description=(
+            "Mark a statement issued, fixing what was reported, to whom, and when. Pass the "
+            "rendered figures you gave the recipient: they are stored rather than re-derived, "
+            "because re-deriving assumes the presentation never changes. A correction posted "
+            "afterwards marks the statement superseded, with no flag to maintain."
+        ),
+    )
+    def issue(
+        entity_id: str,
+        report: str,
+        as_of: str,
+        issued_to: str,
+        figures: dict[str, Any],
+        since: str | None = None,
+    ) -> dict[str, Any]:
+        def work() -> dict[str, Any]:
+            when, _ = _at(as_of, None)
+            start = _at(since, None)[0] if since else None
+            issuance_id = issue_statement(
+                database,
+                entity_id=entity_id,
+                principal=acting(),
+                request_id=f"mcp-{uuid.uuid4().hex}",
+                report=report,
+                since=start,
+                as_of=when,
+                figures=figures,
+                issued_to=issued_to,
+            )
+            return {"ok": True, "issuance_id": issuance_id}
+
+        return _refusals(work)
+
+    @server.tool(
+        name="issued_statements",
+        description=(
+            "Every statement issued from these books, newest first, each saying whether a "
+            "posting has entered its window since — which means what a recipient holds no "
+            "longer matches the books."
+        ),
+    )
+    def read_issued(entity_id: str) -> dict[str, Any]:
+        def work() -> dict[str, Any]:
+            return {
+                "ok": True,
+                "statements": [
+                    _issued(record)
+                    for record in issued(database, entity_id=entity_id, principal=acting())
+                ],
             }
 
         return _refusals(work)

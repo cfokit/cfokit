@@ -370,6 +370,51 @@ class BalanceSheetResponse(BaseModel):
     )
 
 
+class IssueStatementRequest(BaseModel):
+    """Mark a statement issued, fixing what was reported, to whom, and when (RPT-17)."""
+
+    report: Literal["trial_balance", "profit_and_loss", "balance_sheet"]
+    as_of: date
+    since: date | None = Field(
+        default=None, description="The start of the window. Null for an as-of report."
+    )
+    issued_to: str = Field(
+        min_length=1,
+        description="A lender, a board, an accountant. Free text: the recipient is usually not "
+        "a principal of this deployment, and inventing one for them would be wrong.",
+    )
+    figures: dict[str, Any] = Field(
+        description="The rendered statement as the recipient received it. Stored rather than "
+        "re-derived, because re-deriving assumes the presentation never changes and it will."
+    )
+
+
+class IssuedStatementModel(BaseModel):
+    """A statement that was given to somebody, and whether it still holds."""
+
+    issuance_id: str
+    report: str
+    since: date | None = None
+    as_of: date
+    watermark: datetime = Field(
+        description="What the books stood at when it was produced. Re-running the report at "
+        "this moment reproduces what was reported (RPT-11)."
+    )
+    issued_by: str
+    issued_at: datetime
+    issued_to: str
+    superseded: bool = Field(
+        description="Whether a posting entered this statement's window after it was issued, "
+        "changing its figures (SOC1-20). Detected, never stored."
+    )
+    superseded_by: int = Field(description="How many such postings.")
+    figures: dict[str, Any]
+
+
+class IssuedStatementsResponse(BaseModel):
+    statements: list[IssuedStatementModel]
+
+
 class AppliedModel(BaseModel):
     """How much of a settlement goes against one obligation (AR-12)."""
 

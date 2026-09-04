@@ -143,6 +143,73 @@
     "name": "comparative_profit_and_loss"
   },
   {
+    "description": "Mark a statement issued, fixing what was reported, to whom, and when. Pass the rendered figures you gave the recipient: they are stored rather than re-derived, because re-deriving assumes the presentation never changes. A correction posted afterwards marks the statement superseded, with no flag to maintain.",
+    "inputSchema": {
+      "properties": {
+        "as_of": {
+          "title": "As Of",
+          "type": "string"
+        },
+        "entity_id": {
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "figures": {
+          "additionalProperties": true,
+          "title": "Figures",
+          "type": "object"
+        },
+        "issued_to": {
+          "title": "Issued To",
+          "type": "string"
+        },
+        "report": {
+          "title": "Report",
+          "type": "string"
+        },
+        "since": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Since"
+        }
+      },
+      "required": [
+        "entity_id",
+        "report",
+        "as_of",
+        "issued_to",
+        "figures"
+      ],
+      "title": "issueArguments",
+      "type": "object"
+    },
+    "name": "issue_statement"
+  },
+  {
+    "description": "Every statement issued from these books, newest first, each saying whether a posting has entered its window since — which means what a recipient holds no longer matches the books.",
+    "inputSchema": {
+      "properties": {
+        "entity_id": {
+          "title": "Entity Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity_id"
+      ],
+      "title": "read_issuedArguments",
+      "type": "object"
+    },
+    "name": "issued_statements"
+  },
+  {
     "description": "One obligation read as both events: the commitment as it arose, and every settlement applied to it since.",
     "inputSchema": {
       "properties": {

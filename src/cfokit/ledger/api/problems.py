@@ -22,6 +22,7 @@ from cfokit.ledger.errors import (
     EntityNotFound,
     IdempotencyKeyRequired,
     IdempotencyKeyReused,
+    IssuedStatementNotFound,
     LastOwner,
     LedgerError,
     NotAPerson,
@@ -64,6 +65,7 @@ STATUS_FOR_CODE: dict[str, int] = {
     EntityNotFound.code: HTTPStatus.NOT_FOUND,
     AccountNotFound.code: HTTPStatus.NOT_FOUND,
     ObligationNotFound.code: HTTPStatus.NOT_FOUND,
+    IssuedStatementNotFound.code: HTTPStatus.NOT_FOUND,
     TransactionNotFound.code: HTTPStatus.NOT_FOUND,
     # 409 rather than 422: the request is well-formed and would have been valid earlier. The
     # caller's remedy is a different operation, not a corrected body.

@@ -95,6 +95,9 @@ def insert_settlement(
     return str(row[0])
 
 
+# Ordering is total: date, then when the row was written, then its id. Two obligations dated
+# the same day resolve by the second, and a uuid tiebreak alone is not an order at all — it is
+# whatever the database happened to return. `RPT-09` needs the same answer every time.
 OUTSTANDING = """
     SELECT o.id, o.transaction_id, t.transaction_date, o.amount, o.commodity,
            COALESCE(SUM(s.amount), 0)
@@ -105,7 +108,7 @@ OUTSTANDING = """
        AND (%(obligation_id)s::uuid IS NULL OR o.id = %(obligation_id)s)
        AND (%(as_of)s::date IS NULL OR t.transaction_date <= %(as_of)s)
      GROUP BY o.id, o.transaction_id, t.transaction_date, o.amount, o.commodity
-     ORDER BY t.transaction_date, o.id
+     ORDER BY t.transaction_date, o.created_at, o.id
 """
 
 
@@ -147,7 +150,11 @@ def outstanding(
 def settlements_for(
     conn: psycopg.Connection[Any], *, entity_id: str, obligation_id: str
 ) -> list[Settlement]:
-    """Every payment applied to one obligation, oldest first (`AR-12`)."""
+    """Every payment applied to one obligation, oldest first (`AR-12`).
+
+    Ordered by date, then by when the row was written: two payments applied on the same day
+    resolve by the order they were recorded rather than by a random uuid.
+    """
     with conn.cursor() as cur:
         cur.execute(
             "SELECT s.id, s.obligation_id, s.transaction_id, t.transaction_date,"
@@ -155,7 +162,7 @@ def settlements_for(
             "  FROM settlement s"
             "  JOIN ledger_transaction t ON t.id = s.transaction_id"
             " WHERE s.entity_id = %s AND s.obligation_id = %s"
-            " ORDER BY t.transaction_date, s.id",
+            " ORDER BY t.transaction_date, s.created_at, s.id",
             (entity_id, obligation_id),
         )
         return [

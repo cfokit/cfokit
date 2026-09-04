@@ -110,6 +110,8 @@ def test_the_mcp_tool_surface_is_published() -> None:
         "account_detail",
         "balance_sheet",
         "comparative_profit_and_loss",
+        "issue_statement",
+        "issued_statements",
         "obligation_detail",
         "open_balances",
         "outstanding_obligations",
