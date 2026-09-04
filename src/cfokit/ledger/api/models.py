@@ -318,6 +318,52 @@ class ComparativeProfitAndLossResponse(BaseModel):
     net_income: ComparativeLineModel
 
 
+class SourceBalanceModel(BaseModel):
+    """One account's balance as the source system states it."""
+
+    account_code: str
+    balance: Money = Field(
+        description="Signed the way a posting is: positive is a debit. Converting a foreign "
+        "export's sign convention is the caller's job."
+    )
+
+
+class ReconcileRequest(BaseModel):
+    """Compare our books against a source system's own figures (IMP-08)."""
+
+    as_of: date
+    balances: list[SourceBalanceModel] = Field(min_length=1)
+    source_is_rounded: bool = Field(
+        default=False,
+        description="Round both sides once before comparing. Most exports carry rounded "
+        "figures; comparing them against exact recorded values would disagree by design.",
+    )
+    watermark: datetime | None = None
+
+
+class AccountComparisonModel(BaseModel):
+    account_code: str
+    ours: str | None = None
+    theirs: str | None = None
+    difference: str
+    agrees: bool
+
+
+class ReconciliationResponse(BaseModel):
+    """Two figures per account and a difference — nothing about what a difference means.
+
+    A comparison detects difference; it cannot say which side is wrong.
+    """
+
+    as_of: date
+    watermark: datetime | None = None
+    accounting_basis: str
+    commodity: str
+    source_is_rounded: bool
+    agrees: bool
+    comparisons: list[AccountComparisonModel]
+
+
 class StatementLineModel(BaseModel):
     """One line of a statement, signed so positive means more of what the account is."""
 

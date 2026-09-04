@@ -53,11 +53,13 @@ from cfokit.ledger.presentation import (
     PresentedBalanceSheet,
     PresentedProfitAndLoss,
     PresentedTrialBalance,
+    SourceBalance,
     StatementLine,
     present_account_detail,
     present_balance_sheet,
     present_comparative_profit_and_loss,
     present_profit_and_loss,
+    present_reconciliation,
     present_trial_balance,
 )
 from cfokit.ledger.repository.obligations import Obligation
@@ -110,6 +112,16 @@ class AppliedArgument(BaseModel):
 
     obligation_id: str = Field(description="The obligation this payment is applied to.")
     amount: str = Field(description="Signed decimal string, in the entity's currency.")
+
+
+class SourceBalanceArgument(BaseModel):
+    """One account's balance as the source system states it."""
+
+    account_code: str = Field(description="The account code both systems agree on.")
+    balance: str = Field(
+        description="Signed decimal string, positive for a debit. Converting a foreign "
+        "export's sign convention is the caller's job."
+    )
 
 
 class CarriedBalanceArgument(BaseModel):
@@ -592,6 +604,67 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
                         "commodity": applied.commodity,
                     }
                     for applied in detail.settlements
+                ],
+            }
+
+        return _refusals(work)
+
+    @server.tool(
+        name="reconcile",
+        description=(
+            "Compare the books against a source system's own trial balance, account by "
+            "account, matched on account code. Reports two figures and a difference and says "
+            "nothing about what a difference means — a comparison detects difference and "
+            "cannot say which side is wrong. An account present on one side only is reported, "
+            "never dropped. Set source_is_rounded when the source's figures are already "
+            "rounded, which most exports are."
+        ),
+    )
+    def reconcile(
+        entity_id: str,
+        as_of: str,
+        balances: list[SourceBalanceArgument],
+        source_is_rounded: bool = False,
+        watermark: str | None = None,
+    ) -> dict[str, Any]:
+        def work() -> dict[str, Any]:
+            when, taken = _at(as_of, watermark)
+            report = present_reconciliation(
+                trial_balance(
+                    database,
+                    entity_id=entity_id,
+                    principal=acting(),
+                    as_of=when,
+                    watermark=taken,
+                ),
+                [
+                    SourceBalance(
+                        account_code=balance.account_code,
+                        balance=_to_decimal(balance.balance),
+                    )
+                    for balance in balances
+                ],
+                source_is_rounded=source_is_rounded,
+            )
+            return {
+                "ok": True,
+                "as_of": report.as_of.isoformat(),
+                "watermark": report.watermark.isoformat() if report.watermark else None,
+                "accounting_basis": report.accounting_basis,
+                "commodity": report.commodity,
+                "source_is_rounded": report.source_is_rounded,
+                "agrees": report.agrees,
+                "comparisons": [
+                    {
+                        "account_code": comparison.account_code,
+                        "ours": str(comparison.ours) if comparison.ours is not None else None,
+                        "theirs": (
+                            str(comparison.theirs) if comparison.theirs is not None else None
+                        ),
+                        "difference": str(comparison.difference),
+                        "agrees": comparison.agrees,
+                    }
+                    for comparison in report.comparisons
                 ],
             }
 

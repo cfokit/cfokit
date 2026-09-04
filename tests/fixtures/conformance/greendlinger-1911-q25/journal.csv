@@ -1,0 +1,19 @@
+ref,date,description,account_code,amount,commodity
+1,1907-09-30,Subscriptions to capital stock,1610,10000.00,USD
+1,1907-09-30,Subscriptions to capital stock,1620,10000.00,USD
+1,1907-09-30,Subscriptions to capital stock,1630,10000.00,USD
+1,1907-09-30,Subscriptions to capital stock,1640,12500.00,USD
+1,1907-09-30,Subscriptions to capital stock,2000,-42500.00,USD
+2,1907-09-30,Capital stock issued to subscribers,2000,42500.00,USD
+2,1907-09-30,Capital stock issued to subscribers,3100,-42500.00,USD
+3,1907-09-30,Assets surrendered by vendor,1300,100000.00,USD
+3,1907-09-30,Assets surrendered by vendor,1200,79000.00,USD
+3,1907-09-30,Assets surrendered by vendor,1100,93500.00,USD
+3,1907-09-30,Assets surrendered by vendor,2100,-272500.00,USD
+4,1907-09-30,Capital stock issued to vendor,2100,272500.00,USD
+4,1907-09-30,Capital stock issued to vendor,3100,-272500.00,USD
+5,1907-09-30,Incorporators paid 10% of par for services,1500,22500.00,USD
+5,1907-09-30,Incorporators paid 10% of par for services,1000,2500.00,USD
+5,1907-09-30,Incorporators paid 10% of par for services,3100,-25000.00,USD
+6,1907-09-30,Shares donated to provide working capital,1400,15000.00,USD
+6,1907-09-30,Shares donated to provide working capital,3000,-15000.00,USD

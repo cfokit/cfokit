@@ -34,13 +34,16 @@ from cfokit.ledger.service.reports import (
 
 __all__ = [
     "DEFAULT_DISPLAY_SCALE",
+    "AccountComparison",
     "ComparativeLine",
     "PresentedAccountDetail",
     "PresentedBalanceSheet",
     "PresentedComparative",
     "PresentedEntry",
     "PresentedProfitAndLoss",
+    "PresentedReconciliation",
     "PresentedTrialBalance",
+    "SourceBalance",
     "StatementLine",
     "TrialBalanceLine",
     "display_scale",
@@ -49,6 +52,7 @@ __all__ = [
     "present_balance_sheet",
     "present_comparative_profit_and_loss",
     "present_profit_and_loss",
+    "present_reconciliation",
     "present_total",
     "present_trial_balance",
 ]
@@ -505,3 +509,127 @@ def _exact(row: AccountBalance | None) -> Decimal:
     if row is None:
         return Decimal(0)
     return natural_amount(AccountType(row.account_type), row.balance)
+
+
+# --- Reconciliation against a source system (`IMP-08`, `NFR-01`) --------------------------
+#
+# > `IMP-08`: "An import produces a reconciliation the operator can check against the source
+# > system — balances by account, and totals by period — so that agreement is demonstrated
+# > rather than assumed."
+#
+# Its acceptance is deliberately small: "The operator compares two figures per account and
+# either agrees the import or rejects it." So this reports two figures and a difference, and
+# says nothing about what a difference *means*. A comparison detects difference; it cannot say
+# which side is wrong (ADR-0010), and deciding that in the tool would take a judgement that
+# belongs to a person.
+#
+# **It lives here, not in `service`, because it compares figures a reader sees.** Where a
+# source's own figures are already rounded — most exports are — both sides round once before
+# comparing, and rounding happens only at presentation (ADR-0025). Putting it in the service
+# layer put a rounding call below that boundary; `import-linter` refused it, correctly.
+#
+# **No tolerance.** `NFR-01`'s ledger target: "Exactness, not accuracy within a tolerance. A
+# tolerance is a defect, not a target." A reconciliation that passes within a penny will one
+# day hide a penny that mattered.
+
+
+@dataclass(frozen=True, slots=True)
+class SourceBalance:
+    """One account's balance as a source system states it.
+
+    Signed the way a posting is signed: positive is a debit. A converter from a foreign export
+    is responsible for that translation and for nothing else.
+    """
+
+    account_code: str
+    balance: Decimal
+
+
+@dataclass(frozen=True, slots=True)
+class AccountComparison:
+    """Two figures for one account, and what separates them."""
+
+    account_code: str
+    ours: Decimal | None
+    theirs: Decimal | None
+    difference: Decimal
+
+    @property
+    def agrees(self) -> bool:
+        return self.difference == 0 and self.ours is not None and self.theirs is not None
+
+    @property
+    def only_ours(self) -> bool:
+        return self.theirs is None
+
+    @property
+    def only_theirs(self) -> bool:
+        return self.ours is None
+
+
+@dataclass(frozen=True, slots=True)
+class PresentedReconciliation:
+    """The comparison in full, and whether it agreed."""
+
+    as_of: date
+    watermark: datetime | None
+    accounting_basis: str
+    commodity: str
+    source_is_rounded: bool
+    comparisons: tuple[AccountComparison, ...]
+
+    @property
+    def disagreements(self) -> tuple[AccountComparison, ...]:
+        return tuple(comparison for comparison in self.comparisons if not comparison.agrees)
+
+    @property
+    def agrees(self) -> bool:
+        return not self.disagreements
+
+
+def present_reconciliation(
+    report: TrialBalance,
+    source: Iterable[SourceBalance],
+    *,
+    source_is_rounded: bool = False,
+) -> PresentedReconciliation:
+    """Compare our trial balance against a source system's own figures, account by account.
+
+    **Matched by account code, never by name.** Names get edited; codes are what two systems
+    agree on.
+
+    **An account on one side only is reported, not dropped.** `NFR-01` resolves disagreements
+    rather than tolerating them, and an account silently missing from one side is the most
+    tolerable-looking disagreement there is — so it differs by the whole of the side it is on,
+    and never reads as zero.
+    """
+    commodity = report.functional_currency
+
+    def at_scale(amount: Decimal | None) -> Decimal | None:
+        if amount is None:
+            return None
+        return present(amount, commodity) if source_is_rounded else amount
+
+    mine = {row.code: row.balance for row in report.rows}
+    theirs = {balance.account_code: balance.balance for balance in source}
+
+    comparisons: list[AccountComparison] = []
+    for code in sorted(mine.keys() | theirs.keys()):
+        ours, other = at_scale(mine.get(code)), at_scale(theirs.get(code))
+        comparisons.append(
+            AccountComparison(
+                account_code=code,
+                ours=ours,
+                theirs=other,
+                difference=(ours or Decimal(0)) - (other or Decimal(0)),
+            )
+        )
+
+    return PresentedReconciliation(
+        as_of=report.as_of,
+        watermark=report.watermark,
+        accounting_basis=report.accounting_basis,
+        commodity=commodity,
+        source_is_rounded=source_is_rounded,
+        comparisons=tuple(comparisons),
+    )

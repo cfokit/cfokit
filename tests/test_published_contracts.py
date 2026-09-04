@@ -118,6 +118,7 @@ def test_the_mcp_tool_surface_is_published() -> None:
         "post_transaction",
         "profit_and_loss",
         "read_transaction",
+        "reconcile",
         "record_transaction",
         "reverse_transaction",
         "trial_balance",

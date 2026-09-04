@@ -45,6 +45,7 @@ TOOLS = {
     "outstanding_obligations",
     "post_transaction",
     "profit_and_loss",
+    "reconcile",
     "read_transaction",
     "record_transaction",
     "reverse_transaction",

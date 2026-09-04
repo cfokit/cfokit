@@ -29,6 +29,7 @@ from fastapi import Depends, FastAPI, Header, Path, Query, Request, Response, st
 from fastapi.responses import JSONResponse
 
 from cfokit.ledger.api.models import (
+    AccountComparisonModel,
     AccountCreatedResponse,
     AccountDetailResponse,
     AccountEntryModel,
@@ -54,6 +55,8 @@ from cfokit.ledger.api.models import (
     PeriodCloseResponse,
     PostingModel,
     ProfitAndLossResponse,
+    ReconcileRequest,
+    ReconciliationResponse,
     RecordTransactionRequest,
     ReopenPeriodRequest,
     SettlementModel,
@@ -71,11 +74,14 @@ from cfokit.ledger.engine.periods import Period
 from cfokit.ledger.errors import LedgerError
 from cfokit.ledger.presentation import (
     ComparativeLine,
+    PresentedReconciliation,
+    SourceBalance,
     StatementLine,
     present_account_detail,
     present_balance_sheet,
     present_comparative_profit_and_loss,
     present_profit_and_loss,
+    present_reconciliation,
     present_trial_balance,
 )
 from cfokit.ledger.repository.obligations import Obligation
@@ -116,6 +122,27 @@ from cfokit.ledger.service.write import (
 from cfokit.ledger.service.year_end import close_fiscal_year
 
 __all__ = ["create_app"]
+
+
+def _reconciliation(report: PresentedReconciliation) -> ReconciliationResponse:
+    return ReconciliationResponse(
+        as_of=report.as_of,
+        watermark=report.watermark,
+        accounting_basis=report.accounting_basis,
+        commodity=report.commodity,
+        source_is_rounded=report.source_is_rounded,
+        agrees=report.agrees,
+        comparisons=[
+            AccountComparisonModel(
+                account_code=comparison.account_code,
+                ours=str(comparison.ours) if comparison.ours is not None else None,
+                theirs=str(comparison.theirs) if comparison.theirs is not None else None,
+                difference=str(comparison.difference),
+                agrees=comparison.agrees,
+            )
+            for comparison in report.comparisons
+        ],
+    )
 
 
 def _issued(record: Issued) -> IssuedStatementModel:
@@ -805,6 +832,43 @@ def create_app(settings: Settings, authenticator: Authenticator | None = None) -
                 _issued(record)
                 for record in issued(database, entity_id=entity_id, principal=acting)
             ]
+        )
+
+    @app.post(
+        "/entities/{entity_id}/reconciliations",
+        tags=["reports"],
+        summary="Reconcile against a source system's figures",
+        responses=ERRORS,
+    )
+    def reconcile(
+        entity_id: Annotated[str, Path()],
+        body: ReconcileRequest,
+        acting: Annotated[Principal, Depends(get_principal)],
+        database: Annotated[Database, Depends(get_database)],
+    ) -> ReconciliationResponse:
+        """Two figures per account and the difference between them (`IMP-08`).
+
+        `POST` rather than `GET` because the source's figures are the request body and there is
+        no sensible query string for a chart of accounts. Nothing is written.
+
+        Says nothing about what a difference means: a comparison detects difference and cannot
+        say which side is wrong. That determination is a person's.
+        """
+        return _reconciliation(
+            present_reconciliation(
+                trial_balance(
+                    database,
+                    entity_id=entity_id,
+                    principal=acting,
+                    as_of=body.as_of,
+                    watermark=body.watermark,
+                ),
+                [
+                    SourceBalance(account_code=b.account_code, balance=b.balance)
+                    for b in body.balances
+                ],
+                source_is_rounded=body.source_is_rounded,
+            )
         )
 
     # -----------------------------------------------------------------------------------

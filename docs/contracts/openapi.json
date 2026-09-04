@@ -1,6 +1,51 @@
 {
   "components": {
     "schemas": {
+      "AccountComparisonModel": {
+        "properties": {
+          "account_code": {
+            "title": "Account Code",
+            "type": "string"
+          },
+          "agrees": {
+            "title": "Agrees",
+            "type": "boolean"
+          },
+          "difference": {
+            "title": "Difference",
+            "type": "string"
+          },
+          "ours": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ours"
+          },
+          "theirs": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Theirs"
+          }
+        },
+        "required": [
+          "account_code",
+          "difference",
+          "agrees"
+        ],
+        "title": "AccountComparisonModel",
+        "type": "object"
+      },
       "AccountCreatedResponse": {
         "properties": {
           "account_id": {
@@ -1116,6 +1161,103 @@
         "title": "ProfitAndLossResponse",
         "type": "object"
       },
+      "ReconcileRequest": {
+        "description": "Compare our books against a source system's own figures (IMP-08).",
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "balances": {
+            "items": {
+              "$ref": "#/components/schemas/SourceBalanceModel"
+            },
+            "minItems": 1,
+            "title": "Balances",
+            "type": "array"
+          },
+          "source_is_rounded": {
+            "default": false,
+            "description": "Round both sides once before comparing. Most exports carry rounded figures; comparing them against exact recorded values would disagree by design.",
+            "title": "Source Is Rounded",
+            "type": "boolean"
+          },
+          "watermark": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Watermark"
+          }
+        },
+        "required": [
+          "as_of",
+          "balances"
+        ],
+        "title": "ReconcileRequest",
+        "type": "object"
+      },
+      "ReconciliationResponse": {
+        "description": "Two figures per account and a difference — nothing about what a difference means.\n\nA comparison detects difference; it cannot say which side is wrong.",
+        "properties": {
+          "accounting_basis": {
+            "title": "Accounting Basis",
+            "type": "string"
+          },
+          "agrees": {
+            "title": "Agrees",
+            "type": "boolean"
+          },
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "commodity": {
+            "title": "Commodity",
+            "type": "string"
+          },
+          "comparisons": {
+            "items": {
+              "$ref": "#/components/schemas/AccountComparisonModel"
+            },
+            "title": "Comparisons",
+            "type": "array"
+          },
+          "source_is_rounded": {
+            "title": "Source Is Rounded",
+            "type": "boolean"
+          },
+          "watermark": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Watermark"
+          }
+        },
+        "required": [
+          "as_of",
+          "accounting_basis",
+          "commodity",
+          "source_is_rounded",
+          "agrees",
+          "comparisons"
+        ],
+        "title": "ReconciliationResponse",
+        "type": "object"
+      },
       "RecordTransactionRequest": {
         "description": "Record a transaction, as a draft or posted straight through.",
         "properties": {
@@ -1243,6 +1385,30 @@
           "commodity"
         ],
         "title": "SettlementModel",
+        "type": "object"
+      },
+      "SourceBalanceModel": {
+        "description": "One account's balance as the source system states it.",
+        "properties": {
+          "account_code": {
+            "title": "Account Code",
+            "type": "string"
+          },
+          "balance": {
+            "description": "Signed the way a posting is: positive is a debit. Converting a foreign export's sign convention is the caller's job.",
+            "examples": [
+              "100.00",
+              "-1250.5000000000"
+            ],
+            "title": "Balance",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_code",
+          "balance"
+        ],
+        "title": "SourceBalanceModel",
         "type": "object"
       },
       "StatementLineModel": {
@@ -3427,6 +3593,115 @@
           }
         },
         "summary": "Profit and loss beside a comparative period",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/entities/{entity_id}/reconciliations": {
+      "post": {
+        "description": "Two figures per account and the difference between them (`IMP-08`).\n\n`POST` rather than `GET` because the source's figures are the request body and there is\nno sensible query string for a chart of accounts. Nothing is written.\n\nSays nothing about what a difference means: a comparison detects difference and cannot\nsay which side is wrong. That determination is a person's.",
+        "operationId": "reconcile_entities__entity_id__reconciliations_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReconcileRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconciliationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Reconcile against a source system's figures",
         "tags": [
           "reports"
         ]

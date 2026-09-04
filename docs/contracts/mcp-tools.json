@@ -420,6 +420,76 @@
     "name": "read_transaction"
   },
   {
+    "description": "Compare the books against a source system's own trial balance, account by account, matched on account code. Reports two figures and a difference and says nothing about what a difference means — a comparison detects difference and cannot say which side is wrong. An account present on one side only is reported, never dropped. Set source_is_rounded when the source's figures are already rounded, which most exports are.",
+    "inputSchema": {
+      "$defs": {
+        "SourceBalanceArgument": {
+          "description": "One account's balance as the source system states it.",
+          "properties": {
+            "account_code": {
+              "description": "The account code both systems agree on.",
+              "title": "Account Code",
+              "type": "string"
+            },
+            "balance": {
+              "description": "Signed decimal string, positive for a debit. Converting a foreign export's sign convention is the caller's job.",
+              "title": "Balance",
+              "type": "string"
+            }
+          },
+          "required": [
+            "account_code",
+            "balance"
+          ],
+          "title": "SourceBalanceArgument",
+          "type": "object"
+        }
+      },
+      "properties": {
+        "as_of": {
+          "title": "As Of",
+          "type": "string"
+        },
+        "balances": {
+          "items": {
+            "$ref": "#/$defs/SourceBalanceArgument"
+          },
+          "title": "Balances",
+          "type": "array"
+        },
+        "entity_id": {
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "source_is_rounded": {
+          "default": false,
+          "title": "Source Is Rounded",
+          "type": "boolean"
+        },
+        "watermark": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Watermark"
+        }
+      },
+      "required": [
+        "entity_id",
+        "as_of",
+        "balances"
+      ],
+      "title": "reconcileArguments",
+      "type": "object"
+    },
+    "name": "reconcile"
+  },
+  {
     "description": "Record a transaction in an entity's books, as a draft or posted straight through. Postings must sum to zero per commodity to post. Requires an idempotency key; replaying one books nothing further. Pass raises_obligation to record it as an invoice or anything else owed, and settles to apply it against obligations — both need post.",
     "inputSchema": {
       "$defs": {
