@@ -1,6 +1,51 @@
 {
   "components": {
     "schemas": {
+      "AccountComparisonModel": {
+        "properties": {
+          "account_code": {
+            "title": "Account Code",
+            "type": "string"
+          },
+          "agrees": {
+            "title": "Agrees",
+            "type": "boolean"
+          },
+          "difference": {
+            "title": "Difference",
+            "type": "string"
+          },
+          "ours": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ours"
+          },
+          "theirs": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Theirs"
+          }
+        },
+        "required": [
+          "account_code",
+          "difference",
+          "agrees"
+        ],
+        "title": "AccountComparisonModel",
+        "type": "object"
+      },
       "AccountCreatedResponse": {
         "properties": {
           "account_id": {
@@ -705,6 +750,152 @@
         "title": "GrantRoleRequest",
         "type": "object"
       },
+      "IssueStatementRequest": {
+        "description": "Mark a statement issued, fixing what was reported, to whom, and when (RPT-17).",
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "figures": {
+            "additionalProperties": true,
+            "description": "The rendered statement as the recipient received it. Stored rather than re-derived, because re-deriving assumes the presentation never changes and it will.",
+            "title": "Figures",
+            "type": "object"
+          },
+          "issued_to": {
+            "description": "A lender, a board, an accountant. Free text: the recipient is usually not a principal of this deployment, and inventing one for them would be wrong.",
+            "minLength": 1,
+            "title": "Issued To",
+            "type": "string"
+          },
+          "report": {
+            "enum": [
+              "trial_balance",
+              "profit_and_loss",
+              "balance_sheet"
+            ],
+            "title": "Report",
+            "type": "string"
+          },
+          "since": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The start of the window. Null for an as-of report.",
+            "title": "Since"
+          }
+        },
+        "required": [
+          "report",
+          "as_of",
+          "issued_to",
+          "figures"
+        ],
+        "title": "IssueStatementRequest",
+        "type": "object"
+      },
+      "IssuedStatementModel": {
+        "description": "A statement that was given to somebody, and whether it still holds.",
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "figures": {
+            "additionalProperties": true,
+            "title": "Figures",
+            "type": "object"
+          },
+          "issuance_id": {
+            "title": "Issuance Id",
+            "type": "string"
+          },
+          "issued_at": {
+            "format": "date-time",
+            "title": "Issued At",
+            "type": "string"
+          },
+          "issued_by": {
+            "title": "Issued By",
+            "type": "string"
+          },
+          "issued_to": {
+            "title": "Issued To",
+            "type": "string"
+          },
+          "report": {
+            "title": "Report",
+            "type": "string"
+          },
+          "since": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Since"
+          },
+          "superseded": {
+            "description": "Whether a posting entered this statement's window after it was issued, changing its figures (SOC1-20). Detected, never stored.",
+            "title": "Superseded",
+            "type": "boolean"
+          },
+          "superseded_by": {
+            "description": "How many such postings.",
+            "title": "Superseded By",
+            "type": "integer"
+          },
+          "watermark": {
+            "description": "What the books stood at when it was produced. Re-running the report at this moment reproduces what was reported (RPT-11).",
+            "format": "date-time",
+            "title": "Watermark",
+            "type": "string"
+          }
+        },
+        "required": [
+          "issuance_id",
+          "report",
+          "as_of",
+          "watermark",
+          "issued_by",
+          "issued_at",
+          "issued_to",
+          "superseded",
+          "superseded_by",
+          "figures"
+        ],
+        "title": "IssuedStatementModel",
+        "type": "object"
+      },
+      "IssuedStatementsResponse": {
+        "properties": {
+          "statements": {
+            "items": {
+              "$ref": "#/components/schemas/IssuedStatementModel"
+            },
+            "title": "Statements",
+            "type": "array"
+          }
+        },
+        "required": [
+          "statements"
+        ],
+        "title": "IssuedStatementsResponse",
+        "type": "object"
+      },
       "ObligationDetailResponse": {
         "description": "One obligation read as both events (LED-17).",
         "properties": {
@@ -970,6 +1161,103 @@
         "title": "ProfitAndLossResponse",
         "type": "object"
       },
+      "ReconcileRequest": {
+        "description": "Compare our books against a source system's own figures (IMP-08).",
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "balances": {
+            "items": {
+              "$ref": "#/components/schemas/SourceBalanceModel"
+            },
+            "minItems": 1,
+            "title": "Balances",
+            "type": "array"
+          },
+          "source_is_rounded": {
+            "default": false,
+            "description": "Round both sides once before comparing. Most exports carry rounded figures; comparing them against exact recorded values would disagree by design.",
+            "title": "Source Is Rounded",
+            "type": "boolean"
+          },
+          "watermark": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Watermark"
+          }
+        },
+        "required": [
+          "as_of",
+          "balances"
+        ],
+        "title": "ReconcileRequest",
+        "type": "object"
+      },
+      "ReconciliationResponse": {
+        "description": "Two figures per account and a difference — nothing about what a difference means.\n\nA comparison detects difference; it cannot say which side is wrong.",
+        "properties": {
+          "accounting_basis": {
+            "title": "Accounting Basis",
+            "type": "string"
+          },
+          "agrees": {
+            "title": "Agrees",
+            "type": "boolean"
+          },
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "commodity": {
+            "title": "Commodity",
+            "type": "string"
+          },
+          "comparisons": {
+            "items": {
+              "$ref": "#/components/schemas/AccountComparisonModel"
+            },
+            "title": "Comparisons",
+            "type": "array"
+          },
+          "source_is_rounded": {
+            "title": "Source Is Rounded",
+            "type": "boolean"
+          },
+          "watermark": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Watermark"
+          }
+        },
+        "required": [
+          "as_of",
+          "accounting_basis",
+          "commodity",
+          "source_is_rounded",
+          "agrees",
+          "comparisons"
+        ],
+        "title": "ReconciliationResponse",
+        "type": "object"
+      },
       "RecordTransactionRequest": {
         "description": "Record a transaction, as a draft or posted straight through.",
         "properties": {
@@ -1097,6 +1385,30 @@
           "commodity"
         ],
         "title": "SettlementModel",
+        "type": "object"
+      },
+      "SourceBalanceModel": {
+        "description": "One account's balance as the source system states it.",
+        "properties": {
+          "account_code": {
+            "title": "Account Code",
+            "type": "string"
+          },
+          "balance": {
+            "description": "Signed the way a posting is: positive is a debit. Converting a foreign export's sign convention is the caller's job.",
+            "examples": [
+              "100.00",
+              "-1250.5000000000"
+            ],
+            "title": "Balance",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_code",
+          "balance"
+        ],
+        "title": "SourceBalanceModel",
         "type": "object"
       },
       "StatementLineModel": {
@@ -2160,6 +2472,228 @@
         ]
       }
     },
+    "/entities/{entity_id}/issued-statements": {
+      "get": {
+        "description": "Each with whether the books have moved under it since (`SOC1-20`).",
+        "operationId": "read_issued_entities__entity_id__issued_statements_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssuedStatementsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Statements issued from these books",
+        "tags": [
+          "reports"
+        ]
+      },
+      "post": {
+        "description": "Fix what was reported, to whom, and when (`RPT-17`).\n\nThe watermark is taken now, so the statement reproduces from the books exactly as\nissued (`RPT-11`) — and a correction posted afterwards marks it superseded without\nanything having to remember (`SOC1-20`).",
+        "operationId": "issue_entities__entity_id__issued_statements_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Request-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssueStatementRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssuedStatementModel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Mark a statement issued",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
     "/entities/{entity_id}/obligations": {
       "get": {
         "description": "What is still owed, and what has been applied against it (`LED-17`).",
@@ -3059,6 +3593,115 @@
           }
         },
         "summary": "Profit and loss beside a comparative period",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
+    "/entities/{entity_id}/reconciliations": {
+      "post": {
+        "description": "Two figures per account and the difference between them (`IMP-08`).\n\n`POST` rather than `GET` because the source's figures are the request body and there is\nno sensible query string for a chart of accounts. Nothing is written.\n\nSays nothing about what a difference means: a comparison detects difference and cannot\nsay which side is wrong. That determination is a person's.",
+        "operationId": "reconcile_entities__entity_id__reconciliations_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReconcileRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconciliationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Reconcile against a source system's figures",
         "tags": [
           "reports"
         ]

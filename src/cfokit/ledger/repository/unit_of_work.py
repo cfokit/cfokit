@@ -36,6 +36,7 @@ from cfokit.ledger.repository import (
     closes,
     grants,
     idempotency,
+    issuance,
     obligations,
     periods,
     reports,
@@ -261,6 +262,48 @@ class EntityWrite:
             start=year.start,
             end=year.end,
             close_id=close_id,
+        )
+
+    # --- issued statements (RPT-17, SOC1-20) ---------------------------------------------
+
+    def record_issuance(
+        self,
+        *,
+        report: str,
+        since: date | None,
+        as_of: date,
+        watermark: datetime,
+        issued_by: str,
+        issued_to: str,
+        figures: str,
+    ) -> str:
+        return issuance.insert_issued(
+            self._conn,
+            entity_id=self._entity_id,
+            report=report,
+            since=since,
+            as_of=as_of,
+            watermark=watermark,
+            issued_by=issued_by,
+            issued_to=issued_to,
+            figures=figures,
+        )
+
+    def issued_statements(
+        self, issuance_id: str | None = None
+    ) -> list[issuance.IssuedStatement]:
+        return issuance.issued_statements(
+            self._conn, entity_id=self._entity_id, issuance_id=issuance_id
+        )
+
+    def postings_after(self, *, watermark: datetime, since: date | None, as_of: date) -> int:
+        """How many postings entered a statement's window after it was produced (`SOC1-20`)."""
+        return issuance.postings_after(
+            self._conn,
+            entity_id=self._entity_id,
+            watermark=watermark,
+            since=since,
+            as_of=as_of,
         )
 
     # --- obligations and settlements (LED-17, ADR-0037) ----------------------------------

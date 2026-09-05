@@ -127,7 +127,10 @@ docstring-code-format = true
 strict = true
 python_version = "3.12"
 files = ["src", "scripts", "tests"]
-mypy_path = ["src", "scripts"]
+# `tests/integration` is on the path for the same reason `scripts` is on pytest's:
+# `tests` is deliberately not a package, so a helper module beside a test file is
+# imported absolutely, the way pytest's default import mode resolves it.
+mypy_path = ["src", "scripts", "tests/integration"]
 namespace_packages = true
 explicit_package_bases = true
 warn_unreachable = true

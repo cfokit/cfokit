@@ -32,6 +32,10 @@
     "error": "IdempotencyKeyReused"
   },
   {
+    "code": "issued_statement_not_found",
+    "error": "IssuedStatementNotFound"
+  },
+  {
     "code": "last_owner",
     "error": "LastOwner"
   },

@@ -53,11 +53,13 @@ from cfokit.ledger.presentation import (
     PresentedBalanceSheet,
     PresentedProfitAndLoss,
     PresentedTrialBalance,
+    SourceBalance,
     StatementLine,
     present_account_detail,
     present_balance_sheet,
     present_comparative_profit_and_loss,
     present_profit_and_loss,
+    present_reconciliation,
     present_trial_balance,
 )
 from cfokit.ledger.repository.obligations import Obligation
@@ -67,6 +69,7 @@ from cfokit.ledger.service.authentication import (
     TokenAuthenticator,
     principal_from_claims,
 )
+from cfokit.ledger.service.issuance import Issued, issue_statement, issued
 from cfokit.ledger.service.opening import CarriedBalance, open_balances
 from cfokit.ledger.service.principal import Principal
 from cfokit.ledger.service.read import read_transaction
@@ -111,6 +114,16 @@ class AppliedArgument(BaseModel):
     amount: str = Field(description="Signed decimal string, in the entity's currency.")
 
 
+class SourceBalanceArgument(BaseModel):
+    """One account's balance as the source system states it."""
+
+    account_code: str = Field(description="The account code both systems agree on.")
+    balance: str = Field(
+        description="Signed decimal string, positive for a debit. Converting a foreign "
+        "export's sign convention is the caller's job."
+    )
+
+
 class CarriedBalanceArgument(BaseModel):
     """One account's balance as it stood in the system CFOKit is taking over from.
 
@@ -150,6 +163,21 @@ def _comparative_line(line: ComparativeLine) -> dict[str, Any]:
 
 def _comparative_lines(lines: Iterable[ComparativeLine]) -> list[dict[str, Any]]:
     return [_comparative_line(line) for line in lines]
+
+
+def _issued(record: Issued) -> dict[str, Any]:
+    return {
+        "issuance_id": record.statement.issuance_id,
+        "report": record.statement.report,
+        "since": record.statement.since.isoformat() if record.statement.since else None,
+        "as_of": record.statement.as_of.isoformat(),
+        "watermark": record.statement.watermark.isoformat(),
+        "issued_by": record.statement.issued_by,
+        "issued_at": record.statement.issued_at.isoformat(),
+        "issued_to": record.statement.issued_to,
+        "superseded": record.superseded,
+        "superseded_by": record.superseded_by,
+    }
 
 
 def _obligation(found: Obligation) -> dict[str, Any]:
@@ -467,6 +495,61 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
         return _refusals(work)
 
     @server.tool(
+        name="issue_statement",
+        description=(
+            "Mark a statement issued, fixing what was reported, to whom, and when. Pass the "
+            "rendered figures you gave the recipient: they are stored rather than re-derived, "
+            "because re-deriving assumes the presentation never changes. A correction posted "
+            "afterwards marks the statement superseded, with no flag to maintain."
+        ),
+    )
+    def issue(
+        entity_id: str,
+        report: str,
+        as_of: str,
+        issued_to: str,
+        figures: dict[str, Any],
+        since: str | None = None,
+    ) -> dict[str, Any]:
+        def work() -> dict[str, Any]:
+            when, _ = _at(as_of, None)
+            start = _at(since, None)[0] if since else None
+            issuance_id = issue_statement(
+                database,
+                entity_id=entity_id,
+                principal=acting(),
+                request_id=f"mcp-{uuid.uuid4().hex}",
+                report=report,
+                since=start,
+                as_of=when,
+                figures=figures,
+                issued_to=issued_to,
+            )
+            return {"ok": True, "issuance_id": issuance_id}
+
+        return _refusals(work)
+
+    @server.tool(
+        name="issued_statements",
+        description=(
+            "Every statement issued from these books, newest first, each saying whether a "
+            "posting has entered its window since — which means what a recipient holds no "
+            "longer matches the books."
+        ),
+    )
+    def read_issued(entity_id: str) -> dict[str, Any]:
+        def work() -> dict[str, Any]:
+            return {
+                "ok": True,
+                "statements": [
+                    _issued(record)
+                    for record in issued(database, entity_id=entity_id, principal=acting())
+                ],
+            }
+
+        return _refusals(work)
+
+    @server.tool(
         name="outstanding_obligations",
         description=(
             "What is still owed, and how much has been applied against each. Outstanding is "
@@ -521,6 +604,67 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
                         "commodity": applied.commodity,
                     }
                     for applied in detail.settlements
+                ],
+            }
+
+        return _refusals(work)
+
+    @server.tool(
+        name="reconcile",
+        description=(
+            "Compare the books against a source system's own trial balance, account by "
+            "account, matched on account code. Reports two figures and a difference and says "
+            "nothing about what a difference means — a comparison detects difference and "
+            "cannot say which side is wrong. An account present on one side only is reported, "
+            "never dropped. Set source_is_rounded when the source's figures are already "
+            "rounded, which most exports are."
+        ),
+    )
+    def reconcile(
+        entity_id: str,
+        as_of: str,
+        balances: list[SourceBalanceArgument],
+        source_is_rounded: bool = False,
+        watermark: str | None = None,
+    ) -> dict[str, Any]:
+        def work() -> dict[str, Any]:
+            when, taken = _at(as_of, watermark)
+            report = present_reconciliation(
+                trial_balance(
+                    database,
+                    entity_id=entity_id,
+                    principal=acting(),
+                    as_of=when,
+                    watermark=taken,
+                ),
+                [
+                    SourceBalance(
+                        account_code=balance.account_code,
+                        balance=_to_decimal(balance.balance),
+                    )
+                    for balance in balances
+                ],
+                source_is_rounded=source_is_rounded,
+            )
+            return {
+                "ok": True,
+                "as_of": report.as_of.isoformat(),
+                "watermark": report.watermark.isoformat() if report.watermark else None,
+                "accounting_basis": report.accounting_basis,
+                "commodity": report.commodity,
+                "source_is_rounded": report.source_is_rounded,
+                "agrees": report.agrees,
+                "comparisons": [
+                    {
+                        "account_code": comparison.account_code,
+                        "ours": str(comparison.ours) if comparison.ours is not None else None,
+                        "theirs": (
+                            str(comparison.theirs) if comparison.theirs is not None else None
+                        ),
+                        "difference": str(comparison.difference),
+                        "agrees": comparison.agrees,
+                    }
+                    for comparison in report.comparisons
                 ],
             }
 

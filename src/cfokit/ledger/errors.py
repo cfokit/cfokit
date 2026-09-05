@@ -111,6 +111,12 @@ class AlreadyOpened(LedgerError):
     code = "already_opened"
 
 
+class IssuedStatementNotFound(LedgerError):
+    """No such issued statement in this entity (`RPT-17`)."""
+
+    code = "issued_statement_not_found"
+
+
 class ObligationNotFound(LedgerError):
     """No such obligation in this entity (`LED-17`).
 

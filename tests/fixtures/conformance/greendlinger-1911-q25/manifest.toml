@@ -1,0 +1,53 @@
+# A conformance case: figures and answer taken from a published source, not from us.
+#
+# ADR-0036 § 2: "Worked examples taken from published sources with published answers, asserted
+# directly against the expected result… Every case cites its source. A case with no citation is
+# not conformance evidence, it is a unit test that has been misfiled."
+#
+# NFR-01 wants "a source of truth CFOKit did not author". This is one: a state examination
+# question, solved by a practising accountant, published fourteen years before any of us.
+
+name = "greendlinger-1911-q25"
+case = 2
+
+[source]
+title = "Accountancy Problems with Solutions"
+author = "Leo Greendlinger"
+publisher = "Business Book Bureau"
+year = 1911
+problem = "Question 25"
+origin = "State of Washington Examination, September 1907"
+scan = "https://archive.org/details/accountancyprob00greegoog"
+# Archive.org metadata records this item as NOT_IN_COPYRIGHT, and the scan's own front matter
+# states the copyright has expired and the book has entered the public domain. Published 1911,
+# so it is public domain in the United States on the pre-1931 rule.
+licence = "public-domain"
+
+[entity]
+accounting_basis = "accrual"
+fiscal_year_end_month = 12
+fiscal_year_end_day = 31
+functional_currency = "USD"
+
+[expected]
+as_of = 1907-09-30
+# The published trial balance carries whole dollars, so no rounding question arises. Set true
+# only where a source's own figures have been rounded from something more precise.
+source_is_rounded = false
+
+[transcription]
+# Read from the OCR of the scan, which garbles commas — "93>500.oo" is 93,500.00 and
+# "i5,ooaoo" is 15,000.00. Every figure below is confirmed by the published totals: the debit
+# column sums to 355,000.00 and the credit column to 355,000.00, and capital stock
+# 42,500 + 272,500 + 25,000 = 340,000 matches the published line. A misread digit would break
+# one of those sums.
+#
+# The source prints subscribers as one line of 42,500.00 with a memo breakdown of B, C, D and
+# E. They are encoded as four accounts here because the published journal debits each
+# separately and publishes each amount; their sum is the source's single line.
+verified_against = "published column totals"
+# Account types follow 1907 practice — organisation expenses capitalised, treasury stock as a
+# debit balance — and modern practice differs on both. Neither affects this case: a trial
+# balance is grouped by sign, not by type, so the published answer is reproducible whatever
+# view a later standard would take. That is why a century-old source is usable at all, and it
+# is also the boundary: a case turning on how a statement classifies an account would not be.

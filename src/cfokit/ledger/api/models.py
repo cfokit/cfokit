@@ -318,6 +318,52 @@ class ComparativeProfitAndLossResponse(BaseModel):
     net_income: ComparativeLineModel
 
 
+class SourceBalanceModel(BaseModel):
+    """One account's balance as the source system states it."""
+
+    account_code: str
+    balance: Money = Field(
+        description="Signed the way a posting is: positive is a debit. Converting a foreign "
+        "export's sign convention is the caller's job."
+    )
+
+
+class ReconcileRequest(BaseModel):
+    """Compare our books against a source system's own figures (IMP-08)."""
+
+    as_of: date
+    balances: list[SourceBalanceModel] = Field(min_length=1)
+    source_is_rounded: bool = Field(
+        default=False,
+        description="Round both sides once before comparing. Most exports carry rounded "
+        "figures; comparing them against exact recorded values would disagree by design.",
+    )
+    watermark: datetime | None = None
+
+
+class AccountComparisonModel(BaseModel):
+    account_code: str
+    ours: str | None = None
+    theirs: str | None = None
+    difference: str
+    agrees: bool
+
+
+class ReconciliationResponse(BaseModel):
+    """Two figures per account and a difference — nothing about what a difference means.
+
+    A comparison detects difference; it cannot say which side is wrong.
+    """
+
+    as_of: date
+    watermark: datetime | None = None
+    accounting_basis: str
+    commodity: str
+    source_is_rounded: bool
+    agrees: bool
+    comparisons: list[AccountComparisonModel]
+
+
 class StatementLineModel(BaseModel):
     """One line of a statement, signed so positive means more of what the account is."""
 
@@ -368,6 +414,51 @@ class BalanceSheetResponse(BaseModel):
         description="Whether assets equal liabilities plus equity, which is what the statement "
         "asserts."
     )
+
+
+class IssueStatementRequest(BaseModel):
+    """Mark a statement issued, fixing what was reported, to whom, and when (RPT-17)."""
+
+    report: Literal["trial_balance", "profit_and_loss", "balance_sheet"]
+    as_of: date
+    since: date | None = Field(
+        default=None, description="The start of the window. Null for an as-of report."
+    )
+    issued_to: str = Field(
+        min_length=1,
+        description="A lender, a board, an accountant. Free text: the recipient is usually not "
+        "a principal of this deployment, and inventing one for them would be wrong.",
+    )
+    figures: dict[str, Any] = Field(
+        description="The rendered statement as the recipient received it. Stored rather than "
+        "re-derived, because re-deriving assumes the presentation never changes and it will."
+    )
+
+
+class IssuedStatementModel(BaseModel):
+    """A statement that was given to somebody, and whether it still holds."""
+
+    issuance_id: str
+    report: str
+    since: date | None = None
+    as_of: date
+    watermark: datetime = Field(
+        description="What the books stood at when it was produced. Re-running the report at "
+        "this moment reproduces what was reported (RPT-11)."
+    )
+    issued_by: str
+    issued_at: datetime
+    issued_to: str
+    superseded: bool = Field(
+        description="Whether a posting entered this statement's window after it was issued, "
+        "changing its figures (SOC1-20). Detected, never stored."
+    )
+    superseded_by: int = Field(description="How many such postings.")
+    figures: dict[str, Any]
+
+
+class IssuedStatementsResponse(BaseModel):
+    statements: list[IssuedStatementModel]
 
 
 class AppliedModel(BaseModel):
