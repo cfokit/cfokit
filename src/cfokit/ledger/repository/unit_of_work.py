@@ -32,6 +32,7 @@ from cfokit.ledger.errors import EntityNotFound
 from cfokit.ledger.repository import (
     accounts,
     administration,
+    archive,
     audit,
     closes,
     grants,
@@ -242,6 +243,14 @@ class EntityWrite:
         return reports.exportable_postings(
             self._conn, entity_id=self._entity_id, as_of=as_of, watermark=watermark
         )
+
+    def archived(self, table: str) -> tuple[list[str], list[tuple[Any, ...]]]:
+        """One table's rows for this entity, as stored (`EXP-02`)."""
+        return archive.read(self._conn, entity_id=self._entity_id, table=table)
+
+    def schema_version(self) -> str:
+        """The highest migration version this database has applied (`EXP-02`, `EXP-04`)."""
+        return archive.schema_version(self._conn)
 
     def account_detail(
         self,

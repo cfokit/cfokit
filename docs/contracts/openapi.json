@@ -2231,6 +2231,117 @@
         ]
       }
     },
+    "/entities/{entity_id}/complete-export": {
+      "get": {
+        "description": "Everything the entity holds (`EXP-02`).\n\nNot a bigger interchange export. That one is for a foreign accounting system: posted\ntransactions and balances, as CSV. This is for another CFOKit deployment (`EXP-04`) —\nevery row the entity holds, drafts and audit trail included, as stored.\n\nNo `as_of` and no watermark, because \"everything the entity holds\" does not take a\nposition on which moment counts.\n\n`EXP-03` requires this available \"at any time, in any entity state short of deletion,\nwithout asking anyone\", so it needs only the ability to read the books and writes\nnothing — an export that had to write could be refused by anything that stops a write.",
+        "operationId": "complete_export_entities__entity_id__complete_export_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Request-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/zip": {}
+            },
+            "description": "A zip of manifest.json, one JSON Lines file per table, and the interchange CSVs."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Complete export of everything the entity holds",
+        "tags": [
+          "reports"
+        ]
+      }
+    },
     "/entities/{entity_id}/grants": {
       "post": {
         "operationId": "grant_entities__entity_id__grants_post",
