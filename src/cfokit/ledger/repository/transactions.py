@@ -17,6 +17,7 @@ from decimal import Decimal
 from typing import Any
 
 import psycopg
+from psycopg.types.json import Jsonb
 
 from cfokit.ledger.engine import Posting
 
@@ -50,6 +51,7 @@ def insert_draft(
     actor_principal_id: str,
     actor_class: str,
     acting_for_principal_id: str | None,
+    derived_from: dict[str, Any] | None = None,
 ) -> str:
     """Insert a transaction as a draft and return its id.
 
@@ -61,14 +63,20 @@ def insert_draft(
     `actor_principal_id` and `actor_class` arrive from the authenticated principal. No write
     path accepts them from a request body — the same device ADR-0013 used for `recorded_at`
     (ADR-0033 § 2). `recorded_at` itself is not settable here at all; the column defaults.
+
+    `derived_from` is what this entry came from *outside* the books — the column migration 0001
+    added for `BKP-19` and left unpopulated because "the sources are not enumerable yet". An
+    import is the first source, and it names itself (`IMP-04`, `SOC1-14`). Written at insert
+    and never afterwards: the entry is append-only, so lineage that arrived later could not be
+    attached, and lineage that can be attached later is lineage that can be changed.
     """
     with conn.cursor() as cur:
         cur.execute(
             """
             INSERT INTO ledger_transaction
                 (entity_id, status, transaction_date, description, reverses_id, entry_kind,
-                 actor_principal_id, actor_class, acting_for_principal_id)
-            VALUES (%s, 'draft', %s, %s, %s, %s, %s, %s, %s)
+                 actor_principal_id, actor_class, acting_for_principal_id, derived_from)
+            VALUES (%s, 'draft', %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
             """,
             (
@@ -80,6 +88,7 @@ def insert_draft(
                 actor_principal_id,
                 actor_class,
                 acting_for_principal_id,
+                Jsonb(derived_from) if derived_from is not None else None,
             ),
         )
         row = cur.fetchone()

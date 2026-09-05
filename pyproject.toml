@@ -121,7 +121,8 @@ select = [
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101"]              # assert is the point of a test
 "scripts/**" = ["T201"]            # CI scripts report to stdout
-"tests/integration/reconcile_export.py" = ["T201"]  # an on-demand report, read by a person
+# An operator command, read by a person at a terminal. Its whole output is the report.
+"src/cfokit/imports/__main__.py" = ["T201"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["cfokit"]
@@ -209,6 +210,23 @@ forbidden_modules = ["psycopg"]
 # Direct imports only. Reaching the database *through* `repository` is the design; what is
 # forbidden is naming the driver anywhere else, which is what puts SQL in one readable place.
 allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+# ADR-0022's Confirmation: "The contracts encoding 'modules depend on the ledger, never on each
+# other, and the ledger depends on no module' do not exist yet — there is no module to
+# constrain — and they are added as the first one lands." `cfokit.imports` is the first.
+#
+# One direction only. A module may reach into any layer of the ledger, because it is a caller
+# like an adapter is; the ledger may not reach back, because the moment it does it has learned
+# what a QuickBooks export is and the tiny-ledger boundary has moved.
+name = "The ledger depends on no module (ADR-0022)"
+type = "forbidden"
+source_modules = ["cfokit.ledger"]
+forbidden_modules = ["cfokit.imports"]
+
+# NOTE: a contract forbidding module-to-module dependencies is added with the *second* module.
+# ADR-0022 forbids them, and one module cannot violate that rule — a contract naming a single
+# module would assert nothing and would read as though it did.
 
 # NOTE: a contract forbidding provider SDKs at module scope (ADR-0004) is added when
 # the first provider SDK is introduced — import-linter errors on modules it cannot find.
