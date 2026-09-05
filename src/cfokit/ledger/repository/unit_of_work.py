@@ -231,6 +231,18 @@ class EntityWrite:
         """One account in this entity, or None if there is no such account."""
         return reports.account(self._conn, entity_id=self._entity_id, account_id=account_id)
 
+    def chart(self) -> list[reports.Account]:
+        """Every account in this entity, parents before children (`EXP-01`)."""
+        return reports.chart(self._conn, entity_id=self._entity_id)
+
+    def exportable_postings(
+        self, *, as_of: date, watermark: datetime | None = None
+    ) -> list[reports.ExportedPosting]:
+        """Every posted posting up to `as_of`, in a total order (`EXP-01`)."""
+        return reports.exportable_postings(
+            self._conn, entity_id=self._entity_id, as_of=as_of, watermark=watermark
+        )
+
     def account_detail(
         self,
         *,

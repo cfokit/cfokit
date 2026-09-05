@@ -17,9 +17,12 @@ __all__ = [
     "Account",
     "AccountBalance",
     "AccountEntry",
+    "ExportedPosting",
     "account",
     "account_balances",
     "account_detail",
+    "chart",
+    "exportable_postings",
 ]
 
 
@@ -108,6 +111,9 @@ class Account:
     code: str
     name: str
     account_type: str
+    # Codes are what two systems agree on; ids are ours alone (`IMP-08`). Only the chart
+    # populates this, because only an export needs the hierarchy.
+    parent_code: str | None = None
 
 
 def account(
@@ -225,3 +231,84 @@ def account_detail(
             for entry in cur.fetchall()
         ]
     return opening, entries
+
+
+@dataclass(frozen=True, slots=True)
+class ExportedPosting:
+    """One posting as an interchange archive carries it (`EXP-01`)."""
+
+    transaction_id: str
+    transaction_date: date
+    description: str | None
+    account_code: str
+    amount: Decimal
+    commodity: str
+
+
+def chart(conn: psycopg.Connection[Any], *, entity_id: str) -> list[Account]:
+    """Every account in this entity, parents before children, in code order.
+
+    Ordered so a receiving system can create them in the order read: a child naming a parent
+    that does not exist yet is a needless failure to hand somebody.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT id, code, name, type, parent_id FROM account"
+            " WHERE entity_id = %s ORDER BY parent_id NULLS FIRST, code",
+            (entity_id,),
+        )
+        rows = cur.fetchall()
+    codes = {str(row[0]): str(row[1]) for row in rows}
+    return [
+        Account(
+            account_id=str(row[0]),
+            code=str(row[1]),
+            name=str(row[2]),
+            account_type=str(row[3]),
+            parent_code=codes.get(str(row[4])) if row[4] is not None else None,
+        )
+        for row in rows
+    ]
+
+
+EXPORTABLE = """
+    SELECT t.id, t.transaction_date, t.description, a.code, p.amount, p.commodity
+      FROM posting p
+      JOIN account a ON a.id = p.account_id
+      JOIN ledger_transaction t ON t.id = p.transaction_id
+     WHERE p.entity_id = %(entity_id)s
+       AND t.status = 'posted'
+       AND t.transaction_date <= %(as_of)s
+       AND (%(watermark)s::timestamptz IS NULL OR t.posted_at <= %(watermark)s)
+     ORDER BY t.transaction_date, t.posted_at, p.id
+"""
+
+
+def exportable_postings(
+    conn: psycopg.Connection[Any],
+    *,
+    entity_id: str,
+    as_of: date,
+    watermark: datetime | None = None,
+) -> list[ExportedPosting]:
+    """Every posted posting up to `as_of`, in a total order.
+
+    Ordered by date, then when the transaction entered the books, then the posting id — the
+    same order account detail uses, so two exports of unchanged books are byte-identical and a
+    diff between two exports shows only what actually changed.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            EXPORTABLE, {"entity_id": entity_id, "as_of": as_of, "watermark": watermark}
+        )
+        return [
+            ExportedPosting(
+                transaction_id=str(row[0]),
+                transaction_date=row[1],
+                description=row[2],
+                account_code=str(row[3]),
+                amount=Decimal(row[4]),
+                commodity=str(row[5]),
+            )
+            for row in cur.fetchall()
+        ]
