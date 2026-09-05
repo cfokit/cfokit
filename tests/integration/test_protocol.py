@@ -18,7 +18,9 @@ what this adds is a tool that reaches the database through it.
 
 from __future__ import annotations
 
+import io
 import uuid
+import zipfile
 from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import Any
@@ -157,6 +159,55 @@ def test_rest_records_posts_and_reads_back(
         "100.0000000000",
         "-100.0000000000",
     }
+
+
+def test_rest_serves_both_exports_as_downloadable_archives(
+    client: TestClient, books: tuple[str, str, str]
+) -> None:
+    """`EXP-03`: both available "at any time … without asking anyone and without a support
+    request". The REST surface is where that promise is kept, so it is where it is checked.
+
+    Asserted through the protocol rather than the service, because a downloaded file is what
+    a person actually leaves with: the media type, the filename, and the headers that tell a
+    receiving deployment what it is holding.
+    """
+    entity_id, cash, revenue = books
+    client.post(
+        f"/entities/{entity_id}/transactions", json=body(cash, revenue), headers=headers()
+    )
+
+    interchange = client.get(f"/entities/{entity_id}/interchange-export")
+    assert interchange.status_code == 200
+    assert interchange.headers["content-type"] == "application/zip"
+    assert "attachment" in interchange.headers["content-disposition"]
+    with zipfile.ZipFile(io.BytesIO(interchange.content)) as archive:
+        assert "journal.csv" in archive.namelist()
+
+    complete = client.get(f"/entities/{entity_id}/complete-export")
+    assert complete.status_code == 200
+    assert complete.headers["content-type"] == "application/zip"
+    # What a receiving deployment must check before reading the file, on its face.
+    assert complete.headers["x-cfokit-archive-format"] == "1"
+    assert complete.headers["x-cfokit-schema-version"] != ""
+    with zipfile.ZipFile(io.BytesIO(complete.content)) as archive:
+        names = set(archive.namelist())
+    assert {"manifest.json", "tables/posting.jsonl", "interchange/journal.csv"} <= names
+
+
+def test_rest_refuses_a_complete_export_in_an_entity_the_caller_holds_nothing_in(
+    client: TestClient, two_entities: tuple[str, str]
+) -> None:
+    """Needing only the ability to read the books is not the same as needing nothing.
+
+    `EXP-03`'s "without asking anyone" removes the gatekeeper, not the grant — and this is the
+    request that would hand over every posting, payee and audit row the entity holds.
+    """
+    other_entity, _ = two_entities
+
+    refused = client.get(f"/entities/{other_entity}/complete-export")
+
+    assert refused.status_code == 403
+    assert refused.json()["code"] == "not_authorised"
 
 
 def test_rest_replays_an_idempotency_key_without_booking_again(

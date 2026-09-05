@@ -97,7 +97,11 @@ from cfokit.ledger.service.authentication import (
     TokenAuthenticator,
     principal_from_claims,
 )
-from cfokit.ledger.service.interchange import export_interchange
+from cfokit.ledger.service.interchange import (
+    ARCHIVE_FORMAT,
+    export_complete,
+    export_interchange,
+)
 from cfokit.ledger.service.issuance import Issued, issue_statement, issued, supersession
 from cfokit.ledger.service.opening import CarriedBalance, open_balances
 from cfokit.ledger.service.periods import close_period, reopen_period
@@ -918,6 +922,61 @@ def create_app(settings: Settings, authenticator: Authenticator | None = None) -
                 # file separated from the request it came out of still says so.
                 "X-CFOKit-Accounting-Basis": exported.accounting_basis,
                 "X-CFOKit-As-Of": exported.as_of.isoformat(),
+            },
+        )
+
+    @app.get(
+        "/entities/{entity_id}/complete-export",
+        tags=["reports"],
+        summary="Complete export of everything the entity holds",
+        response_class=Response,
+        responses={
+            **ERRORS,
+            200: {
+                "content": {"application/zip": {}},
+                "description": (
+                    "A zip of manifest.json, one JSON Lines file per table, and the"
+                    " interchange CSVs."
+                ),
+            },
+        },
+    )
+    def complete_export(
+        entity_id: Annotated[str, Path()],
+        acting: Annotated[Principal, Depends(get_principal)],
+        database: Annotated[Database, Depends(get_database)],
+        request_id: Annotated[str | None, Header(alias="X-Request-Id")] = None,
+    ) -> Response:
+        """Everything the entity holds (`EXP-02`).
+
+        Not a bigger interchange export. That one is for a foreign accounting system: posted
+        transactions and balances, as CSV. This is for another CFOKit deployment (`EXP-04`) —
+        every row the entity holds, drafts and audit trail included, as stored.
+
+        No `as_of` and no watermark, because "everything the entity holds" does not take a
+        position on which moment counts.
+
+        `EXP-03` requires this available "at any time, in any entity state short of deletion,
+        without asking anyone", so it needs only the ability to read the books and writes
+        nothing — an export that had to write could be refused by anything that stops a write.
+        """
+        exported = export_complete(
+            database,
+            entity_id=entity_id,
+            principal=acting,
+            request_id=request_id or f"req-{uuid.uuid4().hex}",
+        )
+        return Response(
+            content=exported.archive,
+            media_type="application/zip",
+            headers={
+                "Content-Disposition": (
+                    f'attachment; filename="cfokit-{exported.slug}-complete.zip"'
+                ),
+                # On the file's face, so an archive separated from the request that produced
+                # it still says what a receiving deployment must check before reading it.
+                "X-CFOKit-Archive-Format": str(ARCHIVE_FORMAT),
+                "X-CFOKit-Schema-Version": exported.schema_version,
             },
         )
 

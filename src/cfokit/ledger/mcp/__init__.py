@@ -20,6 +20,13 @@ SDK wraps a raised exception in `ToolError` and renders it as `str(exception)` b
 prefix, so the only way a caller could recover the code would be to substring-parse a message
 the SDK formats — and a contract that requires that is not a contract.
 
+**Neither export is a tool here, and the complete one deliberately never will be.** `EXP-03`
+requires both available "without asking anyone", which is about needing no human gatekeeper
+rather than about every protocol carrying them. An export is a file a person downloads; the
+complete one is every posting amount, payee and audit row the entity holds, and putting that
+through a model's context is the thing the observability rules exist to prevent. The REST
+surface serves both.
+
 So every tool returns a result carrying `ok`. On success the payload; on a ledger refusal
 `{"ok": false, "code": ..., "message": ...}`, with the same code the REST surface returns for
 the same condition (ADR-0009). The cost is that a client checking only MCP's `isError` sees a

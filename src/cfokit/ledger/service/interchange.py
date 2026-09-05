@@ -1,4 +1,4 @@
-"""Interchange export: the books in a form another accounting system can read (`EXP-01`).
+"""The two exports: interchange (`EXP-01`) and complete (`EXP-02`).
 
 > "The books in a form another accounting system can read: chart of accounts, transactions, and
 > balances."
@@ -17,10 +17,19 @@ against the live books and every line must agree.
 format an export produces are one artifact, or they drift and the acceptance above becomes a
 test of two formats agreeing rather than of the export being right.
 
-**Not the complete export.** `EXP-02` carries supporting documents, raw payloads, rule
-definitions, approvals and the audit trail; `EXP-04` requires that one to reproduce the books in
-another deployment. This is the interchange half, and the two are deliberately not
-interchangeable.
+**The two are deliberately not interchangeable.** The interchange export is for a *foreign*
+system: three CSVs, posted transactions only, balances a spreadsheet can open. The complete
+export is for *another CFOKit deployment* (`EXP-04`): every row the entity holds, drafts and
+audit trail included, as stored.
+
+**The complete export is JSON Lines, and the interchange files inside it stay CSV.** CSV cannot
+tell an absent value from an empty one, and a round-trip that turned a null description into
+`""` would not have reproduced the books. The interchange files keep CSV because their reader is
+another accounting system, or a person with a spreadsheet, and neither has that problem.
+
+**Both need only `READ` and neither writes.** `EXP-03` requires them "at any time, in any entity
+state short of deletion, without asking anyone", so a privilege beyond reading the books would
+be a way for an entity to become unexportable.
 
 Amounts are written at full recorded precision, not at display scale. A receiving system
 should get what was recorded; rounding is a presentation act and belongs to whoever
@@ -31,17 +40,27 @@ from __future__ import annotations
 
 import csv
 import io
+import json
 import zipfile
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
+from decimal import Decimal
+from typing import Any
+from uuid import UUID
 
+from cfokit.ledger.repository import archive
 from cfokit.ledger.repository.unit_of_work import Database, EntityWrite
 from cfokit.ledger.service.authorisation import Capability, require
 from cfokit.ledger.service.principal import Principal
 from cfokit.ledger.service.reports import trial_balance
 
-__all__ = ["Interchange", "export_interchange"]
+__all__ = ["Complete", "Interchange", "export_complete", "export_interchange"]
+
+# The archive's own version, not the application's. A receiving deployment reads this to decide
+# whether it understands the file; bumping it is a decision about what an older CFOKit can
+# still read, which is why it does not follow anything else.
+ARCHIVE_FORMAT = 1
 
 ACCOUNT_COLUMNS = ("code", "name", "type", "parent")
 JOURNAL_COLUMNS = ("ref", "date", "description", "account_code", "amount", "commodity")
@@ -162,3 +181,120 @@ def _require_read(write: EntityWrite, principal: Principal) -> None:
         else frozenset()
     )
     require(Capability.READ, principal, actor, acted_for)
+
+
+@dataclass(frozen=True, slots=True)
+class Complete:
+    """One complete archive, and what it says about itself."""
+
+    entity_id: str
+    slug: str
+    taken_at: datetime
+    schema_version: str
+    archive: bytes
+    rows: dict[str, int]
+
+
+def export_complete(
+    database: Database, *, entity_id: str, principal: Principal, request_id: str
+) -> Complete:
+    """Everything the entity holds, as a zip of JSON Lines plus the interchange files.
+
+    No `as_of` and no watermark. `EXP-02` is "everything the entity holds", and a complete
+    export that took a position on which moment counts would be a report rather than the books.
+
+    Drafts are included, where the interchange export excludes them. A draft is not in the books
+    (`LED-07`) and so is absent from any statement — but it is something the entity holds, and
+    `EXP-04` requires the receiving deployment to reproduce what was there, not a tidied version
+    of it.
+
+    Writes no audit row, because it changes nothing. That an export happened is worth knowing,
+    and it is the adapter's request log that knows it: an entity that could be made
+    unexportable by a failure to write a row would fail `EXP-03`.
+    """
+    taken_at = datetime.now(UTC)
+
+    with database.entity_write(entity_id) as write:
+        _require_read(write, principal)
+        tables = {name: write.archived(name) for name, _ in archive.TABLES}
+        schema_version = write.schema_version()
+
+    # From the archive rather than from `EntitySettings`, which does not carry it and should
+    # not learn to: the manifest describes the file, so it names the entity the same way the
+    # file's own `entity` row does.
+    entity_columns, entity_rows = tables["entity"]
+    slug = str(dict(zip(entity_columns, entity_rows[0], strict=True))["slug"])
+
+    interchange = export_interchange(
+        database,
+        entity_id=entity_id,
+        principal=principal,
+        as_of=date.max,
+    )
+
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_STORED) as bundle:
+        bundle.writestr(
+            "manifest.json",
+            json.dumps(
+                {
+                    "archive_format": ARCHIVE_FORMAT,
+                    "schema_version": schema_version,
+                    "entity_id": entity_id,
+                    "slug": slug,
+                    "taken_at": taken_at.isoformat(),
+                    "request_id": request_id,
+                    "rows": {name: len(rows) for name, (_, rows) in tables.items()},
+                },
+                indent=2,
+                sort_keys=True,
+            )
+            + "\n",
+        )
+        for name, (columns, rows) in tables.items():
+            bundle.writestr(f"tables/{name}.jsonl", _jsonl(columns, rows))
+        with zipfile.ZipFile(io.BytesIO(interchange.archive)) as inner:
+            for member in sorted(inner.namelist()):
+                bundle.writestr(f"interchange/{member}", inner.read(member))
+
+    return Complete(
+        entity_id=entity_id,
+        slug=slug,
+        taken_at=taken_at,
+        schema_version=schema_version,
+        archive=buffer.getvalue(),
+        rows={name: len(rows) for name, (_, rows) in tables.items()},
+    )
+
+
+def _jsonl(columns: Sequence[str], rows: Iterable[tuple[Any, ...]]) -> str:
+    """One row per line, keys sorted, as a receiving deployment reads it.
+
+    Sorted keys and no whitespace variation, so two exports of unchanged books are
+    byte-identical and a diff between them shows only what changed — the same property the
+    interchange CSVs have.
+    """
+    return "".join(
+        json.dumps(
+            dict(zip(columns, (_scalar(value) for value in row), strict=True)), sort_keys=True
+        )
+        + "\n"
+        for row in rows
+    )
+
+
+def _scalar(value: Any) -> Any:
+    """One stored value, as JSON carries it.
+
+    `Decimal` becomes a string rather than a number: JSON's number is a float in every reader
+    that matters, and `LED-04` allows no representation error (ADR-0005). `date`, `datetime` and
+    `UUID` become their ISO or canonical text. Anything already JSON — `jsonb` columns — is
+    passed through as the structure it is, so a round-trip does not double-encode it.
+    """
+    if isinstance(value, Decimal):
+        return str(value)
+    if isinstance(value, datetime | date):
+        return value.isoformat()
+    if isinstance(value, UUID):
+        return str(value)
+    return value
