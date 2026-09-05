@@ -97,6 +97,7 @@ from cfokit.ledger.service.authentication import (
     TokenAuthenticator,
     principal_from_claims,
 )
+from cfokit.ledger.service.interchange import export_interchange
 from cfokit.ledger.service.issuance import Issued, issue_statement, issued, supersession
 from cfokit.ledger.service.opening import CarriedBalance, open_balances
 from cfokit.ledger.service.periods import close_period, reopen_period
@@ -869,6 +870,55 @@ def create_app(settings: Settings, authenticator: Authenticator | None = None) -
                 ],
                 source_is_rounded=body.source_is_rounded,
             )
+        )
+
+    @app.get(
+        "/entities/{entity_id}/interchange-export",
+        tags=["reports"],
+        summary="Interchange export of the books",
+        response_class=Response,
+        responses={
+            **ERRORS,
+            200: {
+                "content": {"application/zip": {}},
+                "description": "A zip of accounts.csv, journal.csv and trial_balance.csv.",
+            },
+        },
+    )
+    def interchange_export(
+        entity_id: Annotated[str, Path()],
+        acting: Annotated[Principal, Depends(get_principal)],
+        database: Annotated[Database, Depends(get_database)],
+        as_of: Annotated[date | None, Query()] = None,
+        watermark: Annotated[datetime | None, Query()] = None,
+    ) -> Response:
+        """The books in a form another accounting system can read (`EXP-01`).
+
+        A single self-contained archive: it carries the journal *and* the trial balance, so a
+        reader can derive the balances and check them against ours without asking us anything.
+
+        `EXP-03` requires this available "at any time, in any entity state short of deletion,
+        without asking anyone", so it needs only the ability to read the books.
+        """
+        exported = export_interchange(
+            database,
+            entity_id=entity_id,
+            principal=acting,
+            as_of=as_of or date.today(),  # noqa: DTZ011
+            watermark=watermark,
+        )
+        return Response(
+            content=exported.archive,
+            media_type="application/zip",
+            headers={
+                "Content-Disposition": (
+                    f'attachment; filename="cfokit-{entity_id}-{exported.as_of}.zip"'
+                ),
+                # What the archive was produced from, on its face (`RPT-10`, `RPT-11`), so a
+                # file separated from the request it came out of still says so.
+                "X-CFOKit-Accounting-Basis": exported.accounting_basis,
+                "X-CFOKit-As-Of": exported.as_of.isoformat(),
+            },
         )
 
     # -----------------------------------------------------------------------------------
