@@ -60,6 +60,21 @@ class Converted:
     journal: list[dict[str, str]] = field(default_factory=list)
     trial_balance: list[dict[str, str]] = field(default_factory=list)
     trial_balance_basis: str = "unknown"
+    # The general ledger prints its own total per account. That is the source computing a
+    # balance from its own data, which is what makes it usable as an oracle: our arithmetic
+    # against theirs over the same journal. The trial balance is not usable that way when it
+    # is run on a different accounting method from the journal beside it.
+    ledger_totals: list[dict[str, str]] = field(default_factory=list)
+    # Subtotals the same report prints over a parent and everything beneath it. Held apart
+    # from `ledger_totals` because a subtotal is not an account's balance: nothing posts to
+    # it, and comparing it against a chart account would report a divergence that is really a
+    # difference in what the two figures are. Reconciled by summing the children instead.
+    ledger_rollups: list[dict[str, str]] = field(default_factory=list)
+    # The accounting method the general ledger was run on, from its own footer. Load-bearing
+    # rather than informational: CFOKit's books are intrinsically accrual (ADR-0037), so a
+    # cash-basis oracle will differ on exactly the obligation accounts, and a reader who does
+    # not know the basis cannot tell that apart from a defect.
+    ledger_basis: str = "unknown"
     transactions: int = 0
 
 
@@ -89,23 +104,63 @@ def convert(archive: bytes) -> Converted:
         types = _account_types(export)
         journal, transactions = _journal(export)
         trial_balance, basis = _trial_balance(export)
+        ledger_totals, ledger_rollups, ledger_basis = _ledger_totals(export, journal)
 
     used = {line["account_code"] for line in journal} | {
         row["account_code"] for row in trial_balance
     }
     return Converted(
         accounts=[
-            # Unknown means the account appears in the journal but on no statement. Recorded as
-            # such rather than guessed: a wrong type is a silent misclassification, and a
-            # missing one is a question somebody can answer.
-            {"code": name, "name": name, "type": types.get(name, "unknown"), "parent": ""}
+            {
+                "code": name,
+                "name": name,
+                "type": _typed(name, types),
+                "parent": _parent(name, used),
+            }
             for name in sorted(used)
         ],
         journal=journal,
         trial_balance=trial_balance,
         trial_balance_basis=basis,
+        ledger_totals=ledger_totals,
+        ledger_rollups=ledger_rollups,
+        ledger_basis=ledger_basis,
         transactions=transactions,
     )
+
+
+def _typed(name: str, types: dict[str, str]) -> str:
+    """An account's type, from the statement it appears on or from its parent's.
+
+    QuickBooks prints a sub-account under its bare leaf name on the balance sheet and the profit
+    and loss, so the full colon-separated path the journal uses never matches one of those rows.
+    Walking up the path is not a guess about the account: QuickBooks requires a sub-account to
+    share its parent's type, and the path is the source stating the hierarchy.
+
+    Unknown means the account appears in the journal and beneath no statement section at all —
+    recorded as such rather than guessed, because a wrong type is a silent misclassification and
+    a missing one is a question somebody can answer.
+    """
+    parts = name.split(":")
+    for cut in range(len(parts), 0, -1):
+        stated = types.get(":".join(parts[:cut]))
+        if stated is not None:
+            return stated
+    return "unknown"
+
+
+def _parent(name: str, accounts: set[str]) -> str:
+    """The account this one sits under, where the export has one.
+
+    A parent that takes no postings of its own is not in the journal and so is not an account
+    here; the child is then reported as top-level rather than pointing at something absent.
+    """
+    parts = name.split(":")
+    for cut in range(len(parts) - 1, 0, -1):
+        candidate = ":".join(parts[:cut])
+        if candidate in accounts:
+            return candidate
+    return ""
 
 
 def _account_types(export: zipfile.ZipFile) -> dict[str, str]:
@@ -181,6 +236,51 @@ def _trial_balance(export: zipfile.ZipFile) -> tuple[list[dict[str, str]], str]:
         balance = _amount(row[1]) - _amount(row[2])
         balances.append({"account_code": text, "balance": str(balance)})
     return balances, basis
+
+
+def _ledger_totals(
+    export: zipfile.ZipFile, journal: Sequence[dict[str, str]]
+) -> tuple[list[dict[str, str]], list[dict[str, str]], str]:
+    """The general ledger's own stated totals, split into account balances and rollups, and
+    the accounting method it was run on.
+
+    QuickBooks closes each account's section with a "Total for <account>" row. Those are the
+    source's own balances — the figure to reconcile against — and they cover only accounts with
+    activity, which is why an account may be in the journal and absent here.
+
+    Some of those rows are **subtotals over a parent and its children**, printed as
+    "Total for X with sub-accounts" where the parent also takes postings of its own, and as a
+    bare "Total for X" where it does not. Both are recognised, and the bare case is decided
+    against the export's own data rather than its wording: a bare total is a rollup only when
+    the journal posts beneath that parent and never to the parent itself. A parent that takes
+    direct postings therefore keeps its own balance in `ledger_totals` and contributes its
+    "with sub-accounts" row to `ledger_rollups`, which is what those two rows mean.
+
+    The two are returned apart because they answer different questions, and comparing a subtotal
+    against a chart account would manufacture a divergence out of a category error.
+    """
+    if "General_ledger.xlsx" not in export.namelist():
+        return [], [], "unknown"
+    rows = _rows(export, "General_ledger.xlsx")
+    posted_to = {line["account_code"] for line in journal}
+    totals: list[dict[str, str]] = []
+    rollups: list[dict[str, str]] = []
+    for row in rows[_HEADER_ROWS:]:
+        label = row[0]
+        if label is None or not str(label).startswith("Total for "):
+            continue
+        account = str(label)[len("Total for ") :].strip()
+        parent = account.removesuffix(" with sub-accounts")
+        stated = {
+            "account_code": parent,
+            "balance": str(_amount(row[_DEBIT]) - _amount(row[_CREDIT])),
+        }
+        has_children = any(code.startswith(parent + ":") for code in posted_to)
+        if account != parent or (has_children and parent not in posted_to):
+            rollups.append(stated)
+        else:
+            totals.append(stated)
+    return totals, rollups, read_basis(rows)
 
 
 def _rows(export: zipfile.ZipFile, member: str) -> list[Row]:

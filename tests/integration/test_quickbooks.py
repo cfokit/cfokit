@@ -64,6 +64,57 @@ JOURNAL: Rows = [
     [None, "04/02/2026", "Expense", None, "Landlord", "April rent", "Rent", 450.25, None],
     [None, None, None, None, None, "April rent", "Checking", None, 450.25],
     [None, None, None, None, None, None, None, 450.25, 450.25],  # totals row: skipped
+    [None] * 9,
+    # A parent that takes postings of its own and has a sub-account, so the general ledger
+    # below prints both a balance for it and a rollup over it.
+    [None, "04/09/2026", "Expense", None, None, "Stamps", "Office", 12.00, None],
+    [None, None, None, None, None, "Stamps", "Checking", None, 12.00],
+    [None, None, None, None, None, None, None, 12.00, 12.00],  # totals row: skipped
+    [None] * 9,
+    [None, "04/10/2026", "Expense", None, None, "Toner", "Office:Printing", 30.00, None],
+    [None, None, None, None, None, "Toner", "Checking", None, 30.00],
+    [None, None, None, None, None, None, None, 30.00, 30.00],  # totals row: skipped
+    [None] * 9,
+    # A parent that takes none, so its bare total is a rollup rather than a balance.
+    [None, "04/11/2026", "Expense", None, None, "Phone", "Utilities:Phone", 60.00, None],
+    [None, None, None, None, None, "Phone", "Checking", None, 60.00],
+    [None, None, None, None, None, None, None, 60.00, 60.00],  # totals row: skipped
+]
+
+# Only the rows the converter reads: the account sections themselves are detail it ignores,
+# and the "Total for" rows are the source's own arithmetic over its own data.
+GENERAL_LEDGER: Rows = [
+    ["Synthetic Co", None, None, None, None, None, None, None, None, None],
+    ["General Ledger", None, None, None, None, None, None, None, None, None],
+    ["All Dates", None, None, None, None, None, None, None, None, None],
+    [None] * 10,
+    [
+        None,
+        "Date",
+        "Transaction Type",
+        "Num",
+        "Name",
+        "Memo/Description",
+        "Account",
+        "Debit",
+        "Credit",
+        "Balance",
+    ],
+    ["Total for Checking", None, None, None, None, None, None, 1200.00, 552.25, None],
+    ["Total for Rent", None, None, None, None, None, None, 450.25, None, None],
+    ["Total for Services", None, None, None, None, None, None, None, 1200.00, None],
+    ["Total for Office", None, None, None, None, None, None, 12.00, None, None],
+    [
+        "Total for Office with sub-accounts",
+        *[None] * 6,
+        42.00,
+        None,
+        None,
+    ],
+    ["Total for Office:Printing", *[None] * 6, 30.00, None, None],
+    ["Total for Utilities", None, None, None, None, None, None, 60.00, None, None],
+    ["Total for Utilities:Phone", *[None] * 6, 60.00, None, None],
+    ["Saturday, Sep 05, 2026 07:30:59 AM GMT-7 - Accrual Basis", *[None] * 9],
 ]
 
 TRIAL_BALANCE: Rows = [
@@ -72,8 +123,11 @@ TRIAL_BALANCE: Rows = [
     ["All Dates", None, None],
     [None, None, None],
     [None, "Debit", "Credit"],
-    ["Checking", 749.75, None],
+    ["Checking", 647.75, None],
     ["Rent", 450.25, None],
+    ["Office", 12.00, None],
+    ["Office:Printing", 30.00, None],
+    ["Utilities:Phone", 60.00, None],
     ["Services", None, 1200.00],
     ["TOTAL", 1200.00, 1200.00],
     ["Saturday, Sep 05, 2026 07:30:59 AM GMT-7 - Accrual Basis", None, None],
@@ -86,8 +140,8 @@ BALANCE_SHEET: Rows = [
     [None, None],
     [None, "Total"],
     ["ASSETS", None],
-    ["Checking", 749.75],
-    ["TOTAL ASSETS", 749.75],
+    ["Checking", 647.75],
+    ["TOTAL ASSETS", 647.75],
     ["Saturday, Sep 05, 2026 07:30:59 AM GMT-7 - Accrual Basis", None],
 ]
 
@@ -102,7 +156,11 @@ PROFIT_AND_LOSS: Rows = [
     ["Total Income", 1200.00],
     ["Expenses", None],
     ["Rent", 450.25],
-    ["Total Expenses", 450.25],
+    ["Office", 12.00],
+    ["Printing", 30.00],
+    ["Total Office with sub-accounts", 42.00],
+    ["Utilities", 60.00],
+    ["Total Expenses", 552.25],
     ["Saturday, Sep 05, 2026 07:30:59 AM GMT-7 - Accrual Basis", None],
 ]
 
@@ -112,6 +170,7 @@ def synthetic_export(trial_balance_rows: Rows | None = None) -> bytes:
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w") as archive:
         archive.writestr("Journal.xlsx", workbook(JOURNAL))
+        archive.writestr("General_ledger.xlsx", workbook(GENERAL_LEDGER))
         archive.writestr("Trial_balance.xlsx", workbook(trial_balance_rows or TRIAL_BALANCE))
         archive.writestr("Balance_sheet.xlsx", workbook(BALANCE_SHEET))
         archive.writestr("Profit_and_loss.xlsx", workbook(PROFIT_AND_LOSS))
@@ -190,8 +249,8 @@ def test_the_totals_row_inside_each_transaction_is_skipped(export: bytes) -> Non
     row carrying amounts and no account; counting it books everything twice."""
     converted = convert(export)
 
-    assert converted.transactions == 2
-    assert len(converted.journal) == 4
+    assert converted.transactions == 5
+    assert len(converted.journal) == 10
 
 
 def test_each_transaction_is_grouped_under_one_reference(export: bytes) -> None:
@@ -199,7 +258,7 @@ def test_each_transaction_is_grouped_under_one_reference(export: bytes) -> None:
     converted = convert(export)
     refs = [line["ref"] for line in converted.journal]
 
-    assert refs == ["1", "1", "2", "2"]
+    assert refs == ["1", "1", "2", "2", "3", "3", "4", "4", "5", "5"]
     assert {line["date"] for line in converted.journal if line["ref"] == "1"} == {"2026-03-14"}
 
 
@@ -226,7 +285,33 @@ def test_account_types_come_from_the_sources_own_statements(export: bytes) -> No
     the name — that would be our judgement entering data whose value is that it is not ours."""
     types = {account["code"]: account["type"] for account in convert(export).accounts}
 
-    assert types == {"Checking": "asset", "Rent": "expense", "Services": "income"}
+    assert types["Checking"] == "asset"
+    assert types["Rent"] == "expense"
+    assert types["Services"] == "income"
+
+
+def test_a_sub_account_takes_its_parents_type(export: bytes) -> None:
+    """QuickBooks prints a sub-account under its bare leaf name, so the colon-separated path
+    the journal uses matches no statement row. Reading the type off the parent is the source
+    stating the hierarchy, not us guessing: QuickBooks requires the two to share a type."""
+    types = {account["code"]: account["type"] for account in convert(export).accounts}
+
+    # "Printing" and "Phone" appear on the profit and loss; "Office:Printing" and
+    # "Utilities:Phone" never do.
+    assert types["Office:Printing"] == "expense"
+    assert types["Utilities:Phone"] == "expense"
+
+
+def test_a_sub_account_points_at_its_parent_only_when_the_parent_posts(
+    export: bytes,
+) -> None:
+    """A parent that takes no postings of its own is not an account here, so its child is
+    top-level rather than pointing at something absent."""
+    parents = {account["code"]: account["parent"] for account in convert(export).accounts}
+
+    assert parents["Office:Printing"] == "Office"
+    assert parents["Utilities:Phone"] == ""  # nothing posts to "Utilities"
+    assert parents["Rent"] == ""
 
 
 def test_an_account_on_no_statement_is_marked_unknown() -> None:
@@ -312,3 +397,103 @@ def test_a_converted_export_reconciles_against_its_own_trial_balance(
     assert report.agrees, [
         (c.account_code, str(c.ours), str(c.theirs)) for c in report.disagreements
     ]
+
+
+def test_the_ledgers_stated_totals_are_read_as_the_sources_own_balances(
+    export: bytes,
+) -> None:
+    """The general ledger prints a total per account. That is the source computing a balance
+    from its own data, which is what makes it usable as an oracle — our arithmetic against
+    theirs over the same journal, rather than ours against itself."""
+    totals = {
+        row["account_code"]: Decimal(row["balance"]) for row in convert(export).ledger_totals
+    }
+
+    assert totals == {
+        "Checking": Decimal("647.75"),
+        "Rent": Decimal("450.25"),
+        "Services": Decimal("-1200.00"),
+        "Office": Decimal("12.00"),
+        "Office:Printing": Decimal("30.00"),
+        "Utilities:Phone": Decimal("60.00"),
+    }
+
+
+def test_a_subtotal_over_sub_accounts_is_not_read_as_an_account_balance(
+    export: bytes,
+) -> None:
+    """Nothing posts to a subtotal, so comparing one against a chart account would report a
+    divergence that is really a difference in what the two figures are.
+
+    Both spellings are covered: "Office" takes postings of its own and so has a balance *and*
+    a "with sub-accounts" rollup, while "Utilities" takes none and its bare total is a rollup.
+    """
+    converted = convert(export)
+    rollups = {row["account_code"]: Decimal(row["balance"]) for row in converted.ledger_rollups}
+    balances = {row["account_code"] for row in converted.ledger_totals}
+
+    assert rollups == {"Office": Decimal("42.00"), "Utilities": Decimal("60.00")}
+    assert "Utilities" not in balances
+    assert "Office" in balances  # its own postings, apart from the rollup over its children
+
+
+def test_a_ledger_total_is_absent_when_the_export_has_no_general_ledger() -> None:
+    """Reported as absent rather than substituted for. An export with no general ledger states
+    no balance of its own, and summing the journal ourselves would compare our arithmetic
+    against itself."""
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr("Journal.xlsx", workbook(JOURNAL))
+        archive.writestr("Trial_balance.xlsx", workbook(TRIAL_BALANCE))
+
+    converted = convert(buffer.getvalue())
+
+    assert converted.ledger_totals == []
+    assert converted.ledger_rollups == []
+    assert converted.ledger_basis == "unknown"
+
+
+def test_a_converted_export_reconciles_against_the_ledgers_own_totals(
+    database: Database,
+) -> None:
+    """The reconciliation the real export gets, at a scale a test can hold.
+
+    A different oracle from the trial balance above, and deliberately so: an export whose
+    reports are run on a different accounting method from its journal has a trial balance that
+    cannot sum to it, and the general ledger's own per-account totals still can.
+    """
+    converted = convert(synthetic_export())
+
+    entity_id = create_entity(
+        database,
+        principal=PERSON,
+        request_id="quickbooks",
+        slug=f"qb-{uuid.uuid4().hex[:8]}",
+        name="Synthetic Co",
+        accounting_basis="accrual",
+        fiscal_year_end_month=12,
+        fiscal_year_end_day=31,
+        functional_currency="USD",
+        time_zone="UTC",
+    ).entity_id
+    post_converted(database, entity_id, converted)
+
+    report = present_reconciliation(
+        trial_balance(
+            database, entity_id=entity_id, principal=PERSON, as_of=date(2026, 12, 31)
+        ),
+        [
+            SourceBalance(account_code=row["account_code"], balance=Decimal(row["balance"]))
+            for row in converted.ledger_totals
+        ],
+    )
+
+    assert report.agrees, [
+        (c.account_code, str(c.ours), str(c.theirs)) for c in report.disagreements
+    ]
+
+
+def test_the_general_ledgers_basis_is_read_from_its_own_footer(export: bytes) -> None:
+    """A cash-basis oracle differs from accrual books on exactly the obligation accounts
+    (ADR-0037), so a reader who does not know the basis cannot tell that from a defect."""
+    assert convert(export).ledger_basis == "accrual"

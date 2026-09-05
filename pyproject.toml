@@ -121,6 +121,7 @@ select = [
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101"]              # assert is the point of a test
 "scripts/**" = ["T201"]            # CI scripts report to stdout
+"tests/integration/reconcile_export.py" = ["T201"]  # an on-demand report, read by a person
 
 [tool.ruff.lint.isort]
 known-first-party = ["cfokit"]
