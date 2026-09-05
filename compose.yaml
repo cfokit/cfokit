@@ -125,7 +125,7 @@ services:
     build:
       context: .
       target: runtime
-    command: ["python", "-m", "cfokit.ledger.mcp"]
+    command: ["python", "-m", "cfokit.server", "mcp"]
     restart: unless-stopped
     depends_on:
       postgres:
@@ -143,6 +143,21 @@ services:
       AUTH_AUDIENCE: ${AUTH_AUDIENCE:-cfokit-ledger}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       PORT: "8081"
+      # Where the import tools may read from. Unset by default, and unset means the tools are
+      # not registered at all — a tool taking a path is a file-read primitive, and one any
+      # holder of a token can reach should not exist unless it was asked for (ADR-0040).
+      #
+      # To import an export, set IMPORT_ROOT to the in-container path and mount the directory
+      # holding it:
+      #
+      #   IMPORT_ROOT=/imports docker compose up mcp
+      #
+      # with the volume below uncommented and pointed at the directory on your machine. Mount
+      # the directory the file is in, not your home directory: whatever is mounted is what the
+      # tools can read.
+      IMPORT_ROOT: ${IMPORT_ROOT:-}
+    # volumes:
+    #   - ${IMPORT_SOURCE:-./imports}:/imports:ro
     ports:
       - "${MCP_PORT:-8081}:8081"
     healthcheck:

@@ -1,0 +1,96 @@
+"""``python -m cfokit.server {rest|mcp}`` — run one of the deployable's surfaces.
+
+One image, many entrypoints (ADR-0023). These replace `python -m cfokit.ledger.api` and
+`python -m cfokit.ledger.mcp`, which served the ledger alone: a module's tools cannot be
+reached through an entrypoint inside the ledger, because the ledger depends on no module
+(ADR-0022, ADR-0040). Running the deployable means running it from above both.
+
+Migrations are never applied here; they are a separate, explicitly invoked job (ADR-0004).
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import sys
+
+import uvicorn
+
+from cfokit.ledger.config import load_settings
+from cfokit.ledger.errors import LedgerError
+from cfokit.server import mcp_server, rest_app
+
+USAGE = "usage: python -m cfokit.server {rest|mcp}"
+
+
+class _JsonFormatter(logging.Formatter):
+    """Structured JSON logs (CLAUDE.md, Observability)."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        payload = {
+            "level": record.levelname.lower(),
+            "logger": record.name,
+            "message": record.getMessage(),
+        }
+        extra = getattr(record, "fields", None)
+        if isinstance(extra, dict):
+            payload.update(extra)
+        return json.dumps(payload)
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = list(sys.argv[1:] if argv is None else argv)
+    if len(args) != 1 or args[0] not in {"rest", "mcp"}:
+        print(USAGE, file=sys.stderr)  # noqa: T201 - a usage line, before logging is up
+        return 2
+
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(_JsonFormatter())
+    logging.basicConfig(level=logging.INFO, handlers=[handler], force=True)
+
+    settings = load_settings()
+    logging.getLogger("cfokit.server").info(
+        f"starting {args[0]} service",
+        extra={
+            "fields": {
+                "port": settings.port,
+                # A count and a flag, never the path: `IMPORT_ROOT` names a directory on the
+                # host, and a log is read by more people than a configuration file is.
+                "imports_enabled": settings.import_root is not None,
+            }
+        },
+    )
+
+    # Binding all interfaces is correct inside a container; the platform controls ingress.
+    if args[0] == "rest":
+        uvicorn.run(
+            rest_app(settings),
+            host="0.0.0.0",  # noqa: S104
+            port=settings.port,
+            log_level=settings.log_level,
+            access_log=False,
+        )
+        return 0
+
+    # The bind address also decides the SDK's DNS rebinding protection, which auto-enables only
+    # for a localhost bind — so it is off here. That is the right posture and not an accident of
+    # the address: the protection guards a server a browser can reach with ambient authority,
+    # and this one has none. Every request must carry a bearer token, no cookie is issued, and
+    # an attacker's page gets 401. Turning it on means an allowed-host list that must match what
+    # clients send through the ingress, and a mismatch answers 421 to everything.
+    mcp_server(settings).run(
+        "streamable-http",
+        host="0.0.0.0",  # noqa: S104
+        port=settings.port,
+        stateless_http=True,
+        json_response=True,
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except LedgerError as exc:
+        logging.getLogger(__name__).error(exc.message, extra={"fields": {"code": exc.code}})
+        sys.exit(1)

@@ -31,22 +31,27 @@ CONTRACTS = REPO_ROOT / "docs" / "contracts"
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from cfokit.ledger import errors as errors_module  # noqa: E402
-from cfokit.ledger.api import create_app  # noqa: E402
 from cfokit.ledger.config import Settings  # noqa: E402
-from cfokit.ledger.mcp import create_server  # noqa: E402
+from cfokit.server import mcp_server, rest_app  # noqa: E402
 
 # A DSN that is never connected to. Generating a contract must not need a database, or the
 # gate would need one too (ADR-0004).
+#
+# `import_root` is set, so the published surface is everything the deployable *can* expose. A
+# deployment that leaves `IMPORT_ROOT` unset exposes fewer tools than the contract lists, which
+# is a deployment choice rather than a contract change — the opposite arrangement would make
+# the published contract depend on configuration, and a caller could not bind to it.
 SETTINGS = Settings(
     database_url="postgresql://contract.invalid/none",
     public_base_url="http://localhost:8080",
     auth_issuer_url="http://localhost:4444",
     auth_audience="cfokit-ledger",
+    import_root=Path("/imports"),
 )
 
 
 def openapi_document() -> dict[str, Any]:
-    return create_app(SETTINGS).openapi()
+    return rest_app(SETTINGS).openapi()
 
 
 def mcp_tools() -> list[dict[str, Any]]:
@@ -56,7 +61,7 @@ def mcp_tools() -> list[dict[str, Any]]:
     is a CI script under `scripts/`, outside the tree `check_async.py` guards, and the async
     boundary ADR-0024 draws is around the ledger package rather than the repository.
     """
-    tools = asyncio.run(create_server(SETTINGS).list_tools())
+    tools = asyncio.run(mcp_server(SETTINGS).list_tools())
     return sorted(
         (
             {

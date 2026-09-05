@@ -1,0 +1,236 @@
+"""The import module's MCP tools.
+
+Registered onto a server the module does not own. `cfokit.ledger.mcp` builds the server and may
+not import this, because the ledger depends on no module (ADR-0022, ADR-0040); a composition
+point above both puts the two together, which is what `cfokit.server` is for.
+
+**The tools take a location, not a file.** A caller passes a path and the server reads it. For
+an export of several thousand transactions that is an engineering constraint before it is
+anything else: eleven thousand posting lines do not fit usefully in a context, a model asked to
+carry them is a lossy pipe, and a truncated one corrupts books silently. What a model is *for*
+here is reading the loaded books afterwards, which the reporting tools already serve.
+
+**A path argument is a file-read primitive, and is treated as one.** The tools are registered
+only when `IMPORT_ROOT` names a directory, and a path outside it is refused. Without that
+variable a deployment exposes no import tool at all, which is the right default for a surface
+that would otherwise let any holder of a token name any file on the host.
+
+**Figures go to a report file, not into the reply.** A reconciliation names accounts and
+amounts; on a real company's books those are client names and revenue. The reply says how many
+agreed and where the detail was written. That is not a claim that the numbers must be kept from
+a model — `PLT-02` puts the runtime in the organisation's own hands — but a summary is what a
+caller asked for, and a tool that returns eleven thousand figures nobody asked for is the same
+mistake as sending them in.
+"""
+
+from __future__ import annotations
+
+import json
+import uuid
+from collections.abc import Callable
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
+
+from mcp.server import MCPServer
+
+from cfokit.imports import Plan, Result, apply, plan, quickbooks
+from cfokit.ledger.errors import LedgerError
+from cfokit.ledger.mcp import refused
+from cfokit.ledger.repository.unit_of_work import Database
+from cfokit.ledger.service.principal import Principal
+
+__all__ = ["ImportPathRefused", "register"]
+
+
+class ImportPathRefused(LedgerError):
+    """A location outside the configured root, or one that is not a file.
+
+    A `LedgerError` so it carries a stable `code` a caller can branch on, like every other
+    refusal on this surface (ADR-0015).
+    """
+
+    code = "import_path_refused"
+    status = 400
+
+
+def resolve(root: Path, location: str) -> Path:
+    """The file `location` names, if it is inside `root`.
+
+    `resolve()` before comparing, so `..` and a symlink are both settled before the check
+    rather than after it — a containment test against an unresolved path tests the string
+    somebody supplied instead of the file it reaches.
+    """
+    candidate = (
+        (root / location).resolve()
+        if not Path(location).is_absolute()
+        else Path(location).resolve()
+    )
+    if not candidate.is_relative_to(root.resolve()):
+        raise ImportPathRefused(f"{location} is outside the configured import directory")
+    if not candidate.is_file():
+        raise ImportPathRefused(f"{location} is not a file")
+    return candidate
+
+
+def register(
+    server: MCPServer,
+    database: Database,
+    *,
+    root: Path,
+    acting: Callable[[], Principal],
+) -> None:
+    """Add the import tools to `server`.
+
+    `acting` derives the caller from the verified token on the request — supplied by the
+    composition point rather than rebuilt here, so both surfaces derive a principal exactly one
+    way (ADR-0033).
+    """
+
+    def report(source: Path, payload: dict[str, Any]) -> str:
+        stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+        destination = source.parent / f"cfokit-import-{stamp}.json"
+        destination.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+        return str(destination)
+
+    def summarise(proposed: Plan) -> dict[str, Any]:
+        return {
+            "system": proposed.system,
+            "entries_basis": proposed.basis,
+            "stated_balances_basis": proposed.balances_basis,
+            "commodity": proposed.commodity,
+            "transactions": proposed.transactions,
+            "postings": proposed.postings,
+            "accounts_to_create": len(proposed.accounts_to_create),
+            "accounts_already_present": len(proposed.accounts_already_present),
+            "accounts_with_no_stated_type": len(proposed.untyped_accounts),
+            "covering": {
+                "earliest": proposed.earliest.isoformat() if proposed.earliest else None,
+                "latest": proposed.latest.isoformat() if proposed.latest else None,
+            },
+            "rows_to_skip": len(proposed.refusals),
+            "can_apply": proposed.can_apply,
+            "blocked": proposed.blocked,
+            # An accrual journal checked against cash-basis balances differs by exactly what is
+            # unsettled (ADR-0037). Said here so a caller reads two divergences as predicted
+            # rather than as broken.
+            "expect_obligation_accounts_to_differ": proposed.oracle_differs_in_basis,
+        }
+
+    def detail(proposed: Plan, result: Result | None = None) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "plan": {
+                **summarise(proposed),
+                "accounts_to_create": list(proposed.accounts_to_create),
+                "accounts_with_no_stated_type": list(proposed.untyped_accounts),
+                "skipped": [
+                    {
+                        "reference": refusal.reference,
+                        "date": refusal.when.isoformat() if refusal.when else None,
+                        "code": refusal.code,
+                        "detail": refusal.detail,
+                    }
+                    for refusal in proposed.refusals
+                ],
+            }
+        }
+        if result is not None:
+            payload["result"] = {
+                "import_id": result.import_id,
+                "accounts_created": result.accounts_created,
+                "transactions_posted": result.transactions_posted,
+                "skipped": [
+                    {
+                        "reference": refusal.reference,
+                        "date": refusal.when.isoformat() if refusal.when else None,
+                        "code": refusal.code,
+                        "detail": refusal.detail,
+                    }
+                    for refusal in result.refusals
+                ],
+                "reconciliation": {
+                    "agreed": result.agreed,
+                    "compared": result.compared,
+                    "divergences": [
+                        {"account": code, "ours": str(ours), "theirs": str(theirs)}
+                        for code, ours, theirs in result.divergences
+                    ],
+                },
+            }
+        return payload
+
+    @server.tool(
+        name="plan_import",
+        description=(
+            "Read an accounting export on the server's filesystem and report what importing "
+            "it would do — transactions, accounts to create, the period covered, and the rows "
+            "it would skip and why. Posts nothing and writes nothing to the books. Pass the "
+            "file's name within the configured import directory, never its contents: the "
+            "server reads the file. Figures are written to a report file whose path is "
+            "returned; the reply carries counts."
+        ),
+    )
+    def plan_import(entity_id: str, location: str) -> dict[str, Any]:
+        def work() -> dict[str, Any]:
+            source = resolve(root, location)
+            books = quickbooks.read(source.read_bytes())
+            proposed = plan(database, entity_id=entity_id, principal=acting(), books=books)
+            return {
+                "ok": True,
+                **summarise(proposed),
+                "report": report(source, detail(proposed)),
+            }
+
+        return _refuse(work)
+
+    @server.tool(
+        name="apply_import",
+        description=(
+            "Import an accounting export into an entity's books: create the chart, post the "
+            "journal, and reconcile the result against the balances the source states for "
+            "itself. Re-plans first and refuses a blocked import. Every entry records the "
+            "system it came from. Run plan_import first — this one writes."
+        ),
+    )
+    def apply_import(entity_id: str, location: str) -> dict[str, Any]:
+        def work() -> dict[str, Any]:
+            source = resolve(root, location)
+            books = quickbooks.read(source.read_bytes())
+            principal = acting()
+            proposed = plan(database, entity_id=entity_id, principal=principal, books=books)
+            result = apply(
+                database,
+                entity_id=entity_id,
+                principal=principal,
+                request_id=f"mcp-import-{uuid.uuid4().hex[:8]}",
+                books=books,
+            )
+            return {
+                "ok": True,
+                "import_id": result.import_id,
+                "accounts_created": result.accounts_created,
+                "transactions_posted": result.transactions_posted,
+                "rows_skipped": len(result.refusals),
+                "reconciliation": {
+                    "agreed": result.agreed,
+                    "compared": result.compared,
+                    "divergences": len(result.divergences),
+                    "exact": result.reconciled,
+                },
+                "expect_obligation_accounts_to_differ": proposed.oracle_differs_in_basis,
+                "report": report(source, detail(proposed, result)),
+            }
+
+        return _refuse(work)
+
+
+def _refuse(work: Callable[[], dict[str, Any]]) -> dict[str, Any]:
+    """Return a refusal rather than raising it, as every tool on this surface does.
+
+    ADR-0015 makes the `code` a published contract callers branch on, and the SDK renders a
+    raised exception as a formatted string a caller would have to substring-parse.
+    """
+    try:
+        return work()
+    except LedgerError as exc:
+        return refused(exc.code, exc.message)

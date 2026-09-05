@@ -6,8 +6,8 @@
 # against an API version it was not built for.
 #
 #   docker run … python -m cfokit.ledger.migrations    migrations, explicit only
-#   docker run … python -m cfokit.ledger.api           REST service (default)
-#   docker run … python -m cfokit.ledger.mcp           MCP service, streamable HTTP
+#   docker run … python -m cfokit.server rest         REST service (default)
+#   docker run … python -m cfokit.server mcp          MCP service, streamable HTTP
 #
 # Both surfaces validate bearer tokens against the same issuer and the same audience
 # (ADR-0019). They listen on PORT, so a deployment runs one per service.
@@ -74,4 +74,4 @@ ENV PATH="/app/.venv/bin:${PATH}" \
 USER cfokit
 EXPOSE 8080
 
-CMD ["python", "-m", "cfokit.ledger.api"]
+CMD ["python", "-m", "cfokit.server", "rest"]

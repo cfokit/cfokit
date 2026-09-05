@@ -248,6 +248,29 @@ def _to_posting(argument: PostingArgument) -> Posting:
     )
 
 
+def acting() -> Principal:
+    """The caller, from the verified token on this request.
+
+    The SDK's bearer middleware has already rejected an absent or invalid token with a 401, so
+    reaching here without one means the server is running on a transport that carries no
+    credential. Refusing is the only safe answer: `LED-20` requires every transaction to record
+    what wrote it, and there would be nothing true to record.
+
+    Module level rather than a closure inside `create_server`, so a module registering its own
+    tools onto the same server derives a principal exactly one way (ADR-0033, ADR-0040). It
+    closes over nothing — the token comes from the request's own context.
+    """
+    token = get_access_token()
+    if token is None or token.claims is None:
+        raise LedgerToolError(
+            "not_authenticated", "this request carries no verified credential"
+        )
+    try:
+        return principal_from_claims(token.claims)
+    except NotAuthenticated as exc:
+        raise LedgerToolError(exc.code, exc.message) from exc
+
+
 def _refusals(work: Callable[[], dict[str, Any]]) -> dict[str, Any]:
     """Run `work`, converting any ledger refusal into the structured refusal shape."""
     try:
@@ -325,24 +348,6 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
             },
             status_code=HTTPStatus.OK if result.ready else HTTPStatus.SERVICE_UNAVAILABLE,
         )
-
-    def acting() -> Principal:
-        """The caller, from the verified token on this request.
-
-        The SDK's bearer middleware has already rejected an absent or invalid token with a
-        401, so reaching here without one means the server is running on a transport that
-        carries no credential. Refusing is the only safe answer: `LED-20` requires every
-        transaction to record what wrote it, and there would be nothing true to record.
-        """
-        token = get_access_token()
-        if token is None or token.claims is None:
-            raise LedgerToolError(
-                "not_authenticated", "this request carries no verified credential"
-            )
-        try:
-            return principal_from_claims(token.claims)
-        except NotAuthenticated as exc:
-            raise LedgerToolError(exc.code, exc.message) from exc
 
     def context(entity_id: str, idempotency_key: str) -> WriteContext:
         return WriteContext(
