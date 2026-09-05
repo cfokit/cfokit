@@ -152,6 +152,7 @@ def record_transaction(
     entry_kind: str = "ordinary",
     raises_obligation: Decimal | None = None,
     settles: tuple[Applied, ...] = (),
+    derived_from: dict[str, Any] | None = None,
 ) -> WrittenTransaction:
     """Record a transaction, as a draft or posted straight through.
 
@@ -171,6 +172,13 @@ def record_transaction(
 
     Both need the transaction posted. A draft is not in the books (`LED-07`), so an obligation
     raised by one would be owed by nobody and a settlement against one would apply to nothing.
+
+    **`derived_from` says what this entry came from outside the books** — the source system and
+    the record within it (`IMP-04`, `BKP-19`, `SOC1-14`). It is lineage, not content: it never
+    affects what is posted, what balances, or what any statement shows, and it is written once
+    at insert because the entry is append-only. It is deliberately not part of the idempotency
+    digest below: two requests that differ only in where they say they came from are not the
+    same operation, and a caller reusing a key across two sources should be told so.
     """
     _require_key(context)
 
@@ -182,6 +190,7 @@ def record_transaction(
         entry_kind,
         post,
         [(p.account_id, str(p.amount), p.commodity) for p in entry.postings],
+        derived_from,
     )
 
     with database.entity_write(context.entity_id) as write:
@@ -218,6 +227,7 @@ def record_transaction(
             actor_principal_id=context.principal.id,
             actor_class=context.principal.actor_class.value,
             acting_for_principal_id=context.principal.acting_for,
+            derived_from=derived_from,
         )
         write.add_postings(transaction_id, entry.postings)
 

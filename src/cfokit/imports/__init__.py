@@ -1,0 +1,389 @@
+"""Import: landing a company's books from the system it already runs (`IMP-01` to `IMP-08`).
+
+**The first module** under ADR-0022, and a sibling of the ledger rather than part of it. The
+ledger owns the double-entry primitive and "knows nothing about customers, invoices, banks" —
+understanding what a QuickBooks export is, is exactly the domain knowledge that boundary keeps
+out. Reading our own books *out* stays in the ledger (`EXP-01`, `EXP-02`) because that needs no
+foreign vocabulary; reading someone else's books *in* needs a great deal of it.
+
+**In-process, not a separate component.** ADR-0022 § 3 makes in-process the default and
+separation something to be earned. An import holds no third-party credential today, and its
+one real claim to separation — that a third party could build a Xero reader against the API —
+is about an extension point that does not exist (`NFR-12`). A boundary drawn around that guess
+is the mistake the deleted `connectors` package already made once (ADR-0012, ADR-0031).
+
+**Named for the capability.** Not `quickbooks`, which names a vendor, and not `ingest`, which
+names a mechanism. `imports` rather than `import` only because the latter is a keyword.
+
+**Two calls, because `IMP-05` requires two.** `plan` reads the file and says what would happen;
+`apply` does it. The operator sees what will be created and what will not, and can abandon it.
+`apply` re-validates rather than trusting the plan it was handed: a plan is a description, not
+a permission.
+
+**The file never passes through a model.** `plan` and `apply` take an archive and return a
+summary; the transactions themselves go from the file to the database without an intermediate
+that has to hold them all. That is an engineering constraint before it is anything else — an
+export of this size does not fit usefully in a context, and a model asked to carry it is a
+lossy pipe that adds nothing. What a model is *for* here is reading the loaded books
+afterwards, where `PLT-02` puts the runtime in the organisation's own hands.
+"""
+
+from __future__ import annotations
+
+import uuid
+from dataclasses import dataclass, field
+from datetime import date
+from decimal import Decimal
+
+from cfokit.imports.source import SourceBooks
+from cfokit.ledger.engine import Entry, Posting
+from cfokit.ledger.engine.postability import MINIMUM_POSTINGS
+from cfokit.ledger.errors import LedgerError
+from cfokit.ledger.presentation import SourceBalance, present_reconciliation
+from cfokit.ledger.repository.unit_of_work import Database
+from cfokit.ledger.service.administration import create_account
+from cfokit.ledger.service.principal import Principal
+from cfokit.ledger.service.reports import trial_balance
+from cfokit.ledger.service.write import WriteContext, record_transaction
+
+__all__ = ["Plan", "Refusal", "Result", "apply", "plan"]
+
+# An account the source states no type for. The chart admits five types and none of them means
+# "unknown", so something has to be chosen; `asset` is inert for a trial balance, which groups
+# by sign rather than by type. Recorded in the plan so the operator sees it rather than
+# discovering it in a statement.
+FALLBACK_TYPE = "asset"
+
+
+@dataclass(frozen=True, slots=True)
+class Refusal:
+    """One thing the import will not do, and why.
+
+    `IMP-05` requires the operator to see "what will be created, **and what will not**". A
+    refusal is part of the plan, not an error that stops it: an export with three malformed
+    rows out of eleven thousand should import the rest and say so.
+    """
+
+    reference: str
+    when: date | None
+    code: str
+    detail: str
+
+
+@dataclass(frozen=True, slots=True)
+class Plan:
+    """What an import would do, before anything is posted (`IMP-05`)."""
+
+    system: str
+    basis: str
+    balances_basis: str
+    commodity: str
+    accounts_to_create: tuple[str, ...]
+    accounts_already_present: tuple[str, ...]
+    untyped_accounts: tuple[str, ...]
+    transactions: int
+    postings: int
+    earliest: date | None
+    latest: date | None
+    refusals: tuple[Refusal, ...]
+    blocked: str | None = None
+
+    @property
+    def can_apply(self) -> bool:
+        """Whether `apply` would do anything. A blocked plan is abandoned, not forced."""
+        return self.blocked is None
+
+    @property
+    def oracle_differs_in_basis(self) -> bool:
+        """Whether the reconciliation will diverge for a reason that is not a defect.
+
+        An accrual journal checked against cash-basis balances differs by exactly what is
+        unsettled — receivables, and the income not yet recognised against them, equal and
+        opposite. ADR-0037 predicts that, and the prediction is what makes a *different* figure
+        a defect. Surfaced so an operator reads two divergences as expected rather than as
+        broken.
+        """
+        return self.balances_basis not in {"unknown", self.basis}
+
+
+@dataclass(frozen=True, slots=True)
+class Result:
+    """What an import did."""
+
+    import_id: str
+    accounts_created: int
+    transactions_posted: int
+    refusals: tuple[Refusal, ...] = ()
+    agreed: int = 0
+    compared: int = 0
+    divergences: tuple[tuple[str, Decimal, Decimal], ...] = field(default_factory=tuple)
+
+    @property
+    def reconciled(self) -> bool:
+        """`IMP-08`: agreement demonstrated rather than assumed, with no tolerance."""
+        return self.compared > 0 and self.agreed == self.compared
+
+
+def plan(
+    database: Database, *, entity_id: str, principal: Principal, books: SourceBooks
+) -> Plan:
+    """What importing `books` into this entity would do. Posts nothing, writes nothing.
+
+    Reads the entity's own settings rather than taking them from the file: `IMP-06` refuses an
+    import whose basis conflicts with the entity's declared one, and a caller who could state
+    the basis could state its way past that refusal.
+    """
+    report = trial_balance(database, entity_id=entity_id, principal=principal, as_of=date.max)
+    existing = {row.code for row in report.rows}
+    with database.entity_write(entity_id) as write:
+        existing |= {account.code for account in write.chart()}
+
+    blocked = _blocking(books, report.accounting_basis, report.functional_currency)
+    refusals = tuple(_refusals(books))
+    refused = {refusal.reference for refusal in refusals}
+    entries = [entry for entry in books.entries if entry.reference not in refused]
+    dates = [entry.transaction_date for entry in entries]
+
+    return Plan(
+        system=books.system,
+        basis=books.basis,
+        balances_basis=books.balances_basis,
+        commodity=books.commodity,
+        accounts_to_create=tuple(
+            account.code for account in books.accounts if account.code not in existing
+        ),
+        accounts_already_present=tuple(
+            account.code for account in books.accounts if account.code in existing
+        ),
+        untyped_accounts=tuple(
+            account.code for account in books.accounts if account.account_type == "unknown"
+        ),
+        transactions=len(entries),
+        postings=sum(len(entry.lines) for entry in entries),
+        earliest=min(dates, default=None),
+        latest=max(dates, default=None),
+        refusals=refusals,
+        blocked=blocked,
+    )
+
+
+def apply(
+    database: Database,
+    *,
+    entity_id: str,
+    principal: Principal,
+    request_id: str,
+    books: SourceBooks,
+) -> Result:
+    """Create the chart and post the journal. Re-plans first, and refuses a blocked plan.
+
+    **Re-validated rather than trusting a plan it was handed.** A plan is a description of what
+    would happen, not a permission for it, and the books may have moved since one was taken.
+
+    Each transaction is its own write through the ledger's ordinary path — the same
+    `record_transaction` an adapter calls, with its own idempotency key and its own audit row.
+    One enormous transaction would be atomic and would also mean an eleven-thousand-line
+    rollback over a single malformed row, which is the opposite of what `IMP-05` asks for.
+
+    Every entry carries `derived_from` naming this import and the reference it came in under,
+    which is `IMP-04`'s "identifiable as imported and names the system it came from" and the
+    lineage `SOC1-14` wants.
+    """
+    proposed = plan(database, entity_id=entity_id, principal=principal, books=books)
+    if proposed.blocked is not None:
+        raise ImportRefused(proposed.blocked)
+
+    import_id = str(uuid.uuid4())
+    accounts: dict[str, str] = {}
+    with database.entity_write(entity_id) as write:
+        accounts = {account.code: account.account_id for account in write.chart()}
+
+    created = 0
+    # Sorted, so a parent is created before anything under it: a path sorts before every path
+    # it prefixes, which is the ordering the chart's foreign key needs.
+    for account in sorted(books.accounts, key=lambda a: a.code):
+        if account.code in accounts:
+            continue
+        accounts[account.code] = create_account(
+            database,
+            entity_id=entity_id,
+            principal=principal,
+            request_id=request_id,
+            code=account.code,
+            name=account.name,
+            account_type=(
+                account.account_type if account.account_type != "unknown" else FALLBACK_TYPE
+            ),
+            parent_id=accounts.get(account.parent) if account.parent else None,
+        )
+        created += 1
+
+    refused = {refusal.reference for refusal in proposed.refusals}
+    posted = 0
+    failures: list[Refusal] = list(proposed.refusals)
+    for entry in books.entries:
+        if entry.reference in refused:
+            continue
+        try:
+            record_transaction(
+                database,
+                WriteContext(
+                    entity_id=entity_id,
+                    principal=principal,
+                    request_id=request_id,
+                    idempotency_key=uuid.uuid4().hex,
+                ),
+                entry=Entry(
+                    transaction_date=entry.transaction_date,
+                    postings=tuple(
+                        Posting(
+                            account_id=accounts[line.account_code],
+                            amount=line.amount,
+                            commodity=line.commodity,
+                        )
+                        for line in entry.lines
+                    ),
+                    description=entry.description or None,
+                ),
+                post=True,
+                derived_from={
+                    "system": books.system,
+                    "import_id": import_id,
+                    "reference": entry.reference,
+                },
+            )
+            posted += 1
+        except LedgerError as refusal:
+            # A refusal the plan could not foresee — a closed period, an account the chart
+            # would not take. Reported, never swallowed: `NFR-01` resolves disagreements
+            # rather than tolerating them, and a transaction the ledger declined is one.
+            failures.append(
+                Refusal(
+                    reference=entry.reference,
+                    when=entry.transaction_date,
+                    code=refusal.code,
+                    detail=str(refusal),
+                )
+            )
+
+    agreed, compared, divergences = _reconcile(
+        database, entity_id=entity_id, principal=principal, books=books
+    )
+    return Result(
+        import_id=import_id,
+        accounts_created=created,
+        transactions_posted=posted,
+        refusals=tuple(failures),
+        agreed=agreed,
+        compared=compared,
+        divergences=divergences,
+    )
+
+
+class ImportRefused(LedgerError):
+    """The import cannot proceed at all, as opposed to skipping rows within one."""
+
+    code = "import_refused"
+    status = 422
+
+
+def _blocking(books: SourceBooks, basis: str, commodity: str) -> str | None:
+    """Whether the import is refused outright, and why.
+
+    Two conditions, both from the requirements and both about the *file* rather than its rows.
+    A row-level problem skips a row; these mean the file is the wrong file for this entity.
+    """
+    if books.basis != "unknown" and books.basis != basis:
+        # IMP-06, and only about the *entries*. Importing cash-basis entries into accrual books
+        # would land figures no posting path can reconcile, because basis is a presentation
+        # property and nothing branches on it (ADR-0037).
+        #
+        # `books.balances_basis` is deliberately not checked here. That is the method a *report*
+        # in the same file was run on; it explains a divergence rather than causing one, and
+        # refusing on it would reject an accrual journal because a cash-basis report sat beside
+        # it. `unknown` does not block either — a source that states no method for its raw
+        # record has not disagreed with anything.
+        return (
+            f"the source states {books.basis} basis and this entity is {basis}"
+            " — importing would land figures the books cannot reproduce"
+        )
+    foreign = sorted(
+        {line.commodity for entry in books.entries for line in entry.lines} - {commodity}
+    )
+    if foreign:
+        # IMP-07, on the same terms as any other foreign amount (`LED-15`).
+        return f"the source carries {', '.join(foreign)} and this entity is {commodity}"
+    return None
+
+
+def _refusals(books: SourceBooks) -> list[Refusal]:
+    """Rows the import will skip, decided before anything is posted (`IMP-05`)."""
+    refusals: list[Refusal] = []
+    for entry in books.entries:
+        if len(entry.lines) < MINIMUM_POSTINGS:
+            # The engine's own threshold, imported rather than restated. A single line sums to
+            # zero when its amount is zero, so a balance check alone would pass it while it
+            # records no movement of value — which is exactly why `TransactionIncomplete` is a
+            # separate refusal from `unbalanced_transaction`.
+            refusals.append(
+                Refusal(
+                    entry.reference,
+                    entry.transaction_date,
+                    "transaction_incomplete",
+                    f"{len(entry.lines)} posting(s); a movement of value needs"
+                    f" {MINIMUM_POSTINGS}",
+                )
+            )
+        elif sum(line.amount for line in entry.lines) != 0:
+            # LED-03. Stated here rather than left to the engine so the operator sees it in
+            # the plan, which is the whole of what `IMP-05` asks for.
+            refusals.append(
+                Refusal(
+                    entry.reference,
+                    entry.transaction_date,
+                    "unbalanced",
+                    f"debits and credits differ by {sum(line.amount for line in entry.lines)}",
+                )
+            )
+    return refusals
+
+
+def _reconcile(
+    database: Database, *, entity_id: str, principal: Principal, books: SourceBooks
+) -> tuple[int, int, tuple[tuple[str, Decimal, Decimal], ...]]:
+    """`IMP-08`: agreement with the source demonstrated rather than assumed.
+
+    Against the balances the source states for itself, which is the source's own arithmetic
+    over its own data. Summing the journal ourselves and calling it an oracle would be
+    comparing our arithmetic against itself.
+
+    An account the source states zero for is absent from ours, because `RPT-01` reports
+    non-zero balances. Left out of the comparison rather than counted as a divergence: the two
+    systems state the same figure in different ways, and calling that a disagreement would
+    bury the ones that are real.
+    """
+    if not books.balances:
+        return 0, 0, ()
+    as_of = max(entry.transaction_date for entry in books.entries)
+    report = present_reconciliation(
+        trial_balance(database, entity_id=entity_id, principal=principal, as_of=as_of),
+        [
+            SourceBalance(account_code=balance.account_code, balance=balance.balance)
+            for balance in books.balances
+        ],
+    )
+    stated = [
+        comparison
+        for comparison in report.comparisons
+        if not comparison.only_ours and not (comparison.only_theirs and comparison.theirs == 0)
+    ]
+    divergences = tuple(
+        (
+            comparison.account_code,
+            comparison.ours or Decimal(0),
+            comparison.theirs or Decimal(0),
+        )
+        for comparison in stated
+        if not comparison.agrees
+    )
+    return len(stated) - len(divergences), len(stated), divergences

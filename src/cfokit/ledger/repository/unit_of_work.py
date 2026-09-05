@@ -383,6 +383,7 @@ class EntityWrite:
         actor_principal_id: str,
         actor_class: str,
         acting_for_principal_id: str | None,
+        derived_from: dict[str, Any] | None = None,
     ) -> str:
         return transactions.insert_draft(
             self._conn,
@@ -394,6 +395,7 @@ class EntityWrite:
             actor_principal_id=actor_principal_id,
             actor_class=actor_class,
             acting_for_principal_id=acting_for_principal_id,
+            derived_from=derived_from,
         )
 
     def add_postings(self, transaction_id: str, postings: Sequence[Posting]) -> None:
