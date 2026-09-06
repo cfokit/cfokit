@@ -33,6 +33,17 @@ dependencies = [
     # through mcp — a transitive dependency we call into is one that can vanish in a
     # patch release. MIT; the crypto extra is cryptography, Apache-2.0 OR BSD-3-Clause.
     "pyjwt[crypto]>=2.10",
+    # Reads .xlsx workbooks, which is the form every report in a QuickBooks export takes
+    # (`IMP-01`, ADR-0040). Runtime rather than dev because the import tools run in the
+    # deployed image; before they existed, the reader was only a test helper.
+    #
+    # Chosen over reading the format by hand, which is feasible — an .xlsx is a zip of XML and
+    # we need only cell values from one worksheet — but concentrates its risk in shared
+    # strings, styles deciding date-from-number, and the 1900 date system's leap-year bug.
+    # A subtle error there corrupts a figure silently, which is the one failure this codebase
+    # is least willing to take. MIT, and pulls only et-xmlfile, also MIT (both verified
+    # 2026-09-05 from the installed artifacts' metadata, not from memory).
+    "openpyxl>=3.1",
 ]
 
 [build-system]
@@ -73,13 +84,9 @@ dev = [
     # `mcp` transitive; declared here so the suite depends on something stated rather than
     # borrowed. BSD-3-Clause (verified 2026-09-02 from the installed artifact's metadata).
     "httpx2>=0.29",
-    # Reads a QuickBooks export, whose reports are .xlsx workbooks. Used only by the
-    # conversion helper under `tests/`, which turns an export into the interchange format the
-    # reconciler already consumes — no export, and no reader, reaches the distribution.
-    # MIT (verified 2026-09-05 from the installed artifact's metadata, not from memory).
-    "openpyxl>=3.1",
-    # Its stubs, so the converter type-checks under `mypy --strict` like everything
-    # else rather than earning an exemption. Apache-2.0, from typeshed.
+    # Stubs for openpyxl, which is a runtime dependency above. Only the stubs are dev: the
+    # reader type-checks under `mypy --strict` like everything else rather than earning an
+    # exemption, and typeshed stubs ship to nobody. Apache-2.0.
     "types-openpyxl>=3.1",
 ]
 
