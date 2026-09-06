@@ -62,7 +62,7 @@ nothing cites these but this repository. They are added when something breaks wi
 | [0016](0016-opentofu-single-cloud-target-iac.md) | OpenTofu, one cloud target, written deployment contract | Draft |
 | [0017](0017-gcp-initial-cloud-target.md) | GCP (Cloud Run + Cloud SQL) as the initial cloud target | Draft |
 | [0018](0018-local-compose-dev-and-production.md) | One compose stack for local development and local production | Draft |
-| [0019](0019-identity-provider-conformance-contract.md) | Identity provider as a swappable dependency behind a conformance contract | Draft |
+| [0019](0019-identity-provider-conformance-contract.md) | Identity provider as a swappable dependency behind a conformance contract | Proposed |
 | [0020](0020-repository-layout-artifact-kinds.md) | Repository directories are organised by artifact kind | Draft |
 | [0021](0021-slack-as-a-delivery-surface.md) | Slack is a delivery surface, built as a separate component over HTTP events | Draft |
 | [0022](0022-tiny-ledger-modules-and-components.md) | The ledger stays tiny; everything else is an in-process module or a separate component | Draft |
@@ -186,7 +186,7 @@ A sweep found five conflicts and eight unserved requirements. None is fixed.
 |---|---|
 | `SOC1-25` requires the acting principal's own credential to flow through, "never against a shared credential with the real actor passed as a parameter". Components authenticate by client credentials and assert which user is acting — the intersection of grants mitigates this but does not satisfy it. The fix is OAuth token exchange (RFC 8693), which ADR-0019's conformance contract also does not require | ADR-0021, ADR-0032, ADR-0019 |
 | `SOC1-15` puts actor class on the entry "in the data itself, not only in an audit record", and `SOC1-06`, `SOC1-34` and `SOC1-35` add model and skill versions against it. ADR-0022 says the ledger knows nothing about agents. Its boundary test has no answer for this | ADR-0022 |
-| `SOC2-19` requires refusing a session where the issuer does not assert MFA, and `SOC2-20` requires central session revocation reaching skills. ADR-0019's conformance contract enumerates six issuer capabilities and includes neither, so a conforming issuer satisfies neither requirement | ADR-0019 |
+| `SOC2-19` requires refusing a session where the issuer does not assert MFA, and `SOC2-20` requires central session revocation reaching skills. ADR-0019's conformance contract enumerates neither, so a conforming issuer satisfies neither requirement | ADR-0019 |
 | `SOC1-22` requires audit records in storage the application cannot modify or delete by any code path, administrative ones included. ADR-0003 permits only Postgres and does not address how | ADR-0003 |
 | `SOC2-03` requires an agent turn reading untrusted content to hold a reduced capability set, enforced at the interface, so reading a document and writing to the ledger are not simultaneously available. The published tool surface has no notion of a reduced capability set | ADR-0015, ADR-0009 |
 
