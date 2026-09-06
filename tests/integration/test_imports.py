@@ -26,8 +26,9 @@ import pytest
 from cfokit.imports import ImportRefused, apply, plan
 from cfokit.imports.quickbooks import SYSTEM, read
 from cfokit.ledger.engine import Entry, Posting
+from cfokit.ledger.errors import NotAPerson
 from cfokit.ledger.repository.unit_of_work import Database
-from cfokit.ledger.service.administration import create_entity
+from cfokit.ledger.service.administration import create_entity, grant_role
 from cfokit.ledger.service.principal import ActorClass, Principal
 from cfokit.ledger.service.write import WriteContext, record_transaction
 
@@ -693,3 +694,77 @@ def test_an_ordinary_write_carries_no_lineage(database: Database) -> None:
 
     assert by_hand["derived_from"] is None
     assert all(entry["derived_from"] is not None for entry in entries if entry is not by_hand)
+
+
+# --- applying is a person's act (ADR-0007, ADR-0030) ---------------------------------------
+
+
+def staffed(database: Database) -> tuple[str, Principal]:
+    """An entity, and an agent holding a role in it while acting for its owner.
+
+    The grant matters: without one the agent is refused for holding nothing, which would make
+    the tests below pass for the wrong reason.
+    """
+    entity_id = entity(database)
+    agent = Principal(id="agent:bookkeeper", actor_class=ActorClass.AGENT, acting_for=PERSON.id)
+    grant_role(
+        database,
+        entity_id=entity_id,
+        principal=PERSON,
+        request_id="req-grant",
+        to_principal=agent.id,
+        role="owner",
+    )
+    return entity_id, agent
+
+
+def test_a_delegated_agent_may_plan_an_import(database: Database) -> None:
+    """The proposing half. A skill reading an export and reporting what it would do is exactly
+    what a skill is for, and it posts nothing."""
+    entity_id, agent = staffed(database)
+
+    proposed = plan(
+        database, entity_id=entity_id, principal=agent, books=read(synthetic_export())
+    )
+
+    assert proposed.can_apply
+
+
+def test_a_delegated_agent_may_not_apply_one(database: Database) -> None:
+    """**The largest single act of posting the system offers**, in one call. ADR-0007: the
+    agent proposes and a person's confirmation posts.
+
+    A capability the agent does not hold, rather than an instruction it is asked to follow —
+    the same division ADR-0030 drew around reopening a closed period, and for the same reason:
+    an instruction can be argued past and a capability cannot.
+    """
+    entity_id, agent = staffed(database)
+
+    with pytest.raises(NotAPerson):
+        apply(
+            database,
+            entity_id=entity_id,
+            principal=agent,
+            request_id="req",
+            books=read(synthetic_export()),
+        )
+
+    with database.entity_write(entity_id) as write:
+        assert write.chart() == []  # refused before anything was created
+
+
+def test_the_refusal_is_decided_on_the_token_shape_not_a_claim(database: Database) -> None:
+    """`actor_class` comes from whether the token carries an RFC 8693 `act` claim (ADR-0033).
+    A skill cannot describe itself as a person, which is what makes the control worth having.
+    """
+    entity_id, _ = staffed(database)
+    rule = Principal(id="rule:importer", actor_class=ActorClass.RULE)
+
+    with pytest.raises(NotAPerson):
+        apply(
+            database,
+            entity_id=entity_id,
+            principal=rule,
+            request_id="req",
+            books=read(synthetic_export()),
+        )

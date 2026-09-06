@@ -38,11 +38,11 @@ from decimal import Decimal
 from cfokit.imports.source import SourceBooks
 from cfokit.ledger.engine import Entry, Posting
 from cfokit.ledger.engine.postability import MINIMUM_POSTINGS
-from cfokit.ledger.errors import LedgerError
+from cfokit.ledger.errors import LedgerError, NotAPerson
 from cfokit.ledger.presentation import SourceBalance, present_reconciliation
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.administration import create_account
-from cfokit.ledger.service.principal import Principal
+from cfokit.ledger.service.principal import ActorClass, Principal
 from cfokit.ledger.service.reports import trial_balance
 from cfokit.ledger.service.write import WriteContext, record_transaction
 
@@ -188,7 +188,23 @@ def apply(
     Every entry carries `derived_from` naming this import and the reference it came in under,
     which is `IMP-04`'s "identifiable as imported and names the system it came from" and the
     lineage `SOC1-14` wants.
+
+    **A person's act, never a delegated agent's.** ADR-0007 puts it plainly — the agent
+    proposes and a person's confirmation posts — and this is the largest single act of posting
+    the system offers: a company's whole history, in one call. `plan` is the proposing half and
+    holds no such restriction, which is the division ADR-0030 already drew around reopening a
+    closed period.
+
+    Checked on `actor_class`, which comes from the shape of the token and never from a claim
+    the caller sets (ADR-0033). A token carrying no delegation is a person's; one carrying an
+    RFC 8693 `act` claim is an agent acting for someone, and it is that second shape this
+    refuses.
     """
+    if principal.actor_class is not ActorClass.PERSON:
+        raise NotAPerson(
+            "importing a company's books is a person's act; ask the person you act for"
+        )
+
     proposed = plan(database, entity_id=entity_id, principal=principal, books=books)
     if proposed.blocked is not None:
         raise ImportRefused(proposed.blocked)

@@ -116,7 +116,22 @@ rather than causing one: an accrual journal reconciled against cash-basis balanc
 what is unsettled, which is ADR-0037 working. Refusing on it would reject a file whose data is fine
 because a report beside it was run differently.
 
-### 7. Lineage is written at insert
+### 7. Applying is a person's act; planning is not
+
+`plan` reads a file and reports; `apply` posts a company's whole history in one call. ADR-0007
+settles which is which — "the agent proposes; a person's confirmation posts" — and this is the
+largest single act of posting the system offers.
+
+Enforced as a capability rather than an instruction, which is the same division ADR-0030 drew
+around reopening a closed period and for the same reason: an instruction can be argued past and
+a capability cannot. Checked on `actor_class`, which comes from the shape of the token and never
+from a claim the caller sets (ADR-0033), so a skill cannot describe itself as a person.
+
+A token carrying no delegation is a person's; one carrying an RFC 8693 `act` claim is an agent
+acting for someone, and it is that second shape this refuses. An operator running the import
+themselves is unaffected either way.
+
+### 8. Lineage is written at insert
 
 `IMP-04` requires an imported record "identifiable as imported and names the system it came from".
 `ledger_transaction.derived_from` has existed since migration 0001 for `BKP-19` and was left
@@ -130,6 +145,8 @@ not be attached — and lineage that *can* be attached later is lineage that can
 * Good, because the ledger stays about double-entry while a whole foreign vocabulary lands beside it.
 * Good, because an import commits through the ordinary write path, with its own audit row per
   transaction, rather than through a bulk path with different rules.
+* Good, because the one act that could land thousands of entries unattended cannot be reached
+  by a delegated agent, while the act that describes it can.
 * Good, because `IMP-08` reconciles against the source's own stated figures — its arithmetic against
   ours over the same journal, not ours against itself.
 * Bad, because the module needs its own operator surface: the ledger's adapters may not import it, so

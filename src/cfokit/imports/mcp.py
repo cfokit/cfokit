@@ -189,7 +189,9 @@ def register(
             "Import an accounting export into an entity's books: create the chart, post the "
             "journal, and reconcile the result against the balances the source states for "
             "itself. Re-plans first and refuses a blocked import. Every entry records the "
-            "system it came from. Run plan_import first — this one writes."
+            "system it came from. Run plan_import first — this one writes. A person's act: a "
+            "delegated agent session is refused with not_a_person, and should ask the person "
+            "it acts for to apply the import."
         ),
     )
     def apply_import(entity_id: str, location: str) -> dict[str, Any]:
