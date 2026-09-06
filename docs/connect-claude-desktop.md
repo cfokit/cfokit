@@ -83,25 +83,42 @@ rather than the most recent one. Create a fresh entity for a run you care about.
 **`docker compose down -v` destroys the volume**, and with it every set of books in it. The
 warning at the top of `compose.yaml` is not decorative.
 
-## 3. Create a user to sign in as
+## 3. Let this machine reach the issuer by name
+
+**Before anything opens a browser.** The issuer answers on one hostname and redirects
+everything else to it — `KC_HOSTNAME` is authoritative, and a token's `iss` is validated against
+it, so an issuer reachable under two names would issue tokens the application rejects.
+
+That name is `keycloak`, because it is the one that resolves inside the compose network. Make it
+resolve here too:
+
+```
+echo "127.0.0.1 keycloak" | sudo tee -a /etc/hosts
+```
+
+Without it, **`http://localhost:8180` is not a way in**. It answers, and what it answers is a
+redirect somewhere your browser cannot follow:
+
+```
+GET http://localhost:8180/  ->  302  Location: http://keycloak:8180/admin/
+```
+
+which is `DNS_PROBE_FINISHED_NXDOMAIN` rather than anything that names the cause.
+
+A deployment reachable by more than this machine sets `KC_HOSTNAME` and `AUTH_ISSUER_URL` to a
+public hostname instead, which is the same condition `PUBLIC_BASE_URL` already carries
+(ADR-0004, ADR-0018).
+
+## 4. Create a user to sign in as
 
 The realm ships with no users; a realm carrying a known password would be a credential in the
-repository. Open the admin console at **http://localhost:8180**, sign in with `admin` / `admin`,
-switch to the **cfokit** realm, and add a user with a password.
+repository. Open the admin console at **http://keycloak:8180** — the hostname from step 3, not
+`localhost` — sign in with `admin` / `admin`, switch to the **cfokit** realm, and add a user
+with a password.
+
+Their `sub`, which step 8 needs, is on the user's page in the console.
 
 Change the admin password before this is reachable by anything but your laptop.
-
-## 4. Let the browser reach the issuer
-
-The ledger tells a client where the issuer is, and that address has to mean the same thing from
-inside the compose network and from your browser. Add one line to `/etc/hosts`:
-
-```
-127.0.0.1 keycloak
-```
-
-Without it the sign-in page will not load: the client is sent to `http://keycloak:8180`, which
-resolves inside the network and nowhere else.
 
 ## 5. Configure Claude Desktop
 
@@ -119,7 +136,7 @@ resolves inside the network and nowhere else.
 ```
 
 Quit Claude Desktop fully and reopen it — closing the window is not enough. On first use a
-browser window opens for the sign-in from step 3. `mcp-remote` registers itself as a client
+browser window opens for the sign-in from step 4. `mcp-remote` registers itself as a client
 through RFC 7591; the realm's registration policy admits it because its redirect URI is on
 `localhost`.
 
@@ -141,6 +158,9 @@ It knows the import flow: `plan_import` is its call to make, `apply_import` is y
 
 Creating an entity needs an authenticated identity and no prior role (`IAM-06`), and the
 creator becomes its owner. A client registers itself, takes a token, and creates the entity:
+
+The API endpoints answer under either name; it is the admin console that redirects, so this
+works whether or not step 3 is done.
 
 ```bash
 KC=http://localhost:8180/realms/cfokit
@@ -164,7 +184,7 @@ curl -s -X POST http://localhost:8080/entities \
 ```
 
 That returns an `entity_id`, owned by the bootstrap client. Grant your own user the same role,
-using the `sub` shown on their user page in the admin console:
+using the `sub` from step 4:
 
 ```bash
 curl -s -X POST "http://localhost:8080/entities/<entity-id>/grants" \
