@@ -99,3 +99,26 @@ def test_every_service_reads_the_same_issuer() -> None:
     }
 
     assert len(values) == 1, f"services disagree about the issuer: {values}"
+
+
+def test_the_issuer_answers_to_the_name_it_advertises() -> None:
+    """**The other half of the same invariant as the port.**
+
+    A client is handed the issuer's address and goes to it directly, so the name has to reach
+    the issuer from wherever that client sits. Inside the compose network a name reaches a
+    container only if the service answers to it, so the host in `AUTH_ISSUER_URL` must be the
+    service's own name or an alias it declares.
+
+    `keycloak.localhost` resolves to the loopback address in a browser without anything being
+    configured (RFC 6761), and to the container inside the network through the alias. Change
+    one without the other and the address means the issuer on exactly one side — which is not
+    a failure anything reports, because each side works when tested alone.
+    """
+    host = urlparse(setting("AUTH_ISSUER_URL")).hostname
+    body = "\n".join(lines())
+
+    assert host, "AUTH_ISSUER_URL names no host"
+    assert f"- {host}" in body or f"  {host}:" in body, (
+        f"nothing in compose.yaml answers to {host!r}: the issuer service needs it as its own"
+        " name or as a network alias"
+    )
