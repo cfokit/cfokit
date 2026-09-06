@@ -114,12 +114,47 @@ public hostname, which is the condition `PUBLIC_BASE_URL` already carries (ADR-0
 
 ## 4. Create a user to sign in as
 
-The realm ships with no users; a realm carrying a known password would be a credential in the
-repository. Open the admin console at **http://keycloak.localhost:8180** — the name from step 3, not
-`localhost` — sign in with `admin` / `admin`, switch to the **cfokit** realm, and add a user
-with a password.
+The realm ships with no users. That is deliberate — a realm carrying a known password would be
+a credential in the repository — so this is the one step with no way to skip it.
 
-Change the admin password before this is reachable by anything but your laptop.
+**1. Open http://keycloak.localhost:8180** — the name from step 3, not `localhost` — and sign
+in with `admin` / `admin`.
+
+You will see a yellow banner: *"You are logged in as a temporary admin user."* That is
+Keycloak telling you to replace the bootstrap administrator before this is reachable by
+anything but your laptop. It does not block anything here.
+
+**2. Switch realms.** Top left, under the Keycloak logo, is a box reading **master**. Click it
+and choose **CFOKit** (`cfokit`). Everything below happens in that realm — a user created in
+`master` administers Keycloak and cannot sign in to CFOKit.
+
+**3. Left menu → `Users` → `Create new user`.** Under **Manage**, not **Configure**. On a realm
+with no users yet the list is empty and offers the same button in the middle of the page.
+
+**4. Fill in `Username` and click `Create`.** It is the only field marked required — the
+asterisk is on `Username` alone. Email, first and last name are optional and nothing here needs
+them.
+
+**5. Open the `Credentials` tab and click `Set password`.** This is the step people miss: the
+create form has no password field, so a user created and left alone has no way to sign in. The
+tab sits beside **Details** on the user's page.
+
+**6. In the dialog, enter the password twice and turn `Temporary` OFF.**
+
+**It defaults to On**, and On means Keycloak demands a new password at first sign-in. That
+prompt appears inside the browser window `mcp-remote` opened mid-authorisation, which is an
+unwelcome place to meet it.
+
+There are no password rules. The realm sets no `passwordPolicy`, so anything non-empty is
+accepted — a single character is taken. That is Keycloak's default rather than a choice made
+here: a realm shipping opinions about password strength would be deciding for every deployment,
+and this one has not been decided.
+
+**7. Click `Save`.** The user's own `ID` on the **Details** tab is the `sub` a token will carry,
+if you ever need to match a principal to a person.
+
+Change the admin password before this is reachable by anything but your laptop. `Realm settings`
+in the same menu is where brute-force protection lives, and it is off.
 
 ## 5. Configure Claude Desktop
 
