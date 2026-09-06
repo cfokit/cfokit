@@ -35,7 +35,7 @@ from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
 
-from cfokit.imports.source import SourceBooks
+from cfokit.imports.source import SourceBooks, StatedStatement
 from cfokit.ledger.engine import Entry, Posting
 from cfokit.ledger.engine.postability import MINIMUM_POSTINGS
 from cfokit.ledger.errors import LedgerError, NotAPerson
@@ -43,10 +43,10 @@ from cfokit.ledger.presentation import SourceBalance, present_reconciliation
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.administration import create_account
 from cfokit.ledger.service.principal import ActorClass, Principal
-from cfokit.ledger.service.reports import trial_balance
+from cfokit.ledger.service.reports import balance_sheet, profit_and_loss, trial_balance
 from cfokit.ledger.service.write import WriteContext, record_transaction
 
-__all__ = ["Plan", "Refusal", "Result", "apply", "plan"]
+__all__ = ["Comparison", "Plan", "Refusal", "Result", "apply", "compare", "plan"]
 
 # An account the source states no type for. The chart admits five types and none of them means
 # "unknown", so something has to be chosen; `asset` is inert for a trial balance, which groups
@@ -403,3 +403,115 @@ def _reconcile(
         if not comparison.agrees
     )
     return len(stated) - len(divergences), len(stated), divergences
+
+
+# A statement prints income, liabilities and equity as positive; a posting signs them negative,
+# because positive is a debit. The two conventions meet here and nowhere else — translating in
+# the reader would bury it, and translating in the ledger would be the ledger learning what a
+# statement looks like.
+_PRINTED_AS_CREDIT = {"income", "liability", "equity"}
+
+
+@dataclass(frozen=True, slots=True)
+class Comparison:
+    """One statement, ours against theirs."""
+
+    report: str
+    their_basis: str
+    our_basis: str
+    agreed: int
+    divergences: tuple[tuple[str, Decimal, Decimal], ...] = ()
+    only_ours: tuple[str, ...] = ()
+    only_theirs: tuple[str, ...] = ()
+    unmatched: tuple[str, ...] = ()
+
+    @property
+    def compared(self) -> int:
+        return self.agreed + len(self.divergences)
+
+    @property
+    def agrees(self) -> bool:
+        return self.compared > 0 and not self.divergences
+
+
+def compare(
+    database: Database,
+    *,
+    entity_id: str,
+    principal: Principal,
+    books: SourceBooks,
+) -> tuple[Comparison, ...]:
+    """Every statement the source printed, against the one CFOKit produces (`IMP-08`).
+
+    **Against the source's own figures**, which is what makes this evidence rather than a
+    self-check: summing our own postings twice and comparing the results would prove only that
+    addition is deterministic (`NFR-01`).
+
+    The period is the source's: "all dates", so the whole span of what it carries. A statement
+    over a different period would differ for a reason that says nothing about correctness.
+
+    An account on one side only is reported rather than dropped. A line silently missing from a
+    comparison is a difference that reads as agreement.
+    """
+    if not books.entries:
+        return ()
+    since = min(entry.transaction_date for entry in books.entries)
+    as_of = max(entry.transaction_date for entry in books.entries)
+
+    comparisons: list[Comparison] = []
+    for stated in books.statements:
+        if stated.report == "profit_and_loss":
+            report = profit_and_loss(
+                database,
+                entity_id=entity_id,
+                principal=principal,
+                since=since,
+                as_of=as_of,
+            )
+            ours = {row.code: (row.balance, row.account_type) for row in report.rows}
+            basis = report.accounting_basis
+        else:
+            sheet = balance_sheet(
+                database, entity_id=entity_id, principal=principal, as_of=as_of
+            )
+            # `unclosed` holds the income and expense balances that have not been moved to
+            # equity yet, which is how our sheet balances (`LED-12`). A printed balance sheet
+            # shows them as one "Net Income" line instead, so comparing them here would report
+            # every income account as ours-only — and they are compared, by account, in the
+            # profit and loss above.
+            ours = {row.code: (row.balance, row.account_type) for row in sheet.rows}
+            basis = sheet.accounting_basis
+
+        comparisons.append(_compare(stated, ours, basis))
+    return tuple(comparisons)
+
+
+def _compare(
+    stated: StatedStatement,
+    ours: dict[str, tuple[Decimal, str]],
+    our_basis: str,
+) -> Comparison:
+    theirs = {line.account_code: line.balance for line in stated.lines}
+    agreed = 0
+    divergences: list[tuple[str, Decimal, Decimal]] = []
+
+    for code, printed in theirs.items():
+        if code not in ours:
+            continue
+        balance, account_type = ours[code]
+        as_printed = -balance if account_type in _PRINTED_AS_CREDIT else balance
+        if as_printed == printed:
+            agreed += 1
+        else:
+            divergences.append((code, as_printed, printed))
+
+    return Comparison(
+        report=stated.report,
+        their_basis=stated.basis,
+        our_basis=our_basis,
+        agreed=agreed,
+        divergences=tuple(sorted(divergences)),
+        only_ours=tuple(sorted(set(ours) - set(theirs))),
+        only_theirs=tuple(sorted(set(theirs) - set(ours))),
+        unmatched=stated.unmatched,
+    )

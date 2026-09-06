@@ -23,8 +23,8 @@ from decimal import Decimal
 import openpyxl
 import pytest
 
-from cfokit.imports import ImportRefused, apply, plan
-from cfokit.imports.quickbooks import SYSTEM, read
+from cfokit.imports import ImportRefused, apply, compare, plan
+from cfokit.imports.quickbooks import SYSTEM, UnreadableFigure, read
 from cfokit.ledger.engine import Entry, Posting
 from cfokit.ledger.errors import NotAPerson
 from cfokit.ledger.repository.unit_of_work import Database
@@ -151,15 +151,17 @@ PROFIT_AND_LOSS: Rows = [
     ["All Dates", None],
     [None, None],
     [None, "Total"],
+    # Indented as QuickBooks indents: a sub-account sits under its parent, and the path the
+    # journal uses is what that nesting spells out.
     ["Income", None],
-    ["Services", 1200.00],
+    ["   Services", 1200.00],
     ["Total Income", 1200.00],
     ["Expenses", None],
-    ["Rent", 450.25],
-    ["Office", 12.00],
-    ["Printing", 30.00],
-    ["Total Office with sub-accounts", 42.00],
-    ["Utilities", 60.00],
+    ["   Rent", 450.25],
+    ["   Office", 12.00],
+    ["      Printing", 30.00],
+    ["   Total Office with sub-accounts", 42.00],
+    ["   Utilities", 60.00],
     ["Total Expenses", 552.25],
     ["Saturday, Sep 05, 2026 07:30:59 AM GMT-7 - Accrual Basis", None],
 ]
@@ -768,3 +770,148 @@ def test_the_refusal_is_decided_on_the_token_shape_not_a_claim(database: Databas
             request_id="req",
             books=read(synthetic_export()),
         )
+
+
+# --- a formula is not a zero -----------------------------------------------------------------
+
+
+def stated(rows: Rows) -> Rows:
+    """The same report with every amount written as QuickBooks writes it: `=2492948.04`.
+
+    Not a contrivance. Every figure in a real export's balance sheet, profit and loss and trial
+    balance is a formula with no cached result, while the journal and general ledger carry
+    literal numbers.
+    """
+    # A type check, not a calculation: this asks what kind of cell openpyxl wrote so a number
+    # can be rewritten as the formula QuickBooks would have written. What reaches the reader
+    # is text.
+    return [
+        [f"={cell}" if isinstance(cell, int | float) else cell for cell in row]  # not-money
+        for row in rows
+    ]
+
+
+def test_a_formula_stating_a_number_is_that_number() -> None:
+    """Reading the statements at all means reading these."""
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr("Journal.xlsx", workbook(JOURNAL))
+        archive.writestr("Profit_and_loss.xlsx", workbook(stated(PROFIT_AND_LOSS)))
+
+    statement = next(s for s in read(buffer.getvalue()).statements)
+
+    assert {line.account_code: line.balance for line in statement.lines}["Services"] == Decimal(
+        "1200.00"
+    )
+
+
+def test_a_computed_cell_is_refused_rather_than_read_as_zero() -> None:
+    """**The failure this guards against is silent and looks like a balanced book.**
+
+    `openpyxl` asked for a cached value returns 0.0 for a formula that has none, so a reader
+    taking that answer reports every figure in the statement reports as zero — and a zero in a
+    financial figure reads as a fact rather than as a gap.
+    """
+    computed: Rows = [
+        *PROFIT_AND_LOSS[:6],
+        ["Services", "=(B7)+(B8)"],  # a subtotal, as QuickBooks writes one
+        *PROFIT_AND_LOSS[7:],
+    ]
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr("Journal.xlsx", workbook(JOURNAL))
+        archive.writestr("Profit_and_loss.xlsx", workbook(computed))
+
+    with pytest.raises(UnreadableFigure):
+        read(buffer.getvalue())
+
+
+# --- the statements the source printed --------------------------------------------------------
+
+
+def test_a_statements_accounts_come_from_its_indentation(export: bytes) -> None:
+    """A statement indents a sub-account under its parent, so `Printing` beneath `Office` is
+    the account the journal calls `Office:Printing`. Reading the leaf alone would be ambiguous
+    — a real chart has `Meals` under two different parents."""
+    statement = next(s for s in read(export).statements if s.report == "profit_and_loss")
+
+    assert {line.account_code for line in statement.lines} >= {"Office", "Office:Printing"}
+
+
+def test_a_row_that_is_not_an_account_is_reported_rather_than_guessed_at(
+    export: bytes,
+) -> None:
+    """A statement's hierarchy is not only accounts — a balance sheet groups them under
+    headings nothing posts to, and a profit and loss ends with computed lines. Reported,
+    because a line silently missing from a comparison is a difference that reads as
+    agreement."""
+    extra: Rows = [*PROFIT_AND_LOSS[:-1], ["Net Income", 647.75], PROFIT_AND_LOSS[-1]]
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr("Journal.xlsx", workbook(JOURNAL))
+        archive.writestr("Profit_and_loss.xlsx", workbook(extra))
+
+    statement = next(s for s in read(buffer.getvalue()).statements)
+
+    assert "Net Income" in statement.unmatched
+
+
+# --- IMP-08 on the statements ----------------------------------------------------------------
+
+
+def test_the_statements_agree_with_the_ones_we_produce(database: Database) -> None:
+    """`IMP-08` and `NFR-01`, pointed at the statements rather than the balances: agreement
+    against the source's own figures, with no tolerance."""
+    entity_id = entity(database)
+    books = read(synthetic_export())
+    apply(database, entity_id=entity_id, principal=PERSON, request_id="req", books=books)
+
+    comparisons = compare(database, entity_id=entity_id, principal=PERSON, books=books)
+
+    assert {c.report for c in comparisons} == {"profit_and_loss", "balance_sheet"}
+    for comparison in comparisons:
+        assert comparison.agrees, comparison.divergences
+
+
+def test_income_is_compared_the_way_a_statement_prints_it(database: Database) -> None:
+    """A statement shows income positive; a posting signs it negative, because positive is a
+    debit. Without the translation every income account would diverge by twice itself."""
+    entity_id = entity(database)
+    books = read(synthetic_export())
+    apply(database, entity_id=entity_id, principal=PERSON, request_id="req", books=books)
+
+    profit = next(
+        c
+        for c in compare(database, entity_id=entity_id, principal=PERSON, books=books)
+        if c.report == "profit_and_loss"
+    )
+
+    assert profit.divergences == ()
+    assert profit.agreed >= 1
+
+
+def test_a_wrong_figure_in_the_source_shows_up_as_a_divergence(database: Database) -> None:
+    """The property that makes the comparison worth running. A statement that disagrees with
+    the journal beside it produces exactly that disagreement, named."""
+    wrong: Rows = [
+        # The label carries its indentation, which is how the account path is read.
+        [row[0], 9999.99] if str(row[0]).strip() == "Rent" else row
+        for row in PROFIT_AND_LOSS
+    ]
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr("Journal.xlsx", workbook(JOURNAL))
+        archive.writestr("General_ledger.xlsx", workbook(GENERAL_LEDGER))
+        archive.writestr("Balance_sheet.xlsx", workbook(BALANCE_SHEET))
+        archive.writestr("Profit_and_loss.xlsx", workbook(wrong))
+    entity_id = entity(database)
+    books = read(buffer.getvalue())
+    apply(database, entity_id=entity_id, principal=PERSON, request_id="req", books=books)
+
+    profit = next(
+        c
+        for c in compare(database, entity_id=entity_id, principal=PERSON, books=books)
+        if c.report == "profit_and_loss"
+    )
+
+    assert [code for code, _, _ in profit.divergences] == ["Rent"]

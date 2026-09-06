@@ -2,8 +2,9 @@
 
 One of the entrypoints this image provides (ADR-0023).
 
-    python -m cfokit.imports plan  <entity-id> <path>
-    python -m cfokit.imports apply <entity-id> <path>
+    python -m cfokit.imports plan    <entity-id> <path>
+    python -m cfokit.imports apply   <entity-id> <path>
+    python -m cfokit.imports compare <entity-id> <path>
 
 **The path is read by this process, not sent to it.** Nothing between the file and the database
 holds the transactions — not a request body, not a model's context. For an export of several
@@ -29,13 +30,15 @@ import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 
-from cfokit.imports import Plan, apply, plan, quickbooks
+from cfokit.imports import Plan, apply, compare, plan, quickbooks
 from cfokit.ledger.config import require_env
 from cfokit.ledger.errors import LedgerError
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.principal import ActorClass, Principal
 
-USAGE = "usage: python -m cfokit.imports {plan|apply} <entity-id> <path> [--as <principal>]"
+USAGE = (
+    "usage: python -m cfokit.imports {plan|apply|compare} <entity-id> <path> [--as <principal>]"
+)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -45,7 +48,7 @@ def main(argv: list[str] | None = None) -> int:
         at = args.index("--as")
         principal_id = args[at + 1]
         del args[at : at + 2]
-    if len(args) != 3 or args[0] not in {"plan", "apply"}:
+    if len(args) != 3 or args[0] not in {"plan", "apply", "compare"}:
         print(USAGE)
         return 2
 
@@ -56,6 +59,9 @@ def main(argv: list[str] | None = None) -> int:
     database = Database(require_env("DATABASE_URL"))
     principal = Principal(id=principal_id, actor_class=ActorClass.PERSON)
     books = quickbooks.read(Path(location).read_bytes())
+
+    if command == "compare":
+        return _compare(database, entity_id, principal, books, location)
 
     print(
         f"source: {books.system}, {books.commodity},"
@@ -143,6 +149,61 @@ def main(argv: list[str] | None = None) -> int:
         )
     )
     return 0 if result.reconciled and not result.refusals else 1
+
+
+def _compare(
+    database: Database, entity_id: str, principal: Principal, books: object, location: str
+) -> int:
+    """Every statement the source printed, against the one CFOKit produces.
+
+    Reads only. This is `IMP-08` pointed at the statements rather than the balances: agreement
+    demonstrated against the source's own figures, with every disagreement reported and none
+    tolerated (`NFR-01`).
+    """
+    assert isinstance(books, quickbooks.SourceBooks)  # noqa: S101 - narrowing for the reader
+    comparisons = compare(database, entity_id=entity_id, principal=principal, books=books)
+    if not comparisons:
+        print("the export prints no statements to compare against")
+        return 1
+
+    exact = True
+    detail: dict[str, object] = {}
+    for comparison in comparisons:
+        print(
+            f"\n{comparison.report}: {comparison.agreed} of {comparison.compared}"
+            f" accounts agree exactly"
+        )
+        print(f"  basis — theirs {comparison.their_basis}, ours {comparison.our_basis}")
+        if comparison.their_basis not in {"unknown", comparison.our_basis}:
+            print(
+                "  NOTE: the statements are on different bases, so the obligation accounts"
+                " differ by what is unsettled (ADR-0037)"
+            )
+        for code, mine, printed in comparison.divergences:
+            print(f"    DIVERGES {code}: ours {mine} theirs {printed}")
+        if comparison.only_theirs:
+            print(f"  {len(comparison.only_theirs)} accounts only they report")
+        if comparison.only_ours:
+            print(f"  {len(comparison.only_ours)} accounts only we report")
+        if comparison.unmatched:
+            print(f"  {len(comparison.unmatched)} rows are not accounts; see the report")
+        exact = exact and comparison.agrees
+        detail[comparison.report] = {
+            "agreed": comparison.agreed,
+            "compared": comparison.compared,
+            "their_basis": comparison.their_basis,
+            "our_basis": comparison.our_basis,
+            "divergences": [
+                {"account": code, "ours": str(mine), "theirs": str(printed)}
+                for code, mine, printed in comparison.divergences
+            ],
+            "only_ours": list(comparison.only_ours),
+            "only_theirs": list(comparison.only_theirs),
+            "not_accounts": list(comparison.unmatched),
+        }
+
+    print(_report(location, {"statements": detail}))
+    return 0 if exact else 1
 
 
 def _planned(proposed: Plan) -> dict[str, object]:
