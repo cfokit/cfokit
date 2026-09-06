@@ -121,8 +121,9 @@ nothing answering. The issuer listens on the port it advertises, and publishes t
 **One identity, from every side.** Whatever an issuer calls itself is what it must be called by
 everyone — the application validates a token's `iss` against `AUTH_ISSUER_URL`, so an issuer
 advertising one hostname while services reach it at another rejects every token it issues. In
-the compose stack that name is `keycloak:8180`; a browser needs it to resolve too, which means a hosts
-entry or a tunnel with `AUTH_ISSUER_URL` set to the public hostname.
+the compose stack that name is `keycloak.localhost:8180`, chosen because `*.localhost` resolves to
+loopback without a hosts entry (RFC 6761) and a network alias makes the same name reach the
+container from inside. A deployment reachable by more than one machine uses a public hostname.
 
 ### What the suite measures
 

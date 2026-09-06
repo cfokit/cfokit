@@ -83,36 +83,39 @@ rather than the most recent one. Create a fresh entity for a run you care about.
 **`docker compose down -v` destroys the volume**, and with it every set of books in it. The
 warning at the top of `compose.yaml` is not decorative.
 
-## 3. Let this machine reach the issuer by name
+## 3. Nothing, and why there is a step here at all
 
-**Before anything opens a browser.** The issuer answers on one hostname and redirects
-everything else to it — `KC_HOSTNAME` is authoritative, and a token's `iss` is validated against
-it, so an issuer reachable under two names would issue tokens the application rejects.
+The issuer answers on one hostname and redirects everything else to it. That is deliberate:
+`KC_HOSTNAME` is authoritative and a token's `iss` is validated against it, so an issuer
+reachable under two names would issue tokens the application rejects.
 
-That name is `keycloak`, because it is the one that resolves inside the compose network. Make it
-resolve here too:
+The name is **`keycloak.localhost`**, chosen so that both sides get it for free. `*.localhost`
+resolves to the loopback address without a hosts entry (RFC 6761), so a browser reaches the
+published port; inside the compose network the same name is an alias on the service. One name,
+both sides, nothing to configure.
 
-```
-echo "127.0.0.1 keycloak" | sudo tee -a /etc/hosts
-```
-
-Without it, **`http://localhost:8180` is not a way in**. It answers, and what it answers is a
-redirect somewhere your browser cannot follow:
+So `http://localhost:8180` is still not a way in — it answers with a redirect:
 
 ```
-GET http://localhost:8180/  ->  302  Location: http://keycloak:8180/admin/
+GET http://localhost:8180/  ->  302  Location: http://keycloak.localhost:8180/admin/
 ```
 
-which is `DNS_PROBE_FINISHED_NXDOMAIN` rather than anything that names the cause.
+but that is now a redirect your browser can follow.
+
+**If `*.localhost` does not resolve on your platform** — Windows historically does not implement
+it — add the name to your hosts file instead:
+
+```
+127.0.0.1 keycloak.localhost
+```
 
 A deployment reachable by more than this machine sets `KC_HOSTNAME` and `AUTH_ISSUER_URL` to a
-public hostname instead, which is the same condition `PUBLIC_BASE_URL` already carries
-(ADR-0004, ADR-0018).
+public hostname, which is the condition `PUBLIC_BASE_URL` already carries (ADR-0004, ADR-0018).
 
 ## 4. Create a user to sign in as
 
 The realm ships with no users; a realm carrying a known password would be a credential in the
-repository. Open the admin console at **http://keycloak:8180** — the hostname from step 3, not
+repository. Open the admin console at **http://keycloak.localhost:8180** — the name from step 3, not
 `localhost` — sign in with `admin` / `admin`, switch to the **cfokit** realm, and add a user
 with a password.
 
@@ -159,11 +162,8 @@ It knows the import flow: `plan_import` is its call to make, `apply_import` is y
 Creating an entity needs an authenticated identity and no prior role (`IAM-06`), and the
 creator becomes its owner. A client registers itself, takes a token, and creates the entity:
 
-The API endpoints answer under either name; it is the admin console that redirects, so this
-works whether or not step 3 is done.
-
 ```bash
-KC=http://localhost:8180/realms/cfokit
+KC=http://keycloak.localhost:8180/realms/cfokit
 R=$(curl -s -X POST "$KC/clients-registrations/openid-connect" \
   -H 'content-type: application/json' \
   -d '{"client_name":"bootstrap","grant_types":["client_credentials"],
