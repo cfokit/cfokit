@@ -74,7 +74,16 @@ services:
       # `keycloak` is the name that resolves inside the compose network. A browser needs it to
       # resolve too, for the authorization-code flow: add `127.0.0.1 keycloak` to your hosts
       # file, or run behind a tunnel with this and AUTH_ISSUER_URL set to the public hostname.
-      KC_HOSTNAME: ${KC_HOSTNAME:-http://keycloak:8080}
+      #
+      # **The port is the same inside and outside**, which is load-bearing rather than tidy. A
+      # client discovers this address from the ledger's protected-resource metadata and goes to
+      # it directly, so it has to mean the same thing from both sides. Published on the
+      # container's own port rather than mapped to a different one, because a mapping makes the
+      # advertised address wrong for exactly one of the two — and on this network 8080 is the
+      # ledger, so a browser following the chain to `keycloak:8080` would reach the ledger and
+      # be answered.
+      KC_HTTP_PORT: "8180"
+      KC_HOSTNAME: ${KC_HOSTNAME:-http://keycloak:8180}
       KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "false"
       KC_HTTP_ENABLED: "true"
       KC_HEALTH_ENABLED: "true"
@@ -89,7 +98,7 @@ services:
       # explains each part.
       - ./infra/keycloak/cfokit-realm.json:/opt/keycloak/data/import/cfokit-realm.json:ro
     ports:
-      - "${KEYCLOAK_PORT:-8180}:8080"
+      - "${KEYCLOAK_PORT:-8180}:8180"
     healthcheck:
       # The management port, which is where Keycloak serves health from. Readiness rather than
       # liveness here, because everything else waits on this one being able to issue tokens.
@@ -124,7 +133,7 @@ services:
       # must never hold (ADR-0003, ADR-0007). Same variable, different value per entrypoint.
       DATABASE_URL: postgresql://cfokit_app:${POSTGRES_APP_PASSWORD:-cfokit_app}@postgres:5432/cfokit
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
-      AUTH_ISSUER_URL: ${AUTH_ISSUER_URL:-http://keycloak:8080/realms/cfokit}
+      AUTH_ISSUER_URL: ${AUTH_ISSUER_URL:-http://keycloak:8180/realms/cfokit}
       AUTH_AUDIENCE: ${AUTH_AUDIENCE:-cfokit-ledger}
       LOG_LEVEL: ${LOG_LEVEL:-info}
     ports:
@@ -175,7 +184,7 @@ services:
       # PUBLIC_BASE_URL is what a client fetches protected-resource metadata from, so it is
       # this service's own address rather than the REST service's (ADR-0004).
       PUBLIC_BASE_URL: ${MCP_PUBLIC_BASE_URL:-http://localhost:8081}
-      AUTH_ISSUER_URL: ${AUTH_ISSUER_URL:-http://keycloak:8080/realms/cfokit}
+      AUTH_ISSUER_URL: ${AUTH_ISSUER_URL:-http://keycloak:8180/realms/cfokit}
       AUTH_AUDIENCE: ${AUTH_AUDIENCE:-cfokit-ledger}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       PORT: "8081"
@@ -234,7 +243,7 @@ services:
       DATABASE_OWNER_URL: postgresql://cfokit:${POSTGRES_PASSWORD:-cfokit}@postgres:5432/cfokit
       # What the conformance suite measures. The same two variables the application reads,
       # so the suite checks the issuer a deployment would actually use (ADR-0019).
-      AUTH_ISSUER_URL: ${AUTH_ISSUER_URL:-http://keycloak:8080/realms/cfokit}
+      AUTH_ISSUER_URL: ${AUTH_ISSUER_URL:-http://keycloak:8180/realms/cfokit}
       AUTH_AUDIENCE: ${AUTH_AUDIENCE:-cfokit-ledger}
       # Hydra implements RFC 7591 here but does not advertise it, so a client cannot discover
       # it. Stated for the conformance suite alone, so the token-issuing half of the contract

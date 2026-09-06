@@ -111,10 +111,16 @@ Any conforming issuer must provide:
 - The **client credentials grant**, for separate components authenticating as machine callers
   (ADR-0032 — an extension to the contract originally set in ADR-0019)
 
+**One identity, and one port, from every side.** A client is handed the issuer's address in the
+ledger's protected-resource metadata and goes to it directly, so a port mapped to a different
+number outside the network makes that address wrong for exactly one side — and on a network
+where the mapped-from port belongs to another service, the wrong service answers rather than
+nothing answering. The issuer listens on the port it advertises, and publishes the same one.
+
 **One identity, from every side.** Whatever an issuer calls itself is what it must be called by
 everyone — the application validates a token's `iss` against `AUTH_ISSUER_URL`, so an issuer
 advertising one hostname while services reach it at another rejects every token it issues. In
-the compose stack that name is `keycloak`; a browser needs it to resolve too, which means a hosts
+the compose stack that name is `keycloak:8180`; a browser needs it to resolve too, which means a hosts
 entry or a tunnel with `AUTH_ISSUER_URL` set to the public hostname.
 
 ### What the suite measures

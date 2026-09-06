@@ -118,6 +118,20 @@ def grant(conn: psycopg.Connection[Any], entity_id: str, principal_id: str) -> N
         )
 
 
+def asgi_app(settings: Settings) -> Any:
+    """The MCP app as the entrypoint builds it.
+
+    `host="0.0.0.0"` because that is how `cfokit.server` binds it, and the SDK auto-enables DNS
+    rebinding protection only for a localhost bind. Building it another way here would test a
+    configuration that never ships.
+    """
+    return create_server(settings).streamable_http_app(
+        stateless_http=True,
+        json_response=True,
+        host="0.0.0.0",  # noqa: S104
+    )
+
+
 @asynccontextmanager
 async def session(settings: Settings, *, token: str | None) -> AsyncIterator[ClientSession]:
     """A real SDK client over streamable HTTP, against the app in process.
@@ -126,11 +140,7 @@ async def session(settings: Settings, *, token: str | None) -> AsyncIterator[Cli
     auto-enables DNS rebinding protection only for a localhost bind. Building it another way
     would test a configuration that never ships.
     """
-    app = create_server(settings).streamable_http_app(
-        stateless_http=True,
-        json_response=True,
-        host="0.0.0.0",  # noqa: S104
-    )
+    app = asgi_app(settings)
     headers = {"Authorization": f"Bearer {token}"} if token else {}
     async with (
         app.router.lifespan_context(app),
@@ -148,6 +158,72 @@ def payload(result: Any) -> dict[str, Any]:
     content = result.structured_content
     assert isinstance(content, dict)
     return content
+
+
+# --- discovery: how a client finds the issuer at all ----------------------------------------
+
+
+async def test_a_refused_request_says_where_to_find_the_metadata(settings: Settings) -> None:
+    """The first step of the MCP authorization flow, and the one everything else hangs from.
+
+    A client with no token is told, in `WWW-Authenticate`, where the protected-resource
+    metadata lives. Without that header it has nothing to follow and no way to discover the
+    issuer.
+    """
+    app = asgi_app(settings)
+    async with (
+        app.router.lifespan_context(app),
+        httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://ledger"
+        ) as http,
+    ):
+        refused = await http.post(
+            "/mcp",
+            headers={
+                "content-type": "application/json",
+                "accept": "application/json, text/event-stream",
+            },
+            json={"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}},
+        )
+        metadata = (await http.get("/.well-known/oauth-protected-resource")).json()
+
+    assert refused.status_code == 401
+    assert "resource_metadata=" in refused.headers["www-authenticate"]
+    assert metadata["authorization_servers"]
+
+
+async def test_the_advertised_authorization_server_is_the_one_that_issues(
+    settings: Settings,
+) -> None:
+    """**The hop a client makes on its own, and the one nothing was checking.**
+
+    The address in `authorization_servers` is handed to a client and used directly, so it has
+    to mean the same thing from wherever that client sits. Nothing guarantees it does: it comes
+    from `AUTH_ISSUER_URL`, which also names the host *this* process fetches JWKS from, and the
+    two are only the same string if a deployment made them so.
+
+    A mapped port is the ordinary way they diverge — and the failure is worse than a dead link,
+    because a port that means one service inside a network usually means another outside it. So
+    this follows the address and asks whether the thing at the other end is an issuer, and the
+    same one.
+    """
+    app = asgi_app(settings)
+    async with (
+        app.router.lifespan_context(app),
+        httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://ledger"
+        ) as http,
+    ):
+        advertised = (await http.get("/.well-known/oauth-protected-resource")).json()[
+            "authorization_servers"
+        ][0]
+
+    served = httpx.get(
+        f"{advertised.rstrip('/')}/.well-known/openid-configuration", timeout=TIMEOUT
+    )
+
+    assert served.status_code == 200, f"{advertised} serves no issuer metadata"
+    assert served.json()["issuer"].rstrip("/") == advertised.rstrip("/")
 
 
 # --- the join, on the surface a client actually speaks --------------------------------------
@@ -209,11 +285,7 @@ async def post_to_mcp(settings: Settings, *, token: str | None) -> int:
     only "unhandled errors in a TaskGroup" — so asserting through it would match on the shape of
     the SDK's error handling rather than on the status the middleware returned.
     """
-    app = create_server(settings).streamable_http_app(
-        stateless_http=True,
-        json_response=True,
-        host="0.0.0.0",  # noqa: S104
-    )
+    app = asgi_app(settings)
     headers = {
         "content-type": "application/json",
         "accept": "application/json, text/event-stream",
