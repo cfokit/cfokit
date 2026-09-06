@@ -85,6 +85,30 @@ TABLES: tuple[tuple[str, str], ...] = (
         " revoked_by FROM entity_grant WHERE entity_id = %(entity_id)s ORDER BY granted_at, id",
     ),
     (
+        "customer",
+        "SELECT id, name, email, created_at, archived_at FROM customer"
+        " WHERE entity_id = %(entity_id)s ORDER BY created_at, id",
+    ),
+    (
+        "invoice",
+        "SELECT id, customer_id, status, number, issue_date, due_date, terms, commodity,"
+        " note, created_at, issued_at, transaction_id, cancelled_at, cancel_reason"
+        " FROM invoice WHERE entity_id = %(entity_id)s ORDER BY created_at, id",
+    ),
+    (
+        "invoice_line",
+        "SELECT l.id, l.invoice_id, l.position, l.description, l.account_id, l.quantity,"
+        " l.unit_amount, l.created_at FROM invoice_line l"
+        " JOIN invoice i ON i.id = l.invoice_id"
+        " WHERE l.entity_id = %(entity_id)s ORDER BY i.created_at, l.invoice_id, l.position",
+    ),
+    (
+        # Where the gapless series stands. A restore without it would begin numbering at 1
+        # again and collide with every invoice already issued (`AR-05`).
+        "invoice_series",
+        "SELECT entity_id, next FROM invoice_series WHERE entity_id = %(entity_id)s",
+    ),
+    (
         "audit_log",
         "SELECT id, request_id, actor, action, subject_type, subject_id, occurred_at, detail"
         " FROM audit_log WHERE entity_id = %(entity_id)s ORDER BY occurred_at, id",

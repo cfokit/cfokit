@@ -229,11 +229,18 @@ allow_indirect_imports = true
 name = "The ledger depends on no module (ADR-0022)"
 type = "forbidden"
 source_modules = ["cfokit.ledger"]
-forbidden_modules = ["cfokit.imports"]
+forbidden_modules = ["cfokit.imports", "cfokit.receivables"]
 
-# NOTE: a contract forbidding module-to-module dependencies is added with the *second* module.
-# ADR-0022 forbids them, and one module cannot violate that rule — a contract naming a single
-# module would assert nothing and would read as though it did.
+[[tool.importlinter.contracts]]
+# ADR-0022 forbids module-to-module dependencies: "modules depend on the ledger, never on each
+# other". `receivables` is the second module, so the rule is now expressible — a contract
+# naming one module would have asserted nothing while reading as though it did.
+#
+# Independent rather than layered: neither is above the other, and a dependency in either
+# direction is the thing forbidden.
+name = "Modules depend on the ledger, never on each other (ADR-0022)"
+type = "independence"
+modules = ["cfokit.imports", "cfokit.receivables"]
 
 # NOTE: a contract forbidding provider SDKs at module scope (ADR-0004) is added when
 # the first provider SDK is introduced — import-linter errors on modules it cannot find.

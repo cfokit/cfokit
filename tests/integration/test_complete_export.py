@@ -191,6 +191,23 @@ def test_the_grants_are_carried(database: Database, stocked: tuple[str, str, str
     assert [row["role"] for row in rows(bundle, "entity_grant")] == ["owner"]
 
 
+def test_the_receivables_a_module_holds_are_carried(
+    database: Database, stocked: tuple[str, str, str]
+) -> None:
+    """`EXP-02` is "everything the entity holds", and a module's tables are the entity's as
+    much as the ledger's are. A restore without them would return books with no customers and
+    no billing history, and the sweep above is what would otherwise have let that ship."""
+    entity_id, _, _ = stocked
+    bundle = export_complete(
+        database, entity_id=entity_id, principal=PERSON, request_id="req"
+    ).archive
+
+    exported = {name for name, _ in archive.TABLES}
+
+    assert {"customer", "invoice", "invoice_line", "invoice_series"} <= exported
+    assert rows(bundle, "customer") == []  # this entity has none, and the file says so
+
+
 def test_a_closed_period_is_carried(database: Database, stocked: tuple[str, str, str]) -> None:
     """A close is a fact about the books, not a report of them. Restoring without it would
     reopen a period somebody closed."""
