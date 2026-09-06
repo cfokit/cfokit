@@ -53,7 +53,33 @@ services:
     command: serve all --dev
     environment:
       DSN: memory
-      URLS_SELF_ISSUER: ${AUTH_ISSUER_URL:-http://localhost:4444}
+      # The issuer's own identity, and it must be the one every party uses. It defaulted to
+      # `http://localhost:4444` while the services were configured to reach the issuer at
+      # `http://hydra:4444` — so every token carried `iss: http://localhost:4444` and the
+      # application, which validates `iss` against AUTH_ISSUER_URL, would have rejected all of
+      # them. Nothing caught it because no test drove the issuer.
+      #
+      # `hydra` is the name that resolves inside the compose network. A browser needs it to
+      # resolve too, for the authorization-code flow: add `127.0.0.1 hydra` to your hosts file,
+      # or run behind a tunnel with AUTH_ISSUER_URL set to the public hostname, which is the
+      # same thing PUBLIC_BASE_URL already requires (ADR-0004, ADR-0018).
+      URLS_SELF_ISSUER: ${AUTH_ISSUER_URL:-http://hydra:4444}
+      # RFC 7591 dynamic client registration. The infra contract requires it, and Hydra
+      # implements it only when asked. An MCP client registers itself this way rather than
+      # waiting for someone to issue it a credential by hand.
+      OIDC_DYNAMIC_CLIENT_REGISTRATION_ENABLED: "true"
+      # JWT access tokens, not opaque ones. CFOKit validates a token's signature locally
+      # against cached JWKS and reads its audience and subject from the claims (ADR-0019); an
+      # opaque token carries none of that and would need an introspection round trip on every
+      # request. Hydra's default is opaque, so a client registering itself through RFC 7591
+      # would have received tokens this deployment cannot read.
+      STRATEGIES_ACCESS_TOKEN: jwt
+      # Without this Hydra cannot create its own signing keys and answers `server_error` to
+      # every discovery request — the issuer starts, reports healthy, and serves nothing. It
+      # was unset, and no test drove the issuer, so nothing noticed. A local-only credential
+      # like POSTGRES_PASSWORD above: managed deployments inject theirs from a secret store,
+      # and IaC creates secret containers rather than values (ADR-0016).
+      SECRETS_SYSTEM: ${HYDRA_SECRETS_SYSTEM:-local-development-only-not-a-real-secret}
       # `--dev` serves plain HTTP, which is why same-machine access over localhost needs
       # no TLS. Cross-device access requires a tunnel and PUBLIC_BASE_URL set to the
       # public hostname (ADR-0018).
@@ -184,6 +210,11 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      # The issuer, because the conformance suite drives it. `infra/README.md` states a
+      # contract any issuer must meet and once claimed a suite verified it; the suite now
+      # exists, and it needs the thing it measures to be running (ADR-0019).
+      hydra:
+        condition: service_healthy
     environment:
       # As the application role, so an integration test sees exactly the privileges and the
       # row-level security the application runs under.
@@ -191,6 +222,15 @@ services:
       # Owner connection, for fixtures that need to create an entity before RLS scoping
       # applies, and for the migration the suite applies before it starts.
       DATABASE_OWNER_URL: postgresql://cfokit:${POSTGRES_PASSWORD:-cfokit}@postgres:5432/cfokit
+      # What the conformance suite measures. The same two variables the application reads,
+      # so the suite checks the issuer a deployment would actually use (ADR-0019).
+      AUTH_ISSUER_URL: ${AUTH_ISSUER_URL:-http://hydra:4444}
+      AUTH_AUDIENCE: ${AUTH_AUDIENCE:-cfokit-ledger}
+      # Hydra implements RFC 7591 here but does not advertise it, so a client cannot discover
+      # it. Stated for the conformance suite alone, so the token-issuing half of the contract
+      # is measured instead of skipped behind that failure. Not part of the application's
+      # configuration surface, and not read by anything that serves traffic.
+      AUTH_REGISTRATION_ENDPOINT: ${AUTH_REGISTRATION_ENDPOINT:-http://hydra:4444/oauth2/register}
 
 volumes:
   ledger-data:
