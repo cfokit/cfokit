@@ -38,6 +38,7 @@ TOOLS = {
     "account_detail",
     "balance_sheet",
     "comparative_profit_and_loss",
+    "create_entity",
     "issue_statement",
     "issued_statements",
     "obligation_detail",

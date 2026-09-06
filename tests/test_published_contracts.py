@@ -112,6 +112,7 @@ def test_the_mcp_tool_surface_is_published() -> None:
         "balance_sheet",
         "comparative_profit_and_loss",
         "compare_statements",
+        "create_entity",
         "issue_statement",
         "issued_statements",
         "obligation_detail",

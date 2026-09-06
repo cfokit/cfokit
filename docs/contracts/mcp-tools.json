@@ -187,6 +187,53 @@
     "name": "compare_statements"
   },
   {
+    "description": "Create a set of books and become its owner. Needs only an authenticated caller and no prior role — this is the one act with that property, and it is what makes a running deployment usable without anything being provisioned into it first. Every declaration is required and none has a default: the accounting basis, the fiscal year end, the functional currency and the time zone are what every report is computed against, and a default would be an undeclared state wearing a value.",
+    "inputSchema": {
+      "properties": {
+        "accounting_basis": {
+          "title": "Accounting Basis",
+          "type": "string"
+        },
+        "fiscal_year_end_day": {
+          "title": "Fiscal Year End Day",
+          "type": "integer"
+        },
+        "fiscal_year_end_month": {
+          "title": "Fiscal Year End Month",
+          "type": "integer"
+        },
+        "functional_currency": {
+          "title": "Functional Currency",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "slug": {
+          "title": "Slug",
+          "type": "string"
+        },
+        "time_zone": {
+          "title": "Time Zone",
+          "type": "string"
+        }
+      },
+      "required": [
+        "slug",
+        "name",
+        "accounting_basis",
+        "fiscal_year_end_month",
+        "fiscal_year_end_day",
+        "functional_currency",
+        "time_zone"
+      ],
+      "title": "make_entityArguments",
+      "type": "object"
+    },
+    "name": "create_entity"
+  },
+  {
     "description": "Mark a statement issued, fixing what was reported, to whom, and when. Pass the rendered figures you gave the recipient: they are stored rather than re-derived, because re-deriving assumes the presentation never changes. A correction posted afterwards marks the statement superseded, with no flag to maintain.",
     "inputSchema": {
       "properties": {
