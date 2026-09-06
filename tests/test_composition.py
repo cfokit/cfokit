@@ -22,7 +22,7 @@ def settings(import_root: Path | None = None) -> Settings:
     return Settings(
         database_url="postgresql://unreachable.invalid/none",
         public_base_url="http://localhost:8081",
-        auth_issuer_url="http://localhost:4444",
+        auth_issuer_url="http://localhost:8180/realms/cfokit",
         auth_audience="cfokit-ledger",
         import_root=import_root,
     )

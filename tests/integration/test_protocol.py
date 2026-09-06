@@ -48,7 +48,7 @@ PERSON = Principal(id="user:geoff", actor_class=ActorClass.PERSON)
 
 CLAIMS: dict[str, Any] = {
     "sub": PERSON.id,
-    "iss": "http://localhost:4444",
+    "iss": "http://localhost:8180/realms/cfokit",
     "aud": "cfokit-ledger",
 }
 
@@ -97,7 +97,7 @@ def settings(owner_dsn: str, app_dsn: str) -> Settings:
     return Settings(
         database_url=app_dsn,
         public_base_url="http://localhost:8080",
-        auth_issuer_url="http://localhost:4444",
+        auth_issuer_url="http://localhost:8180/realms/cfokit",
         auth_audience="cfokit-ledger",
     )
 

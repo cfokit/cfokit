@@ -35,6 +35,7 @@ import pytest
 pytestmark = pytest.mark.integration
 
 ISSUER = os.environ.get("AUTH_ISSUER_URL", "").rstrip("/")
+AUDIENCE = os.environ.get("AUTH_AUDIENCE", "")
 TIMEOUT = 10
 
 # Where to register a client when the issuer does not advertise it.
@@ -170,44 +171,20 @@ def test_the_authorization_code_grant_is_offered(metadata: dict[str, Any]) -> No
     assert "authorization_code" in metadata["grant_types_supported"]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "Ory Hydra v2.3.0 serves OIDC discovery at /.well-known/openid-configuration and does "
-        "not serve RFC 8414 metadata at /.well-known/oauth-authorization-server. The MCP "
-        "authorization spec requires a client to use RFC 8414, so a spec-following client "
-        "cannot discover this issuer. Measured, not assumed."
-    ),
-)
 def test_authorization_server_metadata_is_served_at_the_rfc_8414_path() -> None:
+    """The MCP authorization specification requires a client to use RFC 8414 metadata, so an
+    issuer serving only OIDC discovery cannot be discovered by one."""
     status, _ = get(f"{ISSUER}/.well-known/oauth-authorization-server")
 
     assert status == 200
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "Ory Hydra v2.3.0 implements dynamic client registration at /oauth2/register — it "
-        "answers 201 — but omits `registration_endpoint` from its metadata. A client discovers "
-        "the endpoint from metadata, finds none, and concludes registration is unsupported, so "
-        "an unadvertised endpoint is the same as an absent one."
-    ),
-)
 def test_dynamic_client_registration_is_advertised(metadata: dict[str, Any]) -> None:
     """RFC 7591. Without it every client needs a credential issued by hand, which the MCP spec
     names as the friction dynamic registration exists to remove."""
     assert metadata.get("registration_endpoint")
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "Ory Hydra v2.3.0 does not advertise RFC 9207 support. Without the issuer identifier "
-        "in the authorization response, a client holding registrations with several issuers "
-        "cannot tell which one answered — the mix-up attack RFC 9207 exists to close."
-    ),
-)
 def test_the_issuer_identifier_is_returned_in_the_authorization_response(
     metadata: dict[str, Any],
 ) -> None:
@@ -264,25 +241,57 @@ def test_a_registered_client_can_obtain_a_token(
     assert response["access_token"]
 
 
+def test_the_audience_is_bound_to_this_deployment(
+    metadata: dict[str, Any], registered: tuple[str, str]
+) -> None:
+    """**The contract line that matters most** (ADR-0019 § 2).
+
+    `NFR-06` refuses a request meant for somewhere else, which the application decides by
+    checking `aud` against `AUTH_AUDIENCE`. So a token has to carry it — and a token issued to
+    a client that *registered itself* has to carry it too, or every MCP client would need a
+    manual step after registering.
+
+    How the issuer arranges that is not the contract's business. This client was registered
+    through RFC 7591 and configured by nobody.
+    """
+    client_id, secret = registered
+
+    status, response = post(
+        metadata["token_endpoint"],
+        form={
+            "grant_type": "client_credentials",
+            "client_id": client_id,
+            "client_secret": secret,
+        },
+    )
+    assert status == 200, response
+
+    audience = claims(response["access_token"]).get("aud")
+    carried = [audience] if isinstance(audience, str) else (audience or [])
+
+    assert AUDIENCE in carried, f"token carries {carried}, not {AUDIENCE}"
+
+
 @pytest.mark.xfail(
     strict=True,
     reason=(
-        "Ory Hydra v2.3.0 ignores the RFC 8707 `resource` parameter and returns aud: []. It "
-        "honours its own non-standard `audience` parameter instead. The MCP authorization spec "
-        "requires a client to send `resource`, and CFOKit validates the audience on every "
-        "request (ADR-0011, ADR-0019) — so a spec-following MCP client is issued a token this "
-        "deployment must reject. Measured against the shipped default."
+        "No issuer implements RFC 8707. Keycloak 26 ignores `resource` and returns its own "
+        "default audience; Ory Hydra returns none; Microsoft Entra ID rejects the parameter "
+        "outright. RFC 6749 obliges a server to ignore parameters it does not recognise, so "
+        "this is conformant behaviour rather than a defect, and ADR-0019 § 2 makes the "
+        "contract line audience binding rather than the mechanism. Kept because the record "
+        "prefers `resource` where an issuer honours it — and strict, so the first issuer that "
+        "does forces this marker off."
     ),
 )
 def test_the_resource_parameter_binds_the_token_audience(
     metadata: dict[str, Any], registered: tuple[str, str]
 ) -> None:
-    """**The contract line that matters most.**
+    """The preferred mechanism, which nothing yet implements.
 
-    Audience binding is what stops a token issued for one resource being replayed at another,
-    and the MCP spec makes both halves mandatory: the client MUST send `resource`, and the
-    server MUST reject a token not issued for it. An issuer that ignores the parameter leaves
-    the client with nothing it can present.
+    Asking for a specific resource is better than configuring the audience once per realm,
+    because it binds the token to what the client actually intends to call rather than to
+    whatever the issuer was set up to say.
     """
     client_id, secret = registered
 

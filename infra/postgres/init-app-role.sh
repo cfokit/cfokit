@@ -17,4 +17,10 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-S
 	    LOGIN
 	    PASSWORD '${POSTGRES_APP_PASSWORD:-cfokit_app}'
 	    NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS;
+
+	-- The identity provider's own store, in its own database on the same server. ADR-0003
+	-- makes Postgres the only storage backend for the books; this is the issuer's data rather
+	-- than ours, and it never shares a database with the ledger. A second server would be
+	-- another thing to run and back up for a separation two databases already give.
+	CREATE DATABASE keycloak OWNER $POSTGRES_USER;
 SQL

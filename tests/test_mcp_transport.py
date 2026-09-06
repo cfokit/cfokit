@@ -63,7 +63,7 @@ def settings() -> Settings:
     return Settings(
         database_url="postgresql://unused/unused",
         public_base_url="http://localhost:8081",
-        auth_issuer_url="http://localhost:4444",
+        auth_issuer_url="http://localhost:8180/realms/cfokit",
         auth_audience="cfokit-ledger",
     )
 
