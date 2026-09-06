@@ -337,3 +337,76 @@ async def test_a_valid_token_reaches_past_the_middleware(
     _, token = caller
 
     assert await post_to_mcp(settings, token=token) == 200
+
+
+# --- IAM-06: usable as it stands ------------------------------------------------------------
+
+
+async def test_a_signed_in_person_can_create_their_own_books(
+    settings: Settings, caller: tuple[str, str]
+) -> None:
+    """**`IAM-06` on the surface a person actually reaches.**
+
+    > "Creating an entity requires an authenticated identity and no prior role… A running
+    > deployment is usable as it stands, with nothing provisioned into it first."
+
+    Administration was REST-only, so someone who signed in through an MCP client could not
+    create books at all — and the setup guide filled the gap with a second identity holding a
+    grant, which is a provisioning step wearing another name.
+
+    This caller holds no role anywhere. That is the point: the act of creating the entity is
+    what confers the first one (`IAM-05`).
+    """
+    _, token = caller
+
+    async with session(settings, token=token) as client:
+        await client.initialize()
+        created = await client.call_tool(
+            "create_entity",
+            {
+                "slug": f"iam06-{uuid.uuid4().hex[:8]}",
+                "name": "Books",
+                "accounting_basis": "accrual",
+                "fiscal_year_end_month": 12,
+                "fiscal_year_end_day": 31,
+                "functional_currency": "USD",
+                "time_zone": "UTC",
+            },
+        )
+        entity_id = payload(created)["entity_id"]
+
+        # And the creator owns it, without a grant anyone had to make.
+        report = await client.call_tool(
+            "trial_balance", {"entity_id": entity_id, "as_of": "2026-12-31"}
+        )
+
+    assert payload(created)["ok"] is True
+    assert payload(report)["ok"] is True
+
+
+async def test_an_undeclared_basis_is_refused_rather_than_defaulted(
+    settings: Settings, caller: tuple[str, str]
+) -> None:
+    """`LED-14` and `LED-15` leave the basis, the fiscal year end and the currency with no
+    undeclared state. A default would be an undeclared state wearing a value, and every report
+    the entity ever produces is computed against it."""
+    _, token = caller
+
+    async with session(settings, token=token) as client:
+        await client.initialize()
+        result = await client.call_tool(
+            "create_entity",
+            {
+                "slug": f"bad-{uuid.uuid4().hex[:8]}",
+                "name": "Books",
+                "accounting_basis": "whatever",
+                "fiscal_year_end_month": 12,
+                "fiscal_year_end_day": 31,
+                "functional_currency": "USD",
+                "time_zone": "UTC",
+            },
+        )
+
+    body = payload(result)
+    assert body["ok"] is False
+    assert body["code"] == "invalid_argument"

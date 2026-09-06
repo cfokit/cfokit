@@ -119,8 +119,6 @@ repository. Open the admin console at **http://keycloak.localhost:8180** — the
 `localhost` — sign in with `admin` / `admin`, switch to the **cfokit** realm, and add a user
 with a password.
 
-Their `sub`, which step 8 needs, is on the user's page in the console.
-
 Change the admin password before this is reachable by anything but your laptop.
 
 ## 5. Configure Claude Desktop
@@ -157,40 +155,22 @@ cp -r skills/bookkeeper ~/.claude/skills/
 The skill talks to the ledger over the published tool surface and by no other route (ADR-0014).
 It knows the import flow: `plan_import` is its call to make, `apply_import` is yours.
 
-## 7. Give yourself the books
+## 7. Create your books
 
-Creating an entity needs an authenticated identity and no prior role (`IAM-06`), and the
-creator becomes its owner. A client registers itself, takes a token, and creates the entity:
+In Claude Desktop:
 
-```bash
-KC=http://keycloak.localhost:8180/realms/cfokit
-R=$(curl -s -X POST "$KC/clients-registrations/openid-connect" \
-  -H 'content-type: application/json' \
-  -d '{"client_name":"bootstrap","grant_types":["client_credentials"],
-       "response_types":["token"],"token_endpoint_auth_method":"client_secret_post",
-       "redirect_uris":["http://localhost/cb"]}')
-CID=$(echo "$R" | python3 -c 'import json,sys; print(json.load(sys.stdin)["client_id"])')
-SEC=$(echo "$R" | python3 -c 'import json,sys; print(json.load(sys.stdin)["client_secret"])')
+> Create an entity called "My Company", accrual basis, fiscal year ending 31 December, USD,
+> America/New_York.
 
-TOK=$(curl -s -X POST "$KC/protocol/openid-connect/token" \
-  -d grant_type=client_credentials -d "client_id=$CID" -d "client_secret=$SEC" \
-  | python3 -c 'import json,sys; print(json.load(sys.stdin)["access_token"])')
+Creating an entity needs an authenticated caller and no prior role — it is the one act with
+that property, and **the act of creating it is what makes you its owner** (`IAM-05`, `IAM-06`).
+There is nothing to provision and no grant for anyone to make.
 
-curl -s -X POST http://localhost:8080/entities \
-  -H "authorization: Bearer $TOK" -H 'content-type: application/json' \
-  -d '{"slug":"my-company","name":"My Company","accounting_basis":"accrual",
-       "fiscal_year_end_month":12,"fiscal_year_end_day":31,
-       "functional_currency":"USD","time_zone":"UTC"}'
-```
+Every declaration is required and none has a default. The basis, the fiscal year end, the
+currency and the time zone are what every report the entity ever produces is computed against,
+and a default would be an undeclared state wearing a value (`LED-14`, `LED-15`, `PLT-08`).
 
-That returns an `entity_id`, owned by the bootstrap client. Grant your own user the same role,
-using the `sub` from step 4:
-
-```bash
-curl -s -X POST "http://localhost:8080/entities/<entity-id>/grants" \
-  -H "authorization: Bearer $TOK" -H 'content-type: application/json' \
-  -d '{"to_principal":"<your-user-sub>","role":"owner"}'
-```
+Keep the `entity_id` it returns.
 
 ## 8. Import, reconcile, compare
 

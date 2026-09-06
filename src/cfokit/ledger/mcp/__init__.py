@@ -71,6 +71,7 @@ from cfokit.ledger.presentation import (
 )
 from cfokit.ledger.repository.obligations import Obligation
 from cfokit.ledger.repository.unit_of_work import Database
+from cfokit.ledger.service.administration import create_entity
 from cfokit.ledger.service.authentication import (
     Authenticator,
     TokenAuthenticator,
@@ -356,6 +357,64 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
             request_id=f"mcp-{uuid.uuid4().hex}",
             idempotency_key=idempotency_key,
         )
+
+    @server.tool(
+        name="create_entity",
+        description=(
+            "Create a set of books and become its owner. Needs only an authenticated caller "
+            "and no prior role — this is the one act with that property, and it is what makes "
+            "a running deployment usable without anything being provisioned into it first. "
+            "Every declaration is required and none has a default: the accounting basis, the "
+            "fiscal year end, the functional currency and the time zone are what every report "
+            "is computed against, and a default would be an undeclared state wearing a value."
+        ),
+    )
+    def make_entity(
+        slug: str,
+        name: str,
+        accounting_basis: str,
+        fiscal_year_end_month: int,
+        fiscal_year_end_day: int,
+        functional_currency: str,
+        time_zone: str,
+    ) -> dict[str, Any]:
+        """`IAM-06`, on the surface a person actually reaches.
+
+        The other administration acts stay off this surface. Granting a role is handing the
+        entity away, which `IAM-21` reserves to owners; the chart is the shape of the books,
+        which someone able to record a transaction is not thereby deciding. Creating an entity
+        is different in kind: there is no entity to hold a role in yet, and the act of creating
+        one is what confers the first (`IAM-05`).
+
+        **No `owner` argument.** The REST surface has one, for the case where a person
+        provisions on another's behalf. Here the caller is a person at a prompt, and an
+        argument naming someone else would be a way to create books nobody in the room owns.
+        """
+
+        def work() -> dict[str, Any]:
+            if accounting_basis not in {"cash", "accrual"}:
+                raise LedgerToolError(
+                    "invalid_argument", "accounting_basis is 'cash' or 'accrual'"
+                )
+            created = create_entity(
+                database,
+                principal=acting(),
+                request_id=f"mcp-{uuid.uuid4().hex}",
+                slug=slug,
+                name=name,
+                accounting_basis=accounting_basis,
+                fiscal_year_end_month=fiscal_year_end_month,
+                fiscal_year_end_day=fiscal_year_end_day,
+                functional_currency=functional_currency,
+                time_zone=time_zone,
+            )
+            return {
+                "ok": True,
+                "entity_id": created.entity_id,
+                "owner_grant_id": created.owner_grant_id,
+            }
+
+        return _refusals(work)
 
     @server.tool(
         name="record_transaction",
