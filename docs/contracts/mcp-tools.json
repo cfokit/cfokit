@@ -51,7 +51,7 @@
     "name": "account_detail"
   },
   {
-    "description": "Import an accounting export into an entity's books: create the chart, post the journal, and reconcile the result against the balances the source states for itself. Re-plans first and refuses a blocked import. Every entry records the system it came from. Run plan_import first — this one writes.",
+    "description": "Import an accounting export into an entity's books: create the chart, post the journal, and reconcile the result against the balances the source states for itself. Re-plans first and refuses a blocked import. Every entry records the system it came from. Run plan_import first — this one writes. A person's act: a delegated agent session is refused with not_a_person, and should ask the person it acts for to apply the import.",
     "inputSchema": {
       "properties": {
         "entity_id": {
