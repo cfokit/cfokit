@@ -201,8 +201,13 @@ services:
       # the directory the file is in, not your home directory: whatever is mounted is what the
       # tools can read.
       IMPORT_ROOT: ${IMPORT_ROOT:-}
+      # Where the detail of a plan or an import is written. Deliberately not the directory
+      # above: exports are mounted read-only by anyone who has thought about it, and a tool
+      # writing beside them fails on a correctly configured deployment. Unset means no file.
+      IMPORT_REPORTS: ${IMPORT_REPORTS:-}
     # volumes:
     #   - ${IMPORT_SOURCE:-./imports}:/imports:ro
+    #   - ${IMPORT_REPORTS_SOURCE:-./reports}:/reports
     ports:
       - "${MCP_PORT:-8081}:8081"
     healthcheck:

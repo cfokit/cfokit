@@ -52,6 +52,13 @@ class Settings:
     A variable within the existing env-vars-only shape, so it needs no record of its own
     (ADR-0016); `infra/README.md` is authoritative for the names."""
 
+    import_reports: Path | None = None
+    """Directory the import tools write their detail to. Optional, and absent by default.
+
+    Separate from `IMPORT_ROOT` because the two want opposite permissions: exports are mounted
+    read-only by anyone who has thought about it, and a tool writing beside them would fail on
+    a correctly configured deployment. Unset means no file is written and the reply says so."""
+
 
 def require_env(name: str) -> str:
     """Read a required variable, or raise without disclosing its value."""
@@ -81,5 +88,8 @@ def load_settings() -> Settings:
         auth_audience=require_env("AUTH_AUDIENCE"),
         port=port,
         import_root=(Path(root).resolve() if (root := os.environ.get("IMPORT_ROOT")) else None),
+        import_reports=(
+            Path(reports).resolve() if (reports := os.environ.get("IMPORT_REPORTS")) else None
+        ),
         log_level=optional_env("LOG_LEVEL", "info"),
     )

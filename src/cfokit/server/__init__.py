@@ -42,6 +42,7 @@ def mcp_server(settings: Settings, authenticator: Authenticator | None = None) -
             Database(settings.database_url),
             root=settings.import_root,
             acting=acting,
+            reports=settings.import_reports,
         )
     return server
 
