@@ -21,11 +21,20 @@ colon-separated path — is what the two systems agree on, and it is what the `c
 **Basis matters, and the export's reports are not all usable.** Every report in a QuickBooks
 export carries its accounting method in its footer. `Journal.xlsx` is the accrual record; a
 report run on a cash basis does not sum to it and must not be used as its oracle.
+
+**Figures in the statement reports are formulas, and a formula is not a zero.** QuickBooks
+writes `Balance_sheet.xlsx`, `Profit_and_loss.xlsx` and `Trial_balance.xlsx` with every amount
+as `=2492948.04` and no cached result, while `Journal.xlsx` and `General_ledger.xlsx` carry
+literal numbers. A reader asking openpyxl for cached values gets `0.0` for every figure in the
+first three and correct values from the last two — silently, and in the direction that looks
+like a balanced book. So the workbook is read unevaluated, a bare numeric formula is the number
+it states, and anything else is refused rather than guessed.
 """
 
 from __future__ import annotations
 
 import io
+import re
 import zipfile
 from collections.abc import Sequence
 from datetime import date, datetime
@@ -39,12 +48,29 @@ from cfokit.imports.source import (
     SourceEntry,
     SourceLine,
     StatedBalance,
+    StatedStatement,
 )
+from cfokit.ledger.errors import LedgerError
 
-__all__ = ["SYSTEM", "read", "read_basis"]
+__all__ = ["SYSTEM", "SourceBooks", "UnreadableFigure", "read", "read_basis"]
 
 # What `IMP-04` requires an imported record to name.
 SYSTEM = "QuickBooks Online"
+
+# A formula whose whole body is the number it states, which is how QuickBooks writes a figure.
+_LITERAL = re.compile(r"-?\d+(\.\d+)?")
+
+
+class UnreadableFigure(LedgerError):
+    """A cell whose value cannot be established, in a place a figure belongs.
+
+    Refused rather than defaulted. A missing amount that arrives as zero is indistinguishable
+    from a real zero, and in a set of books the difference is everything.
+    """
+
+    code = "unreadable_figure"
+    status = 422
+
 
 # QuickBooks Online exports one currency per company file, and states it nowhere in these
 # reports. Declared here rather than guessed from a cell: `IMP-07` refuses a foreign amount, and
@@ -63,7 +89,17 @@ _BALANCE_SHEET_SECTIONS = {
     "Liabilities": "liability",
     "Equity": "equity",
 }
-_INCOME_STATEMENT_SECTIONS = {"Income": "income", "Expenses": "expense"}
+# A profit and loss has four sections, not two. "Other Income" and "Other Expenses" carry
+# things outside the trading result — interest earned, a gain on disposal — and an account
+# under one of them is still income or expense. Reading only the first two leaves those
+# accounts typed `unknown`, which lands them in the chart as assets and then compares them
+# against the statement with the wrong sign.
+_INCOME_STATEMENT_SECTIONS = {
+    "Income": "income",
+    "Other Income": "income",
+    "Expenses": "expense",
+    "Other Expenses": "expense",
+}
 
 
 def read_basis(rows: Sequence[Row]) -> str:
@@ -105,6 +141,15 @@ def read(archive: bytes) -> SourceBooks:
         basis = read_basis(_rows(export, "Journal.xlsx"))
         balances, rollups, balances_basis = _ledger_totals(export, entries)
         commodity = _COMMODITY
+        posted_to = {line.account_code for entry in entries for line in entry.lines}
+        printed = tuple(
+            statement
+            for member, report in (
+                ("Profit_and_loss.xlsx", "profit_and_loss"),
+                ("Balance_sheet.xlsx", "balance_sheet"),
+            )
+            if (statement := _statement(export, member, report, posted_to)) is not None
+        )
 
     used = sorted({line.account_code for entry in entries for line in entry.lines})
     return SourceBooks(
@@ -124,7 +169,81 @@ def read(archive: bytes) -> SourceBooks:
         entries=entries,
         balances=balances,
         rollups=rollups,
+        statements=printed,
     )
+
+
+def _statement(
+    export: zipfile.ZipFile, member: str, report: str, posted_to: set[str]
+) -> StatedStatement | None:
+    """One printed statement, by account.
+
+    **Account paths come from the indentation.** A statement indents a sub-account under its
+    parent, so `Business Development` beneath `Advertising & Marketing` is the account the
+    journal calls `Advertising & Marketing:Business Development`. Reading the leaf name alone
+    would be ambiguous — `Meals` appears under two different parents in a real chart.
+
+    But a statement's hierarchy is not only accounts: a balance sheet groups them under
+    `ASSETS`, `Current Assets`, `Bank Accounts`, none of which anything posts to. So the path
+    the indentation suggests is *checked* against the accounts the journal uses, longest first,
+    and a row that matches none is reported as unmatched rather than guessed at.
+
+    Sign is left exactly as the source prints it. A statement shows income as positive; a
+    posting signs income negative. Translating here would bury the convention in a reader —
+    the comparison is where two conventions meet, so that is where it belongs.
+    """
+    if member not in export.namelist():
+        return None
+    rows = _rows(export, member)
+    lines: list[StatedBalance] = []
+    unmatched: list[str] = []
+    stack: list[tuple[int, str]] = []
+
+    for row in rows[_HEADER_ROWS:]:
+        label = row[0]
+        if label is None:
+            continue
+        text = str(label)
+        name = text.strip()
+        if not name or name.upper().startswith("TOTAL") or name.startswith("Gross "):
+            continue
+        if "Basis" in name and name.endswith("Basis"):
+            continue
+
+        depth = len(text) - len(text.lstrip())
+        while stack and stack[-1][0] >= depth:
+            stack.pop()
+        stack.append((depth, name))
+
+        if row[1] is None:
+            continue  # a heading, or a parent that carries no figure of its own
+
+        code = _resolve([entry for _, entry in stack], posted_to)
+        if code is None:
+            unmatched.append(name)
+            continue
+        lines.append(StatedBalance(account_code=code, balance=_amount(row[1])))
+
+    return StatedStatement(
+        report=report,
+        basis=read_basis(rows),
+        lines=tuple(lines),
+        unmatched=tuple(unmatched),
+    )
+
+
+def _resolve(path: list[str], posted_to: set[str]) -> str | None:
+    """The account a statement row names, from the path its indentation implies.
+
+    Longest suffix first, because the deeper path is the more specific claim: a row nested
+    under a real parent is that parent's sub-account, and one nested only under grouping
+    headings is a top-level account whose leaf name is the whole of it.
+    """
+    for start in range(len(path)):
+        candidate = ":".join(path[start:])
+        if candidate in posted_to:
+            return candidate
+    return None
 
 
 def _typed(name: str, types: dict[str, str]) -> str:
@@ -292,8 +411,10 @@ def _rows(export: zipfile.ZipFile, member: str) -> list[Row]:
     Rows rather than a worksheet, so nothing downstream needs openpyxl's types — and the two
     shapes `load_workbook` returns for read-only and normal mode stop mattering.
     """
+    # Unevaluated. `data_only=True` asks for a cached result, and QuickBooks caches none — so
+    # every figure in the statement reports would come back as 0.0 rather than as missing.
     workbook = openpyxl.load_workbook(
-        io.BytesIO(export.read(member)), read_only=True, data_only=True
+        io.BytesIO(export.read(member)), read_only=True, data_only=False
     )
     try:
         return list(workbook.worksheets[0].iter_rows(values_only=True))
@@ -306,9 +427,20 @@ def _amount(value: object) -> Decimal:
 
     `Decimal(str(value))` rather than `Decimal(value)`: a float's binary expansion is not the
     figure the workbook shows, and `LED-04` allows no representation error.
+
+    **A formula that states a number is that number; any other formula is refused.** The
+    statement reports write every figure as `=2492948.04`, so reading them at all means reading
+    those. A formula that references other cells is a subtotal, and computing it would mean
+    implementing a spreadsheet — where returning zero instead would be worse than either,
+    because a zero in a financial figure reads as a fact.
     """
     if value is None:
         return Decimal(0)
+    if isinstance(value, str) and value.startswith("="):
+        stated = value[1:].strip()
+        if not _LITERAL.fullmatch(stated):
+            raise UnreadableFigure(f"{value[:40]!r} is a computed cell, not a stated figure")
+        return Decimal(stated)
     return Decimal(str(value))
 
 

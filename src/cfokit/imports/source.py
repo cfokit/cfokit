@@ -20,7 +20,14 @@ from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
 
-__all__ = ["SourceAccount", "SourceBooks", "SourceEntry", "SourceLine", "StatedBalance"]
+__all__ = [
+    "SourceAccount",
+    "SourceBooks",
+    "SourceEntry",
+    "SourceLine",
+    "StatedBalance",
+    "StatedStatement",
+]
 
 
 @dataclass(frozen=True, slots=True)
@@ -76,6 +83,25 @@ class StatedBalance:
 
 
 @dataclass(frozen=True, slots=True)
+class StatedStatement:
+    """A statement the source printed, by account.
+
+    Leaf accounts only. A statement's subtotals are computed cells rather than stated figures,
+    so reading one would mean evaluating a spreadsheet — and a total derived from the leaves is
+    the same number without the pretence that the source stated it independently.
+
+    `unmatched` names rows whose account could not be resolved to one the journal posts to.
+    Reported rather than dropped: a line silently missing from a comparison is a difference
+    that reads as agreement.
+    """
+
+    report: str
+    basis: str
+    lines: tuple[StatedBalance, ...] = ()
+    unmatched: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
 class SourceBooks:
     """One foreign system's books, in the shape an import reads.
 
@@ -105,3 +131,7 @@ class SourceBooks:
     # `balances` because nothing posts to a subtotal: comparing one against a chart account
     # would report a divergence that is really a difference in what the two figures are.
     rollups: tuple[StatedBalance, ...] = field(default_factory=tuple)
+    # The statements the source printed, for comparing against the ones CFOKit produces
+    # (`IMP-08`, `NFR-01`). Signed as the source prints them, which is not how a posting is
+    # signed — see `statements` in the reader.
+    statements: tuple[StatedStatement, ...] = field(default_factory=tuple)
