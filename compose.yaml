@@ -43,55 +43,65 @@ services:
     # No ports published. Nothing outside the compose network needs the database; the dev
     # overlay exposes it deliberately.
 
-  # OAuth 2.1 issuer. A default, not a coupling — the application reads AUTH_ISSUER_URL
+  # The identity provider. A default, not a coupling — the application reads AUTH_ISSUER_URL
   # and AUTH_AUDIENCE and nothing else, and any issuer meeting the conformance contract in
-  # infra/README.md can replace this (ADR-0019). Apache 2.0; no copyleft in the shipped
-  # stack.
-  hydra:
-    image: oryd/hydra:v2.3.0
+  # infra/README.md can replace it (ADR-0019). Apache 2.0; no copyleft in the shipped stack.
+  #
+  # A *complete* identity provider, which is the whole reason it is this one. `IAM-10` forbids
+  # CFOKit from operating a login flow or storing a password, and `IAM-06` requires a running
+  # deployment to be usable as it stands — so the issuer has to bring its own user store and
+  # login pages, or a self-hoster is left to supply the one thing we may not write.
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
     restart: unless-stopped
-    command: serve all --dev
+    # `start-dev` serves plain HTTP, which is why same-machine access over localhost needs no
+    # TLS. Cross-device access requires a tunnel and KC_HOSTNAME set to the public hostname
+    # (ADR-0018), the same condition PUBLIC_BASE_URL already carries.
+    command: ["start-dev", "--import-realm"]
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
-      DSN: memory
-      # The issuer's own identity, and it must be the one every party uses. It defaulted to
-      # `http://localhost:4444` while the services were configured to reach the issuer at
-      # `http://hydra:4444` — so every token carried `iss: http://localhost:4444` and the
-      # application, which validates `iss` against AUTH_ISSUER_URL, would have rejected all of
-      # them. Nothing caught it because no test drove the issuer.
+      # The realm is imported at startup from the file mounted below.
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: cfokit
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-cfokit}
+      # The issuer's own identity, and it must be the one every party uses: the application
+      # validates a token's `iss` against AUTH_ISSUER_URL, so an issuer advertising one
+      # hostname while services reach it at another rejects every token it issues.
       #
-      # `hydra` is the name that resolves inside the compose network. A browser needs it to
-      # resolve too, for the authorization-code flow: add `127.0.0.1 hydra` to your hosts file,
-      # or run behind a tunnel with AUTH_ISSUER_URL set to the public hostname, which is the
-      # same thing PUBLIC_BASE_URL already requires (ADR-0004, ADR-0018).
-      URLS_SELF_ISSUER: ${AUTH_ISSUER_URL:-http://hydra:4444}
-      # RFC 7591 dynamic client registration. The infra contract requires it, and Hydra
-      # implements it only when asked. An MCP client registers itself this way rather than
-      # waiting for someone to issue it a credential by hand.
-      OIDC_DYNAMIC_CLIENT_REGISTRATION_ENABLED: "true"
-      # JWT access tokens, not opaque ones. CFOKit validates a token's signature locally
-      # against cached JWKS and reads its audience and subject from the claims (ADR-0019); an
-      # opaque token carries none of that and would need an introspection round trip on every
-      # request. Hydra's default is opaque, so a client registering itself through RFC 7591
-      # would have received tokens this deployment cannot read.
-      STRATEGIES_ACCESS_TOKEN: jwt
-      # Without this Hydra cannot create its own signing keys and answers `server_error` to
-      # every discovery request — the issuer starts, reports healthy, and serves nothing. It
-      # was unset, and no test drove the issuer, so nothing noticed. A local-only credential
-      # like POSTGRES_PASSWORD above: managed deployments inject theirs from a secret store,
-      # and IaC creates secret containers rather than values (ADR-0016).
-      SECRETS_SYSTEM: ${HYDRA_SECRETS_SYSTEM:-local-development-only-not-a-real-secret}
-      # `--dev` serves plain HTTP, which is why same-machine access over localhost needs
-      # no TLS. Cross-device access requires a tunnel and PUBLIC_BASE_URL set to the
-      # public hostname (ADR-0018).
+      # `keycloak` is the name that resolves inside the compose network. A browser needs it to
+      # resolve too, for the authorization-code flow: add `127.0.0.1 keycloak` to your hosts
+      # file, or run behind a tunnel with this and AUTH_ISSUER_URL set to the public hostname.
+      KC_HOSTNAME: ${KC_HOSTNAME:-http://keycloak:8080}
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "false"
+      KC_HTTP_ENABLED: "true"
+      KC_HEALTH_ENABLED: "true"
+      # The first administrator. Local-only, like POSTGRES_PASSWORD above; a managed
+      # deployment injects this from a secret store, and IaC creates secret containers rather
+      # than values (ADR-0016). Change it before exposing this to anything.
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+    volumes:
+      # What makes the deployment usable as it stands: the audience binding every token needs,
+      # and the registration policy that lets a client register itself. infra/keycloak/README.md
+      # explains each part.
+      - ./infra/keycloak/cfokit-realm.json:/opt/keycloak/data/import/cfokit-realm.json:ro
     ports:
-      - "4444:4444"   # public: token, authorize, discovery, JWKS
-      - "4445:4445"   # admin: client registration
+      - "${KEYCLOAK_PORT:-8180}:8080"
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:4444/health/ready"]
+      # The management port, which is where Keycloak serves health from. Readiness rather than
+      # liveness here, because everything else waits on this one being able to issue tokens.
+      test:
+        [
+          "CMD-SHELL",
+          "exec 3<>/dev/tcp/localhost/9000 && echo -e 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 && grep -q '\"UP\"' <&3",
+        ]
       interval: 5s
       timeout: 5s
-      retries: 10
-      start_period: 10s
+      retries: 30
+      start_period: 30s
 
   # The ledger service (ADR-0023: one image, many entrypoints — this one runs the
   # REST adapter). Migrations are NOT applied here; run the migrate profile below.
@@ -103,7 +113,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      hydra:
+      keycloak:
         condition: service_healthy
     environment:
       # The complete configuration surface. Adding to it requires an ADR, because
@@ -114,7 +124,7 @@ services:
       # must never hold (ADR-0003, ADR-0007). Same variable, different value per entrypoint.
       DATABASE_URL: postgresql://cfokit_app:${POSTGRES_APP_PASSWORD:-cfokit_app}@postgres:5432/cfokit
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
-      AUTH_ISSUER_URL: ${AUTH_ISSUER_URL:-http://hydra:4444}
+      AUTH_ISSUER_URL: ${AUTH_ISSUER_URL:-http://keycloak:8080/realms/cfokit}
       AUTH_AUDIENCE: ${AUTH_AUDIENCE:-cfokit-ledger}
       LOG_LEVEL: ${LOG_LEVEL:-info}
     ports:
@@ -156,7 +166,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      hydra:
+      keycloak:
         condition: service_healthy
     environment:
       # The same surface the REST service reads, and the same issuer and audience: one
@@ -165,7 +175,7 @@ services:
       # PUBLIC_BASE_URL is what a client fetches protected-resource metadata from, so it is
       # this service's own address rather than the REST service's (ADR-0004).
       PUBLIC_BASE_URL: ${MCP_PUBLIC_BASE_URL:-http://localhost:8081}
-      AUTH_ISSUER_URL: ${AUTH_ISSUER_URL:-http://hydra:4444}
+      AUTH_ISSUER_URL: ${AUTH_ISSUER_URL:-http://keycloak:8080/realms/cfokit}
       AUTH_AUDIENCE: ${AUTH_AUDIENCE:-cfokit-ledger}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       PORT: "8081"
@@ -213,7 +223,7 @@ services:
       # The issuer, because the conformance suite drives it. `infra/README.md` states a
       # contract any issuer must meet and once claimed a suite verified it; the suite now
       # exists, and it needs the thing it measures to be running (ADR-0019).
-      hydra:
+      keycloak:
         condition: service_healthy
     environment:
       # As the application role, so an integration test sees exactly the privileges and the
@@ -224,13 +234,13 @@ services:
       DATABASE_OWNER_URL: postgresql://cfokit:${POSTGRES_PASSWORD:-cfokit}@postgres:5432/cfokit
       # What the conformance suite measures. The same two variables the application reads,
       # so the suite checks the issuer a deployment would actually use (ADR-0019).
-      AUTH_ISSUER_URL: ${AUTH_ISSUER_URL:-http://hydra:4444}
+      AUTH_ISSUER_URL: ${AUTH_ISSUER_URL:-http://keycloak:8080/realms/cfokit}
       AUTH_AUDIENCE: ${AUTH_AUDIENCE:-cfokit-ledger}
       # Hydra implements RFC 7591 here but does not advertise it, so a client cannot discover
       # it. Stated for the conformance suite alone, so the token-issuing half of the contract
       # is measured instead of skipped behind that failure. Not part of the application's
       # configuration surface, and not read by anything that serves traffic.
-      AUTH_REGISTRATION_ENDPOINT: ${AUTH_REGISTRATION_ENDPOINT:-http://hydra:4444/oauth2/register}
+      AUTH_REGISTRATION_ENDPOINT: ${AUTH_REGISTRATION_ENDPOINT:-}
 
 volumes:
   ledger-data:

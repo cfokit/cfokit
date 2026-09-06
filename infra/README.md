@@ -88,8 +88,13 @@ network on every pull request.
 ### 3. An OAuth 2.1 issuer meeting the conformance contract
 
 The issuer is a **swappable dependency**, not a chosen product. The default in the compose
-stack is Ory Hydra (Apache 2.0); it is a default, not a coupling. No issuer-specific code
-exists anywhere in the codebase. (ADR-0019)
+stack is Keycloak (Apache 2.0); it is a default, not a coupling. No issuer-specific code exists
+anywhere in the codebase. (ADR-0019)
+
+It is a *complete* identity provider — user store, login pages, admin console — because `IAM-10`
+forbids CFOKit from operating a login flow or storing a password, and `IAM-06` requires a
+running deployment to be usable as it stands. An issuer that issues tokens but holds no
+identities leaves a self-hoster to supply exactly the half we may not write.
 
 Any conforming issuer must provide:
 
@@ -109,30 +114,26 @@ Any conforming issuer must provide:
 **One identity, from every side.** Whatever an issuer calls itself is what it must be called by
 everyone — the application validates a token's `iss` against `AUTH_ISSUER_URL`, so an issuer
 advertising one hostname while services reach it at another rejects every token it issues. In
-the compose stack that name is `hydra`; a browser needs it to resolve too, which means a hosts
+the compose stack that name is `keycloak`; a browser needs it to resolve too, which means a hosts
 entry or a tunnel with `AUTH_ISSUER_URL` set to the public hostname.
 
-### What the default issuer does and does not meet
+### What the suite measures
 
 `tests/integration/test_issuer_conformance.py` drives the configured issuer and asserts each
 line above. It runs in CI gate 2, against whatever issuer the stack is pointed at, and it knows
-nothing about what that issuer is — every request goes to an endpoint the issuer advertises.
+nothing about which one that is — every request goes to an endpoint the issuer advertises.
 
-Four lines are **not met by Ory Hydra v2.3.0**, and the suite records each as a strict expected
-failure so the gap is visible and so the marker must be removed the moment it closes:
+The default meets every line as it ships. One preference it does not meet, recorded as a strict
+expected failure so the marker comes off when it closes: **no issuer implements RFC 8707**.
+Keycloak ignores the `resource` parameter and returns its own configured audience, Ory Hydra
+returns none, and Microsoft Entra ID rejects the parameter outright. RFC 6749 obliges a server
+to ignore parameters it does not recognise, so this is conformant behaviour rather than a
+defect, and ADR-0019 § 2 makes the contract line audience binding rather than any one mechanism
+for it.
 
-| Contract line | What Hydra does |
-|---|---|
-| RFC 8707 resource indicators | Ignores `resource` and returns `aud: []`. Honours its own non-standard `audience` parameter instead. |
-| RFC 8414 metadata path | Serves OIDC discovery only; `/.well-known/oauth-authorization-server` is 404. |
-| RFC 7591 advertised | Implements registration, does not name `registration_endpoint` in metadata. |
-| RFC 9207 | Not advertised. |
-
-**The first one blocks the MCP client path.** The MCP authorization specification requires a
-client to send `resource`, and CFOKit validates the audience on every request — so a
-spec-following client is issued a token this deployment must reject. Choosing the default
-issuer is ADR-0019's; whether it stays the default now that this is measured is a live
-question, not a settled one.
+The audience is therefore bound by realm configuration, which ships in
+`infra/keycloak/cfokit-realm.json`. Its omission is an authentication failure rather than a
+visible error, which is why it ships rather than being a setup instruction.
 
 **No AGPL or other network-copyleft component ships in the default stack.** (ADR-0019)
 

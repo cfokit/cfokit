@@ -26,7 +26,7 @@ CONTRACTS = REPO_ROOT / "docs" / "contracts"
 SETTINGS = Settings(
     database_url="postgresql://unreachable.invalid/none",
     public_base_url="http://localhost:8080",
-    auth_issuer_url="http://localhost:4444",
+    auth_issuer_url="http://localhost:8180/realms/cfokit",
     auth_audience="cfokit-ledger",
 )
 

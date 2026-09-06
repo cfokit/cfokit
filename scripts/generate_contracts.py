@@ -44,7 +44,7 @@ from cfokit.server import mcp_server, rest_app  # noqa: E402
 SETTINGS = Settings(
     database_url="postgresql://contract.invalid/none",
     public_base_url="http://localhost:8080",
-    auth_issuer_url="http://localhost:4444",
+    auth_issuer_url="http://localhost:8180/realms/cfokit",
     auth_audience="cfokit-ledger",
     import_root=Path("/imports"),
 )

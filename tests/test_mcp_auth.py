@@ -33,7 +33,7 @@ def settings() -> Settings:
     return Settings(
         database_url="postgresql://unused/unused",
         public_base_url="http://localhost:8081",
-        auth_issuer_url="http://localhost:4444",
+        auth_issuer_url="http://localhost:8180/realms/cfokit",
         auth_audience="cfokit-ledger",
     )
 
@@ -135,7 +135,12 @@ def test_a_client_can_discover_the_issuer_from_the_challenge(settings: Settings)
     with TestClient(_app(settings)) as client:
         metadata = client.get("/.well-known/oauth-protected-resource").json()
 
-    assert metadata["authorization_servers"] == [f"{settings.auth_issuer_url}/"]
+    # Compared without a trailing slash on either side. The SDK normalises a bare origin to
+    # end in one and leaves a path alone, so pinning the exact string would assert a quirk of
+    # whichever issuer URL the test happened to use rather than the property a client needs.
+    advertised = [server.rstrip("/") for server in metadata["authorization_servers"]]
+
+    assert advertised == [settings.auth_issuer_url.rstrip("/")]
     assert metadata["bearer_methods_supported"] == ["header"]
 
 

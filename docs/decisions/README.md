@@ -62,7 +62,7 @@ nothing cites these but this repository. They are added when something breaks wi
 | [0016](0016-opentofu-single-cloud-target-iac.md) | OpenTofu, one cloud target, written deployment contract | Draft |
 | [0017](0017-gcp-initial-cloud-target.md) | GCP (Cloud Run + Cloud SQL) as the initial cloud target | Draft |
 | [0018](0018-local-compose-dev-and-production.md) | One compose stack for local development and local production | Draft |
-| [0019](0019-identity-provider-conformance-contract.md) | Identity provider as a swappable dependency behind a conformance contract | Proposed |
+| [0019](0019-identity-provider-conformance-contract.md) | Identity provider as a swappable dependency behind a conformance contract | Accepted |
 | [0020](0020-repository-layout-artifact-kinds.md) | Repository directories are organised by artifact kind | Draft |
 | [0021](0021-slack-as-a-delivery-surface.md) | Slack is a delivery surface, built as a separate component over HTTP events | Draft |
 | [0022](0022-tiny-ledger-modules-and-components.md) | The ledger stays tiny; everything else is an in-process module or a separate component | Draft |
