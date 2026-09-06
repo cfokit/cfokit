@@ -21,6 +21,11 @@ agreed and where the detail was written. That is not a claim that the numbers mu
 a model — `PLT-02` puts the runtime in the organisation's own hands — but a summary is what a
 caller asked for, and a tool that returns eleven thousand figures nobody asked for is the same
 mistake as sending them in.
+
+**A report goes where a deployment says, and nowhere by default.** The import directory is the
+obvious place and the wrong one: an operator mounts their accounting exports read-only, which is
+right, and a tool that wrote beside them would fail on a correctly configured deployment. So
+`IMPORT_REPORTS` names a writable directory, and without it the tools write no file and say so.
 """
 
 from __future__ import annotations
@@ -34,13 +39,25 @@ from typing import Any
 
 from mcp.server import MCPServer
 
-from cfokit.imports import Plan, Result, apply, plan, quickbooks
+from cfokit.imports import Comparison, Plan, Result, apply, compare, plan, quickbooks
 from cfokit.ledger.errors import LedgerError
 from cfokit.ledger.mcp import refused
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.principal import Principal
 
 __all__ = ["ImportPathRefused", "register"]
+
+
+class ReportNotWritten(LedgerError):
+    """`IMPORT_REPORTS` names a directory that cannot be written to.
+
+    A refusal rather than a silent omission: an operator who configured a reports directory is
+    expecting the detail to be there, and a tool that quietly skipped it would report agreement
+    with nothing to check it against.
+    """
+
+    code = "report_not_written"
+    status = 500
 
 
 class ImportPathRefused(LedgerError):
@@ -79,18 +96,28 @@ def register(
     *,
     root: Path,
     acting: Callable[[], Principal],
+    reports: Path | None = None,
 ) -> None:
     """Add the import tools to `server`.
 
     `acting` derives the caller from the verified token on the request — supplied by the
     composition point rather than rebuilt here, so both surfaces derive a principal exactly one
     way (ADR-0033).
+
+    `reports` is where detail is written. `None` means nowhere, and the tools say so rather
+    than failing: the import directory is mounted read-only on any deployment that has thought
+    about it, so writing beside the source is not a default that can be relied on.
     """
 
-    def report(source: Path, payload: dict[str, Any]) -> str:
+    def report(source: Path, payload: dict[str, Any]) -> str | None:
+        if reports is None:
+            return None
         stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-        destination = source.parent / f"cfokit-import-{stamp}.json"
-        destination.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+        destination = reports / f"cfokit-{source.stem[:40]}-{stamp}.json"
+        try:
+            destination.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+        except OSError as refused:
+            raise ReportNotWritten(f"{destination}: {refused.strerror}") from refused
         return str(destination)
 
     def summarise(proposed: Plan) -> dict[str, Any]:
@@ -184,6 +211,36 @@ def register(
         return _refuse(work)
 
     @server.tool(
+        name="compare_statements",
+        description=(
+            "Compare the profit and loss and balance sheet an accounting export printed "
+            "against the ones CFOKit produces from the books, account by account, with no "
+            "tolerance. Reads only and writes nothing. Run it after apply_import to check the "
+            "import against the source's own statements rather than against a sum of the same "
+            "journal. Where the two are on different accounting bases the obligation accounts "
+            "differ by what is unsettled, which is expected and is flagged."
+        ),
+    )
+    def compare_statements(entity_id: str, location: str) -> dict[str, Any]:
+        def work() -> dict[str, Any]:
+            source = resolve(root, location)
+            books = quickbooks.read(source.read_bytes())
+            comparisons = compare(
+                database, entity_id=entity_id, principal=acting(), books=books
+            )
+            return {
+                "ok": True,
+                "statements": [_summarise_comparison(c) for c in comparisons],
+                "exact": all(c.agrees for c in comparisons) and bool(comparisons),
+                "report": report(
+                    source,
+                    {"statements": [_detail_comparison(c) for c in comparisons]},
+                ),
+            }
+
+        return _refuse(work)
+
+    @server.tool(
         name="apply_import",
         description=(
             "Import an accounting export into an entity's books: create the chart, post the "
@@ -236,3 +293,33 @@ def _refuse(work: Callable[[], dict[str, Any]]) -> dict[str, Any]:
         return work()
     except LedgerError as exc:
         return refused(exc.code, exc.message)
+
+
+def _summarise_comparison(comparison: Comparison) -> dict[str, Any]:
+    """Counts and bases. What diverged is in the report, because it names accounts."""
+    return {
+        "report": comparison.report,
+        "agreed": comparison.agreed,
+        "compared": comparison.compared,
+        "divergences": len(comparison.divergences),
+        "their_basis": comparison.their_basis,
+        "our_basis": comparison.our_basis,
+        "expect_obligation_accounts_to_differ": comparison.their_basis
+        not in {"unknown", comparison.our_basis},
+        "accounts_only_they_report": len(comparison.only_theirs),
+        "accounts_only_we_report": len(comparison.only_ours),
+        "rows_that_are_not_accounts": len(comparison.unmatched),
+    }
+
+
+def _detail_comparison(comparison: Comparison) -> dict[str, Any]:
+    return {
+        **_summarise_comparison(comparison),
+        "divergences": [
+            {"account": code, "ours": str(ours), "theirs": str(theirs)}
+            for code, ours, theirs in comparison.divergences
+        ],
+        "only_they_report": list(comparison.only_theirs),
+        "only_we_report": list(comparison.only_ours),
+        "not_accounts": list(comparison.unmatched),
+    }

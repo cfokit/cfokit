@@ -165,6 +165,28 @@
     "name": "comparative_profit_and_loss"
   },
   {
+    "description": "Compare the profit and loss and balance sheet an accounting export printed against the ones CFOKit produces from the books, account by account, with no tolerance. Reads only and writes nothing. Run it after apply_import to check the import against the source's own statements rather than against a sum of the same journal. Where the two are on different accounting bases the obligation accounts differ by what is unsettled, which is expected and is flagged.",
+    "inputSchema": {
+      "properties": {
+        "entity_id": {
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "location": {
+          "title": "Location",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity_id",
+        "location"
+      ],
+      "title": "compare_statementsArguments",
+      "type": "object"
+    },
+    "name": "compare_statements"
+  },
+  {
     "description": "Mark a statement issued, fixing what was reported, to whom, and when. Pass the rendered figures you gave the recipient: they are stored rather than re-derived, because re-deriving assumes the presentation never changes. A correction posted afterwards marks the statement superseded, with no flag to maintain.",
     "inputSchema": {
       "properties": {
