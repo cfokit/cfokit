@@ -51,12 +51,37 @@ services:
       - /path/to/a/reports/directory:/reports
 ```
 
-Then `docker compose -f compose.yaml -f compose.imports.yaml up -d --wait mcp`.
+Then, **from the repository root, and with both files named every time**:
+
+```
+docker compose -f compose.yaml -f compose.imports.yaml up -d --wait mcp
+```
+
+`compose.yaml` pins `name: cfokit`, so this attaches to the stack already running rather than
+starting a second one. But naming only `compose.yaml` **recreates the container without the
+overlay**, and the import tools then disappear — they are registered only when `IMPORT_ROOT` is
+set, so `tools/list` quietly returns sixteen tools instead of eighteen rather than failing.
+
+There is deliberately no `docker-compose.override.yml` and no `COMPOSE_FILE` default, for the
+reason `compose.yaml` already gives: an overlay that applies itself hands you bind mounts you
+did not ask for. Explicit beats idiomatic here (ADR-0018).
 
 **Read-only on the exports, and a separate writable directory for reports.** The tools write
 their detail — the figures a reconciliation names — to `IMPORT_REPORTS`, never beside the
 source. Mount the directory the export is in, not your home directory: whatever is mounted is
 what the tools can read.
+
+## Keeping one stack straight
+
+Everything runs under the compose project `cfokit`, from the repository root. Two things follow.
+
+**A development database accumulates.** The integration suite creates an entity per test and
+removes none, and every import run leaves the books it imported. That is harmless — entities are
+isolated from each other by row-level security — but it means picking the entity id you meant
+rather than the most recent one. Create a fresh entity for a run you care about.
+
+**`docker compose down -v` destroys the volume**, and with it every set of books in it. The
+warning at the top of `compose.yaml` is not decorative.
 
 ## 3. Create a user to sign in as
 

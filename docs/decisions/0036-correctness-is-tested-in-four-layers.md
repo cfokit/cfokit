@@ -232,6 +232,11 @@ The cheapest option, and the one that looks sufficient.
 - Evals for the acceptance criteria already written as such: `PLT-23`'s embedded-instruction case and
   ADR-0030's closed-period refusal are eval cases, not unit tests.
 - A regression case for every real failure, filed at the layer that should have caught it.
+- Eval cases for the bookkeeper skill's decision points, asserting on records as this record
+  requires: that `plan_import` precedes `apply_import`, that a blocked plan is abandoned rather
+  than forced, that skipped rows are reported rather than repaired. Those are the places the
+  skill either respects a boundary the ledger enforces or talks its way around one, and prose
+  about the divergence is not evidence either way.
 - `NFR-01` is amended alongside this record: it named a mechanism — "an independent implementation" —
   where what it wants is independence.
 
@@ -252,3 +257,9 @@ trigger; ADR-0008 makes the engine pure enough for layer 1; ADR-0015 holds the c
   needs changing.
 * A permissively licensed, independently derived double-entry implementation of comparable maturity
   appears, which would lower the cost of the deferred oracle.
+* A harness becomes generally available that runs a skill against graders **with a no-plugin
+  baseline arm**. The baseline is the whole difficulty: without it an eval reports that the model
+  did well, which is not the question — the question is whether the skill changed the outcome, and
+  a suite that cannot separate the two measures nothing about the skill. `claude plugin eval`
+  does exactly this and is in early access, so the trigger is its availability rather than its
+  existence.

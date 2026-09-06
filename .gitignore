@@ -44,3 +44,9 @@ Thumbs.db
 
 # Claude Code local overrides (project settings.json IS committed)
 .claude/settings.local.json
+
+# A local compose overlay naming paths on one machine — where an export lives, where reports
+# go. Deliberately not auto-applied and deliberately not shared: `compose.yaml` states what
+# every deployment gets, and a path that exists on one laptop is not that (ADR-0018).
+compose.*.yaml
+!compose.dev.yaml
