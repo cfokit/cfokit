@@ -89,6 +89,23 @@ class EntityWrite:
         self._settings = settings
 
     @property
+    def connection(self) -> psycopg.Connection[Any]:
+        """The transaction this write runs in, for a module's own SQL (ADR-0022, ADR-0040).
+
+        **Deliberately narrow in who it is for.** The methods below exist so an adapter or a
+        service cannot reach past `repository` into SQL of its own; this is the one exception,
+        and it is what makes "a module is a sibling in the same deployable" mean anything — an
+        invoice and the postings it produces reach one `COMMIT` because the module writes its
+        rows in this transaction rather than a second one.
+
+        A module's statements live in that module's repository, so the rule the methods below
+        protect still holds: SQL is in one readable place per capability (ADR-0028). What is
+        shared is the transaction, the entity scoping and the advisory lock, which is exactly
+        what a module cannot obtain for itself.
+        """
+        return self._conn
+
+    @property
     def entity_id(self) -> str:
         return self._entity_id
 
