@@ -19,24 +19,36 @@ It is a **default** scope rather than one a client opts into, which is the load-
 client that registers itself through RFC 7591 receives the audience without anyone configuring
 it afterwards. That is what lets an MCP client connect without a manual step.
 
-**`Trusted Hosts`, matching on the client's URIs rather than the caller's address.** Keycloak
-restricts anonymous client registration, and ships with the list empty — so registration is
-refused until a deployment says what may be registered. Keeping the policy is the point; what
-changes here is which half of it applies.
+**Keycloak's own client scopes, restated in full.** Declaring `clientScopes` **replaces** the
+set Keycloak would otherwise create rather than adding to it — the same replace-semantics as
+`components` below, and the reason `basic`, `profile`, `email` and `roles` were absent until
+this file named them. A realm missing them issues tokens without standard claims and refuses
+every client that asks for one, which is how a conforming MCP client came to be rejected at
+registration.
 
-Matching on the *caller's* address is what Keycloak does by default, and it does not survive
-containers, proxies or NAT — every service behind one shares an address, so the check either
-admits everything or nothing. Matching on the *client's URIs* is the check that stops the attack
-worth stopping: registering a client whose redirect URI points somewhere else, so that an
-authorization code is delivered to a stranger. A client with no redirect URI at all — a machine
-caller under the client credentials grant — has nothing to redirect and nothing to check.
+So this file is longer than a hand-written file wants to be. The alternative is a provisioning
+step after startup, which `IAM-06` rules out: a running deployment is usable as it stands.
+These definitions are Keycloak's own; they are reproduced because the platform gives no way to
+add to them.
 
-**Adding a client that lives elsewhere means adding its host here.** A remote MCP client
-redirects to its own vendor's domain, so an operator who wants it to register itself adds that
-domain to this list, deliberately. Otherwise the client is added through the admin console.
+**No anonymous client-registration policies beyond Keycloak's harmless defaults.** Two of them
+refuse a standards-conforming client outright:
 
-The remaining policies are Keycloak's own defaults, restated because listing `components`
-replaces them wholesale rather than merging.
+- `Allowed Client Scopes` rejects `openid`, which is not a Keycloak client scope at all but the
+  OIDC marker every conforming client sends under RFC 7591.
+- `Trusted Hosts` checks *every* client URI, not only redirect URIs, so it rejects any client
+  that advertises a homepage — `https://github.com/modelcontextprotocol/mcp-cli` was the one
+  that surfaced it. Its other mode, matching the caller's address, does not survive containers
+  or proxies.
+
+Neither is adjustable into something that admits a normal client and still means anything, so
+both are gone and **anonymous registration is open to whoever can reach the issuer**.
+
+**That is a deployment posture, and it holds only while the issuer is not reachable.** On a
+laptop it costs nothing: anyone who can reach `localhost:8180` can already reach the ledger. A
+deployment reachable by anything else must close it — by registering clients deliberately
+instead, which `mcp-remote --static-oauth-client-info` and Claude's connector settings both
+support.
 
 ## What it deliberately does not contain
 
