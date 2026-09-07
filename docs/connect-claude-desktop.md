@@ -169,7 +169,7 @@ in the same menu is where brute-force protection lives, and it is off.
   "mcpServers": {
     "cfokit": {
       "command": "npx",
-      "args": ["-y", "mcp-remote", "http://localhost:8081/mcp"]
+      "args": ["-y", "mcp-remote", "http://localhost:8081/mcp", "44196"]
     }
   }
 }
@@ -179,7 +179,12 @@ Quit Claude Desktop fully and reopen it — closing the window is not enough. On
 browser window opens for the sign-in from step 4. `mcp-remote` registers itself as a client
 through RFC 7591, with no credential for you to create.
 
-**Anonymous registration is open**, because the three Keycloak policies that would restrict it
+The trailing `44196` pins the callback port. Without it each instance derives its own, and
+Claude Desktop starts several — they then race for the sign-in, and the losers report that
+"authentication was completed by another instance", find no tokens where they expect them, and
+give up unauthenticated.
+
+**Anonymous registration is open**, because the four Keycloak policies that would restrict it
 each refuse a standards-conforming client outright — `infra/keycloak/README.md` says which and why.
 On a laptop that costs nothing: whoever can reach the issuer can already reach the ledger. **A
 deployment reachable by anything else must close it** and register clients deliberately, which
@@ -191,13 +196,21 @@ launching it and a person completing the sign-in.
 
 ## 6. Install the skill
 
+**Claude Desktop does not read `~/.claude/skills/`.** That is Claude Code's location, and a
+skill copied there is invisible to the desktop app — which then answers bookkeeping questions
+out of general knowledge, and what general knowledge suggests is a ledger file in some other
+format. A second set of books nobody reconciles is worse than no answer.
+
+Package the folder and upload it:
+
 ```
-mkdir -p ~/.claude/skills
-cp -r skills/bookkeeper ~/.claude/skills/
+cd skills && zip -r ~/Downloads/bookkeeper.zip bookkeeper
 ```
 
-The skill talks to the ledger over the published tool surface and by no other route (ADR-0014).
-It knows the import flow: `plan_import` is its call to make, `apply_import` is yours.
+Then in Claude Desktop: **Customize → Skills → `+` → Create skill**, and upload that zip.
+
+The skill's own first rule is what makes the failure above impossible: if the CFOKit tools are
+not reachable it says so and stops, rather than producing a chart of accounts somewhere else.
 
 ## 7. Create your books
 

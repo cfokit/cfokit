@@ -597,12 +597,6 @@
             "saml-role-list-mapper"
           ]
         }
-      },
-      {
-        "name": "Consent Required",
-        "providerId": "consent-required",
-        "subType": "anonymous",
-        "config": {}
       }
     ]
   },
