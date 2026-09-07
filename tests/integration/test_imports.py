@@ -915,3 +915,39 @@ def test_a_wrong_figure_in_the_source_shows_up_as_a_divergence(database: Databas
     )
 
     assert [code for code, _, _ in profit.divergences] == ["Rent"]
+
+
+def test_a_divergence_is_reported_by_name_and_not_only_counted(database: Database) -> None:
+    """**What a count cannot answer.**
+
+    Asked which accounts disagreed, a caller holding only a number has two options and both are
+    bad: reason from the count towards a probable cause, or ask the operator to supply figures
+    the system already holds. A real session did the first, hedged it honestly, and was still
+    guessing.
+
+    The disagreements are the answer. Two account names is a result, not bulk — the line worth
+    holding is between an answer and eleven thousand postings, not between figures and none.
+    """
+    wrong: Rows = [
+        [row[0], 9999.99] if str(row[0]).strip() == "Rent" else row for row in PROFIT_AND_LOSS
+    ]
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr("Journal.xlsx", workbook(JOURNAL))
+        archive.writestr("General_ledger.xlsx", workbook(GENERAL_LEDGER))
+        archive.writestr("Balance_sheet.xlsx", workbook(BALANCE_SHEET))
+        archive.writestr("Profit_and_loss.xlsx", workbook(wrong))
+    entity_id = entity(database)
+    books = read(buffer.getvalue())
+    apply(database, entity_id=entity_id, principal=PERSON, request_id="req", books=books)
+
+    profit = next(
+        c
+        for c in compare(database, entity_id=entity_id, principal=PERSON, books=books)
+        if c.report == "profit_and_loss"
+    )
+    account, ours, theirs = profit.divergences[0]
+
+    assert account == "Rent"
+    assert theirs == Decimal("9999.99")
+    assert ours != theirs
