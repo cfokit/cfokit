@@ -15,12 +15,18 @@ only when `IMPORT_ROOT` names a directory, and a path outside it is refused. Wit
 variable a deployment exposes no import tool at all, which is the right default for a surface
 that would otherwise let any holder of a token name any file on the host.
 
-**Figures go to a report file, not into the reply.** A reconciliation names accounts and
-amounts; on a real company's books those are client names and revenue. The reply says how many
-agreed and where the detail was written. That is not a claim that the numbers must be kept from
-a model — `PLT-02` puts the runtime in the organisation's own hands — but a summary is what a
-caller asked for, and a tool that returns eleven thousand figures nobody asked for is the same
-mistake as sending them in.
+**A summary, and the disagreements in full.** Counts answer "did it reconcile"; the accounts
+that did not answer "what do I do now", and only the second is worth a person's attention. So
+the reply carries every divergence by name and amount, and the bulk — the whole chart, the
+skipped rows, the accounts one side reports and the other does not — goes to a report file.
+
+An earlier version returned counts alone, and it made the tool useless for its purpose: asked
+which accounts diverged, the only honest answers left were to theorise from the count or to ask
+the operator to supply figures the system already held. A reconciliation that cannot say what
+disagreed has not reported a disagreement.
+
+The line is bulk against answer, not figures against no figures. Eleven thousand postings
+through a context is a lossy pipe; two account names is the result.
 
 **A report goes where a deployment says, and nowhere by default.** The import directory is the
 obvious place and the wrong one: an operator mounts their accounting exports read-only, which is
@@ -34,6 +40,7 @@ import json
 import uuid
 from collections.abc import Callable
 from datetime import UTC, datetime
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -217,8 +224,10 @@ def register(
             "against the ones CFOKit produces from the books, account by account, with no "
             "tolerance. Reads only and writes nothing. Run it after apply_import to check the "
             "import against the source's own statements rather than against a sum of the same "
-            "journal. Where the two are on different accounting bases the obligation accounts "
-            "differ by what is unsettled, which is expected and is flagged."
+            "journal. Every account that disagreed comes back named, with both figures, so a "
+            "divergence never has to be inferred from a count. Where the two are on different "
+            "accounting bases the obligation accounts differ by what is unsettled, which is "
+            "expected and is flagged."
         ),
     )
     def compare_statements(entity_id: str, location: str) -> dict[str, Any]:
@@ -246,9 +255,10 @@ def register(
             "Import an accounting export into an entity's books: create the chart, post the "
             "journal, and reconcile the result against the balances the source states for "
             "itself. Re-plans first and refuses a blocked import. Every entry records the "
-            "system it came from. Run plan_import first — this one writes. A person's act: a "
-            "delegated agent session is refused with not_a_person, and should ask the person "
-            "it acts for to apply the import."
+            "system it came from. Every account whose balance disagrees with the source comes "
+            "back named, with both figures. Run plan_import first — this one writes. A "
+            "person's act: a delegated agent session is refused with not_a_person, and should "
+            "ask the person it acts for to apply the import."
         ),
     )
     def apply_import(entity_id: str, location: str) -> dict[str, Any]:
@@ -274,6 +284,7 @@ def register(
                     "agreed": result.agreed,
                     "compared": result.compared,
                     "divergences": len(result.divergences),
+                    "diverging_accounts": _named(result.divergences),
                     "exact": result.reconciled,
                 },
                 "expect_obligation_accounts_to_differ": proposed.oracle_differs_in_basis,
@@ -295,13 +306,24 @@ def _refuse(work: Callable[[], dict[str, Any]]) -> dict[str, Any]:
         return refused(exc.code, exc.message)
 
 
+# A ceiling on how much disagreement comes back inline. A healthy import has none or two; a
+# reader facing hundreds needs the file, not a wall of them in a reply.
+MAX_INLINE_DIVERGENCES = 25
+
+
 def _summarise_comparison(comparison: Comparison) -> dict[str, Any]:
-    """Counts and bases. What diverged is in the report, because it names accounts."""
+    """Counts, bases, and every account that disagreed.
+
+    The disagreements are the answer. Reporting how many there were and not which ones leaves a
+    caller to guess, and guessing about a figure is the one thing this surface must never make
+    anybody do.
+    """
     return {
         "report": comparison.report,
         "agreed": comparison.agreed,
         "compared": comparison.compared,
         "divergences": len(comparison.divergences),
+        "diverging_accounts": _named(comparison.divergences),
         "their_basis": comparison.their_basis,
         "our_basis": comparison.our_basis,
         "expect_obligation_accounts_to_differ": comparison.their_basis
@@ -310,6 +332,20 @@ def _summarise_comparison(comparison: Comparison) -> dict[str, Any]:
         "accounts_only_we_report": len(comparison.only_ours),
         "rows_that_are_not_accounts": len(comparison.unmatched),
     }
+
+
+def _named(
+    divergences: tuple[tuple[str, Decimal, Decimal], ...],
+) -> list[dict[str, str]]:
+    """Each disagreement, by account and by both figures.
+
+    Both sides, never a difference alone: which is larger is the thing a person reads first, and
+    a signed delta makes them reconstruct it.
+    """
+    return [
+        {"account": code, "ours": str(ours), "theirs": str(theirs)}
+        for code, ours, theirs in divergences[:MAX_INLINE_DIVERGENCES]
+    ]
 
 
 def _detail_comparison(comparison: Comparison) -> dict[str, Any]:

@@ -51,7 +51,7 @@
     "name": "account_detail"
   },
   {
-    "description": "Import an accounting export into an entity's books: create the chart, post the journal, and reconcile the result against the balances the source states for itself. Re-plans first and refuses a blocked import. Every entry records the system it came from. Run plan_import first — this one writes. A person's act: a delegated agent session is refused with not_a_person, and should ask the person it acts for to apply the import.",
+    "description": "Import an accounting export into an entity's books: create the chart, post the journal, and reconcile the result against the balances the source states for itself. Re-plans first and refuses a blocked import. Every entry records the system it came from. Every account whose balance disagrees with the source comes back named, with both figures. Run plan_import first — this one writes. A person's act: a delegated agent session is refused with not_a_person, and should ask the person it acts for to apply the import.",
     "inputSchema": {
       "properties": {
         "entity_id": {
@@ -165,7 +165,7 @@
     "name": "comparative_profit_and_loss"
   },
   {
-    "description": "Compare the profit and loss and balance sheet an accounting export printed against the ones CFOKit produces from the books, account by account, with no tolerance. Reads only and writes nothing. Run it after apply_import to check the import against the source's own statements rather than against a sum of the same journal. Where the two are on different accounting bases the obligation accounts differ by what is unsettled, which is expected and is flagged.",
+    "description": "Compare the profit and loss and balance sheet an accounting export printed against the ones CFOKit produces from the books, account by account, with no tolerance. Reads only and writes nothing. Run it after apply_import to check the import against the source's own statements rather than against a sum of the same journal. Every account that disagreed comes back named, with both figures, so a divergence never has to be inferred from a count. Where the two are on different accounting bases the obligation accounts differ by what is unsettled, which is expected and is flagged.",
     "inputSchema": {
       "properties": {
         "entity_id": {
