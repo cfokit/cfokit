@@ -261,6 +261,31 @@ the ones the export printed:
  "their_basis": "cash", "our_basis": "accrual"}
 ```
 
+## When a tool is missing
+
+The skill will say a tool is not there rather than improvise around it. Before assuming the
+connection is at fault, ask the deployment what it serves:
+
+```
+curl -s http://localhost:8081/readyz | python3 -m json.tool
+```
+
+```json
+{"status": "ready",
+ "tools": {"count": 19, "digest": "3b1309c30f9a", "names": ["account_detail", …]}}
+```
+
+Compare that list against `docs/contracts/mcp-tools.json`. **A container built before a tool
+was merged serves the surface it was built with**, and nothing in the repository can see that:
+CI diffs the generated contract against the committed one, and both are current while the
+running thing is not. The symptom is a client truthfully reporting that a tool does not exist.
+
+If they differ, rebuild:
+
+```
+docker compose -f compose.yaml -f compose.imports.yaml up -d --build mcp ledger
+```
+
 ## Reading the result
 
 **Three statements, one divergence, appearing twice.** On a real set of books the trial balance

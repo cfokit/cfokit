@@ -57,10 +57,31 @@ CREATE TABLE IF NOT EXISTS schema_migration (
 MIGRATION_LOCK_KEY = 8_474_021_100_001
 
 
-def applied_versions(conn: object) -> set[str]:
-    """Versions already recorded as applied."""
+def ensure_ledger(conn: object) -> None:
+    """Create the migration ledger if this database has never been migrated.
+
+    DDL, so only the owner may run it — which is why it is here rather than inside
+    `applied_versions`. Reading which migrations are applied is something the application role
+    does on every readiness check, and a read that creates a table is a read the application
+    cannot perform.
+    """
     with conn.cursor() as cur:  # type: ignore[attr-defined]
         cur.execute(SCHEMA_MIGRATION_DDL)
+
+
+def applied_versions(conn: object) -> set[str]:
+    """Versions already recorded as applied. Reads, and only reads.
+
+    A database with no ledger table has had no migration applied, which is an answer rather
+    than an error — every migration is pending. Distinct from being unable to reach the
+    database at all, which `pending_migrations` reports separately and must not conflate with
+    this (`ADR-0004`).
+    """
+    with conn.cursor() as cur:  # type: ignore[attr-defined]
+        cur.execute("SELECT to_regclass('public.schema_migration')")
+        row = cur.fetchone()
+        if row is None or row[0] is None:
+            return set()
         cur.execute("SELECT version FROM schema_migration")
         return {row[0] for row in cur.fetchall()}
 

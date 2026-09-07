@@ -19,8 +19,8 @@ from cfokit.ledger.config import require_env
 from cfokit.ledger.errors import LedgerError, MigrationError
 from cfokit.ledger.migrations import (
     MIGRATION_LOCK_KEY,
-    SCHEMA_MIGRATION_DDL,
     discover,
+    ensure_ledger,
     pending,
 )
 
@@ -57,8 +57,12 @@ def main() -> int:
     with psycopg.connect(database_url, autocommit=True) as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT pg_advisory_lock(%s)", (MIGRATION_LOCK_KEY,))
-            cur.execute(SCHEMA_MIGRATION_DDL)
 
+        # The owner creates the ledger table if this database has never been migrated.
+        # `applied_versions` deliberately does not, because the application role reads it on
+        # every readiness check and cannot run DDL — which is what made every readiness check
+        # answer "database unreachable: InsufficientPrivilege".
+        ensure_ledger(conn)
         todo = pending(conn)
         if not todo:
             log.info(
