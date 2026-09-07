@@ -173,12 +173,17 @@ in the same menu is where brute-force protection lives, and it is off.
 
 Quit Claude Desktop fully and reopen it — closing the window is not enough. On first use a
 browser window opens for the sign-in from step 4. `mcp-remote` registers itself as a client
-through RFC 7591; the realm's registration policy admits it because its redirect URI is on
-`localhost`.
+through RFC 7591, with no credential for you to create.
 
-**Not verified end to end here.** Everything either side of it is: the tools, the tokens, the
-imports and the reports below were all run against this stack. What was not exercised is
-Claude Desktop launching the proxy and a person clicking through the sign-in.
+**Anonymous registration is open**, because the two Keycloak policies that would restrict it
+refuse a standards-conforming client outright — `infra/keycloak/README.md` says which and why.
+On a laptop that costs nothing: whoever can reach the issuer can already reach the ledger. **A
+deployment reachable by anything else must close it** and register clients deliberately, which
+`mcp-remote --static-oauth-client-info` supports.
+
+`mcp-remote` itself is verified against this stack: it discovers the issuer, registers, and
+opens the browser at a valid authorization URL. What is not exercised is Claude Desktop
+launching it and a person completing the sign-in.
 
 ## 6. Install the skill
 

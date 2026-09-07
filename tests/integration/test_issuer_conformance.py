@@ -223,6 +223,22 @@ def registered(metadata: dict[str, Any]) -> tuple[str, str]:
     return client["client_id"], client["client_secret"]
 
 
+def test_the_realm_offers_the_scopes_a_conforming_client_asks_for(
+    metadata: dict[str, Any],
+) -> None:
+    """A client registers itself with the scopes it intends to use (RFC 7591), and an issuer
+    that does not have them refuses the registration outright.
+
+    This realm declares its own client scopes, and declaring them **replaces** the set the
+    issuer would otherwise create rather than adding to it. That is how `basic`, `profile` and
+    `email` came to be absent — a realm that looked configured, issued tokens without standard
+    claims, and rejected every client that asked for one.
+    """
+    offered = set(metadata.get("scopes_supported") or [])
+
+    assert {"openid", "profile", "email"} <= offered, f"realm offers only {sorted(offered)}"
+
+
 def test_a_registered_client_can_obtain_a_token(
     metadata: dict[str, Any], registered: tuple[str, str]
 ) -> None:
