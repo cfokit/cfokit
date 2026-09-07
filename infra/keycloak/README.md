@@ -55,8 +55,16 @@ refuse a standards-conforming client outright:
   refused with "Offline tokens not allowed for the user or client", naming neither the policy
   nor the role.
 
+- `Consent Required` sets `consentRequired` on every registered client, and a proxy sends
+  `prompt=consent` on every authorization request — which forces the screen again whatever was
+  granted before. A consent screen shown on every connection is not a control: it teaches
+  whoever sees it to click through without reading, and it puts a human round-trip inside the
+  desktop client's startup timeout, where being slow means the connection never completes.
+  Consent protects a person from a *third-party* client taking their resources; here the client
+  is their own proxy, on their own machine, reaching their own ledger.
+
 None is adjustable into something that admits a normal client and still means anything, so all
-three are gone and **anonymous registration is open to whoever can reach the issuer**.
+four are gone and **anonymous registration is open to whoever can reach the issuer**.
 
 Losing `Full Scope Disabled` costs less than it appears: it controls which realm roles reach a
 token, and **CFOKit authorises on none of them**. What a caller may do is decided by the entity

@@ -25,8 +25,10 @@ fails if the line ever starts passing, forcing the marker off rather than lettin
 from __future__ import annotations
 
 import base64
+import contextlib
 import json
 import os
+from collections.abc import Iterator
 from typing import Any
 
 import httpx2 as httpx
@@ -97,6 +99,23 @@ def _json(response: httpx.Response) -> dict[str, Any]:
     except ValueError:
         return {}
     return body if isinstance(body, dict) else {}
+
+
+def deregister(client: dict[str, Any]) -> None:
+    """Delete a client the suite registered, through RFC 7591's own management endpoint.
+
+    A registration is durable, and a suite that leaves one behind on every run fills the realm
+    — `max-clients` is a policy with a number on it, and the run that crosses it fails for a
+    reason that has nothing to do with the change that triggered it.
+
+    The response carries the credentials for exactly this: `registration_client_uri` and a
+    `registration_access_token` scoped to the one client. Nothing here needs an administrator.
+    """
+    uri, token = client.get("registration_client_uri"), client.get("registration_access_token")
+    if not (uri and token):  # pragma: no cover - an issuer that does not offer management
+        return
+    with contextlib.suppress(httpx.HTTPError):
+        httpx.delete(uri, headers={"authorization": f"Bearer {token}"}, timeout=TIMEOUT)
 
 
 def claims(token: str) -> dict[str, Any]:
@@ -196,7 +215,7 @@ def test_the_issuer_identifier_is_returned_in_the_authorization_response(
 
 
 @pytest.fixture
-def registered(metadata: dict[str, Any]) -> tuple[str, str]:
+def registered(metadata: dict[str, Any]) -> Iterator[tuple[str, str]]:
     """A client, obtained the only way that is not issuer-specific: RFC 7591.
 
     An issuer advertising no registration endpoint cannot be exercised further without knowing
@@ -220,7 +239,10 @@ def registered(metadata: dict[str, Any]) -> tuple[str, str]:
         },
     )
     assert status in (200, 201), f"registration refused: {status} {client}"
-    return client["client_id"], client["client_secret"]
+
+    yield client["client_id"], client["client_secret"]
+
+    deregister(client)
 
 
 def test_the_realm_offers_the_scopes_a_conforming_client_asks_for(

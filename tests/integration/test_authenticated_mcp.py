@@ -16,9 +16,10 @@ database, which is what keeps it in the unit suite. This is the same shape with 
 
 from __future__ import annotations
 
+import contextlib
 import os
 import uuid
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -60,7 +61,7 @@ def settings(app_dsn: str) -> Settings:
 
 
 @pytest.fixture
-def caller() -> tuple[str, str]:
+def caller() -> Iterator[tuple[str, str]]:
     """A self-registered client and its token. Returns (subject, token).
 
     Registered through RFC 7591 and configured by nobody, which is how an MCP client arrives.
@@ -94,7 +95,27 @@ def caller() -> tuple[str, str]:
     )
     assert issued.status_code == 200, issued.text
     token = str(issued.json()["access_token"])
-    return _subject(token), token
+
+    yield _subject(token), token
+
+    deregister(client)
+
+
+def deregister(client: dict[str, Any]) -> None:
+    """Delete a client this test registered, through RFC 7591's own management endpoint.
+
+    A registration is durable, and a suite that leaves one behind on every run fills the realm
+    — `max-clients` is a policy with a number on it, and the run that crosses it fails for a
+    reason unrelated to the change that triggered it.
+
+    The registration response carries the credentials for exactly this, scoped to the one
+    client, so nothing here needs an administrator.
+    """
+    uri, token = client.get("registration_client_uri"), client.get("registration_access_token")
+    if not (uri and token):  # pragma: no cover - an issuer that does not offer management
+        return
+    with contextlib.suppress(httpx.HTTPError):
+        httpx.delete(uri, headers={"authorization": f"Bearer {token}"}, timeout=TIMEOUT)
 
 
 def _subject(token: str) -> str:
