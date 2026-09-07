@@ -131,9 +131,13 @@ and choose **CFOKit** (`cfokit`). Everything below happens in that realm — a u
 **3. Left menu → `Users` → `Create new user`.** Under **Manage**, not **Configure**. On a realm
 with no users yet the list is empty and offers the same button in the middle of the page.
 
-**4. Fill in `Username` and click `Create`.** It is the only field marked required — the
-asterisk is on `Username` alone. Email, first and last name are optional and nothing here needs
-them.
+**4. Fill in `Username`, `Email`, `First name` and `Last name`, then click `Create`.**
+
+Only `Username` carries an asterisk, and the other three are required anyway. Keycloak's user
+profile marks email and both names required for anyone holding the `user` role, so a user
+created with a username alone is sent to an **Update Account Information** form at first
+sign-in — which happens mid-authorisation, in the browser window `mcp-remote` opened. Filling
+them here costs nothing and skips that.
 
 **5. Open the `Credentials` tab and click `Set password`.** This is the step people miss: the
 create form has no password field, so a user created and left alone has no way to sign in. The
@@ -175,8 +179,8 @@ Quit Claude Desktop fully and reopen it — closing the window is not enough. On
 browser window opens for the sign-in from step 4. `mcp-remote` registers itself as a client
 through RFC 7591, with no credential for you to create.
 
-**Anonymous registration is open**, because the two Keycloak policies that would restrict it
-refuse a standards-conforming client outright — `infra/keycloak/README.md` says which and why.
+**Anonymous registration is open**, because the three Keycloak policies that would restrict it
+each refuse a standards-conforming client outright — `infra/keycloak/README.md` says which and why.
 On a laptop that costs nothing: whoever can reach the issuer can already reach the ledger. **A
 deployment reachable by anything else must close it** and register clients deliberately, which
 `mcp-remote --static-oauth-client-info` supports.

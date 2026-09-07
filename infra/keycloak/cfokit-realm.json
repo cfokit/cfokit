@@ -603,12 +603,6 @@
         "providerId": "consent-required",
         "subType": "anonymous",
         "config": {}
-      },
-      {
-        "name": "Full Scope Disabled",
-        "providerId": "scope",
-        "subType": "anonymous",
-        "config": {}
       }
     ]
   },

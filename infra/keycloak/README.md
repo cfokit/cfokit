@@ -19,6 +19,14 @@ It is a **default** scope rather than one a client opts into, which is the load-
 client that registers itself through RFC 7591 receives the audience without anyone configuring
 it afterwards. That is what lets an MCP client connect without a manual step.
 
+**A registered client can still end up with it as optional.** Keycloak's registration takes the
+`scope` field of an RFC 7591 request as the set a client may use, and assigns those as
+*optional* rather than honouring the realm's defaults — so a client that names its scopes gets
+the audience only if it asked. The observed clients do ask, and the failure mode if one did not
+is closed rather than silent: a token with no audience is rejected by the ledger (`NFR-06`)
+rather than accepted with a missing claim. Worth checking on a client's first connection all the
+same, in the admin console under the client's **Client scopes** tab.
+
 **Keycloak's own client scopes, restated in full.** Declaring `clientScopes` **replaces** the
 set Keycloak would otherwise create rather than adding to it — the same replace-semantics as
 `components` below, and the reason `basic`, `profile`, `email` and `roles` were absent until
@@ -41,8 +49,20 @@ refuse a standards-conforming client outright:
   that surfaced it. Its other mode, matching the caller's address, does not survive containers
   or proxies.
 
-Neither is adjustable into something that admits a normal client and still means anything, so
-both are gone and **anonymous registration is open to whoever can reach the issuer**.
+- `Full Scope Disabled` clears every realm role from a registered client's scope, and
+  `offline_access` is a realm role. So a client asking for an offline token — which is how a
+  desktop proxy keeps a connection alive without sending someone back to a login page — is
+  refused with "Offline tokens not allowed for the user or client", naming neither the policy
+  nor the role.
+
+None is adjustable into something that admits a normal client and still means anything, so all
+three are gone and **anonymous registration is open to whoever can reach the issuer**.
+
+Losing `Full Scope Disabled` costs less than it appears: it controls which realm roles reach a
+token, and **CFOKit authorises on none of them**. What a caller may do is decided by the entity
+grant held against their `sub` (ADR-0011, `IAM-01`), read from this deployment's own database on
+every request. The roles in a token are Keycloak's business, and `offline_access` is the only
+one anything here consults.
 
 **That is a deployment posture, and it holds only while the issuer is not reachable.** On a
 laptop it costs nothing: anyone who can reach `localhost:8180` can already reach the ledger. A
