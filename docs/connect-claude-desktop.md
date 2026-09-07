@@ -162,6 +162,28 @@ in the same menu is where brute-force protection lives, and it is off.
 
 ## 5. Configure Claude Desktop
 
+**Register one client first, and keep it.** Dynamic registration is what the conformance
+contract asks for and it works — but `mcp-remote` registers a *fresh* client on every launch,
+then compares the scopes that client was granted against the ones it had cached, finds them
+different, and signs in again. Every launch. That re-authentication is what makes several proxy
+instances race for one callback port, and the race is what makes the desktop client cancel the
+server before it ever asks for a tool list.
+
+A client that does not change breaks that loop at the start:
+
+```bash
+curl -s -X POST \
+  http://keycloak.localhost:8180/realms/cfokit/clients-registrations/openid-connect \
+  -H 'content-type: application/json' -d '{
+    "client_name":"CFOKit for Claude Desktop",
+    "redirect_uris":["http://localhost:44196/oauth/callback",
+                     "http://127.0.0.1:44196/oauth/callback"],
+    "grant_types":["authorization_code","refresh_token"],
+    "response_types":["code"],
+    "token_endpoint_auth_method":"client_secret_post"}'
+```
+
+Keep the `client_id` and `client_secret` it returns. Then in
 `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
 ```json
@@ -169,11 +191,17 @@ in the same menu is where brute-force protection lives, and it is off.
   "mcpServers": {
     "cfokit": {
       "command": "npx",
-      "args": ["-y", "mcp-remote", "http://localhost:8081/mcp", "44196"]
+      "args": ["-y", "mcp-remote", "http://localhost:8081/mcp", "44196",
+               "--static-oauth-client-info",
+               "{\"client_id\":\"…\",\"client_secret\":\"…\"}"]
     }
   }
 }
 ```
+
+The secret sits in that file in plaintext. On a laptop, against an issuer nothing else can
+reach, that is proportionate; anywhere else it is not, and the client should be one an operator
+provisions rather than one anybody can register.
 
 Quit Claude Desktop fully and reopen it — closing the window is not enough. On first use a
 browser window opens for the sign-in from step 4. `mcp-remote` registers itself as a client
@@ -182,10 +210,12 @@ through RFC 7591, with no credential for you to create.
 The trailing `44196` pins the callback port. Without it each instance derives its own, and
 Claude Desktop starts several — they then race for the sign-in, and the losers report that
 "authentication was completed by another instance", find no tokens where they expect them, and
-give up unauthenticated.
+give up unauthenticated. Pinning the port narrows that race; pinning the client above is what
+stops it starting.
 
-**Anonymous registration is open**, because the four Keycloak policies that would restrict it
-each refuse a standards-conforming client outright — `infra/keycloak/README.md` says which and why.
+**Anonymous registration is still open** even though the client above is registered by hand,
+because the four Keycloak policies that would restrict it each refuse a standards-conforming
+client outright — `infra/keycloak/README.md` says which and why.
 On a laptop that costs nothing: whoever can reach the issuer can already reach the ledger. **A
 deployment reachable by anything else must close it** and register clients deliberately, which
 `mcp-remote --static-oauth-client-info` supports.
