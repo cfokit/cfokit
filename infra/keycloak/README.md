@@ -78,6 +78,19 @@ deployment reachable by anything else must close it — by registering clients d
 instead, which `mcp-remote --static-oauth-client-info` and Claude's connector settings both
 support.
 
+**Tokens that outlive a working session.** Keycloak's default access token lives five minutes,
+and a desktop client runs several proxy instances that all re-authenticate the moment it
+expires. They then race for one callback port, one wins, the stragglers report that
+"authentication was completed by another instance", and the client cancels the whole server
+before it ever asks for a tool list. Every five minutes.
+
+Eight hours removes the trigger rather than the symptom: within one working session no instance
+re-authenticates, so there is nothing to race. The refresh token already lasted thirty days, so
+this lengthens how long a *bearer* token is worth stealing — which on a laptop, where the issuer
+is not reachable and anyone who can reach it can reach the ledger anyway, is a trade worth
+making. **A deployment reachable by anything else should shorten it**, and accept that a client
+which cannot tolerate re-authentication is a client that needs static credentials instead.
+
 ## What it deliberately does not contain
 
 **No users, and no credentials.** The first person signs in through the admin console the

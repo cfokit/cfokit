@@ -35,6 +35,7 @@ refusal as a success, which the tool descriptions and the server instructions bo
 
 from __future__ import annotations
 
+import hashlib
 import json
 import uuid
 from collections.abc import Callable, Iterable
@@ -249,6 +250,22 @@ def _to_posting(argument: PostingArgument) -> Posting:
     )
 
 
+async def tool_surface(server: MCPServer) -> dict[str, Any]:
+    """The names this instance serves, and a short digest of them.
+
+    A digest so two deployments can be compared at a glance, and the names so a difference can
+    be read without fetching anything else. Neither is a secret: the tool surface is published
+    (ADR-0015), and `docs/contracts/mcp-tools.json` is the same list in the repository.
+
+    Async because `list_tools` is, and this module is where async is permitted (ADR-0024). It
+    is the published way to ask; reaching into the SDK's tool manager would couple a readiness
+    check to an internal.
+    """
+    names = sorted(t.name for t in await server.list_tools())
+    digest = hashlib.sha256("\n".join(names).encode()).hexdigest()[:12]
+    return {"count": len(names), "digest": digest, "names": names}
+
+
 def acting() -> Principal:
     """The caller, from the verified token on this request.
 
@@ -345,6 +362,12 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
                 "status": "ready" if result.ready else "not_ready",
                 "database_reachable": result.database_reachable,
                 "migrations_current": result.migrations_current,
+                # What this instance actually serves, so a deployment can be compared against
+                # the published contract without a credential. A container older than the
+                # contract answers with the surface it has, and the difference is the whole
+                # of what was wrong — a tool merged and never rolled out is invisible to
+                # every check that reads the repository rather than the deployment.
+                "tools": await tool_surface(server),
                 "detail": result.detail,
             },
             status_code=HTTPStatus.OK if result.ready else HTTPStatus.SERVICE_UNAVAILABLE,

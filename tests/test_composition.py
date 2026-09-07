@@ -7,6 +7,7 @@ are decided before a connection is opened.
 from __future__ import annotations
 
 import asyncio
+import json
 from pathlib import Path
 
 import pytest
@@ -14,6 +15,8 @@ import pytest
 from cfokit.imports.mcp import ImportPathRefused, resolve
 from cfokit.ledger.config import Settings
 from cfokit.server import mcp_server
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 def settings(import_root: Path | None = None) -> Settings:
@@ -114,3 +117,25 @@ def test_a_directory_is_not_a_file(tmp_path: Path) -> None:
 def test_a_missing_file_is_refused_rather_than_read(tmp_path: Path) -> None:
     with pytest.raises(ImportPathRefused):
         resolve(tmp_path, "absent.zip")
+
+
+def test_the_surface_a_deployment_serves_matches_the_published_contract(tmp_path: Path) -> None:
+    """**The comparison a stale container fails.**
+
+    Gate 5 diffs the contract this code generates against the one committed, and both live in
+    the repository — so they agree with each other while a running container serves whatever
+    surface it was built with. A tool merged and never rolled out is invisible to every check
+    that reads the repository, and shows up only as a client reporting that it does not exist.
+
+    `/readyz` reports the served names and a digest of them, so the same comparison can be made
+    against a deployment with a single unauthenticated request. This fixes the shape of it: the
+    composed surface, which is what a deployment serves, against the published list.
+    """
+    published = json.loads(
+        (REPO_ROOT / "docs" / "contracts" / "mcp-tools.json").read_text(encoding="utf-8")
+    )
+    served = sorted(
+        tool.name for tool in asyncio.run(mcp_server(settings(tmp_path)).list_tools())
+    )
+
+    assert served == sorted(tool["name"] for tool in published)

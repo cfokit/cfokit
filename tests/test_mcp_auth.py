@@ -188,3 +188,26 @@ def test_readiness_reports_not_ready_when_the_database_is_unreachable(
     body = response.json()
     assert body["status"] == "not_ready"
     assert body["database_reachable"] is False
+
+
+# --- the deployed surface, not the generated one --------------------------------------------
+
+
+def test_readiness_reports_the_tool_surface_this_instance_serves(settings: Settings) -> None:
+    """**What a stale deployment looks like from outside.**
+
+    Gate 5 diffs the contract this *code* generates against the one committed. Nothing compared
+    either against what a *running* container serves — so a tool merged and never rolled out
+    was invisible: the repository agreed with itself while the deployment served an older
+    surface, and the only symptom was a client reporting that the tool did not exist.
+
+    Reported unauthenticated because it is not a secret. The tool surface is published
+    (ADR-0015) and `docs/contracts/mcp-tools.json` is the same list.
+    """
+    with TestClient(_app(settings)) as client:
+        body = client.get("/readyz").json()
+
+    surface = body["tools"]
+    assert surface["count"] == len(surface["names"])
+    assert surface["digest"]
+    assert "trial_balance" in surface["names"]

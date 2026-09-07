@@ -605,5 +605,8 @@
     "microprofile-jwt",
     "offline_access",
     "phone"
-  ]
+  ],
+  "accessTokenLifespan": 28800,
+  "ssoSessionIdleTimeout": 28800,
+  "ssoSessionMaxLifespan": 86400
 }
