@@ -46,7 +46,16 @@ from typing import Any
 
 from mcp.server import MCPServer
 
-from cfokit.imports import Comparison, Plan, Result, apply, compare, plan, quickbooks
+from cfokit.imports import (
+    Comparison,
+    Plan,
+    Refusal,
+    Result,
+    apply,
+    compare,
+    plan,
+    quickbooks,
+)
 from cfokit.ledger.errors import LedgerError
 from cfokit.ledger.mcp import refused
 from cfokit.ledger.repository.unit_of_work import Database
@@ -137,12 +146,19 @@ def register(
             "postings": proposed.postings,
             "accounts_to_create": len(proposed.accounts_to_create),
             "accounts_already_present": len(proposed.accounts_already_present),
-            "accounts_with_no_stated_type": len(proposed.untyped_accounts),
+            # Named, not counted. These are created as assets because the chart admits no
+            # "unknown", and a misclassified account is invisible in a trial balance and wrong
+            # in every statement that groups by type. A count tells nobody which to look at.
+            "accounts_with_no_stated_type": _capped(proposed.untyped_accounts),
             "covering": {
                 "earliest": proposed.earliest.isoformat() if proposed.earliest else None,
                 "latest": proposed.latest.isoformat() if proposed.latest else None,
             },
             "rows_to_skip": len(proposed.refusals),
+            # A skipped row is a transaction that will not be in the books. `IMP-05` asks for
+            # what will not be created, and a number is not that — the reference is what makes
+            # one findable in the source.
+            "rows_to_skip_detail": _refusals(proposed.refusals),
             "can_apply": proposed.can_apply,
             "blocked": proposed.blocked,
             # An accrual journal checked against cash-basis balances differs by exactly what is
@@ -200,8 +216,10 @@ def register(
             "it would do — transactions, accounts to create, the period covered, and the rows "
             "it would skip and why. Posts nothing and writes nothing to the books. Pass the "
             "file's name within the configured import directory, never its contents: the "
-            "server reads the file. Figures are written to a report file whose path is "
-            "returned; the reply carries counts."
+            "server reads the file. Every row it would skip comes back with the reference it "
+            "carries in the source and why, and every account the source states no type for "
+            "is named. The rest — the whole chart — goes to a report file on the ledger's "
+            "own server, whose path is returned."
         ),
     )
     def plan_import(entity_id: str, location: str) -> dict[str, Any]:
@@ -280,6 +298,7 @@ def register(
                 "accounts_created": result.accounts_created,
                 "transactions_posted": result.transactions_posted,
                 "rows_skipped": len(result.refusals),
+                "rows_skipped_detail": _refusals(result.refusals),
                 "reconciliation": {
                     "agreed": result.agreed,
                     "compared": result.compared,
@@ -332,6 +351,28 @@ def _summarise_comparison(comparison: Comparison) -> dict[str, Any]:
         "accounts_only_we_report": len(comparison.only_ours),
         "rows_that_are_not_accounts": len(comparison.unmatched),
     }
+
+
+def _capped(names: tuple[str, ...]) -> dict[str, Any]:
+    """A list of names, with a count that stays honest when the list is truncated."""
+    return {"count": len(names), "names": list(names[:MAX_INLINE_DIVERGENCES])}
+
+
+def _refusals(refusals: tuple[Refusal, ...]) -> list[dict[str, Any]]:
+    """Each row that will not be imported, by the reference it came in under and why.
+
+    The reference is the point: it is how somebody finds the row in the file the figures came
+    from. A count says three transactions are missing and leaves no way to look at them.
+    """
+    return [
+        {
+            "reference": r.reference,
+            "date": r.when.isoformat() if r.when else None,
+            "code": r.code,
+            "detail": r.detail,
+        }
+        for r in refusals[:MAX_INLINE_DIVERGENCES]
+    ]
 
 
 def _named(
