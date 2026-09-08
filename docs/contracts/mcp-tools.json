@@ -416,7 +416,7 @@
     "name": "outstanding_obligations"
   },
   {
-    "description": "Read an accounting export on the server's filesystem and report what importing it would do — transactions, accounts to create, the period covered, and the rows it would skip and why. Posts nothing and writes nothing to the books. Pass the file's name within the configured import directory, never its contents: the server reads the file. Figures are written to a report file whose path is returned; the reply carries counts.",
+    "description": "Read an accounting export on the server's filesystem and report what importing it would do — transactions, accounts to create, the period covered, and the rows it would skip and why. Posts nothing and writes nothing to the books. Pass the file's name within the configured import directory, never its contents: the server reads the file. Every row it would skip comes back with the reference it carries in the source and why, and every account the source states no type for is named. The rest — the whole chart — goes to a report file on the ledger's own server, whose path is returned.",
     "inputSchema": {
       "properties": {
         "entity_id": {

@@ -951,3 +951,54 @@ def test_a_divergence_is_reported_by_name_and_not_only_counted(database: Databas
     assert account == "Rent"
     assert theirs == Decimal("9999.99")
     assert ours != theirs
+
+
+def test_a_skipped_row_is_reported_with_the_reference_it_came_in_under(
+    database: Database,
+) -> None:
+    """A skipped row is a transaction that will not be in the books, and `IMP-05` asks for what
+    will not be created — which a number is not.
+
+    The reference is the point: it is how somebody finds the row in the file the figures came
+    from. Told only that three transactions are missing, a reader has no way to look at them.
+    """
+    unbalanced: Rows = [
+        *JOURNAL[:-1],
+        [None] * 9,
+        [None, "05/01/2026", "Journal Entry", None, None, "Stub", "Rent", 0.00, None],
+        JOURNAL[-1],
+    ]
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr("Journal.xlsx", workbook(unbalanced))
+
+    proposed = plan(
+        database,
+        entity_id=entity(database),
+        principal=PERSON,
+        books=read(buffer.getvalue()),
+    )
+    refusal = proposed.refusals[0]
+
+    assert refusal.reference  # findable in the source
+    assert refusal.when == date(2026, 5, 1)
+    assert refusal.code == "transaction_incomplete"
+
+
+def test_an_account_the_source_states_no_type_for_is_named(database: Database) -> None:
+    """They are created as assets, because the chart admits no "unknown". A misclassified
+    account is invisible in a trial balance, which groups by sign, and wrong in every statement
+    that groups by type — so which ones they are is the part worth reporting."""
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr("Journal.xlsx", workbook(JOURNAL))
+
+    proposed = plan(
+        database,
+        entity_id=entity(database),
+        principal=PERSON,
+        books=read(buffer.getvalue()),
+    )
+
+    assert "Rent" in proposed.untyped_accounts
+    assert len(proposed.untyped_accounts) == len(proposed.accounts_to_create)
