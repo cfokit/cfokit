@@ -84,6 +84,7 @@ nothing cites these but this repository. They are added when something breaks wi
 | [0038](0038-an-entity-is-held-by-its-owners.md) | An entity is held by one or more mutually equivalent owners | Proposed |
 | [0039](0039-roles-are-rows-privileges-are-code.md) | Roles are rows, privileges are code, and only `owner` exists yet | Proposed |
 | [0040](0040-import-is-the-first-module.md) | Import is the first in-process module, and the file never passes through a model | Proposed |
+| [0041](0041-import-is-parsed-where-the-file-is.md) | An import is parsed where the file is, and the books arrive as a neutral shape | Proposed |
 
 ## Deferred — decided in principle, waiting on a need
 
