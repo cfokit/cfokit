@@ -130,6 +130,10 @@ select = [
 "scripts/**" = ["T201"]            # CI scripts report to stdout
 # An operator command, read by a person at a terminal. Its whole output is the report.
 "src/cfokit/imports/__main__.py" = ["T201"]
+# Shipped with the skill and run in the agent's runtime, where stdout is the contract (ADR-0041).
+# Linted and formatted here because it is ours; not type-checked with the package, because it
+# imports nothing from it and must run on a bare interpreter.
+"skills/**" = ["T201"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["cfokit"]
