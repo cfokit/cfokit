@@ -173,10 +173,13 @@ of layer 3 drives both adapters as a client does, and CI gate 5 diffs what they 
 the committed copies (ADR-0015). Layer 4 sits behind its own pytest marker, alongside the `oracle`
 marker, so it cannot accidentally join the per-commit gate.
 
-**Provenance is gated at layer 2 and reviewed everywhere else.** `test_conformance.py` refuses a
-case whose manifest names no published source, no expired copyright and no scan, so a unit test
-cannot enter the corpus claiming to be conformance evidence — which is the layer carrying `NFR-01`
-while the oracle stays deferred, and so the one where the control has to be mechanical. Elsewhere it
+**Provenance is gated at layer 2 and reviewed everywhere else.** `tests/test_conformance_corpus.py`
+reads every case in the corpus and refuses one whose manifest names no published source, no
+expired copyright and no scan, so a unit test cannot enter the corpus claiming to be conformance
+evidence — which is the layer carrying `NFR-01` while the oracle stays deferred, and so the one
+where the control has to be mechanical. It is parameterised over the fixture directory rather
+than over a named case, or it would hold only for the cases that exist today, and it sits outside
+the integration tier so it gates every commit rather than only the runs with a stack up. Elsewhere it
 is review: nothing distinguishes an invariant derived from `LED-03` from one derived by running the
 code, and nothing detects a judge used where a state assertion was available. A review rule is weak
 here, because the reviewer and the author are the same process. Treat every ungated rule in this

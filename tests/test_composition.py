@@ -12,7 +12,12 @@ from pathlib import Path
 
 import pytest
 
-from cfokit.imports.mcp import ImportPathRefused, resolve
+from cfokit.imports.mcp import (
+    MAX_ARCHIVE_BYTES,
+    ImportPathRefused,
+    ImportTooLarge,
+    resolve,
+)
 from cfokit.ledger.config import Settings
 from cfokit.server import mcp_server
 
@@ -84,6 +89,29 @@ def test_a_path_escaping_the_root_is_refused(tmp_path: Path) -> None:
 
     with pytest.raises(ImportPathRefused):
         resolve(root, "../elsewhere.zip")
+
+
+def test_an_archive_over_the_ceiling_is_refused(tmp_path: Path) -> None:
+    """The whole file is read into memory and the process doing it serves every other entity's
+    tools, so an oversized file is one tenant's export taking the surface down for all of them
+    (`NFR-04`). Refused before a byte is read rather than discovered by the process dying.
+
+    Written against `MAX_ARCHIVE_BYTES` rather than a number copied from it, so raising the
+    ceiling deliberately does not silently leave a test asserting the old one.
+    """
+    oversized = tmp_path / "books.zip"
+    oversized.write_bytes(b"\0" * (MAX_ARCHIVE_BYTES + 1))
+
+    with pytest.raises(ImportTooLarge):
+        resolve(tmp_path, "books.zip")
+
+
+def test_an_archive_at_the_ceiling_is_read(tmp_path: Path) -> None:
+    """The limit is a ceiling, not a threshold: the boundary case is allowed, or the message
+    telling an operator the maximum names a size they cannot actually use."""
+    (tmp_path / "books.zip").write_bytes(b"\0" * MAX_ARCHIVE_BYTES)
+
+    assert resolve(tmp_path, "books.zip") == (tmp_path / "books.zip").resolve()
 
 
 def test_an_absolute_path_outside_the_root_is_refused(tmp_path: Path) -> None:

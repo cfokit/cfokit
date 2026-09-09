@@ -113,7 +113,8 @@ def main() -> int:
         # exactly that, and `quickbooks._amount` exists to convert it with `Decimal(str(...))`.
         # A fixture stating that cell as a Decimal would test a path production never takes,
         # so the faithful fixture is the one carrying the float. Under src/ there is no such
-        # excuse: a float literal there is either money, and wrong, or a timeout, and marked.
+        # excuse, and there is deliberately no way to mark an exception: if a float literal ever
+        # belongs there, that is a decision to make in this file, in a diff someone reviews.
         in_src = path.relative_to(REPO_ROOT).parts[0] == "src"
         source = path.read_text(encoding="utf-8")
         for number, text in offending_python_lines(source, literals=in_src):

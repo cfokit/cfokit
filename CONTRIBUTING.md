@@ -51,25 +51,14 @@ uv run task test
 CI runs these and more on every pull request.
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) is the authority on what has to pass.
 
-**`uv run task test` on its own skips the integration suite**, which is most of it — every
-test of row-level security, the entity lock and the write path needs a database and an issuer,
-and skips without them. A green run from that command alone means the parts needing no
-infrastructure passed. The whole suite is the compose stack, the same way CI gate 2 runs it:
+**`uv run task test` on its own skips the integration suite**, which is most of it. The whole
+suite needs Docker and runs inside the compose network:
 
 ```bash
 docker compose --profile test run --rm test
 ```
 
-Postgres publishes no port, deliberately (ADR-0018), so the suite runs *inside* the network
-rather than against it from the host. Row-level security is only actually in force for a
-non-superuser that does not own the tables, and the `test` service connects as `cfokit_app` —
-which is what makes those tests able to tell an enforced policy from an inert one (ADR-0003).
-
-Docker is expected to be present and working, including in a Claude Code web session: the
-environment is configured with container registry access, so `docker compose` needs no setup
-beyond what is in this repository. If an image pull fails there, that is an environment
-misconfiguration to fix in the environment — not something to work around with a
-locally-provisioned database, which would test a different Postgres than the one shipped.
+`CLAUDE.md` explains why it runs there rather than against the stack from the host.
 
 ## Opening a pull request
 

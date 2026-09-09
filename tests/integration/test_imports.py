@@ -698,6 +698,111 @@ def test_an_ordinary_write_carries_no_lineage(database: Database) -> None:
     assert all(entry["derived_from"] is not None for entry in entries if entry is not by_hand)
 
 
+# --- ADR-0029: applying the same file twice imports it once ---------------------------------
+
+
+def test_applying_the_same_file_twice_imports_it_once(database: Database) -> None:
+    """**The invariant, not an observation.** ADR-0029 makes a repeated operation return the
+    stored result rather than repeat the work, and `apply` derives each entry's key from the
+    file's fingerprint and the source's own row reference so that a retry meets the keys the
+    first attempt claimed.
+
+    The expected figures come from that rule and from the export itself — five transactions in
+    `JOURNAL`, so the second call posts none and replays all five, and the books still hold
+    five. They are not read back from a first run and pinned.
+
+    This is the failure worth a test: an import is thousands of writes in a loop, so a client
+    that times out partway through and retries would otherwise post a company's whole history a
+    second time, and append-only leaves no correction short of a reversing entry per duplicate
+    (ADR-0007).
+    """
+    entity_id = entity(database)
+    books = read(synthetic_export())
+
+    first = apply(
+        database, entity_id=entity_id, principal=PERSON, request_id="req", books=books
+    )
+    second = apply(
+        database, entity_id=entity_id, principal=PERSON, request_id="req", books=books
+    )
+
+    assert first.transactions_posted == 5
+    assert first.transactions_replayed == 0
+    assert second.transactions_posted == 0
+    assert second.transactions_replayed == 5
+
+    # The books themselves, not the counts reported about them: a replay that silently posted
+    # would still be able to report zero. The source states these balances, and they agree only
+    # if the journal landed once — a second copy doubles every one of them.
+    assert second.divergences == ()
+    assert second.reconciled
+
+
+def test_a_retry_keeps_the_same_import_id(database: Database) -> None:
+    """`IMP-04` requires an imported record to name where it came from, and a retry of one
+    import is not a second import. The id is derived from the file, so re-reading the same
+    bytes names the same import."""
+    entity_id = entity(database)
+    books = read(synthetic_export())
+
+    first = apply(
+        database, entity_id=entity_id, principal=PERSON, request_id="req", books=books
+    )
+    second = apply(
+        database, entity_id=entity_id, principal=PERSON, request_id="req", books=books
+    )
+
+    assert first.import_id == second.import_id
+
+
+def test_the_same_file_imported_into_two_entities_is_two_imports(database: Database) -> None:
+    """Keys are scoped per entity by `idempotency_key`'s primary key `(entity_id, key)`. Two
+    companies importing the same file is two sets of books, not a replay of the first."""
+    books = read(synthetic_export())
+    first_entity = entity(database)
+    second_entity = entity(database)
+
+    apply(database, entity_id=first_entity, principal=PERSON, request_id="req", books=books)
+    second = apply(
+        database, entity_id=second_entity, principal=PERSON, request_id="req", books=books
+    )
+
+    assert second.transactions_posted == 5
+    assert second.transactions_replayed == 0
+
+
+def test_a_different_export_of_the_same_books_is_a_second_import(database: Database) -> None:
+    """**The sharp edge, stated as a test so it is not discovered on real books.** The key is
+    the file's identity, not its content's: ADR-0029 rejects content hashing because two
+    identical coffees on one day are two transactions. So re-exporting the same period from the
+    source system produces different bytes, and applying that posts everything again.
+
+    Asserted rather than left implicit because the operator's instinct is the opposite — the
+    books look the same to them.
+    """
+    entity_id = entity(database)
+    # The same journal; a different file, because the trial balance beside it was re-run.
+    restated: Rows = [*TRIAL_BALANCE[:-1], [None] * 3, TRIAL_BALANCE[-1]]
+
+    apply(
+        database,
+        entity_id=entity_id,
+        principal=PERSON,
+        request_id="req",
+        books=read(synthetic_export()),
+    )
+    again = apply(
+        database,
+        entity_id=entity_id,
+        principal=PERSON,
+        request_id="req",
+        books=read(synthetic_export(restated)),
+    )
+
+    assert again.transactions_replayed == 0
+    assert again.transactions_posted == 5
+
+
 # --- applying is a person's act (ADR-0007, ADR-0030) ---------------------------------------
 
 
