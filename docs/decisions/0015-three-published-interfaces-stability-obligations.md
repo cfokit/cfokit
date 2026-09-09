@@ -90,9 +90,10 @@ change procedures.
 
 ### Confirmation
 
-CI gate 5: regenerate the OpenAPI document and the MCP tool descriptions, then `git diff
---exit-code`. **Scaffolded and commented out** in `.github/workflows/ci.yml`, pending the adapters
-existing. Until it is switched on, this record is enforced by review.
+CI gate 5: regenerate the OpenAPI document, the MCP tool descriptions and the error codes, then
+`git diff --exit-code` against the copies in `docs/contracts/`. Running in
+`.github/workflows/ci.yml`, and it needs no database — nothing is touched to generate them — so a
+contract diff is caught on every pull request rather than at deploy.
 
 The gate depends on the generator being deterministic — nondeterministic ordering in the generated
 output would make the diff meaningless rather than merely noisy.

@@ -142,9 +142,11 @@ not yet made.
 ### Confirmation
 
 `import-linter` runs inside `uv run task lint`, and the layering contracts it already holds have been
-observed to fail on violation. **The contracts encoding "modules depend on the ledger, never on each
-other, and the ledger depends on no module" do not exist yet** — there is no module to constrain —
-and they are added as the first one lands.
+observed to fail on violation. Both contracts this record calls for now exist in `pyproject.toml`:
+"The ledger depends on no module" forbids `cfokit.ledger` from importing `cfokit.imports` or
+`cfokit.receivables`, and "Modules depend on the ledger, never on each other" holds the two modules
+independent. The second became expressible only with the second module — a contract naming one would
+have asserted nothing while reading as though it did.
 
 **The tiny-ledger test itself is not gated.** No check asserts that the ledger does not know what a
 customer is — that is review, and the signal is a ledger module acquiring a domain noun.

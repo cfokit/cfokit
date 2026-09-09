@@ -130,9 +130,16 @@ smell.
 - **Layers 1 to 3 are deterministic and gate every commit. Layer 4 does not.** Evals are slow,
   non-deterministic and cost tokens; they run on a cadence, and a regression there blocks a release
   rather than a commit.
-- **No model writes an assertion, at any layer.** A generated assertion encodes current behaviour
-  including its defects, which reintroduces at the top of the pyramid exactly the blind spot layer 2
-  exists to close.
+- **An assertion's expected value comes from outside the implementation.** A published worked
+  example, a requirement's stated acceptance, a domain invariant, or a second enforcement point —
+  never from observing what the code returns. Who types the assertion is not the control and cannot
+  be: every commit here is generated, tests included, so a rule about authorship is one the process
+  writing it violates. Where the answer came from is checkable, which is why a layer 2 case carries
+  a citation and a test refuses one without it.
+- **Recording what the code returned and asserting that is never a specification.** It pins current
+  behaviour including its defects, which reintroduces at the top of the pyramid exactly the blind
+  spot layer 2 exists to close. It is legitimate only as a characterisation test taken deliberately
+  before a refactor and labelled as one, and it never stands in for a case at layer 2 or layer 4.
 - **Evals pin the model version** (ADR-0033, `SOC1-35`). An eval run against an unpinned model
   measures the model, not the change.
 - **Evals gate on a statistically significant regression in pass rate**, not on a fixed threshold.
@@ -166,9 +173,14 @@ of layer 3 drives both adapters as a client does, and CI gate 5 diffs what they 
 the committed copies (ADR-0015). Layer 4 sits behind its own pytest marker, alongside the `oracle`
 marker, so it cannot accidentally join the per-commit gate.
 
-**Two rules here are not gated and cannot easily be.** Nothing detects an assertion a model wrote,
-and nothing detects a judge used where a state assertion was available. Both are review rules, and
-they are stated plainly rather than implied.
+**Provenance is gated at layer 2 and reviewed everywhere else.** `test_conformance.py` refuses a
+case whose manifest names no published source, no expired copyright and no scan, so a unit test
+cannot enter the corpus claiming to be conformance evidence — which is the layer carrying `NFR-01`
+while the oracle stays deferred, and so the one where the control has to be mechanical. Elsewhere it
+is review: nothing distinguishes an invariant derived from `LED-03` from one derived by running the
+code, and nothing detects a judge used where a state assertion was available. A review rule is weak
+here, because the reviewer and the author are the same process. Treat every ungated rule in this
+section as a statement of what the gated ones are for, rather than as a control of equal standing.
 
 ## Pros and Cons of the Options
 
@@ -205,6 +217,24 @@ The cheapest option, and the one that looks sufficient.
 * Bad, because every assertion is written by whoever wrote the logic, which is exactly the blind spot
   ADR-0010 named and which generated assertions are reported to share. A misunderstanding of
   double-entry semantics passes every test in this option.
+
+### Prohibiting model-written assertions
+
+The rule this section's provenance rule replaces, and the one that looks like the answer.
+
+* Good, because it names a real failure. An assertion written against an implementation encodes that
+  implementation, defects included, and the eval literature reports generated assertions sharing the
+  blind spot ADR-0010 identified in self-written tests.
+* Bad, because nothing can enforce it here and nothing ever will. Every commit in this repository is
+  generated, tests included, so the rule is violated by the process that writes it — and a corpus
+  asserting a control it does not have is worse than one asserting none, because it stops anyone
+  looking for the real control. ADR-0028's Confirmation claimed an `import-linter` contract that did
+  not exist, and the rule keeping SQL in one place was review-enforced for as long as the record said
+  it was gated.
+* Bad, because authorship is the wrong variable. Someone who writes an assertion by running the code
+  and recording its output has made the error whether they are a person or a model, and someone who
+  takes the expected figure from `LED-04`'s published acceptance has not. The provenance of the
+  expected value is what separates the two, and it is the half that can be cited and checked.
 
 ### A second differential oracle from the same family — Ledger or hledger
 

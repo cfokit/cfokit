@@ -195,9 +195,12 @@ Four layers, and only the top one needs a model. (ADR-0036)
 4. Evals, which assert on records — the transaction and its status, the postings, the audit row —
    never on prose.
 
-Layers 1 to 3 gate every commit; layer 4 does not. **No model writes an assertion, at any layer**:
-a generated assertion encodes current behaviour including its defects, which is the blind spot
-layer 2 exists to close.
+Layers 1 to 3 gate every commit; layer 4 does not. **An assertion's expected value comes from
+outside the implementation** — a published worked example, a requirement's stated acceptance, a
+domain invariant, or a second enforcement point. Never write one by running the code and recording
+what it returned: that pins current behaviour including its defects, which is the blind spot layer 2
+exists to close. Authorship is not the control here and cannot be, because every commit is
+generated; provenance is, which is why a layer 2 case without a citation is refused.
 
 ## Licensing
 
