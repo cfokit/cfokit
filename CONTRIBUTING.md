@@ -51,6 +51,15 @@ uv run task test
 CI runs these and more on every pull request.
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) is the authority on what has to pass.
 
+**`uv run task test` on its own skips the integration suite**, which is most of it. The whole
+suite needs Docker and runs inside the compose network:
+
+```bash
+docker compose --profile test run --rm test
+```
+
+`CLAUDE.md` explains why it runs there rather than against the stack from the host.
+
 ## Opening a pull request
 
 - Work on a branch. Never commit to `main`.

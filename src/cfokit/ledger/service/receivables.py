@@ -19,12 +19,12 @@ incumbents infer the link at report time and it does not hold.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, date, datetime
+from datetime import date
 
 from cfokit.ledger.errors import ObligationNotFound
 from cfokit.ledger.repository.obligations import Obligation, Settlement
-from cfokit.ledger.repository.unit_of_work import Database, EntityWrite
-from cfokit.ledger.service.authorisation import Capability, require
+from cfokit.ledger.repository.unit_of_work import Database
+from cfokit.ledger.service.authorisation import Capability, authorise
 from cfokit.ledger.service.principal import Principal
 
 __all__ = ["ObligationDetail", "obligation_detail", "outstanding_obligations"]
@@ -52,7 +52,7 @@ def outstanding_obligations(
     still owed". Passing false gives the full history, settled ones included.
     """
     with database.entity_write(entity_id) as write:
-        _require_read(write, principal)
+        authorise(write, Capability.READ, principal)
         return tuple(write.outstanding(as_of=as_of, unsettled_only=unsettled_only))
 
 
@@ -61,21 +61,10 @@ def obligation_detail(
 ) -> ObligationDetail:
     """One obligation read as both events: what was committed, and what has settled it."""
     with database.entity_write(entity_id) as write:
-        _require_read(write, principal)
+        authorise(write, Capability.READ, principal)
         found = write.outstanding(obligation_id=obligation_id)
         if not found:
             raise ObligationNotFound(f"no obligation {obligation_id} in this entity")
         return ObligationDetail(
             obligation=found[0], settlements=tuple(write.settlements_for(obligation_id))
         )
-
-
-def _require_read(write: EntityWrite, principal: Principal) -> None:
-    now = datetime.now(UTC)
-    actor = write.privileges_in_force(principal.id, now)
-    acted_for = (
-        write.privileges_in_force(principal.acting_for, now)
-        if principal.acting_for is not None
-        else frozenset()
-    )
-    require(Capability.READ, principal, actor, acted_for)

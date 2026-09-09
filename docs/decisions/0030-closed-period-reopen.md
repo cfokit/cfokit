@@ -119,8 +119,11 @@ which is what makes "an agent cannot reopen" a property rather than a request. E
 validated server-side regardless of token contents (ADR-0011), so the same check covers both
 adapters.
 
-**None of this is built: there is no period close, so there is nothing to reopen.** What follows is
-what the mechanism must do when it exists, not what it does today.
+Period close and reopen are built: `0005-period-close.sql` holds the schema,
+`cfokit.ledger.service.periods` the write path, and `tests/integration/test_period_close.py`
+exercises both. A posting into a closed period is refused with `period_closed`, which is distinct
+from `not_authorised` so a caller is told to reopen rather than sent to ask for a capability that
+would not help.
 
 A reopen writes an `audit_log` row carrying the actor, the period, and the stated reason; the matching
 re-close writes another. That is the evidence `NFR-18` requires, and its absence on a state change is

@@ -556,9 +556,14 @@ class Database:
         state-changing call writes exactly one audit row" true rather than aspirational: the
         row and the change it describes cannot be separated by a failure.
 
-        A connection per call rather than a pool. Pooling means a sixth runtime dependency,
+        A connection per call rather than a pool. Pooling means another runtime dependency,
         and runtime dependencies are decisions here — the workload is low write concurrency
         per entity (ADR-0003), so this is not the thing to optimise first.
+
+        The exception to that reasoning is a bulk import, which is thousands of writes in a
+        loop and pays the connection cost on every one. It shares the transaction instead:
+        `EntityWrite.connection` is what lets a module do several things in one, so the fix
+        there is batching rather than a pool.
         """
         with connect(self._dsn) as conn, conn.transaction():
             settings = self._scope_and_lock(conn, entity_id)

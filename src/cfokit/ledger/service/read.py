@@ -9,12 +9,10 @@ The check happens here rather than in an adapter, so both surfaces get it (ADR-0
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
-
 from cfokit.ledger.errors import TransactionNotFound
 from cfokit.ledger.repository.transactions import StoredTransaction
 from cfokit.ledger.repository.unit_of_work import Database
-from cfokit.ledger.service.authorisation import Capability, require
+from cfokit.ledger.service.authorisation import Capability, authorise
 from cfokit.ledger.service.principal import Principal
 
 __all__ = ["read_transaction"]
@@ -29,16 +27,8 @@ def read_transaction(
     security makes those the same answer, and distinguishing them would leak the other
     entity's existence (`NFR-04`).
     """
-    now = datetime.now(UTC)
     with database.entity_write(entity_id) as write:
-        actor = write.privileges_in_force(principal.id, now)
-        acted_for = (
-            write.privileges_in_force(principal.acting_for, now)
-            if principal.acting_for is not None
-            else frozenset()
-        )
-        require(Capability.READ, principal, actor, acted_for)
-
+        authorise(write, Capability.READ, principal)
         stored = write.load_transaction(transaction_id)
 
     if stored is None:

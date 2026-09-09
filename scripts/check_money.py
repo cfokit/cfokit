@@ -47,20 +47,34 @@ def offending_lines(sql: str) -> list[tuple[int, str]]:
     return hits
 
 
-def offending_python_lines(source: str) -> list[tuple[int, str]]:
+def offending_python_lines(source: str, *, literals: bool = False) -> list[tuple[int, str]]:
     """Return (line number, text) for each real use of `float` in Python code.
 
     Parsed as an AST rather than matched line by line. A docstring explaining that money is
     never a float is prose, not a float, and a regex cannot tell the difference — the first
     version of this gate flagged its own rule documentation.
+
+    `literals` additionally rejects a float *constant*. That is a separate check because it
+    catches a separate bug: `Decimal(0.1)` names no `float` at all, so the walk below cannot
+    see it, and it is the one CLAUDE.md forbids by name — it carries the binary expansion into
+    the type chosen to avoid it, and `Decimal(0.1)` is
+    `0.1000000000000000055511151231257827`. Construct from a string.
     """
     tree = ast.parse(source)
     lines = source.splitlines()
 
+    def offends(node: ast.Name | ast.Constant) -> bool:
+        # `x: float`, `-> float`, `float(x)` and `list[float]` all resolve to a Name load.
+        if isinstance(node, ast.Name):
+            return node.id == "float"
+        # A float literal. `bool` subclasses `int` and never `float`, so `True` is not a hit.
+        return literals and isinstance(node.value, float)
+
     hits: list[tuple[int, str]] = []
     for node in ast.walk(tree):
-        # `x: float`, `-> float`, `float(x)`, and `list[float]` all resolve to a Name load.
-        if not (isinstance(node, ast.Name) and node.id == "float"):
+        # Narrowed before `offends` so `lineno` is reachable: `ast.AST` does not declare it,
+        # but every expression node does.
+        if not isinstance(node, ast.Name | ast.Constant) or not offends(node):
             continue
         number = node.lineno
         text = lines[number - 1] if number <= len(lines) else ""
@@ -94,7 +108,16 @@ def main() -> int:
         if "__pycache__" not in path.parts
     )
     for path in py_files:
-        for number, text in offending_python_lines(path.read_text(encoding="utf-8")):
+        # Float *literals* are rejected under src/ only. A fixture modelling a foreign file
+        # format legitimately holds one: an .xlsx cell is an IEEE double, openpyxl hands back
+        # exactly that, and `quickbooks._amount` exists to convert it with `Decimal(str(...))`.
+        # A fixture stating that cell as a Decimal would test a path production never takes,
+        # so the faithful fixture is the one carrying the float. Under src/ there is no such
+        # excuse, and there is deliberately no way to mark an exception: if a float literal ever
+        # belongs there, that is a decision to make in this file, in a diff someone reviews.
+        in_src = path.relative_to(REPO_ROOT).parts[0] == "src"
+        source = path.read_text(encoding="utf-8")
+        for number, text in offending_python_lines(source, literals=in_src):
             _report(path, number, text, "float in package code — use Decimal (ADR-0005)")
             failures += 1
 

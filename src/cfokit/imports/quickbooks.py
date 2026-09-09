@@ -33,6 +33,7 @@ it states, and anything else is refused rather than guessed.
 
 from __future__ import annotations
 
+import hashlib
 import io
 import re
 import zipfile
@@ -154,6 +155,11 @@ def read(archive: bytes) -> SourceBooks:
     used = sorted({line.account_code for entry in entries for line in entry.lines})
     return SourceBooks(
         system=SYSTEM,
+        # Over the archive bytes, so re-reading the same export yields the same identity and a
+        # different export never collides with it. Not a security boundary — nobody is
+        # adversarially colliding their own accounting export — so sha256 here is simply the
+        # obvious digest rather than a considered choice against a weaker one.
+        fingerprint=hashlib.sha256(archive).hexdigest(),
         basis=basis,
         balances_basis=balances_basis,
         commodity=commodity,

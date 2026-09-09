@@ -21,7 +21,7 @@ mistake is — an ordinary entry against the same equity account (`LED-08`).
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, date, datetime
+from datetime import date
 from decimal import Decimal
 
 from cfokit.ledger.engine import Posting
@@ -33,8 +33,8 @@ from cfokit.ledger.errors import (
     PeriodClosed,
     TransactionIncomplete,
 )
-from cfokit.ledger.repository.unit_of_work import Database, EntityWrite
-from cfokit.ledger.service.authorisation import Capability, require
+from cfokit.ledger.repository.unit_of_work import Database
+from cfokit.ledger.service.authorisation import Capability, authorise
 from cfokit.ledger.service.principal import Principal
 
 __all__ = ["CarriedBalance", "OpenedBooks", "open_balances"]
@@ -72,12 +72,11 @@ def open_balances(
     `as_of` is the day the balances stood at — conventionally the day before the first period
     CFOKit keeps, so the opening figures sit outside every period it reports on.
     """
-    now = datetime.now(UTC)
     if not balances:
         raise TransactionIncomplete("opening the books needs at least one balance")
 
     with database.entity_write(entity_id) as write:
-        _require_post(write, principal, now)
+        authorise(write, Capability.POST, principal)
 
         equity_account = write.settings.opening_balance_account_id
         if equity_account is None:
@@ -133,17 +132,3 @@ def open_balances(
         )
 
     return OpenedBooks(transaction_id=transaction_id, as_of=as_of, equity_amount=equity_amount)
-
-
-def _require_post(write: EntityWrite, principal: Principal, now: datetime) -> None:
-    """Posting, because the caller chooses the amounts.
-
-    Distinct from the year-end close, which needs `CLOSE` and derives everything it writes.
-    """
-    actor = write.privileges_in_force(principal.id, now)
-    acted_for = (
-        write.privileges_in_force(principal.acting_for, now)
-        if principal.acting_for is not None
-        else frozenset()
-    )
-    require(Capability.POST, principal, actor, acted_for)

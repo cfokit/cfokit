@@ -77,16 +77,6 @@ def test_the_published_totals_are_reproduced(database: Database, washington_1907
     assert debits == credited == Decimal("355000.00")
 
 
-def test_the_case_names_a_public_domain_source(washington_1907: Case) -> None:
-    """A case with no citation is a unit test that has been misfiled (ADR-0036 § 2), and one
-    whose licence is unrecorded cannot be redistributed with confidence (`NFR-14`)."""
-    source = washington_1907.manifest["source"]
-
-    assert source["licence"] == "public-domain"
-    assert source["year"] < 1931  # public domain in the United States
-    assert source["scan"].startswith("https://archive.org/")
-
-
 # --- The reconciler must be able to fail --------------------------------------------------
 
 

@@ -88,3 +88,34 @@ def test_identifier_containing_float_is_not_flagged() -> None:
 def test_not_money_marker_permits_a_genuine_non_monetary_float() -> None:
     source = "def wait(timeout: float) -> None: ...  # not-money: seconds\n"
     assert offending_python_lines(source) == []
+
+
+# --- float literals, rejected under src/ only --------------------------------------------
+
+
+def test_a_float_literal_is_caught_when_literals_are_rejected() -> None:
+    """`Decimal(0.1)` names no `float`, so the Name walk cannot see it. CLAUDE.md forbids it by
+    name: it carries the binary expansion into the type chosen to avoid it."""
+    assert len(offending_python_lines("amount = Decimal(0.1)", literals=True)) == 1
+
+
+def test_a_float_literal_is_allowed_by_default() -> None:
+    """A fixture modelling a foreign file format legitimately holds one: an .xlsx cell is an
+    IEEE double and openpyxl hands back exactly that, so the faithful fixture carries the
+    float. The default is what runs over tests/."""
+    assert offending_python_lines("cell = 647.75") == []
+
+
+def test_a_decimal_from_a_string_is_not_a_literal() -> None:
+    """The correction the gate exists to push people toward must itself pass."""
+    assert offending_python_lines('amount = Decimal("0.1")', literals=True) == []
+
+
+def test_an_integer_is_not_a_float_literal() -> None:
+    assert offending_python_lines("scale = 10", literals=True) == []
+
+
+def test_a_bool_is_not_a_float_literal() -> None:
+    """`bool` subclasses `int` and never `float`, but a naive isinstance check on a numeric
+    constant is the kind that catches `True`."""
+    assert offending_python_lines("posted = True", literals=True) == []

@@ -25,14 +25,14 @@ one the ledger derives.
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime
+from datetime import date
 from decimal import Decimal
 
 from cfokit.ledger.engine import Posting
 from cfokit.ledger.engine.periods import FiscalYear, fiscal_year_of
 from cfokit.ledger.errors import NothingToClose, RetainedEarningsUnset, YearAlreadyClosed
 from cfokit.ledger.repository.unit_of_work import Database, EntityWrite
-from cfokit.ledger.service.authorisation import Capability, require
+from cfokit.ledger.service.authorisation import Capability, authorise
 from cfokit.ledger.service.principal import Principal
 
 __all__ = ["YearClosed", "close_fiscal_year", "is_close_stale"]
@@ -68,9 +68,8 @@ def close_fiscal_year(
     The year is derived from what the entity declared, never from the caller: a caller who
     could state the fiscal year end could choose which year a close applied to.
     """
-    now = datetime.now(UTC)
     with database.entity_write(entity_id) as write:
-        _require_close(write, principal, now)
+        authorise(write, Capability.CLOSE, principal)
 
         settings = write.settings
         year = fiscal_year_of(
@@ -231,13 +230,3 @@ def _post(
     write.add_postings(transaction_id, postings)
     write.mark_posted(transaction_id)
     return transaction_id
-
-
-def _require_close(write: EntityWrite, principal: Principal, now: datetime) -> None:
-    actor = write.privileges_in_force(principal.id, now)
-    acted_for = (
-        write.privileges_in_force(principal.acting_for, now)
-        if principal.acting_for is not None
-        else frozenset()
-    )
-    require(Capability.CLOSE, principal, actor, acted_for)

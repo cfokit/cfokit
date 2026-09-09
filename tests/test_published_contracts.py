@@ -85,16 +85,31 @@ def test_every_error_code_is_published() -> None:
     """ADR-0015: "adding a code is a contract change; renaming or removing one is breaking".
 
     A code that exists in the codebase and not in the artifact is an unpublished contract.
+
+    Collected across the whole `cfokit` package tree, not `ledger.errors` alone: a module
+    defines refusals of its own and they leave through the same surfaces carrying the same
+    shape, so a caller branches on them the same way and ADR-0015 covers them the same way.
+
+    Walked with `pkgutil` rather than by asking the generator what it found, which would
+    compare the generator against itself. The generator scans what `cfokit.server` has
+    imported; this scans what exists on disk. The two agreeing is the evidence — a module the
+    composition point silently stopped importing would show up here as an unpublished code.
     """
+    import importlib
+    import pkgutil
+
+    import cfokit
     from cfokit.ledger import errors
 
-    in_code = {
-        member.code
-        for member in vars(errors).values()
-        if isinstance(member, type)
-        and issubclass(member, errors.LedgerError)
-        and member is not errors.LedgerError
-    }
+    in_code: set[str] = set()
+    for found in pkgutil.walk_packages(cfokit.__path__, prefix="cfokit."):
+        for member in vars(importlib.import_module(found.name)).values():
+            if (
+                isinstance(member, type)
+                and issubclass(member, errors.LedgerError)
+                and member is not errors.LedgerError
+            ):
+                in_code.add(member.code)
     published = {
         entry["code"]
         for entry in json.loads((CONTRACTS / "error-codes.json").read_text(encoding="utf-8"))

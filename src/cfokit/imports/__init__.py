@@ -113,6 +113,10 @@ class Result:
     import_id: str
     accounts_created: int
     transactions_posted: int
+    # Entries a previous run of this same file already posted, returned by ADR-0029's replay
+    # rather than posted again. Non-zero means a retry met work already done, which is the
+    # mechanism working; it is not a count of anything that went wrong.
+    transactions_replayed: int = 0
     refusals: tuple[Refusal, ...] = ()
     agreed: int = 0
     compared: int = 0
@@ -185,6 +189,15 @@ def apply(
     One enormous transaction would be atomic and would also mean an eleven-thousand-line
     rollback over a single malformed row, which is the opposite of what `IMP-05` asks for.
 
+    **Applying the same file twice imports it once.** Each entry's idempotency key is derived
+    from the file's fingerprint and the source's own reference for the row (`_entry_key`), so a
+    second call meets the keys the first one claimed and ADR-0029's replay returns the stored
+    result rather than repeating the write. That matters more here than on any single write: a
+    client that times out partway through eleven thousand transactions and retries would
+    otherwise post a whole company's books twice, and append-only leaves no correction for that
+    short of a reversing entry per duplicate (ADR-0007). `Result.transactions_replayed` counts
+    what a previous run had already done.
+
     Every entry carries `derived_from` naming this import and the reference it came in under,
     which is `IMP-04`'s "identifiable as imported and names the system it came from" and the
     lineage `SOC1-14` wants.
@@ -209,7 +222,7 @@ def apply(
     if proposed.blocked is not None:
         raise ImportRefused(proposed.blocked)
 
-    import_id = str(uuid.uuid4())
+    import_id = _import_id(books.fingerprint)
     accounts: dict[str, str] = {}
     with database.entity_write(entity_id) as write:
         accounts = {account.code: account.account_id for account in write.chart()}
@@ -236,18 +249,19 @@ def apply(
 
     refused = {refusal.reference for refusal in proposed.refusals}
     posted = 0
+    replayed = 0
     failures: list[Refusal] = list(proposed.refusals)
     for entry in books.entries:
         if entry.reference in refused:
             continue
         try:
-            record_transaction(
+            written = record_transaction(
                 database,
                 WriteContext(
                     entity_id=entity_id,
                     principal=principal,
                     request_id=request_id,
-                    idempotency_key=uuid.uuid4().hex,
+                    idempotency_key=_entry_key(books.fingerprint, entry.reference),
                 ),
                 entry=Entry(
                     transaction_date=entry.transaction_date,
@@ -268,7 +282,6 @@ def apply(
                     "reference": entry.reference,
                 },
             )
-            posted += 1
         except LedgerError as refusal:
             # A refusal the plan could not foresee — a closed period, an account the chart
             # would not take. Reported, never swallowed: `NFR-01` resolves disagreements
@@ -281,6 +294,15 @@ def apply(
                     detail=str(refusal),
                 )
             )
+        else:
+            # Counted apart, because they answer different questions. `posted` is what this
+            # call put in the books; `replayed` is what a previous one already had. An operator
+            # re-running an import wants to see the second number rise and the first stay at
+            # zero — that is the retry working rather than the file half-importing.
+            if written.replayed:
+                replayed += 1
+            else:
+                posted += 1
 
     agreed, compared, divergences = _reconcile(
         database, entity_id=entity_id, principal=principal, books=books
@@ -289,6 +311,7 @@ def apply(
         import_id=import_id,
         accounts_created=created,
         transactions_posted=posted,
+        transactions_replayed=replayed,
         refusals=tuple(failures),
         agreed=agreed,
         compared=compared,
@@ -301,6 +324,43 @@ class ImportRefused(LedgerError):
 
     code = "import_refused"
     status = 422
+
+
+def _import_id(fingerprint: str) -> str:
+    """This import's identity, derived from the file rather than minted.
+
+    A uuid5 so `derived_from.import_id` keeps the shape every other identifier has, while
+    naming the same import on a re-run. A minted uuid4 would make a retry look like a second,
+    unrelated import of the same books.
+    """
+    return str(uuid.uuid5(_IMPORT_NAMESPACE, fingerprint))
+
+
+def _entry_key(fingerprint: str, reference: str) -> str:
+    """The idempotency key for one imported entry (ADR-0029).
+
+    **Derived, not minted, and this is what makes an import safe to retry.** An import is
+    thousands of writes in a loop, so the interesting failure is not the first call — it is a
+    client that times out partway through and sends the request again. With a fresh key per
+    entry that retry posts every transaction a second time, and under append-only the only
+    correction available is a reversing entry per duplicated transaction (ADR-0007). With this
+    one, each entry meets the key its first attempt used, and `claim` returns the stored result
+    instead of doing the work.
+
+    `(file, row)` rather than `(file, content)`: ADR-0029 rejects content hashing for deciding
+    whether two requests are the same operation, because two five-dollar coffees on the same day
+    are two transactions. The source's own reference is what distinguishes them, and `IMP-04`
+    already requires it to survive into `derived_from`.
+
+    Keys are scoped per entity by `idempotency_key`'s primary key, so importing one file into
+    two entities is two imports rather than a replay of the first.
+    """
+    return f"import:{fingerprint[:32]}:{reference}"
+
+
+# A fixed namespace, so `_import_id` is stable across processes and deployments. Arbitrary and
+# permanent: changing it would make every already-imported file importable again.
+_IMPORT_NAMESPACE = uuid.UUID("6f9b1d2c-0e77-5a41-9c3e-2a5d8f4b6e10")
 
 
 def _blocking(books: SourceBooks, basis: str, commodity: str) -> str | None:
@@ -350,7 +410,7 @@ def _refusals(books: SourceBooks) -> list[Refusal]:
                     f" {MINIMUM_POSTINGS}",
                 )
             )
-        elif sum(line.amount for line in entry.lines) != 0:
+        elif (difference := sum(line.amount for line in entry.lines)) != 0:
             # LED-03. Stated here rather than left to the engine so the operator sees it in
             # the plan, which is the whole of what `IMP-05` asks for.
             refusals.append(
@@ -358,7 +418,7 @@ def _refusals(books: SourceBooks) -> list[Refusal]:
                     entry.reference,
                     entry.transaction_date,
                     "unbalanced",
-                    f"debits and credits differ by {sum(line.amount for line in entry.lines)}",
+                    f"debits and credits differ by {difference}",
                 )
             )
     return refusals

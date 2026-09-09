@@ -81,7 +81,7 @@ adopts a specification workflow is undecided and needs its own record. (ADR-0001
 
 ```
 uv sync                          # install everything
-uv run task test                 # full suite
+uv run task test                 # the tests needing no infrastructure; integration skips
 uv run task test <path>          # scope it, e.g. tests/test_migrations.py
 uv run task lint                 # ruff + mypy --strict + import-linter + async boundary
 uv run task check-money          # CI gate 4: no floats touch money
@@ -89,10 +89,17 @@ uv run task check-decisions      # CI gate 6: decision corpus is well-formed
 uv run task migrate              # apply migrations (never runs on startup)
 docker compose up                # local production stack, no cloud account needed
 uv run task dev                  # compose.yaml + compose.dev.yaml
+docker compose --profile test run --rm test   # the whole suite, the way CI gate 2 runs it
 ```
 
-Run `lint` and the relevant tests before reporting work complete. Do not report
-completion on a red suite.
+**`uv run task test` is not the whole suite.** Every test of row-level security, the entity lock
+and the write path needs a database and an issuer, and skips without them — which is most of the
+tests. Row-level security is only in force for a non-superuser that does not own the tables, so
+the suite runs *inside* the compose network as `cfokit_app` rather than against it from the host;
+Postgres publishes no port, deliberately (ADR-0003, ADR-0018).
+
+Run `lint` and the relevant tests before reporting work complete. A green `task test` alone is not
+that. Do not report completion on a red suite.
 
 ## Stack — the non-obvious parts
 
@@ -195,9 +202,12 @@ Four layers, and only the top one needs a model. (ADR-0036)
 4. Evals, which assert on records — the transaction and its status, the postings, the audit row —
    never on prose.
 
-Layers 1 to 3 gate every commit; layer 4 does not. **No model writes an assertion, at any layer**:
-a generated assertion encodes current behaviour including its defects, which is the blind spot
-layer 2 exists to close.
+Layers 1 to 3 gate every commit; layer 4 does not. **An assertion's expected value comes from
+outside the implementation** — a published worked example, a requirement's stated acceptance, a
+domain invariant, or a second enforcement point. Never write one by running the code and recording
+what it returned: that pins current behaviour including its defects, which is the blind spot layer 2
+exists to close. Authorship is not the control here and cannot be, because every commit is
+generated; provenance is, which is why a layer 2 case without a citation is refused.
 
 ## Licensing
 
