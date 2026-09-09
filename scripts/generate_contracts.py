@@ -5,9 +5,9 @@ Three interfaces are published, and two of them are generated artifacts:
 
 1. **The REST API**, as an OpenAPI document.
 2. **The MCP tool surface**, as tool names, descriptions and input schemas.
-3. **The error codes**, which are enumerated in `errors.py` and written out here too, because
-   ADR-0015 makes them a contract in their own right: "adding a code is a contract change;
-   renaming or removing one is breaking".
+3. **The error codes**, collected from every module in the distribution — the ledger's
+   `errors.py` and each module's own refusals alike — because ADR-0015 makes them a contract in
+   their own right: "adding a code is a contract change; renaming or removing one is breaking".
 
 The artifacts are committed. CI regenerates them and fails on any diff, so a contract change
 cannot happen without appearing in a pull request as a change to a contract.
@@ -19,10 +19,13 @@ so explicitly. Hence sorted keys and a fixed indent.
 from __future__ import annotations
 
 import asyncio
+import importlib
 import inspect
 import json
+import pkgutil
 import sys
 from pathlib import Path
+from types import ModuleType
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -30,6 +33,7 @@ CONTRACTS = REPO_ROOT / "docs" / "contracts"
 
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
+import cfokit  # noqa: E402
 from cfokit.ledger import errors as errors_module  # noqa: E402
 from cfokit.ledger.config import Settings  # noqa: E402
 from cfokit.server import mcp_server, rest_app  # noqa: E402
@@ -75,17 +79,54 @@ def mcp_tools() -> list[dict[str, Any]]:
     )
 
 
+def _cfokit_modules() -> list[ModuleType]:
+    """Every module in the distribution, imported.
+
+    Import-safe by construction: ADR-0004 confines environment reads to `load_settings`, so no
+    module does I/O or reads configuration at import time. If one ever did, this would be where
+    it announced itself.
+    """
+    return [
+        importlib.import_module(found.name)
+        for found in pkgutil.walk_packages(cfokit.__path__, prefix="cfokit.")
+    ]
+
+
 def error_codes() -> list[dict[str, str]]:
-    """Every stable `code` an error can carry, with the class that raises it."""
-    found: list[dict[str, str]] = []
-    for name, member in vars(errors_module).items():
-        if (
-            inspect.isclass(member)
-            and issubclass(member, errors_module.LedgerError)
-            and member is not errors_module.LedgerError
-        ):
-            found.append({"code": member.code, "error": name})
-    return sorted(found, key=lambda entry: entry["code"])
+    """Every stable `code` an error can carry, with the class that raises it.
+
+    Scanned across every loaded `cfokit` module rather than `ledger.errors` alone. A module
+    defines refusals of its own — `import_refused`, `invoice_not_draft`, `import_path_refused` —
+    and they leave through the same published surfaces carrying the same `ok: false, code`
+    shape, so a caller branches on them exactly as it does on the ledger's. Enumerating only
+    the ledger's meant renaming a module's code was a breaking change no gate could see, which
+    is the failure ADR-0015 names in as many words.
+
+    **The distribution's codes, not the currently-composed surface's.** Walking the package
+    tree finds `cfokit.receivables`, which no adapter exposes yet; scanning what
+    `cfokit.server` happens to have imported would not. The tree is the right scope because one
+    image ships every module (ADR-0023), so a code becomes raisable the moment an adapter is
+    wired — and a caller binding to CFOKit binds to the product rather than to today's routing
+    table. The alternative publishes a code for the first time in the same change that exposes
+    it, burying a contract addition inside a feature diff.
+
+    Keyed on the class's own `__name__` rather than the name it is bound under, so a class
+    imported into three modules is one entry rather than three. Order comes from the sort, not
+    from traversal, because the output has to be deterministic or the diff is noise.
+    """
+    found: dict[tuple[str, str], None] = {}
+    for module in _cfokit_modules():
+        for member in vars(module).values():
+            if (
+                inspect.isclass(member)
+                and issubclass(member, errors_module.LedgerError)
+                and member is not errors_module.LedgerError
+            ):
+                found[(member.code, member.__name__)] = None
+    return sorted(
+        ({"code": code, "error": name} for code, name in found),
+        key=lambda entry: (entry["code"], entry["error"]),
+    )
 
 
 def write(path: Path, payload: object) -> bool:

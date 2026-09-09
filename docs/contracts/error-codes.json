@@ -20,6 +20,10 @@
     "error": "ConfigError"
   },
   {
+    "code": "customer_not_found",
+    "error": "CustomerNotFound"
+  },
+  {
     "code": "entity_not_found",
     "error": "EntityNotFound"
   },
@@ -32,12 +36,36 @@
     "error": "IdempotencyKeyReused"
   },
   {
+    "code": "import_path_refused",
+    "error": "ImportPathRefused"
+  },
+  {
+    "code": "import_refused",
+    "error": "ImportRefused"
+  },
+  {
+    "code": "import_too_large",
+    "error": "ImportTooLarge"
+  },
+  {
+    "code": "invoice_not_draft",
+    "error": "InvoiceNotDraft"
+  },
+  {
+    "code": "invoice_not_found",
+    "error": "InvoiceNotFound"
+  },
+  {
     "code": "issued_statement_not_found",
     "error": "IssuedStatementNotFound"
   },
   {
     "code": "last_owner",
     "error": "LastOwner"
+  },
+  {
+    "code": "line_without_income",
+    "error": "LineWithoutIncome"
   },
   {
     "code": "migration_failed",
@@ -76,6 +104,10 @@
     "error": "PeriodNotClosed"
   },
   {
+    "code": "report_not_written",
+    "error": "ReportNotWritten"
+  },
+  {
     "code": "retained_earnings_unset",
     "error": "RetainedEarningsUnset"
   },
@@ -98,6 +130,10 @@
   {
     "code": "unknown_role",
     "error": "UnknownRole"
+  },
+  {
+    "code": "unreadable_figure",
+    "error": "UnreadableFigure"
   },
   {
     "code": "year_already_closed",

@@ -87,12 +87,39 @@ class ImportPathRefused(LedgerError):
     status = 400
 
 
+class ImportTooLarge(LedgerError):
+    """An archive larger than this surface will read into memory.
+
+    Refused before a byte is read, rather than discovered by the process dying. The whole file
+    is loaded, unzipped and turned into a workbook in memory, and the process doing that also
+    serves every other entity's tools — so an oversized file is one tenant's export taking the
+    surface down for all of them (`NFR-04`).
+
+    A ceiling rather than a streaming reader, because the ceiling is honest about what this
+    does and a reader that streamed would still have to hold the journal to group it. If a real
+    export ever exceeds this, the answer is to raise it deliberately after measuring, not to
+    discover the limit in production.
+    """
+
+    code = "import_too_large"
+    status = 413
+
+
+# Generous against a real export and small against available memory. The largest QuickBooks
+# export seen here is a few megabytes of zipped XML; a hundred is room for an order of
+# magnitude more without letting one file exhaust the process.
+MAX_ARCHIVE_BYTES = 100 * 1024 * 1024
+
+
 def resolve(root: Path, location: str) -> Path:
-    """The file `location` names, if it is inside `root`.
+    """The file `location` names, if it is inside `root` and small enough to read.
 
     `resolve()` before comparing, so `..` and a symlink are both settled before the check
     rather than after it — a containment test against an unresolved path tests the string
     somebody supplied instead of the file it reaches.
+
+    The size is checked here rather than at each call site, so a tool added later cannot forget
+    it: every path onto this surface comes through this function.
     """
     candidate = (
         (root / location).resolve()
@@ -103,6 +130,13 @@ def resolve(root: Path, location: str) -> Path:
         raise ImportPathRefused(f"{location} is outside the configured import directory")
     if not candidate.is_file():
         raise ImportPathRefused(f"{location} is not a file")
+    size = candidate.stat().st_size
+    if size > MAX_ARCHIVE_BYTES:
+        # The size is the operator's own file, not a secret, and knowing the limit is what
+        # lets them act on the refusal.
+        raise ImportTooLarge(
+            f"{location} is {size} bytes; this surface reads at most {MAX_ARCHIVE_BYTES}"
+        )
     return candidate
 
 
@@ -132,8 +166,10 @@ def register(
         destination = reports / f"cfokit-{source.stem[:40]}-{stamp}.json"
         try:
             destination.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
-        except OSError as refused:
-            raise ReportNotWritten(f"{destination}: {refused.strerror}") from refused
+        except OSError as unwritable:
+            # Not `refused`: that is the module-level helper turning a LedgerError into a
+            # reply, and shadowing it inside this scope hides it from anything added here.
+            raise ReportNotWritten(f"{destination}: {unwritable.strerror}") from unwritable
         return str(destination)
 
     def summarise(proposed: Plan) -> dict[str, Any]:
@@ -276,7 +312,9 @@ def register(
             "system it came from. Every account whose balance disagrees with the source comes "
             "back named, with both figures. Run plan_import first — this one writes. A "
             "person's act: a delegated agent session is refused with not_a_person, and should "
-            "ask the person it acts for to apply the import."
+            "ask the person it acts for to apply the import. Safe to retry: applying the same "
+            "file to the same entity twice imports it once, and the reply reports how many "
+            "entries were replayed rather than posted."
         ),
     )
     def apply_import(entity_id: str, location: str) -> dict[str, Any]:
@@ -297,6 +335,12 @@ def register(
                 "import_id": result.import_id,
                 "accounts_created": result.accounts_created,
                 "transactions_posted": result.transactions_posted,
+                # Non-zero means this file had been imported before and the entries were
+                # returned rather than posted again. Reported rather than folded into
+                # `transactions_posted`, because "nothing happened, it was already done" and
+                # "eleven thousand transactions entered the books" are different answers and a
+                # caller about to tell someone what changed needs to tell them apart.
+                "transactions_replayed": result.transactions_replayed,
                 "rows_skipped": len(result.refusals),
                 "rows_skipped_detail": _refusals(result.refusals),
                 "reconciliation": {

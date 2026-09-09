@@ -116,6 +116,18 @@ class SourceBooks:
     """
 
     system: str
+    # A digest of the bytes this was read from — the source file's identity, not its content's.
+    #
+    # What makes an import replayable rather than duplicable (ADR-0029). An import is thousands
+    # of writes in a loop, and a client that times out halfway through and retries would
+    # otherwise post the whole company's books a second time — which under append-only is
+    # undone only by a reversing entry per transaction (ADR-0007). Keying each entry's
+    # idempotency key on this plus the source's own row reference makes the retry a replay.
+    #
+    # A property of the file rather than of the parse, so a reader change that alters the
+    # parsed shape does not silently make an already-imported file importable again. Set by the
+    # reader, which is the only thing holding the bytes.
+    fingerprint: str
     # The accounting method of the entries — what `IMP-06` refuses a conflict with.
     basis: str
     # The accounting method the stated balances were computed on. Not a gate; an explanation.
