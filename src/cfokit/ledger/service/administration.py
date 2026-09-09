@@ -26,8 +26,8 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from cfokit.ledger.errors import LastOwner, NotAuthorised, UnknownRole
-from cfokit.ledger.repository.unit_of_work import Database, EntityWrite
-from cfokit.ledger.service.authorisation import Capability, require
+from cfokit.ledger.repository.unit_of_work import Database
+from cfokit.ledger.service.authorisation import Capability, authorise
 from cfokit.ledger.service.principal import Principal
 
 __all__ = [
@@ -132,9 +132,8 @@ def create_account(
     business has earned, and the opening balance account holds the counterweight to figures
     that arrived from a system CFOKit never saw.
     """
-    now = datetime.now(UTC)
     with database.entity_write(entity_id) as write:
-        _require(write, principal, now, Capability.GRANT)
+        authorise(write, Capability.GRANT, principal)
 
         if (retained_earnings or opening_balance) and account_type != "equity":
             raise NotAuthorised("a named equity role must be an equity account")
@@ -178,7 +177,6 @@ def grant_role(
     Granting a role that carries `OWN` takes `OWN`; granting anything else takes `GRANT`, so a
     role that staffs an entity cannot hand it away.
     """
-    now = datetime.now(UTC)
     with database.entity_write(entity_id) as write:
         definition = write.role_definition(role)
         if definition is None:
@@ -186,9 +184,7 @@ def grant_role(
         # Granting a role that carries `own` is itself an owner's act: handing the entity away
         # is not part of staffing it (`IAM-21`).
         confers_ownership = Capability.OWN in definition.privileges
-        _require(
-            write, principal, now, Capability.OWN if confers_ownership else Capability.GRANT
-        )
+        authorise(write, Capability.OWN if confers_ownership else Capability.GRANT, principal)
         if definition.never_lapses and lapses_at is not None:
             # IAM-09's lapse happens without anyone acting, and must never unhold an entity.
             raise NotAuthorised(f"the {role!r} role cannot be granted for a stated period")
@@ -232,9 +228,7 @@ def revoke_grant(
         # Revoking a role that holds the entity takes `own`; revoking anyone else takes
         # `grant`. An administrative role cannot remove the people whose entity it is.
         confers_ownership = held is not None and Capability.OWN in held.privileges
-        _require(
-            write, principal, now, Capability.OWN if confers_ownership else Capability.GRANT
-        )
+        authorise(write, Capability.OWN if confers_ownership else Capability.GRANT, principal)
 
         if write.would_remove_last_owner(grant_id, now):
             raise LastOwner("an entity always has at least one owner; grant another first")
@@ -250,16 +244,3 @@ def revoke_grant(
             subject_id=grant_id,
             detail=None,
         )
-
-
-def _require(
-    write: EntityWrite, principal: Principal, now: datetime, capability: Capability
-) -> None:
-    """`IAM-03`: administering is available to no other role."""
-    actor = write.privileges_in_force(principal.id, now)
-    acted_for = (
-        write.privileges_in_force(principal.acting_for, now)
-        if principal.acting_for is not None
-        else frozenset()
-    )
-    require(capability, principal, actor, acted_for)

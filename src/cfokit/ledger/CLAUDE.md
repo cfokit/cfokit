@@ -117,6 +117,10 @@ change and needs review. (ADR-0015)
 ## Stop and ask
 
 Booking semantics, auth, and the write path need human review **before** you proceed. So does
-adding any runtime dependency. There are **five**, each with its reason and verified licence in
-a comment in the root `pyproject.toml`: `psycopg[binary]`, `fastapi`, `uvicorn`, `mcp`,
-`pyjwt[crypto]`. Five is the number; a sixth is a decision.
+adding any runtime dependency. The list lives in the root `pyproject.toml`, each entry carrying
+its reason and its verified licence in a comment beside it; read it there and count them there.
+Whatever the number is, the next one is a decision rather than a convenience.
+
+The count is deliberately not restated here. It was, and it drifted: this file said five while
+the manifest held six, and the file with directory priority is the one an agent working in the
+ledger reads. A fact worth stating twice is a fact that will disagree with itself.

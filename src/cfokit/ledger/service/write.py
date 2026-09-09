@@ -29,7 +29,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass
-from datetime import UTC, date, datetime
+from datetime import date
 from decimal import Decimal
 from typing import Any
 
@@ -44,7 +44,7 @@ from cfokit.ledger.errors import (
     TransactionNotFound,
 )
 from cfokit.ledger.repository.unit_of_work import Database, EntityWrite
-from cfokit.ledger.service.authorisation import Capability, require
+from cfokit.ledger.service.authorisation import Capability, authorise
 from cfokit.ledger.service.principal import Principal
 
 __all__ = [
@@ -110,23 +110,6 @@ def _request_hash(*parts: Any) -> str:
 def _require_key(context: WriteContext) -> None:
     if not context.idempotency_key:
         raise IdempotencyKeyRequired("every write requires an idempotency key")
-
-
-def _authorise(write: EntityWrite, context: WriteContext, capability: Capability) -> None:
-    """Check the capability is in force, inside the transaction that will do the work.
-
-    Both principals are looked up for an agent, because `IAM-11` makes effective authority the
-    intersection of the skill's and the person's, and "no shared credential, service account,
-    or ambient authority stands in for either".
-    """
-    now = datetime.now(UTC)
-    actor = write.privileges_in_force(context.principal.id, now)
-    acted_for = (
-        write.privileges_in_force(context.principal.acting_for, now)
-        if context.principal.acting_for is not None
-        else frozenset()
-    )
-    require(capability, context.principal, actor, acted_for)
 
 
 def _require_open(write: EntityWrite, when: date) -> None:
@@ -203,7 +186,7 @@ def record_transaction(
                 replayed=True,
             )
 
-        _authorise(write, context, Capability.POST if post else Capability.RECORD)
+        authorise(write, Capability.POST if post else Capability.RECORD, context.principal)
 
         if (raises_obligation is not None or settles) and not post:
             raise TransactionIncomplete(
@@ -289,7 +272,7 @@ def post_transaction(
                 replayed=True,
             )
 
-        _authorise(write, context, Capability.POST)
+        authorise(write, Capability.POST, context.principal)
 
         stored = write.load_transaction(transaction_id)
         if stored is None:
@@ -361,7 +344,7 @@ def reverse_transaction(
 
         # A reversal posts immediately, so it needs the capability to post rather than only
         # to record (`LED-08`, ADR-0007).
-        _authorise(write, context, Capability.POST)
+        authorise(write, Capability.POST, context.principal)
 
         stored = write.load_transaction(transaction_id)
         if stored is None:

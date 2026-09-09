@@ -50,8 +50,8 @@ from typing import Any
 from uuid import UUID
 
 from cfokit.ledger.repository import archive
-from cfokit.ledger.repository.unit_of_work import Database, EntityWrite
-from cfokit.ledger.service.authorisation import Capability, require
+from cfokit.ledger.repository.unit_of_work import Database
+from cfokit.ledger.service.authorisation import Capability, authorise
 from cfokit.ledger.service.principal import Principal
 from cfokit.ledger.service.reports import trial_balance
 
@@ -101,7 +101,7 @@ def export_interchange(
     )
 
     with database.entity_write(entity_id) as write:
-        _require_read(write, principal)
+        authorise(write, Capability.READ, principal)
         accounts = write.chart()
         postings = write.exportable_postings(as_of=as_of, watermark=watermark)
 
@@ -172,17 +172,6 @@ def _csv(columns: tuple[str, ...], rows: Iterable[tuple[str, ...]]) -> str:
     return out.getvalue()
 
 
-def _require_read(write: EntityWrite, principal: Principal) -> None:
-    now = datetime.now(UTC)
-    actor = write.privileges_in_force(principal.id, now)
-    acted_for = (
-        write.privileges_in_force(principal.acting_for, now)
-        if principal.acting_for is not None
-        else frozenset()
-    )
-    require(Capability.READ, principal, actor, acted_for)
-
-
 @dataclass(frozen=True, slots=True)
 class Complete:
     """One complete archive, and what it says about itself."""
@@ -215,7 +204,7 @@ def export_complete(
     taken_at = datetime.now(UTC)
 
     with database.entity_write(entity_id) as write:
-        _require_read(write, principal)
+        authorise(write, Capability.READ, principal)
         tables = {name: write.archived(name) for name, _ in archive.TABLES}
         schema_version = write.schema_version()
 

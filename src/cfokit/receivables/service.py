@@ -19,12 +19,9 @@ to this module's tables through the same session setting.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
-from decimal import Decimal
-
 from cfokit.ledger.errors import LedgerError
 from cfokit.ledger.repository.unit_of_work import Database, EntityWrite
-from cfokit.ledger.service.authorisation import Capability, require
+from cfokit.ledger.service.authorisation import Capability, authorise
 from cfokit.ledger.service.principal import Principal
 from cfokit.receivables import Invoice, LineInput
 from cfokit.receivables import repository as store
@@ -91,7 +88,7 @@ def create_customer(
 ) -> str:
     """Add a customer to the entity (`AR-01`)."""
     with database.entity_write(entity_id) as write:
-        _require(write, principal, Capability.GRANT)
+        authorise(write, Capability.GRANT, principal)
         customer_id = store.create_customer(
             write.connection, entity_id=entity_id, name=name, email=email
         )
@@ -126,7 +123,7 @@ def update_customer(
     customer by id and carries its own frozen figures (`AR-14`).
     """
     with database.entity_write(entity_id) as write:
-        _require(write, principal, Capability.GRANT)
+        authorise(write, Capability.GRANT, principal)
         found = store.update_customer(
             write.connection,
             entity_id=entity_id,
@@ -155,7 +152,7 @@ def list_customers(
     include_archived: bool = False,
 ) -> list[store.Customer]:
     with database.entity_write(entity_id) as write:
-        _require(write, principal, Capability.READ)
+        authorise(write, Capability.READ, principal)
         return store.customers(
             write.connection, entity_id=entity_id, include_archived=include_archived
         )
@@ -182,7 +179,7 @@ def draft_invoice(
     foreign amount, which is why the ledger reads it the same way.
     """
     with database.entity_write(entity_id) as write:
-        _require(write, principal, Capability.RECORD)
+        authorise(write, Capability.RECORD, principal)
         _require_customer(write, entity_id, customer_id)
         _require_income(write, lines)
 
@@ -220,7 +217,7 @@ def replace_lines(
 ) -> None:
     """Rewrite a draft's lines. Refused once the invoice is issued (`AR-04`, `AR-14`)."""
     with database.entity_write(entity_id) as write:
-        _require(write, principal, Capability.RECORD)
+        authorise(write, Capability.RECORD, principal)
         found = store.invoice(write.connection, entity_id=entity_id, invoice_id=invoice_id)
         if found is None:
             raise InvoiceNotFound(invoice_id)
@@ -245,7 +242,7 @@ def invoice(
     database: Database, *, entity_id: str, principal: Principal, invoice_id: str
 ) -> Invoice:
     with database.entity_write(entity_id) as write:
-        _require(write, principal, Capability.READ)
+        authorise(write, Capability.READ, principal)
         found = store.invoice(write.connection, entity_id=entity_id, invoice_id=invoice_id)
     if found is None:
         raise InvoiceNotFound(invoice_id)
@@ -256,26 +253,8 @@ def invoices(
     database: Database, *, entity_id: str, principal: Principal, status: str | None = None
 ) -> list[Invoice]:
     with database.entity_write(entity_id) as write:
-        _require(write, principal, Capability.READ)
+        authorise(write, Capability.READ, principal)
         return store.invoices(write.connection, entity_id=entity_id, status=status)
-
-
-def total(lines: list[LineInput]) -> Decimal:
-    """What a set of lines comes to, exactly. Never rounded (ADR-0025)."""
-    from cfokit.receivables import total_of
-
-    return total_of(lines)
-
-
-def _require(write: EntityWrite, principal: Principal, capability: Capability) -> None:
-    now = datetime.now(UTC)
-    actor = write.privileges_in_force(principal.id, now)
-    acted_for = (
-        write.privileges_in_force(principal.acting_for, now)
-        if principal.acting_for is not None
-        else frozenset()
-    )
-    require(capability, principal, actor, acted_for)
 
 
 def _require_customer(write: EntityWrite, entity_id: str, customer_id: str) -> None:

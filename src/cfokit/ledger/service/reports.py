@@ -16,15 +16,15 @@ different machinery than it reports the present is two reports that can disagree
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, date, datetime
+from datetime import date, datetime
 from decimal import Decimal
 from enum import StrEnum
 
 from cfokit.ledger.engine.periods import preceding_window, year_earlier_window
 from cfokit.ledger.errors import AccountNotFound
 from cfokit.ledger.repository.reports import Account, AccountBalance, AccountEntry
-from cfokit.ledger.repository.unit_of_work import Database, EntityWrite
-from cfokit.ledger.service.authorisation import Capability, require
+from cfokit.ledger.repository.unit_of_work import Database
+from cfokit.ledger.service.authorisation import Capability, authorise
 from cfokit.ledger.service.principal import Principal
 
 __all__ = [
@@ -72,7 +72,7 @@ def trial_balance(
     from the postings that were in the books at that moment.
     """
     with database.entity_write(entity_id) as write:
-        _require_read(write, principal)
+        authorise(write, Capability.READ, principal)
         settings = write.settings
         rows = write.account_balances(as_of=as_of, watermark=watermark)
 
@@ -131,7 +131,7 @@ def profit_and_loss(
     stands at one.
     """
     with database.entity_write(entity_id) as write:
-        _require_read(write, principal)
+        authorise(write, Capability.READ, principal)
         settings = write.settings
         rows = write.account_balances(
             as_of=as_of, since=since, types=INCOME_STATEMENT_TYPES, watermark=watermark
@@ -160,7 +160,7 @@ def balance_sheet(
     Cumulative from the beginning of the books, because that is what a balance sheet is.
     """
     with database.entity_write(entity_id) as write:
-        _require_read(write, principal)
+        authorise(write, Capability.READ, principal)
         settings = write.settings
         rows = write.account_balances(
             as_of=as_of, types=BALANCE_SHEET_TYPES, watermark=watermark
@@ -180,17 +180,6 @@ def balance_sheet(
         rows=tuple(rows),
         unclosed=tuple(unclosed),
     )
-
-
-def _require_read(write: EntityWrite, principal: Principal) -> None:
-    now = datetime.now(UTC)
-    actor = write.privileges_in_force(principal.id, now)
-    acted_for = (
-        write.privileges_in_force(principal.acting_for, now)
-        if principal.acting_for is not None
-        else frozenset()
-    )
-    require(Capability.READ, principal, actor, acted_for)
 
 
 @dataclass(frozen=True, slots=True)
@@ -232,7 +221,7 @@ def account_detail(
     chain, and belongs with rules rather than here.
     """
     with database.entity_write(entity_id) as write:
-        _require_read(write, principal)
+        authorise(write, Capability.READ, principal)
         settings = write.settings
         found = write.account(account_id)
         if found is None:
