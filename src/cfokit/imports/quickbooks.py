@@ -53,7 +53,17 @@ from cfokit.imports.source import (
 )
 from cfokit.ledger.errors import LedgerError
 
-__all__ = ["SYSTEM", "SourceBooks", "UnreadableFigure", "read", "read_basis"]
+__all__ = [
+    "MAX_ARCHIVE_BYTES",
+    "MAX_MEMBERS",
+    "MAX_UNCOMPRESSED_BYTES",
+    "SYSTEM",
+    "ImportTooLarge",
+    "SourceBooks",
+    "UnreadableFigure",
+    "read",
+    "read_basis",
+]
 
 # What `IMP-04` requires an imported record to name.
 SYSTEM = "QuickBooks Online"
@@ -123,6 +133,78 @@ def read_basis(rows: Sequence[Row]) -> str:
     return "unknown"
 
 
+class ImportTooLarge(LedgerError):
+    """An archive this surface will not read, refused before it is decompressed.
+
+    **A ceiling belongs here, not at an adapter.** It was at the MCP tool, so the CLI had none
+    and any endpoint added later would have inherited none either. Every path onto the books
+    goes through `read`, which is the only place holding the bytes.
+
+    Three bounds rather than one, because one only catches the honest mistake:
+
+    - `MAX_ARCHIVE_BYTES` on the file, which fails fastest and costs nothing to check.
+    - `MAX_UNCOMPRESSED_BYTES` on what it expands to, which is the one that matters. A zip's
+      compressed size bounds its expanded size only if you assume the ratio is sane, and an
+      archive is untrusted input: 1,029x is four lines of Python, so a file inside a 100 MB
+      ceiling expands past 100 GB and takes the process — and every other entity's tools in it
+      — with it (`NFR-04`).
+    - `MAX_MEMBERS`, because thousands of tiny members cost time and file handles without
+      tripping either size bound.
+    """
+
+    code = "import_too_large"
+    status = 413
+
+
+# Measured against a real export rather than guessed: eight members, 979,403 bytes expanded
+# from 904,749, an overall ratio of 1.08. That ratio is not luck — the members are `.xlsx`
+# files, which are themselves zips, so a genuine export is very nearly incompressible. These
+# leave room for an export a hundred times larger than the one seen here while refusing
+# anything whose ratio says it is not an accounting export at all.
+MAX_ARCHIVE_BYTES = 100 * 1024 * 1024
+MAX_UNCOMPRESSED_BYTES = 300 * 1024 * 1024
+MAX_MEMBERS = 64
+
+
+def _bounded(export: zipfile.ZipFile) -> None:
+    """Refuse an archive that would expand past what this surface reads.
+
+    Checked against the central directory, which is metadata rather than decompression, so a
+    bomb is refused without a byte of it being expanded. The directory is the attacker's to
+    write, so it is not trusted on its own — `_member` bounds the actual read as well. This
+    check exists so the ordinary case fails immediately with a message naming the limit.
+    """
+    members = export.infolist()
+    if len(members) > MAX_MEMBERS:
+        raise ImportTooLarge(
+            f"the archive holds {len(members)} members; this surface reads at most"
+            f" {MAX_MEMBERS}"
+        )
+    declared = sum(member.file_size for member in members)
+    if declared > MAX_UNCOMPRESSED_BYTES:
+        raise ImportTooLarge(
+            f"the archive declares {declared} bytes expanded; this surface reads at most"
+            f" {MAX_UNCOMPRESSED_BYTES}"
+        )
+
+
+def _member(export: zipfile.ZipFile, name: str) -> bytes:
+    """One member's bytes, refusing to read past the ceiling.
+
+    Streamed with an explicit stop rather than `ZipFile.read`, because the size `_bounded`
+    checked came from the central directory and an attacker writes that. A member declaring a
+    kilobyte and delivering a terabyte passes the metadata check and is stopped here.
+    """
+    with export.open(name) as stream:
+        payload = stream.read(MAX_UNCOMPRESSED_BYTES + 1)
+    if len(payload) > MAX_UNCOMPRESSED_BYTES:
+        raise ImportTooLarge(
+            f"{name} expands past {MAX_UNCOMPRESSED_BYTES} bytes; the archive's own"
+            " directory understated it"
+        )
+    return payload
+
+
 def read(archive: bytes) -> SourceBooks:
     """One QuickBooks export, as `SourceBooks`.
 
@@ -136,7 +218,13 @@ def read(archive: bytes) -> SourceBooks:
     accrual. Reconciling one against the other then diverges on exactly the obligation
     accounts, which ADR-0037 predicts and `IMP-08` reports rather than tolerates.
     """
+    if len(archive) > MAX_ARCHIVE_BYTES:
+        raise ImportTooLarge(
+            f"the archive is {len(archive)} bytes; this surface reads at most"
+            f" {MAX_ARCHIVE_BYTES}"
+        )
     with zipfile.ZipFile(io.BytesIO(archive)) as export:
+        _bounded(export)
         types = _account_types(export)
         entries = _entries(export)
         basis = read_basis(_rows(export, "Journal.xlsx"))
@@ -420,7 +508,7 @@ def _rows(export: zipfile.ZipFile, member: str) -> list[Row]:
     # Unevaluated. `data_only=True` asks for a cached result, and QuickBooks caches none — so
     # every figure in the statement reports would come back as 0.0 rather than as missing.
     workbook = openpyxl.load_workbook(
-        io.BytesIO(export.read(member)), read_only=True, data_only=False
+        io.BytesIO(_member(export, member)), read_only=True, data_only=False
     )
     try:
         return list(workbook.worksheets[0].iter_rows(values_only=True))

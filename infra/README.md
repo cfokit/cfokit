@@ -32,7 +32,7 @@ metadata lookups, no provider SDK imports at module scope.
 | `AUTH_AUDIENCE` | yes | Expected token audience. Validated on every request (ADR-0011, ADR-0019). |
 | `LOG_LEVEL` | no | Defaults to `info`. |
 | `IMPORT_REPORTS` | no | Directory the import tools write their detail to. Separate from `IMPORT_ROOT` because the two want opposite permissions: exports are mounted read-only by anyone who has thought about it. Unset means no file is written and the reply says so. |
-| `IMPORT_ROOT` | no | Directory the import tools read from. Unset means the tools are not registered: a tool taking a path is a file-read primitive, and one reachable by any holder of a token should not exist unless a deployment asked for it (ADR-0040). |
+| `IMPORT_ROOT` | no | **Development only.** Directory the import tools read from. Unset means the tools are not registered: a tool taking a path is a file-read primitive, and one reachable by any holder of a token should not exist unless a deployment asked for it (ADR-0040). A deployed instance has no host directory to mount and takes an upload instead; this is not a supported deployment shape (ADR-0041). |
 | `PORT` | no | Defaults to `8080`. |
 
 There is deliberately no variable selecting a cloud, a region, or a provider.

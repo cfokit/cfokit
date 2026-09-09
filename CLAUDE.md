@@ -124,12 +124,13 @@ otherwise get wrong, because absence isn't visible in a manifest:
   forbidden because it makes an `await` inside a transaction expressible, and the workload has
   almost no concurrency to reclaim in exchange. (ADR-0024)
 - **Runtime dependencies are load-bearing and few.** Adding one is a decision, not a
-  convenience. Ask before adding any. Currently **six**, in the root `pyproject.toml`, each
+  convenience. Ask before adding any. Currently **seven**, in the root `pyproject.toml`, each
   with its reason and verified licence in a comment there: `psycopg[binary]` (driver), `fastapi`
   (REST + OpenAPI), `uvicorn` (ASGI server), `mcp` (tool surface), `pyjwt[crypto]` (audience
-  validation), `openpyxl` (reads the .xlsx an accounting export is made of). Those six pull
-  **38** packages in total — `uv export --no-dev --no-emit-project --no-hashes | grep -c
-  '^[a-z]'` — and the MCP SDK is most of it, accepted knowingly (ADR-0024).
+  validation), `openpyxl` (reads the .xlsx an accounting export is made of), `defusedxml`
+  (entity-expansion defence for that .xlsx, once an archive can arrive from outside). Those
+  seven pull **39** packages in total — `uv export --no-dev --no-emit-project --no-hashes |
+  grep -c '^[a-z]'` — and the MCP SDK is most of it, accepted knowingly (ADR-0024).
 - **Python 3.12+**, `ruff`, `mypy --strict`, `import-linter`.
 
 ## Money and correctness

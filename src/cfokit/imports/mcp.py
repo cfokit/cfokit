@@ -87,30 +87,6 @@ class ImportPathRefused(LedgerError):
     status = 400
 
 
-class ImportTooLarge(LedgerError):
-    """An archive larger than this surface will read into memory.
-
-    Refused before a byte is read, rather than discovered by the process dying. The whole file
-    is loaded, unzipped and turned into a workbook in memory, and the process doing that also
-    serves every other entity's tools — so an oversized file is one tenant's export taking the
-    surface down for all of them (`NFR-04`).
-
-    A ceiling rather than a streaming reader, because the ceiling is honest about what this
-    does and a reader that streamed would still have to hold the journal to group it. If a real
-    export ever exceeds this, the answer is to raise it deliberately after measuring, not to
-    discover the limit in production.
-    """
-
-    code = "import_too_large"
-    status = 413
-
-
-# Generous against a real export and small against available memory. The largest QuickBooks
-# export seen here is a few megabytes of zipped XML; a hundred is room for an order of
-# magnitude more without letting one file exhaust the process.
-MAX_ARCHIVE_BYTES = 100 * 1024 * 1024
-
-
 def resolve(root: Path, location: str) -> Path:
     """The file `location` names, if it is inside `root` and small enough to read.
 
@@ -118,8 +94,9 @@ def resolve(root: Path, location: str) -> Path:
     rather than after it — a containment test against an unresolved path tests the string
     somebody supplied instead of the file it reaches.
 
-    The size is checked here rather than at each call site, so a tool added later cannot forget
-    it: every path onto this surface comes through this function.
+    The size is checked twice on purpose. `quickbooks.read` holds the real ceiling, because it
+    is the one place every path onto the books goes through; this one refuses a file before
+    100 MB of it is read into memory to be handed over. Same constant, so they cannot drift.
     """
     candidate = (
         (root / location).resolve()
@@ -131,11 +108,12 @@ def resolve(root: Path, location: str) -> Path:
     if not candidate.is_file():
         raise ImportPathRefused(f"{location} is not a file")
     size = candidate.stat().st_size
-    if size > MAX_ARCHIVE_BYTES:
+    if size > quickbooks.MAX_ARCHIVE_BYTES:
         # The size is the operator's own file, not a secret, and knowing the limit is what
         # lets them act on the refusal.
-        raise ImportTooLarge(
-            f"{location} is {size} bytes; this surface reads at most {MAX_ARCHIVE_BYTES}"
+        raise quickbooks.ImportTooLarge(
+            f"{location} is {size} bytes; this surface reads at most"
+            f" {quickbooks.MAX_ARCHIVE_BYTES}"
         )
     return candidate
 

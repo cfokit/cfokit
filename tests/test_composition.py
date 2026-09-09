@@ -12,12 +12,8 @@ from pathlib import Path
 
 import pytest
 
-from cfokit.imports.mcp import (
-    MAX_ARCHIVE_BYTES,
-    ImportPathRefused,
-    ImportTooLarge,
-    resolve,
-)
+from cfokit.imports.mcp import ImportPathRefused, resolve
+from cfokit.imports.quickbooks import MAX_ARCHIVE_BYTES, ImportTooLarge
 from cfokit.ledger.config import Settings
 from cfokit.server import mcp_server
 
@@ -92,12 +88,11 @@ def test_a_path_escaping_the_root_is_refused(tmp_path: Path) -> None:
 
 
 def test_an_archive_over_the_ceiling_is_refused(tmp_path: Path) -> None:
-    """The whole file is read into memory and the process doing it serves every other entity's
-    tools, so an oversized file is one tenant's export taking the surface down for all of them
-    (`NFR-04`). Refused before a byte is read rather than discovered by the process dying.
+    """Refused before 100 MB is read into memory to be handed to the reader.
 
-    Written against `MAX_ARCHIVE_BYTES` rather than a number copied from it, so raising the
-    ceiling deliberately does not silently leave a test asserting the old one.
+    The reader holds the real ceiling — `tests/test_archive_bounds.py` — because every path
+    onto the books goes through it and this one is an adapter. This check is the fast
+    refusal in front of it, on the same constant so the two cannot drift.
     """
     oversized = tmp_path / "books.zip"
     oversized.write_bytes(b"\0" * (MAX_ARCHIVE_BYTES + 1))

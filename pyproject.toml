@@ -44,6 +44,15 @@ dependencies = [
     # is least willing to take. MIT, and pulls only et-xmlfile, also MIT (both verified
     # 2026-09-05 from the installed artifacts' metadata, not from memory).
     "openpyxl>=3.1",
+    # Entity-expansion defence for the XML inside an .xlsx. openpyxl checks for this package at
+    # import and routes its parsing through it when present — `OPENPYXL_DEFUSEDXML` defaults to
+    # "True", so installing it is enough and nothing sets that variable. Without it, parsing
+    # runs on stdlib ElementTree: external entities are not resolved, so this is not XXE, but
+    # billion-laughs and quadratic blowup are undefended. That is acceptable while an archive can
+    # only arrive from a directory the operator mounted, and stops being acceptable the moment
+    # one arrives over the wire. PSF-2.0, verified 2026-09-09 from the installed artifact's
+    # metadata, not from memory. Pulls nothing.
+    "defusedxml>=0.7",
 ]
 
 [build-system]
