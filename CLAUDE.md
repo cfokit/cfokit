@@ -90,6 +90,7 @@ uv run task migrate              # apply migrations (never runs on startup)
 docker compose up                # local production stack, no cloud account needed
 uv run task dev                  # compose.yaml + compose.dev.yaml
 docker compose --profile test run --rm test   # the whole suite, the way CI gate 2 runs it
+docker compose --profile test build test      # after any source change, or the above runs a cache
 ```
 
 **`uv run task test` is not the whole suite.** Every test of row-level security, the entity lock
