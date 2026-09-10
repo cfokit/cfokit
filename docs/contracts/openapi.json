@@ -667,6 +667,37 @@
         "title": "CreateEntityRequest",
         "type": "object"
       },
+      "DivergenceModel": {
+        "properties": {
+          "account_code": {
+            "title": "Account Code",
+            "type": "string"
+          },
+          "ours": {
+            "examples": [
+              "100.00",
+              "-1250.5000000000"
+            ],
+            "title": "Ours",
+            "type": "string"
+          },
+          "theirs": {
+            "examples": [
+              "100.00",
+              "-1250.5000000000"
+            ],
+            "title": "Theirs",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_code",
+          "ours",
+          "theirs"
+        ],
+        "title": "DivergenceModel",
+        "type": "object"
+      },
       "EntityCreatedResponse": {
         "properties": {
           "entity_id": {
@@ -988,6 +1019,94 @@
         "title": "OpenBalancesRequest",
         "type": "object"
       },
+      "OpenImportRequest": {
+        "description": "Open an import: create the chart, and name the import.\n\nCarries no entries. Those arrive in batches, because a company's whole journal in one\nrequest is the shape this design exists to avoid.",
+        "properties": {
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/SourceAccountModel"
+            },
+            "title": "Accounts",
+            "type": "array"
+          },
+          "balances_basis": {
+            "description": "The method the stated balances were computed on. Not a gate — an explanation. An accrual journal reconciled against cash-basis balances differs by exactly what is unsettled, which ADR-0037 predicts.",
+            "enum": [
+              "accrual",
+              "cash",
+              "unknown"
+            ],
+            "title": "Balances Basis",
+            "type": "string"
+          },
+          "basis": {
+            "description": "The accounting method of the *entries*. `IMP-06` refuses a conflict with the entity's declared basis; `unknown` conflicts with nothing.",
+            "enum": [
+              "accrual",
+              "cash",
+              "unknown"
+            ],
+            "title": "Basis",
+            "type": "string"
+          },
+          "commodity": {
+            "minLength": 1,
+            "title": "Commodity",
+            "type": "string"
+          },
+          "fingerprint": {
+            "description": "A digest of the file the shape was read from. The import's identity and half of every entry's idempotency key, so re-reading the same file names the same import and re-sending its entries replays rather than duplicates (ADR-0029).",
+            "minLength": 16,
+            "title": "Fingerprint",
+            "type": "string"
+          },
+          "shape_version": {
+            "const": "1",
+            "title": "Shape Version",
+            "type": "string"
+          },
+          "system": {
+            "description": "Where the books came from (`IMP-04`).",
+            "minLength": 1,
+            "title": "System",
+            "type": "string"
+          }
+        },
+        "required": [
+          "shape_version",
+          "system",
+          "fingerprint",
+          "basis",
+          "balances_basis",
+          "commodity",
+          "accounts"
+        ],
+        "title": "OpenImportRequest",
+        "type": "object"
+      },
+      "OpenImportResponse": {
+        "properties": {
+          "accounts_already_present": {
+            "title": "Accounts Already Present",
+            "type": "integer"
+          },
+          "accounts_created": {
+            "title": "Accounts Created",
+            "type": "integer"
+          },
+          "import_id": {
+            "title": "Import Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "import_id",
+          "accounts_created",
+          "accounts_already_present"
+        ],
+        "title": "OpenImportResponse",
+        "type": "object"
+      },
       "OpenedBooksResponse": {
         "properties": {
           "as_of": {
@@ -1052,6 +1171,61 @@
           "close_id"
         ],
         "title": "PeriodCloseResponse",
+        "type": "object"
+      },
+      "PostEntriesRequest": {
+        "description": "One batch of entries.",
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/SourceEntryModel"
+            },
+            "title": "Entries",
+            "type": "array"
+          },
+          "fingerprint": {
+            "minLength": 16,
+            "title": "Fingerprint",
+            "type": "string"
+          },
+          "system": {
+            "minLength": 1,
+            "title": "System",
+            "type": "string"
+          }
+        },
+        "required": [
+          "system",
+          "fingerprint",
+          "entries"
+        ],
+        "title": "PostEntriesRequest",
+        "type": "object"
+      },
+      "PostEntriesResponse": {
+        "description": "Never sum `posted` and `replayed`: they answer different questions.\n\nAn operator re-running an import wants to see `replayed` rise and `posted` stay at zero.\nThat is the retry working, not the file half-importing.",
+        "properties": {
+          "posted": {
+            "title": "Posted",
+            "type": "integer"
+          },
+          "refusals": {
+            "items": {
+              "$ref": "#/components/schemas/RefusalModel"
+            },
+            "title": "Refusals",
+            "type": "array"
+          },
+          "replayed": {
+            "title": "Replayed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "posted",
+          "replayed"
+        ],
+        "title": "PostEntriesResponse",
         "type": "object"
       },
       "PostingModel": {
@@ -1159,6 +1333,86 @@
           "net_income"
         ],
         "title": "ProfitAndLossResponse",
+        "type": "object"
+      },
+      "ReconcileImportRequest": {
+        "description": "The figures the source states for itself, for `IMP-08`'s comparison.",
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "End of that period. Omitted means all dates.",
+            "title": "As Of"
+          },
+          "balances": {
+            "items": {
+              "$ref": "#/components/schemas/StatedBalanceModel"
+            },
+            "title": "Balances",
+            "type": "array"
+          },
+          "since": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Start of the period the statements cover. Omitted means all dates, which is what a source's own reports are usually run over — and the period must match, or the figures differ for a reason that says nothing about correctness.",
+            "title": "Since"
+          },
+          "statements": {
+            "items": {
+              "$ref": "#/components/schemas/StatedStatementModel"
+            },
+            "title": "Statements",
+            "type": "array"
+          }
+        },
+        "title": "ReconcileImportRequest",
+        "type": "object"
+      },
+      "ReconcileImportResponse": {
+        "description": "No tolerance. `NFR-01`: \"a tolerance is a defect, not a target\".",
+        "properties": {
+          "agreed": {
+            "title": "Agreed",
+            "type": "integer"
+          },
+          "compared": {
+            "title": "Compared",
+            "type": "integer"
+          },
+          "divergences": {
+            "items": {
+              "$ref": "#/components/schemas/DivergenceModel"
+            },
+            "title": "Divergences",
+            "type": "array"
+          },
+          "statements": {
+            "items": {
+              "$ref": "#/components/schemas/StatementComparisonModel"
+            },
+            "title": "Statements",
+            "type": "array"
+          }
+        },
+        "required": [
+          "agreed",
+          "compared"
+        ],
+        "title": "ReconcileImportResponse",
         "type": "object"
       },
       "ReconcileRequest": {
@@ -1324,6 +1578,43 @@
         "title": "RecordTransactionRequest",
         "type": "object"
       },
+      "RefusalModel": {
+        "description": "One thing the import would not do, and why (`IMP-05`).",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "reference": {
+            "title": "Reference",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reference",
+          "date",
+          "code",
+          "detail"
+        ],
+        "title": "RefusalModel",
+        "type": "object"
+      },
       "ReopenPeriodRequest": {
         "description": "Reopen a closed period (LED-11, ADR-0030).\n\nA person's act, never a skill's. `reason` is required: SOC1-17 asks the reopen to capture\none, and a reopen without a reason is indistinguishable from a mistake afterwards.",
         "properties": {
@@ -1387,6 +1678,46 @@
         "title": "SettlementModel",
         "type": "object"
       },
+      "SourceAccountModel": {
+        "description": "One account in the source's chart.\n\n`code` is whatever the source system agrees with itself on. QuickBooks has no account codes,\nso it is the full colon-separated name; another source may have real ones.",
+        "properties": {
+          "account_type": {
+            "description": "`unknown` where the source states none. Recorded as a question rather than guessed: a wrong type is a silent misclassification, and a missing one is something an operator can answer.",
+            "enum": [
+              "asset",
+              "liability",
+              "equity",
+              "income",
+              "expense",
+              "unknown"
+            ],
+            "title": "Account Type",
+            "type": "string"
+          },
+          "code": {
+            "minLength": 1,
+            "title": "Code",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "parent": {
+            "default": "",
+            "description": "The `code` this sits under, or empty.",
+            "title": "Parent",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "account_type"
+        ],
+        "title": "SourceAccountModel",
+        "type": "object"
+      },
       "SourceBalanceModel": {
         "description": "One account's balance as the source system states it.",
         "properties": {
@@ -1409,6 +1740,194 @@
           "balance"
         ],
         "title": "SourceBalanceModel",
+        "type": "object"
+      },
+      "SourceEntryModel": {
+        "description": "One transaction, as the source grouped it.",
+        "properties": {
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/SourceLineModel"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "reference": {
+            "description": "The source's own identifier for this transaction, or a positional one. Half of the idempotency key, so it must be stable across a retry of the same file and unique within it (ADR-0029).",
+            "minLength": 1,
+            "title": "Reference",
+            "type": "string"
+          },
+          "transaction_date": {
+            "format": "date",
+            "title": "Transaction Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reference",
+          "transaction_date",
+          "lines"
+        ],
+        "title": "SourceEntryModel",
+        "type": "object"
+      },
+      "SourceLineModel": {
+        "description": "One posting line. Positive is a debit, as everywhere else.",
+        "properties": {
+          "account_code": {
+            "minLength": 1,
+            "title": "Account Code",
+            "type": "string"
+          },
+          "amount": {
+            "examples": [
+              "100.00",
+              "-1250.5000000000"
+            ],
+            "title": "Amount",
+            "type": "string"
+          },
+          "commodity": {
+            "minLength": 1,
+            "title": "Commodity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_code",
+          "amount",
+          "commodity"
+        ],
+        "title": "SourceLineModel",
+        "type": "object"
+      },
+      "StatedBalanceModel": {
+        "description": "A balance the source states for one account — its arithmetic, not ours.\n\nThis is what makes an import checkable (`IMP-08`). Summing the journal ourselves and\ncomparing that against our own books would be comparing our arithmetic against itself.",
+        "properties": {
+          "account_code": {
+            "minLength": 1,
+            "title": "Account Code",
+            "type": "string"
+          },
+          "balance": {
+            "examples": [
+              "100.00",
+              "-1250.5000000000"
+            ],
+            "title": "Balance",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_code",
+          "balance"
+        ],
+        "title": "StatedBalanceModel",
+        "type": "object"
+      },
+      "StatedStatementModel": {
+        "description": "A statement the source printed, by account, signed as the source prints it.",
+        "properties": {
+          "basis": {
+            "enum": [
+              "accrual",
+              "cash",
+              "unknown"
+            ],
+            "title": "Basis",
+            "type": "string"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/StatedBalanceModel"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "report": {
+            "enum": [
+              "profit_and_loss",
+              "balance_sheet"
+            ],
+            "title": "Report",
+            "type": "string"
+          },
+          "unmatched": {
+            "description": "Rows whose account the reader could not resolve. Reported rather than dropped: a line silently missing from a comparison is a difference that reads as agreement.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Unmatched",
+            "type": "array"
+          }
+        },
+        "required": [
+          "report",
+          "basis"
+        ],
+        "title": "StatedStatementModel",
+        "type": "object"
+      },
+      "StatementComparisonModel": {
+        "properties": {
+          "agreed": {
+            "title": "Agreed",
+            "type": "integer"
+          },
+          "divergences": {
+            "items": {
+              "$ref": "#/components/schemas/DivergenceModel"
+            },
+            "title": "Divergences",
+            "type": "array"
+          },
+          "only_ours": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Only Ours",
+            "type": "array"
+          },
+          "only_theirs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Only Theirs",
+            "type": "array"
+          },
+          "our_basis": {
+            "title": "Our Basis",
+            "type": "string"
+          },
+          "report": {
+            "title": "Report",
+            "type": "string"
+          },
+          "their_basis": {
+            "title": "Their Basis",
+            "type": "string"
+          },
+          "unmatched": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Unmatched",
+            "type": "array"
+          }
+        },
+        "required": [
+          "report",
+          "their_basis",
+          "our_basis",
+          "agreed"
+        ],
+        "title": "StatementComparisonModel",
         "type": "object"
       },
       "StatementLineModel": {
@@ -2580,6 +3099,383 @@
         "summary": "Revoke a grant",
         "tags": [
           "administration"
+        ]
+      }
+    },
+    "/entities/{entity_id}/imports": {
+      "post": {
+        "description": "Create every account the source uses that this entity lacks (`IMP-01`).\n\nA person's act, never a delegated agent's (ADR-0007): an agent session is refused with\n`not_a_person` and should ask the person it acts for.\n\nRefused outright where the source's basis conflicts with the entity's declared one\n(`IMP-06`) or its commodity is not the entity's (`IMP-07`). Both are read from the entity\nrather than taken from the body — a caller who could state them could state its way past the\nrefusal.\n\nSafe to repeat: an account already present is skipped, so a client retrying this step\ncreates nothing twice.",
+        "operationId": "open_import_entities__entity_id__imports_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Request-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpenImportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenImportResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Open an import and create the chart it needs",
+        "tags": [
+          "import"
+        ]
+      }
+    },
+    "/entities/{entity_id}/imports/{import_id}/entries": {
+      "post": {
+        "description": "Each entry is a write through the ledger's ordinary path (`IMP-02`, `IMP-04`).\n\n**Safe to retry.** Every entry's idempotency key is derived from the file's fingerprint and\nthe source's own reference, so a batch sent twice is a replay rather than a second set of\nbooks (ADR-0029) — which is what lets a client that dies mid-import resume by sending the\nsame batches again. `replayed` counts what a previous attempt had already done, and is never\nsummed with `posted`.\n\n`import_id` must be the one this fingerprint yields. It is derived rather than stored, so\nthis is a check that the caller is continuing the import it opened rather than a lookup.\n\nA row this cannot post is reported and the rest of the batch proceeds: `IMP-05` asks for an\nimport that skips a malformed row rather than abandoning eleven thousand good ones.",
+        "operationId": "post_import_entries_entities__entity_id__imports__import_id__entries_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "import_id",
+            "required": true,
+            "schema": {
+              "title": "Import Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Request-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostEntriesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostEntriesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Post one batch of a source's transactions",
+        "tags": [
+          "import"
+        ]
+      }
+    },
+    "/entities/{entity_id}/imports/{import_id}/reconciliation": {
+      "post": {
+        "description": "`IMP-08`, and the reason any of this is trustworthy.\n\nAgreement is demonstrated against the balances the source states **for itself**, not against\na sum computed from the same journal that was just loaded — that would be our arithmetic\nagainst itself (`NFR-01`).\n\nReads only, so it may be repeated, and it is a read rather than a person's act: anyone who\nmay read this entity's books may check them.\n\nNo tolerance. Where the source's statements were run on a different basis from its\njournal, the obligation accounts differ by exactly what is unsettled — ADR-0037\npredicts it, and it is reported as a divergence rather than absorbed.",
+        "operationId": "reconcile_import_entities__entity_id__imports__import_id__reconciliation_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "import_id",
+            "required": true,
+            "schema": {
+              "title": "Import Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReconcileImportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconcileImportResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Compare the imported books against the figures the source states",
+        "tags": [
+          "import"
         ]
       }
     },

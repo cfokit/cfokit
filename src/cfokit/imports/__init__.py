@@ -31,11 +31,17 @@ afterwards, where `PLT-02` puts the runtime in the organisation's own hands.
 from __future__ import annotations
 
 import uuid
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
 
-from cfokit.imports.source import SourceBooks, StatedStatement
+from cfokit.imports.source import (
+    SourceAccount,
+    SourceBooks,
+    SourceEntry,
+    StatedStatement,
+)
 from cfokit.ledger.engine import Entry, Posting
 from cfokit.ledger.engine.postability import MINIMUM_POSTINGS
 from cfokit.ledger.errors import LedgerError, NotAPerson
@@ -46,7 +52,19 @@ from cfokit.ledger.service.principal import ActorClass, Principal
 from cfokit.ledger.service.reports import balance_sheet, profit_and_loss, trial_balance
 from cfokit.ledger.service.write import WriteContext, record_transaction
 
-__all__ = ["Comparison", "Plan", "Refusal", "Result", "apply", "compare", "plan"]
+__all__ = [
+    "Comparison",
+    "Opened",
+    "Plan",
+    "Posted",
+    "Refusal",
+    "Result",
+    "apply",
+    "compare",
+    "open_books",
+    "plan",
+    "post_entries",
+]
 
 # An account the source states no type for. The chart admits five types and none of them means
 # "unknown", so something has to be chosen; `asset` is inert for a trial balance, which groups
@@ -126,6 +144,29 @@ class Result:
     def reconciled(self) -> bool:
         """`IMP-08`: agreement demonstrated rather than assumed, with no tolerance."""
         return self.compared > 0 and self.agreed == self.compared
+
+
+@dataclass(frozen=True, slots=True)
+class Opened:
+    """An import's chart, created and ready for entries (`IMP-05` step two)."""
+
+    import_id: str
+    accounts_created: int
+    accounts_already_present: int
+
+
+@dataclass(frozen=True, slots=True)
+class Posted:
+    """What one batch of entries did.
+
+    `posted` and `replayed` answer different questions and are never summed. An operator
+    re-running an import wants to see the second rise and the first stay at zero — that is the
+    retry working rather than the file half-importing (ADR-0029).
+    """
+
+    posted: int
+    replayed: int
+    refusals: tuple[Refusal, ...] = ()
 
 
 def plan(
@@ -213,39 +254,20 @@ def apply(
     RFC 8693 `act` claim is an agent acting for someone, and it is that second shape this
     refuses.
     """
-    if principal.actor_class is not ActorClass.PERSON:
-        raise NotAPerson(
-            "importing a company's books is a person's act; ask the person you act for"
-        )
+    _require_person(principal)
 
     proposed = plan(database, entity_id=entity_id, principal=principal, books=books)
     if proposed.blocked is not None:
         raise ImportRefused(proposed.blocked)
 
     import_id = _import_id(books.fingerprint)
-    accounts: dict[str, str] = {}
-    with database.entity_write(entity_id) as write:
-        accounts = {account.code: account.account_id for account in write.chart()}
-
-    created = 0
-    # Sorted, so a parent is created before anything under it: a path sorts before every path
-    # it prefixes, which is the ordering the chart's foreign key needs.
-    for account in sorted(books.accounts, key=lambda a: a.code):
-        if account.code in accounts:
-            continue
-        accounts[account.code] = create_account(
-            database,
-            entity_id=entity_id,
-            principal=principal,
-            request_id=request_id,
-            code=account.code,
-            name=account.name,
-            account_type=(
-                account.account_type if account.account_type != "unknown" else FALLBACK_TYPE
-            ),
-            parent_id=accounts.get(account.parent) if account.parent else None,
-        )
-        created += 1
+    accounts, created = _create_chart(
+        database,
+        entity_id=entity_id,
+        principal=principal,
+        request_id=request_id,
+        accounts=books.accounts,
+    )
 
     refused = {refusal.reference for refusal in proposed.refusals}
     posted = 0
@@ -319,6 +341,216 @@ def apply(
     )
 
 
+def _create_chart(
+    database: Database,
+    *,
+    entity_id: str,
+    principal: Principal,
+    request_id: str,
+    accounts: tuple[SourceAccount, ...],
+) -> tuple[dict[str, str], int]:
+    """Create every account the source uses that this entity does not have.
+
+    Sorted, so a parent is created before anything under it: a path sorts before every path it
+    prefixes, which is the ordering the chart's foreign key needs.
+
+    Idempotent by observation rather than by a key — an account already present is skipped — so
+    a client that retries the opening step creates nothing twice.
+    """
+    known: dict[str, str] = {}
+    with database.entity_write(entity_id) as write:
+        known = {account.code: account.account_id for account in write.chart()}
+
+    created = 0
+    for account in sorted(accounts, key=lambda a: a.code):
+        if account.code in known:
+            continue
+        known[account.code] = create_account(
+            database,
+            entity_id=entity_id,
+            principal=principal,
+            request_id=request_id,
+            code=account.code,
+            name=account.name,
+            account_type=(
+                account.account_type if account.account_type != "unknown" else FALLBACK_TYPE
+            ),
+            parent_id=known.get(account.parent) if account.parent else None,
+        )
+        created += 1
+    return known, created
+
+
+def open_books(
+    database: Database,
+    *,
+    entity_id: str,
+    principal: Principal,
+    request_id: str,
+    books: SourceBooks,
+) -> Opened:
+    """Create the chart an import needs, and name the import (`IMP-01`).
+
+    The first of three calls, because the entries arrive in batches and something has to exist
+    for them to post into. Takes the shape with `entries` empty: an opening call carrying a
+    company's whole journal would be the single enormous request this shape exists to avoid.
+
+    **A person's act, like `apply`.** ADR-0007 puts it plainly — the agent proposes and a
+    person's confirmation posts — and creating a company's chart of accounts is the first half
+    of that act rather than a preliminary to it.
+    """
+    _require_person(principal)
+    blocked = _blocking_shape(database, entity_id=entity_id, principal=principal, books=books)
+    if blocked is not None:
+        raise ImportRefused(blocked)
+
+    _, created = _create_chart(
+        database,
+        entity_id=entity_id,
+        principal=principal,
+        request_id=request_id,
+        accounts=books.accounts,
+    )
+    return Opened(
+        import_id=_import_id(books.fingerprint),
+        accounts_created=created,
+        accounts_already_present=len(books.accounts) - created,
+    )
+
+
+def post_entries(
+    database: Database,
+    *,
+    entity_id: str,
+    principal: Principal,
+    request_id: str,
+    system: str,
+    fingerprint: str,
+    entries: Sequence[SourceEntry],
+) -> Posted:
+    """Post one batch of entries (`IMP-02`).
+
+    Each entry is its own write through the ledger's ordinary path, with a key derived from
+    the file's fingerprint and the source's own reference. A batch sent twice is a replay rather
+    than a second set of books (ADR-0029), which is what lets a client that dies mid-import
+    resume by sending the same batches again.
+
+    A refusal the plan could not foresee — a closed period, or an account the chart will not
+    take — is reported rather than swallowed. `NFR-01` resolves disagreements rather than
+    tolerating them, and a transaction the ledger declined is one.
+    """
+    _require_person(principal)
+    import_id = _import_id(fingerprint)
+    with database.entity_write(entity_id) as write:
+        accounts = {account.code: account.account_id for account in write.chart()}
+
+    posted = replayed = 0
+    refusals: list[Refusal] = []
+    for entry in entries:
+        problem = _unpostable(entry, accounts)
+        if problem is not None:
+            refusals.append(problem)
+            continue
+        try:
+            written = record_transaction(
+                database,
+                WriteContext(
+                    entity_id=entity_id,
+                    principal=principal,
+                    request_id=request_id,
+                    idempotency_key=_entry_key(fingerprint, entry.reference),
+                ),
+                entry=Entry(
+                    transaction_date=entry.transaction_date,
+                    postings=tuple(
+                        Posting(
+                            account_id=accounts[line.account_code],
+                            amount=line.amount,
+                            commodity=line.commodity,
+                        )
+                        for line in entry.lines
+                    ),
+                    description=entry.description or None,
+                ),
+                post=True,
+                derived_from={
+                    "system": system,
+                    "import_id": import_id,
+                    "reference": entry.reference,
+                },
+            )
+        except LedgerError as refusal:
+            refusals.append(
+                Refusal(
+                    reference=entry.reference,
+                    when=entry.transaction_date,
+                    code=refusal.code,
+                    detail=str(refusal),
+                )
+            )
+        else:
+            if written.replayed:
+                replayed += 1
+            else:
+                posted += 1
+    return Posted(posted=posted, replayed=replayed, refusals=tuple(refusals))
+
+
+def _unpostable(entry: SourceEntry, accounts: dict[str, str]) -> Refusal | None:
+    """Why this entry will not post, decided before the write is attempted.
+
+    The same two checks `_refusals` makes over a whole file, plus the one only a batch can make:
+    an account the opening call did not create. A batch naming an unknown account is a client
+    that skipped the opening step or sent a file's entries against another file's chart.
+    """
+    if len(entry.lines) < MINIMUM_POSTINGS:
+        return Refusal(
+            entry.reference,
+            entry.transaction_date,
+            "transaction_incomplete",
+            f"{len(entry.lines)} posting(s); a movement of value needs {MINIMUM_POSTINGS}",
+        )
+    difference = sum(line.amount for line in entry.lines)
+    if difference != 0:
+        return Refusal(
+            entry.reference,
+            entry.transaction_date,
+            "unbalanced",
+            f"debits and credits differ by {difference}",
+        )
+    missing = sorted({line.account_code for line in entry.lines} - set(accounts))
+    if missing:
+        return Refusal(
+            entry.reference,
+            entry.transaction_date,
+            "unknown_account",
+            f"this entity has no account {missing[0]!r};"
+            " open the import before posting entries",
+        )
+    return None
+
+
+def _blocking_shape(
+    database: Database, *, entity_id: str, principal: Principal, books: SourceBooks
+) -> str | None:
+    """Whether this shape may be imported into this entity at all.
+
+    Read from the entity rather than taken from the caller: `IMP-06` refuses an import whose
+    basis conflicts with the entity's declared one, and a caller who could state the basis could
+    state its way past that refusal.
+    """
+    report = trial_balance(database, entity_id=entity_id, principal=principal, as_of=date.max)
+    return _blocking(books, report.accounting_basis, report.functional_currency)
+
+
+def _require_person(principal: Principal) -> None:
+    """ADR-0007, ADR-0033: from the shape of the token, never from a claim the caller sets."""
+    if principal.actor_class is not ActorClass.PERSON:
+        raise NotAPerson(
+            "importing a company's books is a person's act; ask the person you act for"
+        )
+
+
 class ImportRefused(LedgerError):
     """The import cannot proceed at all, as opposed to skipping rows within one."""
 
@@ -383,9 +615,15 @@ def _blocking(books: SourceBooks, basis: str, commodity: str) -> str | None:
             f"the source states {books.basis} basis and this entity is {basis}"
             " — importing would land figures the books cannot reproduce"
         )
-    foreign = sorted(
-        {line.commodity for entry in books.entries for line in entry.lines} - {commodity}
-    )
+    # The declared commodity and the entries' commodities are checked separately, because the
+    # batched surface opens an import before it has sent a single entry — a file declaring GBP
+    # against books kept in USD has to be refused then, not eleven thousand rows later. Where
+    # entries are present the per-line check still runs, so a top-level field that lied about
+    # them is caught too.
+    stated = {line.commodity for entry in books.entries for line in entry.lines}
+    if books.commodity:
+        stated.add(books.commodity)
+    foreign = sorted(stated - {commodity})
     if foreign:
         # IMP-07, on the same terms as any other foreign amount (`LED-15`).
         return f"the source carries {', '.join(foreign)} and this entity is {commodity}"
@@ -425,7 +663,12 @@ def _refusals(books: SourceBooks) -> list[Refusal]:
 
 
 def _reconcile(
-    database: Database, *, entity_id: str, principal: Principal, books: SourceBooks
+    database: Database,
+    *,
+    entity_id: str,
+    principal: Principal,
+    books: SourceBooks,
+    as_of: date | None = None,
 ) -> tuple[int, int, tuple[tuple[str, Decimal, Decimal], ...]]:
     """`IMP-08`: agreement with the source demonstrated rather than assumed.
 
@@ -440,7 +683,12 @@ def _reconcile(
     """
     if not books.balances:
         return 0, 0, ()
-    as_of = max(entry.transaction_date for entry in books.entries)
+    # The caller's date where it has one, and the journal's last otherwise. The batched surface
+    # reconciles from a request that carries balances and no entries, so there is nothing there
+    # to take a period from; `date.max` is "all dates", which is what the source's own reports
+    # were run over.
+    if as_of is None:
+        as_of = max((entry.transaction_date for entry in books.entries), default=date.max)
     report = present_reconciliation(
         trial_balance(database, entity_id=entity_id, principal=principal, as_of=as_of),
         [
@@ -500,6 +748,8 @@ def compare(
     entity_id: str,
     principal: Principal,
     books: SourceBooks,
+    since: date | None = None,
+    as_of: date | None = None,
 ) -> tuple[Comparison, ...]:
     """Every statement the source printed, against the one CFOKit produces (`IMP-08`).
 
@@ -513,10 +763,15 @@ def compare(
     An account on one side only is reported rather than dropped. A line silently missing from a
     comparison is a difference that reads as agreement.
     """
-    if not books.entries:
+    if not books.entries and not books.statements:
         return ()
-    since = min(entry.transaction_date for entry in books.entries)
-    as_of = max(entry.transaction_date for entry in books.entries)
+    # As above: the period is the caller's where it states one, and the journal's otherwise.
+    # `date.min` to `date.max` is "all dates", which is what a source's own statements are run
+    # over and therefore the only period that compares like with like.
+    if since is None:
+        since = min((entry.transaction_date for entry in books.entries), default=date.min)
+    if as_of is None:
+        as_of = max((entry.transaction_date for entry in books.entries), default=date.max)
 
     comparisons: list[Comparison] = []
     for stated in books.statements:

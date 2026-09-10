@@ -17,6 +17,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 from mcp.server import MCPServer
 
+from cfokit.imports import api as imports_api
 from cfokit.imports import mcp as imports_mcp
 from cfokit.ledger.api import create_app
 from cfokit.ledger.config import Settings
@@ -48,10 +49,13 @@ def mcp_server(settings: Settings, authenticator: Authenticator | None = None) -
 
 
 def rest_app(settings: Settings, authenticator: Authenticator | None = None) -> FastAPI:
-    """The REST surface.
+    """The REST surface: the ledger's routes, plus each module's.
 
-    No module contributes routes yet. Import's surface is MCP because its caller is an
-    operator's agent; a REST route would need the bytes delivered over the wire, which is the
-    hosted-deployment question ADR-0040 leaves open.
+    Import contributes its own router rather than being mounted by the ledger's adapter, which
+    would be the dependency ADR-0022's contract forbids. It is included unconditionally: the
+    routes take a body, not a path, so unlike the MCP tools they are not a file-read primitive
+    and there is nothing to withhold until a deployment asks for it (ADR-0041).
     """
-    return create_app(settings, authenticator=authenticator)
+    app = create_app(settings, authenticator=authenticator)
+    app.include_router(imports_api.router)
+    return app

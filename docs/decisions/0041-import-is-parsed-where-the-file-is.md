@@ -114,7 +114,39 @@ Retry stays safe because [ADR-0029](0029-mandatory-idempotency-keys.md)'s keys a
 file's fingerprint and the source's own row reference: a batch sent twice is a replay, and a client
 that dies mid-import resumes by sending the same batches again.
 
-### 5. `IMPORT_ROOT` is removed rather than demoted
+### 5. The script authenticates as a person, by device flow, and caches nothing
+
+The script POSTs, so it needs a credential, and it cannot borrow the agent session's: `apply`
+refuses anything that is not `ActorClass.PERSON`, and a token an agent session holds carries an
+RFC 8693 `act` claim. **A person-facing sign-in is therefore the design rather than friction added
+to it** — ADR-0007's "the agent proposes; a person's confirmation posts", applied to the largest
+single act of posting the system offers.
+
+**RFC 8628 device authorization**, against a public client declared in the realm. The script
+discovers `device_authorization_endpoint` from `AUTH_ISSUER_URL`'s metadata, prints a URL and a
+user code, and polls — no issuer-specific code (ADR-0019), and no bound port or local browser,
+neither of which an agent runtime reliably has. It is what `gh`, `aws` and `az` do, for that
+reason.
+
+**A public client, so it ships in the realm.** It holds no secret, which is why it can be in the
+repository where the Claude Desktop client deliberately is not. A self-hoster gets it with the
+realm rather than registering one.
+
+**Nothing is cached — no token, no refresh token.** One sign-in per run. A standing refresh token
+in an agent runtime is a credential sitting where a great deal can read it, in exchange for
+convenience on an operation a company performs approximately once. A run that dies is resumed by
+signing in again, which is safe because ADR-0029's derived keys make the repeat a replay.
+
+CFOKit issues nothing. `IAM-10` says it "never issues credentials, stores passwords, or operates a
+login flow", so an endpoint minting a short-lived import token was considered and rejected outright
+rather than weighed.
+
+**Device flow is not universal, and that is a contract line rather than a surprise.** It joins the
+issuer contract `infra/README.md` states and the conformance suite verifies, on the same footing as
+RFC 8707 — which no issuer implements and which the suite records as a strict xfail. Loopback with
+PKCE (RFC 8252) is the documented fallback for an issuer without it.
+
+### 6. `IMPORT_ROOT` is removed rather than demoted
 
 An earlier draft kept it as a development affordance. Two ingress paths is the thing that record
 argued against, and a convenience kept "for local development" is how a second supported path
@@ -122,6 +154,9 @@ arrives by accident. The script runs locally as readily as it runs anywhere.
 
 ### Consequences
 
+* Good, because the import is the one operation that already had to be a person's act, so the
+  credential it needs and the credential it can get are the same one — the constraint and the
+  mechanism agree instead of fighting.
 * Good, because the runtime dependency count goes **down**. `openpyxl` was added for the reader and
   nothing else imports it.
 * Good, because the operator's file never leaves their machine, on a hosted deployment as much as a
@@ -157,6 +192,10 @@ is written by whoever made the file.
 
 The contract itself is gated by CI gate 5 (`ADR-0015`): the neutral shape is a published interface,
 so a change to it appears in a pull request as a change to a contract.
+
+The issuer contract's device-flow line is verified by `tests/integration/test_issuer_conformance.py`
+against the running issuer, which is where `AUTH_ISSUER_URL`'s other obligations are already
+measured rather than assumed.
 
 **Not gated:** nothing detects a skill emitting an older shape than the server expects. A version
 field makes it detectable at the boundary; nothing makes it impossible.
