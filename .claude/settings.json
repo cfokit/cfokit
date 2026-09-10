@@ -35,6 +35,7 @@
       "Bash(uv tree:*)"
     ],
     "ask": [
+      "Bash(docker compose down -v:*)",
       "Bash(docker compose down:*)",
       "Bash(docker compose up:*)",
       "Bash(gh pr create:*)",
@@ -52,7 +53,6 @@
       "Bash(pip install:*)",
       "Bash(poetry:*)",
       "Bash(terraform:*)",
-      "Bash(docker compose down -v:*)",
       "Read(./.env)",
       "Read(./.env.*)",
       "Read(./**/*.tfstate)",

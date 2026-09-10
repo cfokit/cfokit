@@ -1,0 +1,15 @@
+-- Acts reserved to a principal's own judgement (ADR-0042).
+--
+-- Reopening a closed period and importing a company's books were gated on `actor_class`, which
+-- does not do what it says: a token carrying no RFC 8693 `act` claim is classified as a person,
+-- and a client credentials token carries none. So a component granted capabilities in an entity
+-- passed a check that reads as "a person did this".
+--
+-- The reservation moves to the grant model, where every other authority question already lives
+-- and where a decision has a grantor, a timestamp and an audit row.
+--
+-- `owner` carries it. `IAM-05` requires no separate step to make an entity usable and `IAM-06`
+-- that a running deployment is usable as it stands, so an owner who cannot import their own
+-- books until somebody grants them something has been handed exactly the step both forbid. The
+-- control is against granting a *narrow* role to a component and silently conferring these acts.
+INSERT INTO role_privilege (role_name, privilege) VALUES ('owner', 'act_as_principal');

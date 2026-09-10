@@ -20,11 +20,11 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from enum import StrEnum
 
-from cfokit.ledger.errors import NotAuthorised
+from cfokit.ledger.errors import NotAPerson, NotAuthorised
 from cfokit.ledger.repository.unit_of_work import EntityWrite
 from cfokit.ledger.service.principal import Principal
 
-__all__ = ["Capability", "authorise", "effective", "require"]
+__all__ = ["Capability", "authorise", "authorise_own_act", "effective", "require"]
 
 
 class Capability(StrEnum):
@@ -45,6 +45,11 @@ class Capability(StrEnum):
     granting and revoking ownership to owners. Nothing carries `GRANT` without `OWN` today —
     `owner` is the only role — and the split is what lets a role that delegates staffing
     without handing the entity over be added by migration rather than by code.
+
+    `ACT_AS_PRINCIPAL` is separate from all of them because it is not a class of work. It marks
+    the acts that must be somebody's own rather than performed on their behalf or by a component
+    running unattended, and it is separate precisely so a narrow role can be granted to a
+    component without conferring them (ADR-0042).
     """
 
     READ = "read"
@@ -53,6 +58,7 @@ class Capability(StrEnum):
     GRANT = "grant"
     CLOSE = "close"
     OWN = "own"
+    ACT_AS_PRINCIPAL = "act_as_principal"
 
 
 def _known(privileges: frozenset[str]) -> frozenset[Capability]:
@@ -126,3 +132,33 @@ def authorise(write: EntityWrite, capability: Capability, principal: Principal) 
         else frozenset[str]()
     )
     require(capability, principal, write.privileges_in_force(principal.id, now), acted_for)
+
+
+def authorise_own_act(write: EntityWrite, principal: Principal) -> None:
+    """Raise unless this principal may perform an act reserved to its own judgement.
+
+    **Two conditions, and neither implies the other** (ADR-0042).
+
+    The principal must not be acting for another. `IAM-11` makes an agent's authority the
+    intersection of its grants and the person's, so intersection alone would let a skill inherit
+    the reservation from the person it acts for — which is the failure the reservation exists to
+    prevent. ADR-0007's "the agent proposes; a person's confirmation posts" is about *who
+    confirms*, not about what they may do.
+
+    And it must hold `ACT_AS_PRINCIPAL`. The delegation check alone was the whole of this
+    once, and it does not do what it says: `principal_from_claims` assigns `PERSON` to any
+    token carrying no `act` claim, and a client credentials token carries none — so a
+    component was classified as a person and passed. The grant model is where the reservation
+    belongs, because it is read server-side from rows that have a grantor, a timestamp and an
+    audit row, none of which a token's shape has.
+
+    `owner` carries the capability, because `IAM-05` and `IAM-06` forbid a separate
+    provisioning step: an entity is usable the moment it is created. The control is against
+    granting something *narrow* to a component and silently conferring these acts, not against
+    `owner`, which nobody hands out by accident.
+    """
+    if principal.acting_for is not None:
+        raise NotAPerson(
+            "this act is the principal's own; a delegated session may not perform it"
+        )
+    authorise(write, Capability.ACT_AS_PRINCIPAL, principal)

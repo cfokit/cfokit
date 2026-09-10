@@ -90,8 +90,12 @@ uv run task migrate              # apply migrations (never runs on startup)
 docker compose up                # local production stack, no cloud account needed
 uv run task dev                  # compose.yaml + compose.dev.yaml
 docker compose --profile test run --rm test   # the whole suite, the way CI gate 2 runs it
-docker compose --profile test build test      # after any source change, or the above runs a cache
+docker compose --profile test build <service>  # after any source change, or the above runs a cache
 ```
+
+**Rebuild before you run.** Every service copies the source into an image rather than mounting
+it, so `test` runs the previous copy after an edit and `migrate` reports "no migrations to apply"
+for a migration that is on disk. Both have cost real debugging time.
 
 **`uv run task test` is not the whole suite.** Every test of row-level security, the entity lock
 and the write path needs a database and an issuer, and skips without them — which is most of the

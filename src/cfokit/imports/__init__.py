@@ -44,11 +44,12 @@ from cfokit.imports.source import (
 )
 from cfokit.ledger.engine import Entry, Posting
 from cfokit.ledger.engine.postability import MINIMUM_POSTINGS
-from cfokit.ledger.errors import LedgerError, NotAPerson
+from cfokit.ledger.errors import LedgerError
 from cfokit.ledger.presentation import SourceBalance, present_reconciliation
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.administration import create_account
-from cfokit.ledger.service.principal import ActorClass, Principal
+from cfokit.ledger.service.authorisation import authorise_own_act
+from cfokit.ledger.service.principal import Principal
 from cfokit.ledger.service.reports import balance_sheet, profit_and_loss, trial_balance
 from cfokit.ledger.service.write import WriteContext, record_transaction
 
@@ -165,7 +166,9 @@ def open_books(
     person's confirmation posts — and creating a company's chart of accounts is the first half
     of that act rather than a preliminary to it.
     """
-    _require_person(principal)
+    with database.entity_write(entity_id) as write:
+        authorise_own_act(write, principal)
+
     blocked = _blocking_shape(database, entity_id=entity_id, principal=principal, books=books)
     if blocked is not None:
         raise ImportRefused(blocked)
@@ -205,9 +208,9 @@ def post_entries(
     take — is reported rather than swallowed. `NFR-01` resolves disagreements rather than
     tolerating them, and a transaction the ledger declined is one.
     """
-    _require_person(principal)
     import_id = _import_id(fingerprint)
     with database.entity_write(entity_id) as write:
+        authorise_own_act(write, principal)
         accounts = {account.code: account.account_id for account in write.chart()}
 
     posted = replayed = 0
@@ -307,14 +310,6 @@ def _blocking_shape(
     """
     report = trial_balance(database, entity_id=entity_id, principal=principal, as_of=date.max)
     return _blocking(books, report.accounting_basis, report.functional_currency)
-
-
-def _require_person(principal: Principal) -> None:
-    """ADR-0007, ADR-0033: from the shape of the token, never from a claim the caller sets."""
-    if principal.actor_class is not ActorClass.PERSON:
-        raise NotAPerson(
-            "importing a company's books is a person's act; ask the person you act for"
-        )
 
 
 class ImportRefused(LedgerError):
