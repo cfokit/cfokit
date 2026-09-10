@@ -613,7 +613,7 @@
     {
       "clientId": "cfokit-importer",
       "name": "CFOKit importer",
-      "description": "The reader that ships with the bookkeeper skill, signing a person in so it can post their books (ADR-0041). Public: it holds no secret, which is why it can live in this file where a confidential client cannot. Device authorization only \u2014 the script may run in a container with no browser and no bindable port, and the person's browser may be on another machine.",
+      "description": "The reader that ships with the bookkeeper skill, signing a person in so it can post their books. Public, device-authorization only. See ADR-0041 for why.",
       "enabled": true,
       "publicClient": true,
       "standardFlowEnabled": false,
