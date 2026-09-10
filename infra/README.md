@@ -111,6 +111,11 @@ Any conforming issuer must provide:
 - RFC 7591 Dynamic Client Registration **or** Client ID Metadata Documents
 - The **client credentials grant**, for separate components authenticating as machine callers
   (ADR-0032 — an extension to the contract originally set in ADR-0019)
+- **RFC 8628 Device Authorization**, for the importer that ships with the bookkeeper skill. It
+  runs in an agent's runtime, which may have no browser and no port it can bind, and the person
+  approving may be at a different machine entirely — so a redirect flow has nothing to redirect
+  to. An issuer without it needs the RFC 8252 loopback-with-PKCE fallback instead, which is a
+  deployment note rather than a second code path (ADR-0041)
 
 **One identity, and one port, from every side.** A client is handed the issuer's address in the
 ledger's protected-resource metadata and goes to it directly, so a port mapped to a different

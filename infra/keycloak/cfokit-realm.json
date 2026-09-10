@@ -608,5 +608,29 @@
   ],
   "accessTokenLifespan": 28800,
   "ssoSessionIdleTimeout": 28800,
-  "ssoSessionMaxLifespan": 86400
+  "ssoSessionMaxLifespan": 86400,
+  "clients": [
+    {
+      "clientId": "cfokit-importer",
+      "name": "CFOKit importer",
+      "description": "The reader that ships with the bookkeeper skill, signing a person in so it can post their books (ADR-0041). Public: it holds no secret, which is why it can live in this file where a confidential client cannot. Device authorization only \u2014 the script may run in a container with no browser and no bindable port, and the person's browser may be on another machine.",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "attributes": {
+        "oauth2.device.authorization.grant.enabled": "true",
+        "client_credentials.use_refresh_token": "false"
+      },
+      "defaultClientScopes": [
+        "basic",
+        "cfokit-audience",
+        "email",
+        "profile"
+      ],
+      "optionalClientScopes": []
+    }
+  ]
 }
