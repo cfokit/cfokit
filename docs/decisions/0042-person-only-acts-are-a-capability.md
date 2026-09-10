@@ -7,7 +7,8 @@ decision-makers: [Geoff]
 
 # ADR-0042: A person-only act is gated by a capability, and `actor_class` describes provenance rather than authority
 
-**Requirements served:** `IAM-02`, `IAM-11`, `LED-11`, `SOC1-04`, `SOC1-15`.
+**Requirements served:** `IAM-02`, `IAM-05`, `IAM-06`, `IAM-11`, `LED-11`, `SOC1-04`,
+`SOC1-15`.
 
 ## Context and Problem Statement
 
@@ -69,10 +70,17 @@ provenance".
 performed on their behalf or by a component configured to run unattended. Reopening a closed
 period and importing a company's books require it. Nothing else does today.
 
-No seeded role carries it, `owner` included. An operator granting it to a service account is then
-a deliberate, recorded act rather than a consequence of how their issuer shapes a token — and
-because grants are rows, that decision has a grantor, a timestamp and an audit row, which a token
-shape has none of.
+**`owner` carries it; nothing else does.** `IAM-05` says creating an entity requires "no separate
+step to make it usable" and `IAM-06` that "a running deployment is usable as it stands, with
+nothing provisioned into it first" — so an owner who cannot import their own books until somebody
+grants them something has been handed exactly the separate step both forbid.
+
+That is not a weaker control, because it is not the failure worth guarding. Granting `owner` to a
+component is an enormous and obvious act. The realistic error is granting something narrow —
+`post`, or a bookkeeper role added later — to a component and silently conferring two acts nobody
+described. A separate flag that only `owner` carries stops that, and an operator who adds it to
+another role has made a deliberate, recorded decision: grants are rows, so it has a grantor, a
+timestamp and an audit row, which a token shape has none of.
 
 **This is where the control belongs.** `CLAUDE.md` already says entity grants are validated
 server-side regardless of token contents; putting the reservation in the grant model puts it
@@ -124,9 +132,9 @@ by nothing is worth less than a class assigned by something honest about when it
   can perform neither act until somebody decides who may, and the refusal names the capability.
 * Good, because `actor_class` stops carrying two jobs, so `SOC1-04`'s provenance split and
   `IAM-11`'s authority model can each change without the other.
-* Bad, because every existing deployment must grant the capability before anyone can reopen a
-  period or import books, and nothing warns an operator in advance. That is a migration note and
-  a release note, not a code change.
+* Bad, because a role added later starts without the flag, so a deployment that defines a
+  bookkeeper role and expects it to reopen periods has to say so. That is the control working,
+  and it is only visible when somebody hits it.
 * Bad, because it does not distinguish a person from a machine, and does not try to. An operator
   who grants the capability to a service account has made that machine able to perform a person's
   act. The decision is that this should be *possible and recorded* rather than impossible and
@@ -140,9 +148,9 @@ Integration tests over both reserved acts: refused for a principal holding every
 capability, permitted for one holding this one, and refused for a delegated agent whose person
 holds it — which is the condition intersection alone would let through.
 
-A test asserts no seeded role carries the capability, so a future migration cannot widen it by
-accident; `_known` already fails closed on a privilege the enum does not define, and this is the
-same property from the other side.
+A test asserts `owner` carries the capability and no other seeded role does, so a future
+migration cannot widen it by accident; `_known` already fails closed on a privilege the enum does
+not define, and this is the same property from the other side.
 
 **Not gated:** nothing prevents new code reading `actor_class` as an authority check. It is a
 review rule, and a weak one — see [ADR-0036](0036-correctness-is-tested-in-four-layers.md) § 5 on
@@ -156,9 +164,10 @@ thing `import-linter` lets the service layer reach for a permission question.
 * Good, because it uses the authority model that already exists rather than adding a second one.
 * Good, because the decision is data, so it is auditable, revocable and lapses like any grant
   (`IAM-09`).
-* Bad, because it is a breaking change for any deployment already relying on the acts working.
 * Bad, because a machine can still be granted a person's act, which reads as a gap to anyone who
   expected the name to be enforced.
+* Bad, because the reservation is only as good as the role catalogue: a deployment that hands
+  `owner` out freely has no reservation at all.
 
 ### Derive a fourth `actor_class` from claims that evidence end-user authentication
 
