@@ -18,24 +18,33 @@ from fastapi import FastAPI
 from mcp.server import MCPServer
 
 from cfokit.imports import api as imports_api
+from cfokit.imports import mcp as imports_mcp
 from cfokit.ledger.api import create_app
 from cfokit.ledger.config import Settings
-from cfokit.ledger.mcp import create_server
+from cfokit.ledger.mcp import acting, create_server
+from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.authentication import Authenticator
 
 __all__ = ["mcp_server", "rest_app"]
 
 
 def mcp_server(settings: Settings, authenticator: Authenticator | None = None) -> MCPServer:
-    """The MCP surface: the ledger's tools.
+    """The MCP surface: the ledger's tools, plus each module's.
 
-    No module contributes tools. Import's did, taking a path to a file the server would read —
-    which needed a directory mounted where the server could see it, and that has no analogue on
-    a hosted deployment and is not an onboarding step anybody completes. Its surface is now REST
-    and its caller is a script in the agent's own runtime, so there is nothing here to register
-    (ADR-0041).
+    Import contributes tools again, on different terms. They took a path to a file the
+    server would read, which needed a directory mounted where the server could see it — no
+    analogue on a hosted deployment, and not an onboarding step anybody completes. These take
+    the parsed shape, because a sandboxed agent runtime cannot open a socket to CFOKit and the
+    model is then the only bridge between the file and the books (ADR-0041 § 6).
+
+    Registered unconditionally. The old ones existed only where `IMPORT_ROOT` named a
+    directory, because a tool taking a path is a file-read primitive; these take a body, so
+    there is nothing to withhold and the published contract no longer depends on how a
+    deployment is configured.
     """
-    return create_server(settings, authenticator=authenticator)
+    server = create_server(settings, authenticator=authenticator)
+    imports_mcp.register(server, Database(settings.database_url), acting=acting)
+    return server
 
 
 def rest_app(settings: Settings, authenticator: Authenticator | None = None) -> FastAPI:

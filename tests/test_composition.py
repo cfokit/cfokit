@@ -66,13 +66,17 @@ def test_the_import_routes_need_no_configuration() -> None:
     assert routes(rest_app(settings())) == routes(rest_app(settings()))
 
 
-def test_no_module_contributes_tools() -> None:
-    """Import's MCP tools took a path to a file the server would read. That needed a directory
-    mounted where the server could see it, which has no analogue on a hosted deployment and is
-    not an onboarding step anybody completes (ADR-0041)."""
+def test_the_import_tools_take_a_shape_and_need_no_configuration() -> None:
+    """They took a path once, so they existed only where `IMPORT_ROOT` named a
+    directory — a tool taking a path is a file-read primitive. These take the parsed
+    shape, so there is nothing to withhold and the contract no longer depends on how a
+    deployment is configured (ADR-0041 § 6)."""
     served = sorted(tool.name for tool in asyncio.run(mcp_server(settings()).list_tools()))
 
-    assert not [name for name in served if "import" in name]
+    assert {"open_import", "import_entries", "reconcile_import"} <= set(served)
+    assert served == sorted(
+        tool.name for tool in asyncio.run(mcp_server(settings()).list_tools())
+    )
 
 
 # --- what a deployment serves, against what is published ------------------------------------

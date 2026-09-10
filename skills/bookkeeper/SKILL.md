@@ -76,24 +76,35 @@ That prints what the export holds — how many transactions, over what period, h
 and any the source states no type for. Show the user that before anything else. It is counts and
 account names only; it carries no amounts, and neither should you.
 
-**Then the import, which is theirs to run, not yours:**
+**Then the import. Which route depends on whether you can reach CFOKit from here.**
+
+Try `--post` first. It signs the user in — a browser page and a short code — then opens the
+import, sends the transactions in batches, and reconciles:
 
 ```
 python3 scripts/read_quickbooks.py <export.zip> --post <cfokit-url> --entity <entity-id>
 ```
 
-It signs the user in — a browser page and a short code — then opens the import, sends the
-transactions in batches, and reconciles. Watch its output and relay what it says.
+If that reports `unreachable`, you are in a sandbox that cannot open a socket to CFOKit. Use the
+tools instead:
 
-**Why the sign-in is theirs and cannot be yours.** Importing a company's books is a person's act
-(ADR-0007). A token from your session carries a delegation claim and the ledger refuses it with
-`not_a_person`, which is correct and is not something to work around. Tell the user the browser
-page needs their approval; do not attempt to approve it, and do not ask them for a credential.
+```
+python3 scripts/read_quickbooks.py <export.zip> --mcp
+```
 
-**The file never leaves their machine, and never enters this conversation.** It is a company's
-whole history — thousands of transactions. Reading it to you would gain nothing, lose figures,
-and put every payee and amount through a context window as a side effect of loading a file.
-Point the script at the path. Never at its contents.
+That prints three things. Call `open_import` with the first, `import_entries` with about 500
+lines of the second at a time, then `reconcile_import` with the third. **Copy the lines exactly.**
+Every figure you retype is a figure in somebody's books, and an account is named by its *position*
+in the chart — a wrong index posts to the wrong account.
+
+The reconciliation is what catches you if you slip: it compares the books against figures the
+source states for itself, so a mistyped amount comes back as a divergence. Do not explain a
+divergence away. Report it.
+
+**The archive never enters this conversation.** Point the script at the path, never at its
+contents: it is a zip of spreadsheets, and reading it to you would gain nothing and lose figures.
+What the `--mcp` route puts in front of you is the *parsed* result, which is a different thing —
+already checked, already balanced, and the only way into books you cannot otherwise reach.
 
 **Safe to run again.** Every entry's key is derived from the file and the row, so a run that dies
 partway resumes by running it again: what already landed is reported as `replayed`, and only the

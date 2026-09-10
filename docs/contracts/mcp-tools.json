@@ -190,6 +190,54 @@
     "name": "create_entity"
   },
   {
+    "description": "Post one batch of a company's transactions. Each line is 'reference|YYYY-MM-DD|description' followed by one 'index~amount' per posting, where index is the account's position in the chart sent to open_import. Send about 500 lines per call. Positive amounts debit, negative credit, and every transaction must sum to zero. Safe to repeat: a batch sent twice is reported as replayed rather than posted a second time, so a run that stopped part way is resumed by sending the same batches again. Report skipped rows; do not repair them.",
+    "inputSchema": {
+      "properties": {
+        "chart": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Chart",
+          "type": "array"
+        },
+        "entity_id": {
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "entries": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Entries",
+          "type": "array"
+        },
+        "fingerprint": {
+          "title": "Fingerprint",
+          "type": "string"
+        },
+        "import_id": {
+          "title": "Import Id",
+          "type": "string"
+        },
+        "system": {
+          "title": "System",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity_id",
+        "import_id",
+        "fingerprint",
+        "system",
+        "chart",
+        "entries"
+      ],
+      "title": "import_entriesArguments",
+      "type": "object"
+    },
+    "name": "import_entries"
+  },
+  {
     "description": "Mark a statement issued, fixing what was reported, to whom, and when. Pass the rendered figures you gave the recipient: they are stored rather than re-derived, because re-deriving assumes the presentation never changes. A correction posted afterwards marks the statement superseded, with no flag to maintain.",
     "inputSchema": {
       "properties": {
@@ -336,6 +384,56 @@
       "type": "object"
     },
     "name": "open_balances"
+  },
+  {
+    "description": "Open an import of a company's books and create the chart it needs. Run the reader in this session first — it parses the export locally and prints the chart and the transactions in the compact form these tools take; the export file itself never reaches CFOKit. Send the chart here, then the transactions in batches with import_entries, then reconcile_import. A person's act: a delegated agent session is refused with not_a_person, and should ask the person it acts for. Refused outright if the source's accounting basis conflicts with this entity's, or its currency is not the one this entity keeps books in.",
+    "inputSchema": {
+      "properties": {
+        "balances_basis": {
+          "title": "Balances Basis",
+          "type": "string"
+        },
+        "basis": {
+          "title": "Basis",
+          "type": "string"
+        },
+        "chart": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Chart",
+          "type": "array"
+        },
+        "commodity": {
+          "title": "Commodity",
+          "type": "string"
+        },
+        "entity_id": {
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "fingerprint": {
+          "title": "Fingerprint",
+          "type": "string"
+        },
+        "system": {
+          "title": "System",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity_id",
+        "system",
+        "fingerprint",
+        "basis",
+        "balances_basis",
+        "commodity",
+        "chart"
+      ],
+      "title": "open_importArguments",
+      "type": "object"
+    },
+    "name": "open_import"
   },
   {
     "description": "What is still owed, and how much has been applied against each. Outstanding is derived from the obligation less its settlements, never stored. Pass unsettled_only=false for the full history including what has been paid.",
@@ -535,6 +633,66 @@
       "type": "object"
     },
     "name": "reconcile"
+  },
+  {
+    "description": "Check the imported books against the figures the source states for itself, and compare the statements it printed. Balances are 'account|amount' lines from the source's own general ledger totals; statements are what its profit and loss and balance sheet printed. This is the answer an import is for: anything short of exact agreement is a finding to report, never a rounding to explain away. Where the source's reports were run on a different accounting basis from its journal, the receivable and the income behind it differ by exactly what is unsettled — that is arithmetic, not a defect.",
+    "inputSchema": {
+      "properties": {
+        "balance_sheet": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Balance Sheet"
+        },
+        "balances": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Balances",
+          "type": "array"
+        },
+        "entity_id": {
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "profit_and_loss": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Profit And Loss"
+        },
+        "their_basis": {
+          "default": "unknown",
+          "title": "Their Basis",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity_id",
+        "balances"
+      ],
+      "title": "reconcile_importArguments",
+      "type": "object"
+    },
+    "name": "reconcile_import"
   },
   {
     "description": "Record a transaction in an entity's books, as a draft or posted straight through. Postings must sum to zero per commodity to post. Requires an idempotency key; replaying one books nothing further. Pass raises_obligation to record it as an invoice or anything else owed, and settles to apply it against obligations — both need post.",
