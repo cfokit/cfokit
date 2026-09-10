@@ -18,34 +18,24 @@ from fastapi import FastAPI
 from mcp.server import MCPServer
 
 from cfokit.imports import api as imports_api
-from cfokit.imports import mcp as imports_mcp
 from cfokit.ledger.api import create_app
 from cfokit.ledger.config import Settings
-from cfokit.ledger.mcp import acting, create_server
-from cfokit.ledger.repository.unit_of_work import Database
+from cfokit.ledger.mcp import create_server
 from cfokit.ledger.service.authentication import Authenticator
 
 __all__ = ["mcp_server", "rest_app"]
 
 
 def mcp_server(settings: Settings, authenticator: Authenticator | None = None) -> MCPServer:
-    """The MCP surface: the ledger's tools, plus each module's.
+    """The MCP surface: the ledger's tools.
 
-    A module's tools are registered only when its configuration is present. Import needs
-    `IMPORT_ROOT`, and without it the tools do not exist rather than existing and refusing —
-    a surface that would let any holder of a token name any file on the host should not be
-    reachable by default.
+    No module contributes tools. Import's did, taking a path to a file the server would read —
+    which needed a directory mounted where the server could see it, and that has no analogue on
+    a hosted deployment and is not an onboarding step anybody completes. Its surface is now REST
+    and its caller is a script in the agent's own runtime, so there is nothing here to register
+    (ADR-0041).
     """
-    server = create_server(settings, authenticator=authenticator)
-    if settings.import_root is not None:
-        imports_mcp.register(
-            server,
-            Database(settings.database_url),
-            root=settings.import_root,
-            acting=acting,
-            reports=settings.import_reports,
-        )
-    return server
+    return create_server(settings, authenticator=authenticator)
 
 
 def rest_app(settings: Settings, authenticator: Authenticator | None = None) -> FastAPI:

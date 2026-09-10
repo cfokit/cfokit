@@ -32,7 +32,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 
@@ -55,14 +55,10 @@ from cfokit.ledger.service.write import WriteContext, record_transaction
 __all__ = [
     "Comparison",
     "Opened",
-    "Plan",
     "Posted",
     "Refusal",
-    "Result",
-    "apply",
     "compare",
     "open_books",
-    "plan",
     "post_entries",
 ]
 
@@ -89,64 +85,6 @@ class Refusal:
 
 
 @dataclass(frozen=True, slots=True)
-class Plan:
-    """What an import would do, before anything is posted (`IMP-05`)."""
-
-    system: str
-    basis: str
-    balances_basis: str
-    commodity: str
-    accounts_to_create: tuple[str, ...]
-    accounts_already_present: tuple[str, ...]
-    untyped_accounts: tuple[str, ...]
-    transactions: int
-    postings: int
-    earliest: date | None
-    latest: date | None
-    refusals: tuple[Refusal, ...]
-    blocked: str | None = None
-
-    @property
-    def can_apply(self) -> bool:
-        """Whether `apply` would do anything. A blocked plan is abandoned, not forced."""
-        return self.blocked is None
-
-    @property
-    def oracle_differs_in_basis(self) -> bool:
-        """Whether the reconciliation will diverge for a reason that is not a defect.
-
-        An accrual journal checked against cash-basis balances differs by exactly what is
-        unsettled — receivables, and the income not yet recognised against them, equal and
-        opposite. ADR-0037 predicts that, and the prediction is what makes a *different* figure
-        a defect. Surfaced so an operator reads two divergences as expected rather than as
-        broken.
-        """
-        return self.balances_basis not in {"unknown", self.basis}
-
-
-@dataclass(frozen=True, slots=True)
-class Result:
-    """What an import did."""
-
-    import_id: str
-    accounts_created: int
-    transactions_posted: int
-    # Entries a previous run of this same file already posted, returned by ADR-0029's replay
-    # rather than posted again. Non-zero means a retry met work already done, which is the
-    # mechanism working; it is not a count of anything that went wrong.
-    transactions_replayed: int = 0
-    refusals: tuple[Refusal, ...] = ()
-    agreed: int = 0
-    compared: int = 0
-    divergences: tuple[tuple[str, Decimal, Decimal], ...] = field(default_factory=tuple)
-
-    @property
-    def reconciled(self) -> bool:
-        """`IMP-08`: agreement demonstrated rather than assumed, with no tolerance."""
-        return self.compared > 0 and self.agreed == self.compared
-
-
-@dataclass(frozen=True, slots=True)
 class Opened:
     """An import's chart, created and ready for entries (`IMP-05` step two)."""
 
@@ -167,178 +105,6 @@ class Posted:
     posted: int
     replayed: int
     refusals: tuple[Refusal, ...] = ()
-
-
-def plan(
-    database: Database, *, entity_id: str, principal: Principal, books: SourceBooks
-) -> Plan:
-    """What importing `books` into this entity would do. Posts nothing, writes nothing.
-
-    Reads the entity's own settings rather than taking them from the file: `IMP-06` refuses an
-    import whose basis conflicts with the entity's declared one, and a caller who could state
-    the basis could state its way past that refusal.
-    """
-    report = trial_balance(database, entity_id=entity_id, principal=principal, as_of=date.max)
-    existing = {row.code for row in report.rows}
-    with database.entity_write(entity_id) as write:
-        existing |= {account.code for account in write.chart()}
-
-    blocked = _blocking(books, report.accounting_basis, report.functional_currency)
-    refusals = tuple(_refusals(books))
-    refused = {refusal.reference for refusal in refusals}
-    entries = [entry for entry in books.entries if entry.reference not in refused]
-    dates = [entry.transaction_date for entry in entries]
-
-    return Plan(
-        system=books.system,
-        basis=books.basis,
-        balances_basis=books.balances_basis,
-        commodity=books.commodity,
-        accounts_to_create=tuple(
-            account.code for account in books.accounts if account.code not in existing
-        ),
-        accounts_already_present=tuple(
-            account.code for account in books.accounts if account.code in existing
-        ),
-        untyped_accounts=tuple(
-            account.code for account in books.accounts if account.account_type == "unknown"
-        ),
-        transactions=len(entries),
-        postings=sum(len(entry.lines) for entry in entries),
-        earliest=min(dates, default=None),
-        latest=max(dates, default=None),
-        refusals=refusals,
-        blocked=blocked,
-    )
-
-
-def apply(
-    database: Database,
-    *,
-    entity_id: str,
-    principal: Principal,
-    request_id: str,
-    books: SourceBooks,
-) -> Result:
-    """Create the chart and post the journal. Re-plans first, and refuses a blocked plan.
-
-    **Re-validated rather than trusting a plan it was handed.** A plan is a description of what
-    would happen, not a permission for it, and the books may have moved since one was taken.
-
-    Each transaction is its own write through the ledger's ordinary path — the same
-    `record_transaction` an adapter calls, with its own idempotency key and its own audit row.
-    One enormous transaction would be atomic and would also mean an eleven-thousand-line
-    rollback over a single malformed row, which is the opposite of what `IMP-05` asks for.
-
-    **Applying the same file twice imports it once.** Each entry's idempotency key is derived
-    from the file's fingerprint and the source's own reference for the row (`_entry_key`), so a
-    second call meets the keys the first one claimed and ADR-0029's replay returns the stored
-    result rather than repeating the write. That matters more here than on any single write: a
-    client that times out partway through eleven thousand transactions and retries would
-    otherwise post a whole company's books twice, and append-only leaves no correction for that
-    short of a reversing entry per duplicate (ADR-0007). `Result.transactions_replayed` counts
-    what a previous run had already done.
-
-    Every entry carries `derived_from` naming this import and the reference it came in under,
-    which is `IMP-04`'s "identifiable as imported and names the system it came from" and the
-    lineage `SOC1-14` wants.
-
-    **A person's act, never a delegated agent's.** ADR-0007 puts it plainly — the agent
-    proposes and a person's confirmation posts — and this is the largest single act of posting
-    the system offers: a company's whole history, in one call. `plan` is the proposing half and
-    holds no such restriction, which is the division ADR-0030 already drew around reopening a
-    closed period.
-
-    Checked on `actor_class`, which comes from the shape of the token and never from a claim
-    the caller sets (ADR-0033). A token carrying no delegation is a person's; one carrying an
-    RFC 8693 `act` claim is an agent acting for someone, and it is that second shape this
-    refuses.
-    """
-    _require_person(principal)
-
-    proposed = plan(database, entity_id=entity_id, principal=principal, books=books)
-    if proposed.blocked is not None:
-        raise ImportRefused(proposed.blocked)
-
-    import_id = _import_id(books.fingerprint)
-    accounts, created = _create_chart(
-        database,
-        entity_id=entity_id,
-        principal=principal,
-        request_id=request_id,
-        accounts=books.accounts,
-    )
-
-    refused = {refusal.reference for refusal in proposed.refusals}
-    posted = 0
-    replayed = 0
-    failures: list[Refusal] = list(proposed.refusals)
-    for entry in books.entries:
-        if entry.reference in refused:
-            continue
-        try:
-            written = record_transaction(
-                database,
-                WriteContext(
-                    entity_id=entity_id,
-                    principal=principal,
-                    request_id=request_id,
-                    idempotency_key=_entry_key(books.fingerprint, entry.reference),
-                ),
-                entry=Entry(
-                    transaction_date=entry.transaction_date,
-                    postings=tuple(
-                        Posting(
-                            account_id=accounts[line.account_code],
-                            amount=line.amount,
-                            commodity=line.commodity,
-                        )
-                        for line in entry.lines
-                    ),
-                    description=entry.description or None,
-                ),
-                post=True,
-                derived_from={
-                    "system": books.system,
-                    "import_id": import_id,
-                    "reference": entry.reference,
-                },
-            )
-        except LedgerError as refusal:
-            # A refusal the plan could not foresee — a closed period, an account the chart
-            # would not take. Reported, never swallowed: `NFR-01` resolves disagreements
-            # rather than tolerating them, and a transaction the ledger declined is one.
-            failures.append(
-                Refusal(
-                    reference=entry.reference,
-                    when=entry.transaction_date,
-                    code=refusal.code,
-                    detail=str(refusal),
-                )
-            )
-        else:
-            # Counted apart, because they answer different questions. `posted` is what this
-            # call put in the books; `replayed` is what a previous one already had. An operator
-            # re-running an import wants to see the second number rise and the first stay at
-            # zero — that is the retry working rather than the file half-importing.
-            if written.replayed:
-                replayed += 1
-            else:
-                posted += 1
-
-    agreed, compared, divergences = _reconcile(
-        database, entity_id=entity_id, principal=principal, books=books
-    )
-    return Result(
-        import_id=import_id,
-        accounts_created=created,
-        transactions_posted=posted,
-        transactions_replayed=replayed,
-        refusals=tuple(failures),
-        agreed=agreed,
-        compared=compared,
-        divergences=divergences,
-    )
 
 
 def _create_chart(
@@ -499,7 +265,7 @@ def post_entries(
 def _unpostable(entry: SourceEntry, accounts: dict[str, str]) -> Refusal | None:
     """Why this entry will not post, decided before the write is attempted.
 
-    The same two checks `_refusals` makes over a whole file, plus the one only a batch can make:
+    The two checks a whole file used to be scanned for, plus the one only a batch can make:
     an account the opening call did not create. A batch naming an unknown account is a client
     that skipped the opening step or sent a file's entries against another file's chart.
     """
@@ -628,38 +394,6 @@ def _blocking(books: SourceBooks, basis: str, commodity: str) -> str | None:
         # IMP-07, on the same terms as any other foreign amount (`LED-15`).
         return f"the source carries {', '.join(foreign)} and this entity is {commodity}"
     return None
-
-
-def _refusals(books: SourceBooks) -> list[Refusal]:
-    """Rows the import will skip, decided before anything is posted (`IMP-05`)."""
-    refusals: list[Refusal] = []
-    for entry in books.entries:
-        if len(entry.lines) < MINIMUM_POSTINGS:
-            # The engine's own threshold, imported rather than restated. A single line sums to
-            # zero when its amount is zero, so a balance check alone would pass it while it
-            # records no movement of value — which is exactly why `TransactionIncomplete` is a
-            # separate refusal from `unbalanced_transaction`.
-            refusals.append(
-                Refusal(
-                    entry.reference,
-                    entry.transaction_date,
-                    "transaction_incomplete",
-                    f"{len(entry.lines)} posting(s); a movement of value needs"
-                    f" {MINIMUM_POSTINGS}",
-                )
-            )
-        elif (difference := sum(line.amount for line in entry.lines)) != 0:
-            # LED-03. Stated here rather than left to the engine so the operator sees it in
-            # the plan, which is the whole of what `IMP-05` asks for.
-            refusals.append(
-                Refusal(
-                    entry.reference,
-                    entry.transaction_date,
-                    "unbalanced",
-                    f"debits and credits differ by {difference}",
-                )
-            )
-    return refusals
 
 
 def _reconcile(

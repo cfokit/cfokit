@@ -2224,6 +2224,30 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/.well-known/oauth-protected-resource": {
+      "get": {
+        "description": "Where a client should go to be issued a token for this API.\n\nThe MCP surface has served this since the SDK's auth middleware was wired; REST did not,\nso a client of the REST API had to be told the issuer out of band. The importer that\nships with the skill signs a person in by device flow (ADR-0041) and needs to discover\nthe issuer from the resource it is about to write to — being handed a second URL to\nconfigure is the kind of setup step that does not survive contact with an operator.\n\n`PUBLIC_BASE_URL` is authoritative for what this service says about itself. Never a\nrequest header: behind a proxy or a tunnel they lie.",
+        "operationId": "protected_resource__well_known_oauth_protected_resource_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Protected Resource  Well Known Oauth Protected Resource Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Which issuer guards this API (RFC 9728)",
+        "tags": [
+          "operations"
+        ]
+      }
+    },
     "/entities": {
       "post": {
         "description": "Requires authentication and no prior role (`IAM-06`).\n\nThe entity and its first owner are written in one transaction, or neither is\n(`IAM-05`).",

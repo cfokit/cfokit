@@ -33,17 +33,6 @@ dependencies = [
     # through mcp — a transitive dependency we call into is one that can vanish in a
     # patch release. MIT; the crypto extra is cryptography, Apache-2.0 OR BSD-3-Clause.
     "pyjwt[crypto]>=2.10",
-    # Reads .xlsx workbooks, which is the form every report in a QuickBooks export takes
-    # (`IMP-01`, ADR-0040). Runtime rather than dev because the import tools run in the
-    # deployed image; before they existed, the reader was only a test helper.
-    #
-    # Chosen over reading the format by hand, which is feasible — an .xlsx is a zip of XML and
-    # we need only cell values from one worksheet — but concentrates its risk in shared
-    # strings, styles deciding date-from-number, and the 1900 date system's leap-year bug.
-    # A subtle error there corrupts a figure silently, which is the one failure this codebase
-    # is least willing to take. MIT, and pulls only et-xmlfile, also MIT (both verified
-    # 2026-09-05 from the installed artifacts' metadata, not from memory).
-    "openpyxl>=3.1",
 ]
 
 [build-system]
@@ -63,6 +52,15 @@ packages = ["src/cfokit"]
 [dependency-groups]
 dev = [
     "ruff>=0.14",
+    # Writes the synthetic .xlsx the reader tests are built from. **Dev, not runtime.** It was
+    # runtime while the server parsed exports; it stopped being so when parsing moved to the
+    # agent's runtime, where the reader is standard-library only and installs nothing (ADR-0041).
+    # Reading an .xlsx by hand concentrates its risk in shared strings, styles deciding
+    # date-from-number, and the 1900 leap-year bug — real risks, which is why the reader is
+    # tested against the export this builds and was proven field-for-field against the openpyxl
+    # reader it replaces before that one was deleted. MIT, pulls only et-xmlfile, also MIT
+    # (verified 2026-09-05 from the installed artifacts' metadata, not from memory).
+    "openpyxl>=3.1",
     "mypy>=1.18",
     "pytest>=8.4",
     "import-linter>=2.3",

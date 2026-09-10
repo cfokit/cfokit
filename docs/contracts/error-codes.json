@@ -36,16 +36,8 @@
     "error": "IdempotencyKeyReused"
   },
   {
-    "code": "import_path_refused",
-    "error": "ImportPathRefused"
-  },
-  {
     "code": "import_refused",
     "error": "ImportRefused"
-  },
-  {
-    "code": "import_too_large",
-    "error": "ImportTooLarge"
   },
   {
     "code": "invoice_not_draft",
@@ -104,10 +96,6 @@
     "error": "PeriodNotClosed"
   },
   {
-    "code": "report_not_written",
-    "error": "ReportNotWritten"
-  },
-  {
     "code": "retained_earnings_unset",
     "error": "RetainedEarningsUnset"
   },
@@ -130,10 +118,6 @@
   {
     "code": "unknown_role",
     "error": "UnknownRole"
-  },
-  {
-    "code": "unreadable_figure",
-    "error": "UnreadableFigure"
   },
   {
     "code": "year_already_closed",

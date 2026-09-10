@@ -1,7 +1,7 @@
-"""The deployable, composed: what the ledger's own adapters cannot reach (ADR-0022, ADR-0040).
+"""The deployable, composed: what the ledger's own adapters cannot reach (ADR-0022, ADR-0041).
 
-No database. These are about which tools exist and which paths a tool will read, both of which
-are decided before a connection is opened.
+No database. These are about which surface a deployment serves, which is decided before a
+connection is opened.
 """
 
 from __future__ import annotations
@@ -10,160 +10,98 @@ import asyncio
 import json
 from pathlib import Path
 
-import pytest
-
-from cfokit.imports.mcp import (
-    MAX_ARCHIVE_BYTES,
-    ImportPathRefused,
-    ImportTooLarge,
-    resolve,
-)
+from cfokit.ledger.api import create_app
 from cfokit.ledger.config import Settings
-from cfokit.server import mcp_server
+from cfokit.server import mcp_server, rest_app
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
-def settings(import_root: Path | None = None) -> Settings:
-    """A configuration that is never connected to. Which tools exist is decided before a
-    connection is opened, which is what lets these run without a database."""
+def settings() -> Settings:
     return Settings(
-        database_url="postgresql://unreachable.invalid/none",
-        public_base_url="http://localhost:8081",
+        database_url="postgresql://composition.invalid/none",
+        public_base_url="http://localhost:8080",
         auth_issuer_url="http://localhost:8180/realms/cfokit",
         auth_audience="cfokit-ledger",
-        import_root=import_root,
     )
 
 
-def tools(config: Settings) -> set[str]:
-    return {tool.name for tool in asyncio.run(mcp_server(config).list_tools())}
+def routes(app: object) -> set[str]:
+    """Every path the app serves, from its own OpenAPI document.
 
-
-# --- the module's tools exist only when a deployment asked for them ------------------------
-
-
-def test_the_import_tools_are_absent_without_a_configured_root() -> None:
-    """**The default, and the one that matters.** A tool taking a path is a file-read
-    primitive. Absent rather than present-and-refusing: a surface any holder of a token can
-    reach should not exist unless a deployment asked for it."""
-    named = tools(settings())
-
-    assert "plan_import" not in named
-    assert "apply_import" not in named
-    assert "trial_balance" in named  # the ledger's own surface is unaffected
-
-
-def test_the_import_tools_appear_when_a_root_is_configured(tmp_path: Path) -> None:
-    named = tools(settings(tmp_path))
-
-    assert {"plan_import", "apply_import"} <= named
-
-
-def test_the_ledger_alone_has_no_import_tools(tmp_path: Path) -> None:
-    """The contract `import-linter` holds, seen from the outside: the ledger's server knows
-    nothing about a module even when one is configured, because it cannot import one."""
-    from cfokit.ledger.mcp import create_server
-
-    named = {tool.name for tool in asyncio.run(create_server(settings(tmp_path)).list_tools())}
-
-    assert "plan_import" not in named
-
-
-# --- a path argument is treated as a file-read primitive -----------------------------------
-
-
-def test_a_path_inside_the_root_resolves(tmp_path: Path) -> None:
-    (tmp_path / "books.zip").write_bytes(b"not really a zip")
-
-    assert resolve(tmp_path, "books.zip") == (tmp_path / "books.zip").resolve()
-
-
-def test_a_path_escaping_the_root_is_refused(tmp_path: Path) -> None:
-    """`..` is settled by resolving before comparing. A containment test against the string
-    somebody supplied tests the string, not the file it reaches."""
-    outside = tmp_path.parent / "elsewhere.zip"
-    outside.write_bytes(b"not really a zip")
-    root = tmp_path / "root"
-    root.mkdir()
-
-    with pytest.raises(ImportPathRefused):
-        resolve(root, "../elsewhere.zip")
-
-
-def test_an_archive_over_the_ceiling_is_refused(tmp_path: Path) -> None:
-    """The whole file is read into memory and the process doing it serves every other entity's
-    tools, so an oversized file is one tenant's export taking the surface down for all of them
-    (`NFR-04`). Refused before a byte is read rather than discovered by the process dying.
-
-    Written against `MAX_ARCHIVE_BYTES` rather than a number copied from it, so raising the
-    ceiling deliberately does not silently leave a test asserting the old one.
+    Not `app.routes`: an included router appears there as one opaque entry rather than as its
+    routes, so a check over that list would report a module's routes as absent while a client
+    reached them perfectly well. The generated document is what the app actually serves and what
+    gate 5 publishes, so it is the honest thing to assert over.
     """
-    oversized = tmp_path / "books.zip"
-    oversized.write_bytes(b"\0" * (MAX_ARCHIVE_BYTES + 1))
-
-    with pytest.raises(ImportTooLarge):
-        resolve(tmp_path, "books.zip")
+    return set(app.openapi()["paths"])  # type: ignore[attr-defined]
 
 
-def test_an_archive_at_the_ceiling_is_read(tmp_path: Path) -> None:
-    """The limit is a ceiling, not a threshold: the boundary case is allowed, or the message
-    telling an operator the maximum names a size they cannot actually use."""
-    (tmp_path / "books.zip").write_bytes(b"\0" * MAX_ARCHIVE_BYTES)
-
-    assert resolve(tmp_path, "books.zip") == (tmp_path / "books.zip").resolve()
+# --- a module contributes routes, and the ledger does not know it ---------------------------
 
 
-def test_an_absolute_path_outside_the_root_is_refused(tmp_path: Path) -> None:
-    root = tmp_path / "root"
-    root.mkdir()
+def test_the_composed_app_serves_the_import_routes() -> None:
+    """Import's surface is REST because its caller is a script in the agent's own runtime, which
+    posts the neutral shape rather than naming a file for the server to read (ADR-0041)."""
+    served = routes(rest_app(settings()))
 
-    with pytest.raises(ImportPathRefused):
-        resolve(root, "/etc/passwd")
-
-
-def test_a_symlink_out_of_the_root_is_refused(tmp_path: Path) -> None:
-    """Resolved before the check, so a link is followed to where it actually goes. A
-    containment test that ran first would pass a link whose target is anywhere."""
-    outside = tmp_path / "elsewhere.zip"
-    outside.write_bytes(b"not really a zip")
-    root = tmp_path / "root"
-    root.mkdir()
-    (root / "books.zip").symlink_to(outside)
-
-    with pytest.raises(ImportPathRefused):
-        resolve(root, "books.zip")
+    assert "/entities/{entity_id}/imports" in served
+    assert "/entities/{entity_id}/imports/{import_id}/entries" in served
+    assert "/entities/{entity_id}/imports/{import_id}/reconciliation" in served
 
 
-def test_a_directory_is_not_a_file(tmp_path: Path) -> None:
-    (tmp_path / "nested").mkdir()
+def test_the_ledger_alone_serves_none_of_them() -> None:
+    """**The contract, as a test.** "The ledger depends on no module" is enforced by
+    `import-linter` over import paths; this is the same rule observed at the surface, where a
+    ledger adapter that had quietly mounted a module's router would show up."""
+    served = routes(create_app(settings()))
 
-    with pytest.raises(ImportPathRefused):
-        resolve(tmp_path, "nested")
-
-
-def test_a_missing_file_is_refused_rather_than_read(tmp_path: Path) -> None:
-    with pytest.raises(ImportPathRefused):
-        resolve(tmp_path, "absent.zip")
+    assert not [path for path in served if "imports" in path]
 
 
-def test_the_surface_a_deployment_serves_matches_the_published_contract(tmp_path: Path) -> None:
+def test_the_import_routes_need_no_configuration() -> None:
+    """They took a path once, so they existed only where `IMPORT_ROOT` named a directory — which
+    made the published contract depend on how a deployment was configured. They take a body now,
+    so there is nothing to withhold and a caller can bind to the contract."""
+    assert routes(rest_app(settings())) == routes(rest_app(settings()))
+
+
+def test_no_module_contributes_tools() -> None:
+    """Import's MCP tools took a path to a file the server would read. That needed a directory
+    mounted where the server could see it, which has no analogue on a hosted deployment and is
+    not an onboarding step anybody completes (ADR-0041)."""
+    served = sorted(tool.name for tool in asyncio.run(mcp_server(settings()).list_tools()))
+
+    assert not [name for name in served if "import" in name]
+
+
+# --- what a deployment serves, against what is published ------------------------------------
+
+
+def test_the_tool_surface_matches_the_published_contract() -> None:
     """**The comparison a stale container fails.**
 
     Gate 5 diffs the contract this code generates against the one committed, and both live in
     the repository — so they agree with each other while a running container serves whatever
     surface it was built with. A tool merged and never rolled out is invisible to every check
-    that reads the repository, and shows up only as a client reporting that it does not exist.
+    that reads the repository, and shows up only as a client reporting it does not exist.
 
     `/readyz` reports the served names and a digest of them, so the same comparison can be made
-    against a deployment with a single unauthenticated request. This fixes the shape of it: the
-    composed surface, which is what a deployment serves, against the published list.
+    against a deployment with one unauthenticated request. This fixes the shape of it.
     """
     published = json.loads(
         (REPO_ROOT / "docs" / "contracts" / "mcp-tools.json").read_text(encoding="utf-8")
     )
-    served = sorted(
-        tool.name for tool in asyncio.run(mcp_server(settings(tmp_path)).list_tools())
-    )
+    served = sorted(tool.name for tool in asyncio.run(mcp_server(settings()).list_tools()))
 
     assert served == sorted(tool["name"] for tool in published)
+
+
+def test_the_rest_surface_matches_the_published_contract() -> None:
+    """The same comparison for REST, which now has a module's routes in it — so a contract taken
+    from the ledger's app alone would publish less than a deployment serves."""
+    published = json.loads(
+        (REPO_ROOT / "docs" / "contracts" / "openapi.json").read_text(encoding="utf-8")
+    )
+
+    assert sorted(published["paths"]) == sorted(rest_app(settings()).openapi()["paths"])
