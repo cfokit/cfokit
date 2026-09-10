@@ -17,6 +17,13 @@ this boundary as the text the cell holds.
     python3 read_quickbooks.py <zip>                     # the shape, on stdout
     python3 read_quickbooks.py <zip> --summary           # counts only, for a person to read
     python3 read_quickbooks.py <zip> --post <url> --entity <id>   # sign in and import
+    python3 read_quickbooks.py <zip> --mcp               # the form the MCP import tools take
+
+**`--mcp` is for a runtime that cannot reach CFOKit.** A Claude Desktop chat runs this in a
+sandbox whose egress is a proxy with a domain allowlist, so no port on the operator's machine is
+reachable and `--post` cannot work. It prints the chart and the transactions in the compact form
+the `open_import` and `import_entries` tools take, and the model relays them. The archive still
+never passes through a model — what crosses is the parsed shape (ADR-0040, ADR-0041 § 6).
 
 **`--post` signs a person in.** It cannot borrow the agent session's credential: importing
 is a person's act and the ledger refuses a delegated one (ADR-0007), so a token carrying an
@@ -852,6 +859,60 @@ def _report(
     return 1 if (diverged or refusals) else 0
 
 
+def for_mcp(books: dict[str, Any]) -> str:
+    """The chart and the transactions, in the form the MCP import tools take.
+
+    **An account is named by its position in the chart**, not by its path. 62 accounts named
+    11,580 times are 270 KB of a 509 KB payload, so indexing them halves what the model has to
+    emit: about 74,000 tokens against 404,000 as JSON.
+
+    ISO dates rather than packed ones, because a model emits `2026-06-28` more reliably and the
+    7,000 tokens saved are worth less than that. Descriptions kept, because they are `IMP-04`'s
+    lineage. References explicit, because ADR-0029 derives the idempotency key from them and
+    implying them from line order would break a retry that batched differently.
+    """
+    index = {account["code"]: at for at, account in enumerate(books["accounts"])}
+    chart = [f"{a['code']}|{a['account_type']}|{a['parent']}" for a in books["accounts"]]
+    entries = [
+        "|".join(
+            [
+                entry["reference"],
+                entry["transaction_date"],
+                entry["description"].replace("|", " "),
+            ]
+            + [f"{index[line['account_code']]}~{line['amount']}" for line in entry["lines"]]
+        )
+        for entry in books["entries"]
+    ]
+    stated = [f"{b['account_code']}|{b['balance']}" for b in books["balances"]]
+    printed = {
+        statement["report"]: [
+            f"{line['account_code']}|{line['balance']}" for line in statement["lines"]
+        ]
+        for statement in books["statements"]
+    }
+    return json.dumps(
+        {
+            "open_import": {
+                "system": books["system"],
+                "fingerprint": books["fingerprint"],
+                "basis": books["basis"],
+                "balances_basis": books["balances_basis"],
+                "commodity": books["commodity"],
+                "chart": chart,
+            },
+            "import_entries": entries,
+            "reconcile_import": {
+                "balances": stated,
+                "profit_and_loss": printed.get("profit_and_loss", []),
+                "balance_sheet": printed.get("balance_sheet", []),
+                "their_basis": next((s["basis"] for s in books["statements"]), "unknown"),
+            },
+        },
+        separators=(",", ":"),
+    )
+
+
 def summarise(books: dict[str, Any]) -> str:
     """What a person needs to see before they agree to post it (`IMP-05`).
 
@@ -902,7 +963,9 @@ def main(argv: list[str]) -> int:
             print(summarise(books), file=sys.stderr)
             return post(books, base, entity_id, sign_in(base), out=sys.stderr)
 
-        if "--summary" in flags:
+        if "--mcp" in flags:
+            print(for_mcp(books))
+        elif "--summary" in flags:
             print(summarise(books))
         else:
             json.dump(books, sys.stdout, separators=(",", ":"))
