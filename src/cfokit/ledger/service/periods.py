@@ -22,10 +22,14 @@ April opening figure to invalidate.
 from __future__ import annotations
 
 from cfokit.ledger.engine.periods import Period
-from cfokit.ledger.errors import NotAPerson, PeriodClosed, PeriodNotClosed
+from cfokit.ledger.errors import PeriodClosed, PeriodNotClosed
 from cfokit.ledger.repository.unit_of_work import Database
-from cfokit.ledger.service.authorisation import Capability, authorise
-from cfokit.ledger.service.principal import ActorClass, Principal
+from cfokit.ledger.service.authorisation import (
+    Capability,
+    authorise,
+    authorise_own_act,
+)
+from cfokit.ledger.service.principal import Principal
 
 __all__ = ["close_period", "reopen_period"]
 
@@ -71,7 +75,14 @@ def reopen_period(
     period: Period,
     reason: str,
 ) -> str:
-    """Reopen a closed period. Requires `CLOSE`, and requires being a person.
+    """Reopen a closed period. Requires `CLOSE`, and requires `ACT_AS_PRINCIPAL`.
+
+    **Two capabilities, because they answer different questions.** `CLOSE` is the class of
+    work — deciding the books have been reviewed. `ACT_AS_PRINCIPAL` is that this act must be
+    the
+    caller's own: ADR-0030 reserved reopening because it is what lets a write into a period
+    somebody has already reported on, and a delegated session must not reach it. A component
+    granted `CLOSE` to run an automated month-end holds the first and not the second.
 
     `reason` is mandatory because `SOC1-17` requires the reopen to capture one. A reopen with
     no reason is indistinguishable from a mistake once the person who made it has forgotten.
@@ -81,7 +92,7 @@ def reopen_period(
 
     with database.entity_write(entity_id) as write:
         authorise(write, Capability.CLOSE, principal)
-        _require_person(principal)
+        authorise_own_act(write, principal)
 
         close_id = write.close_in_force(period)
         if close_id is None:
@@ -104,15 +115,3 @@ def reopen_period(
             detail={"period": str(period), "reason": reason},
         )
     return close_id
-
-
-def _require_person(principal: Principal) -> None:
-    """ADR-0030: the reopen is a human capability, never a skill's.
-
-    Checked on `actor_class`, which comes from the shape of the token and never from a claim
-    the caller sets (ADR-0033). A skill cannot describe itself as a person.
-    """
-    if principal.actor_class is not ActorClass.PERSON:
-        raise NotAPerson(
-            "reopening a closed period is a person's act; ask the person you act for"
-        )

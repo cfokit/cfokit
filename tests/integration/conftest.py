@@ -69,6 +69,12 @@ DELEGATED_ROLES: dict[str, frozenset[str]] = {
     "recorder": frozenset({"read", "record"}),
     "poster": frozenset({"read", "record", "post"}),
     "administrator": frozenset({"grant"}),
+    # Every class of work and none of the reservation — the component ADR-0042 is about, and the
+    # shape the old `actor_class` check let through.
+    "month-end": frozenset({"read", "record", "post", "close"}),
+    "everything-else": frozenset({"read", "record", "post", "grant", "close", "own"}),
+    # A component an operator has deliberately trusted with a person's act.
+    "importer": frozenset({"read", "record", "post", "grant", "act_as_principal"}),
 }
 
 
