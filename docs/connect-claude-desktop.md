@@ -32,56 +32,14 @@ docker compose exec postgres psql -U cfokit -d postgres -c \
   "CREATE DATABASE keycloak OWNER cfokit"
 ```
 
-## 2. Mount the exports, read-only
+## 2. Nothing to mount
 
-`IMPORT_ROOT` is unset by default, and without it the import tools are not registered at all —
-a tool taking a path is a file-read primitive, and one any holder of a token can reach should
-not exist unless a deployment asked for it (ADR-0040).
+Earlier versions asked you to mount a directory of exports into the container and set
+`IMPORT_ROOT`. That is gone. The export is read **on your machine** by a script in the skill
+bundle, which posts the books to CFOKit over HTTP — so there is no directory to mount, no overlay
+file to remember, and the file never leaves your laptop (ADR-0041).
 
-Create `compose.imports.yaml` beside `compose.yaml`:
-
-```yaml
-services:
-  mcp:
-    environment:
-      IMPORT_ROOT: /imports
-      IMPORT_REPORTS: /reports
-    volumes:
-      - /path/to/your/exports:/imports:ro
-      - /path/to/a/reports/directory:/reports
-```
-
-Then, **from the repository root, and with both files named every time**:
-
-```
-docker compose -f compose.yaml -f compose.imports.yaml up -d --wait mcp
-```
-
-`compose.yaml` pins `name: cfokit`, so this attaches to the stack already running rather than
-starting a second one. But naming only `compose.yaml` **recreates the container without the
-overlay**, and the import tools then disappear — they are registered only when `IMPORT_ROOT` is
-set, so `tools/list` quietly returns sixteen tools instead of eighteen rather than failing.
-
-There is deliberately no `docker-compose.override.yml` and no `COMPOSE_FILE` default, for the
-reason `compose.yaml` already gives: an overlay that applies itself hands you bind mounts you
-did not ask for. Explicit beats idiomatic here (ADR-0018).
-
-**Read-only on the exports, and a separate writable directory for reports.** The tools write
-their detail — the figures a reconciliation names — to `IMPORT_REPORTS`, never beside the
-source. Mount the directory the export is in, not your home directory: whatever is mounted is
-what the tools can read.
-
-## Keeping one stack straight
-
-Everything runs under the compose project `cfokit`, from the repository root. Two things follow.
-
-**A development database accumulates.** The integration suite creates an entity per test and
-removes none, and every import run leaves the books it imported. That is harmless — entities are
-isolated from each other by row-level security — but it means picking the entity id you meant
-rather than the most recent one. Create a fresh entity for a run you care about.
-
-**`docker compose down -v` destroys the volume**, and with it every set of books in it. The
-warning at the top of `compose.yaml` is not decorative.
+The script is standard-library Python 3. It installs nothing.
 
 ## 3. Nothing, and why there is a step here at all
 
@@ -261,35 +219,58 @@ Keep the `entity_id` it returns.
 
 ## 8. Import, reconcile, compare
 
-In Claude Desktop, with the skill loaded:
+Ask the skill in Claude Desktop, or run it yourself — the script is the same either way:
 
-> Plan an import of `Growth Science LLC Sep 5, 2026.zip` into entity `<entity-id>`.
-
-```json
-{"ok": true, "system": "QuickBooks Online",
- "transactions": 5553, "postings": 11577, "accounts_to_create": 62,
- "covering": {"earliest": "2018-04-11", "latest": "2026-09-01"},
- "rows_to_skip": 3, "can_apply": true,
- "expect_obligation_accounts_to_differ": true}
+```
+python3 skills/bookkeeper/scripts/read_quickbooks.py \
+  "~/exports/Growth Science LLC Sep 5, 2026.zip" --summary
 ```
 
-`apply_import` is a person's act — a delegated agent session is refused with `not_a_person`
-(ADR-0007). Run it yourself, or from a session holding your own token:
-
-```json
-{"ok": true, "accounts_created": 62, "transactions_posted": 5553, "rows_skipped": 3,
- "reconciliation": {"agreed": 25, "compared": 27, "divergences": 2}}
+```
+QuickBooks Online, USD
+  5556 transactions, 11580 posting lines
+  62 accounts
+  covering 2018-04-11 to 2026-09-01
+  entries unknown basis, stated balances cash basis
+  2 accounts the source states no type for: [...]
+  NOTE: the stated balances were run on a different basis from the journal, so the
+  obligation accounts will differ by what is unsettled (ADR-0037)
 ```
 
-Then `compare_statements` puts the profit and loss and balance sheet CFOKit produces against
-the ones the export printed:
+Nothing has been sent yet. When you are satisfied, add `--post`:
 
-```json
-{"report": "profit_and_loss", "agreed": 44, "compared": 45, "divergences": 1,
- "their_basis": "cash", "our_basis": "accrual"}
-{"report": "balance_sheet",   "agreed": 10, "compared": 11, "divergences": 1,
- "their_basis": "cash", "our_basis": "accrual"}
 ```
+python3 skills/bookkeeper/scripts/read_quickbooks.py \
+  "~/exports/Growth Science LLC Sep 5, 2026.zip" \
+  --post http://localhost:8080 --entity <entity-id>
+```
+
+It prints a URL and a short code. **Approve it in a browser as yourself** — importing is a
+person's act, and a token from a delegated agent session is refused with `not_a_person`
+(ADR-0007). Then:
+
+```
+opened import 6f9b… : 62 accounts created, 0 already present
+  500/5556  posted 500, replayed 0, skipped 0
+  ...
+ 5556/5556  posted 5553, replayed 0, skipped 3
+
+posted 5553, replayed 0, skipped 3
+reconciled 25 of 27 accounts exactly
+  DIVERGES Accounts Receivable (A/R): ours 25469.0000000000 theirs 0
+  DIVERGES Services: ours -2518417.0400000000 theirs -2492948.04
+profit_and_loss: 44 agree, 1 diverge (theirs cash, ours accrual)
+balance_sheet: 10 agree, 1 diverge (theirs cash, ours accrual)
+```
+
+**Those two divergences are the same figure**, 25,469.00, appearing as the receivable and as the
+income not yet recognised against it. The journal is accrual and the reports were run on a cash
+basis, so they differ by exactly what is unsettled — ADR-0037 predicts it. To compare like with
+like, set QuickBooks' accounting method to Accrual and re-export.
+
+**Run it again and it is safe.** Each entry's key is derived from the file and the row, so a run
+that died partway resumes: `replayed` rises and `posted` stays at zero. A *re-export* is a
+different file and therefore a second import — use a fresh entity for one.
 
 ## When a tool is missing
 
@@ -313,7 +294,7 @@ running thing is not. The symptom is a client truthfully reporting that a tool d
 If they differ, rebuild:
 
 ```
-docker compose -f compose.yaml -f compose.imports.yaml up -d --build mcp ledger
+docker compose up -d --build mcp ledger
 ```
 
 ## Reading the result
