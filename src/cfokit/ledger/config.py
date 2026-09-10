@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from pathlib import Path
 
 from cfokit.ledger.errors import ConfigError
 
@@ -42,23 +41,6 @@ class Settings:
     """Optional. Never raise this to a level that would log posting amounts, account
     numbers, or payee names (CLAUDE.md, Observability)."""
 
-    import_root: Path | None = None
-    """Directory the import tools may read from. Optional, and absent by default.
-
-    Absent means the import tools are not registered at all rather than registered and
-    refusing: a tool taking a path is a file-read primitive, and one reachable by any holder of
-    a token should not exist unless a deployment asked for it (ADR-0040).
-
-    A variable within the existing env-vars-only shape, so it needs no record of its own
-    (ADR-0016); `infra/README.md` is authoritative for the names."""
-
-    import_reports: Path | None = None
-    """Directory the import tools write their detail to. Optional, and absent by default.
-
-    Separate from `IMPORT_ROOT` because the two want opposite permissions: exports are mounted
-    read-only by anyone who has thought about it, and a tool writing beside them would fail on
-    a correctly configured deployment. Unset means no file is written and the reply says so."""
-
 
 def require_env(name: str) -> str:
     """Read a required variable, or raise without disclosing its value."""
@@ -87,9 +69,5 @@ def load_settings() -> Settings:
         auth_issuer_url=require_env("AUTH_ISSUER_URL"),
         auth_audience=require_env("AUTH_AUDIENCE"),
         port=port,
-        import_root=(Path(root).resolve() if (root := os.environ.get("IMPORT_ROOT")) else None),
-        import_reports=(
-            Path(reports).resolve() if (reports := os.environ.get("IMPORT_REPORTS")) else None
-        ),
         log_level=optional_env("LOG_LEVEL", "info"),
     )

@@ -54,9 +54,6 @@ def main(argv: list[str] | None = None) -> int:
         extra={
             "fields": {
                 "port": settings.port,
-                # A count and a flag, never the path: `IMPORT_ROOT` names a directory on the
-                # host, and a log is read by more people than a configuration file is.
-                "imports_enabled": settings.import_root is not None,
             }
         },
     )

@@ -2,9 +2,14 @@
 
 `code` is the contract and the status is not (ADR-0015), but a status that contradicts the
 code is still a defect — a caller that retries on 5xx would retry an unbalanced transaction
-forever. So the mapping is enumerated here rather than decided at each raise site, and a code
-with no entry falls to 500, which is the safe direction: an unmapped code is a bug in this
-table, not a client error to report as one.
+forever. So the ledger's own mapping is enumerated here rather than decided at each raise site.
+
+**A module's refusals carry their own status**, and this defers to it. The table below knows the
+ledger's codes and nothing else, so a module's error — `import_refused`, `import_too_large` —
+would fall to the 500 default and a caller would retry a file that will never be accepted. A
+module declares `status` on the error class; that is the more specific statement and it wins.
+The 500 default now means only what it always should have: an error that declared nothing,
+which is a bug here rather than a client error to report as one.
 
 **Both adapters surface the same code for the same condition** (ADR-0009). The MCP adapter
 does not reuse the status, because MCP has no statuses — it reuses this module's codes.
@@ -81,5 +86,14 @@ STATUS_FOR_CODE: dict[str, int] = {
 
 
 def status_for(error: LedgerError) -> int:
-    """The HTTP status for an error's stable code, defaulting to 500."""
+    """The HTTP status for an error, from its own declaration or the ledger's table.
+
+    The error's own `status` first: a module defines refusals the ledger has never heard of, and
+    enumerating them here would make the ledger depend on knowing what its modules can refuse —
+    which is the dependency ADR-0022's contract forbids, arriving as a table instead of an
+    import.
+    """
+    declared = getattr(error, "status", None)
+    if isinstance(declared, int):
+        return declared
     return STATUS_FOR_CODE.get(error.code, HTTPStatus.INTERNAL_SERVER_ERROR)

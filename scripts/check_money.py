@@ -108,13 +108,12 @@ def main() -> int:
         if "__pycache__" not in path.parts
     )
     for path in py_files:
-        # Float *literals* are rejected under src/ only. A fixture modelling a foreign file
-        # format legitimately holds one: an .xlsx cell is an IEEE double, openpyxl hands back
-        # exactly that, and `quickbooks._amount` exists to convert it with `Decimal(str(...))`.
-        # A fixture stating that cell as a Decimal would test a path production never takes,
-        # so the faithful fixture is the one carrying the float. Under src/ there is no such
-        # excuse, and there is deliberately no way to mark an exception: if a float literal ever
-        # belongs there, that is a decision to make in this file, in a diff someone reviews.
+        # Float *literals* are rejected under src/ only. A fixture building a synthetic .xlsx
+        # legitimately holds one: a spreadsheet cell is an IEEE double and openpyxl writes
+        # exactly that, so a fixture stating the cell as a Decimal would build a file no
+        # source system emits. Under src/ there is no such excuse, and there is deliberately
+        # no way to mark an exception: if a float literal ever belongs there, that is a
+        # decision to make in this file, in a diff someone reviews.
         in_src = path.relative_to(REPO_ROOT).parts[0] == "src"
         source = path.read_text(encoding="utf-8")
         for number, text in offending_python_lines(source, literals=in_src):

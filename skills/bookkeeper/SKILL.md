@@ -65,44 +65,58 @@ quoting the error `code` the ledger returned. Never summarise a partial failure 
 
 ## Bringing in books from another system
 
-An entity may arrive with years of history in QuickBooks or something like it. Two tools
-handle that, and the split between them is the whole of how it should go.
+An entity may arrive with years of history in QuickBooks or something like it. **You do not read
+that file, and neither does CFOKit.** A script in this bundle does, here, on this machine:
 
-**`plan_import` is yours.** It reads an export on the server and reports what importing it
-would do: how many transactions, which accounts would be created, the period covered, and how
-many rows would be skipped and why. It posts nothing. Run it, and tell the user what it says.
+```
+python3 scripts/read_quickbooks.py <export.zip> --summary
+```
 
-**`apply_import` is theirs.** It is the largest single act of posting the system offers — a
-company's whole history in one call — and it is a person's act, not yours (ADR-0007). If you
-call it from a delegated session the ledger refuses with `not_a_person`, which is correct and
-is not something to work around. Ask the person you act for to run it.
+That prints what the export holds — how many transactions, over what period, how many accounts,
+and any the source states no type for. Show the user that before anything else. It is counts and
+account names only; it carries no amounts, and neither should you.
 
-**Pass a filename, never a file's contents.** The server reads the export itself. An export is
-tens of thousands of lines; carrying them through a conversation gains nothing, and a
-conversation that runs out of room mid-way would import books that are silently incomplete.
+**Then the import, which is theirs to run, not yours:**
 
-**The reply is a summary; the report has the figures.** Both tools write a report file and
-return its path. When the user wants the detail, point them at the file rather than reciting
-it back — and never restate a figure from memory once you have.
+```
+python3 scripts/read_quickbooks.py <export.zip> --post <cfokit-url> --entity <entity-id>
+```
 
-**Two things in a plan look like problems and are not.**
+It signs the user in — a browser page and a short code — then opens the import, sends the
+transactions in batches, and reconciles. Watch its output and relay what it says.
 
-- `expect_obligation_accounts_to_differ` means the source stated its balances on a different
-  accounting basis from the books they are landing in. Receivables and the income not yet
-  recognised against them will differ by exactly what is unsettled. That is arithmetic, not a
-  defect — say so plainly rather than reporting a failed reconciliation.
-- Skipped rows are refusals decided before anything was posted: a transaction with one line
+**Why the sign-in is theirs and cannot be yours.** Importing a company's books is a person's act
+(ADR-0007). A token from your session carries a delegation claim and the ledger refuses it with
+`not_a_person`, which is correct and is not something to work around. Tell the user the browser
+page needs their approval; do not attempt to approve it, and do not ask them for a credential.
+
+**The file never leaves their machine, and never enters this conversation.** It is a company's
+whole history — thousands of transactions. Reading it to you would gain nothing, lose figures,
+and put every payee and amount through a context window as a side effect of loading a file.
+Point the script at the path. Never at its contents.
+
+**Safe to run again.** Every entry's key is derived from the file and the row, so a run that dies
+partway resumes by running it again: what already landed is reported as `replayed`, and only the
+remainder posts. `replayed` rising with `posted` at zero is the retry working, not a half-import.
+Never add the two together when telling someone what changed.
+
+**Two things in the output look like problems and are not.**
+
+- A note that the stated balances were run on a **different basis** from the journal. Receivables
+  and the income not yet recognised against them will differ by exactly what is unsettled. That
+  is arithmetic, not a defect — say so plainly rather than reporting a failed reconciliation.
+- **Skipped rows** are refusals decided before anything was posted: a transaction with one line
   records no movement of value, and one whose debits and credits differ cannot balance. Report
-  how many and why. Do not offer to repair them; a source's malformed row is the user's to
-  decide about.
+  how many and why. Do not offer to repair them; a source's malformed row is the user's to decide
+  about.
 
-**A blocked plan is abandoned, not forced.** `can_apply: false` means the file is the wrong
-file for this entity — the wrong accounting basis, or a currency the entity does not keep books
-in. Say which, and stop.
+**A refused import is abandoned, not forced.** `import_refused` means the file is wrong for this
+entity — the wrong accounting basis, or a currency the entity does not keep books in. Say which,
+and stop.
 
-**After an import, the reconciliation is the answer.** It compares our balances against the
-ones the source states for itself. Anything short of exact agreement, beyond the basis
-difference above, is a finding to report — never a rounding to explain away.
+**After an import, the reconciliation is the answer.** It compares our balances against the ones
+the source states for itself. Anything short of exact agreement, beyond the basis difference
+above, is a finding to report — never a rounding to explain away.
 
 ## How you report
 

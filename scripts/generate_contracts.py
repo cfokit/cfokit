@@ -41,16 +41,16 @@ from cfokit.server import mcp_server, rest_app  # noqa: E402
 # A DSN that is never connected to. Generating a contract must not need a database, or the
 # gate would need one too (ADR-0004).
 #
-# `import_root` is set, so the published surface is everything the deployable *can* expose. A
-# deployment that leaves `IMPORT_ROOT` unset exposes fewer tools than the contract lists, which
-# is a deployment choice rather than a contract change — the opposite arrangement would make
-# the published contract depend on configuration, and a caller could not bind to it.
+# Nothing here is conditional on configuration. It was: the import tools existed only where
+# `IMPORT_ROOT` named a directory, so the contract had to be generated with it set or a
+# deployment would expose less than the contract listed. Import's surface is now REST and
+# unconditional (ADR-0041), so the published contract no longer depends on how a deployment
+# is configured — which is the property a caller binds to.
 SETTINGS = Settings(
     database_url="postgresql://contract.invalid/none",
     public_base_url="http://localhost:8080",
     auth_issuer_url="http://localhost:8180/realms/cfokit",
     auth_audience="cfokit-ledger",
-    import_root=Path("/imports"),
 )
 
 

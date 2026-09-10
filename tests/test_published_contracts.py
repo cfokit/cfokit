@@ -19,6 +19,7 @@ from pydantic import ValidationError
 from cfokit.ledger.api import create_app
 from cfokit.ledger.api.models import PostingModel
 from cfokit.ledger.config import Settings
+from cfokit.server import rest_app
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CONTRACTS = REPO_ROOT / "docs" / "contracts"
@@ -75,10 +76,16 @@ def test_the_error_body_carries_a_code_not_only_a_message(client: TestClient) ->
 
 
 def test_the_committed_openapi_matches_the_application() -> None:
-    """CI gate 5 diffs this. Failing here first is friendlier than failing there."""
+    """CI gate 5 diffs this. Failing here first is friendlier than failing there.
+
+    Against the **composed** application, not the ledger's alone. A module contributes its own
+    router (ADR-0022 forbids the ledger mounting one), so the moment import landed its routes
+    the ledger's app stopped being what a deployment serves — and a contract taken from it would
+    have published a surface smaller than the one callers reach.
+    """
     committed = json.loads((CONTRACTS / "openapi.json").read_text(encoding="utf-8"))
 
-    assert committed == json.loads(json.dumps(create_app(SETTINGS).openapi()))
+    assert committed == json.loads(json.dumps(rest_app(SETTINGS).openapi()))
 
 
 def test_every_error_code_is_published() -> None:
@@ -123,17 +130,14 @@ def test_the_mcp_tool_surface_is_published() -> None:
 
     assert [tool["name"] for tool in published] == [
         "account_detail",
-        "apply_import",
         "balance_sheet",
         "comparative_profit_and_loss",
-        "compare_statements",
         "create_entity",
         "issue_statement",
         "issued_statements",
         "obligation_detail",
         "open_balances",
         "outstanding_obligations",
-        "plan_import",
         "post_transaction",
         "profit_and_loss",
         "read_transaction",

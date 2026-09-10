@@ -31,8 +31,6 @@ metadata lookups, no provider SDK imports at module scope.
 | `AUTH_ISSUER_URL` | yes | OAuth 2.1 issuer base URL (ADR-0019). |
 | `AUTH_AUDIENCE` | yes | Expected token audience. Validated on every request (ADR-0011, ADR-0019). |
 | `LOG_LEVEL` | no | Defaults to `info`. |
-| `IMPORT_REPORTS` | no | Directory the import tools write their detail to. Separate from `IMPORT_ROOT` because the two want opposite permissions: exports are mounted read-only by anyone who has thought about it. Unset means no file is written and the reply says so. |
-| `IMPORT_ROOT` | no | Directory the import tools read from. Unset means the tools are not registered: a tool taking a path is a file-read primitive, and one reachable by any holder of a token should not exist unless a deployment asked for it (ADR-0040). |
 | `PORT` | no | Defaults to `8080`. |
 
 There is deliberately no variable selecting a cloud, a region, or a provider.
@@ -111,6 +109,11 @@ Any conforming issuer must provide:
 - RFC 7591 Dynamic Client Registration **or** Client ID Metadata Documents
 - The **client credentials grant**, for separate components authenticating as machine callers
   (ADR-0032 — an extension to the contract originally set in ADR-0019)
+- **RFC 8628 Device Authorization**, for the importer that ships with the bookkeeper skill. It
+  runs in an agent's runtime, which may have no browser and no port it can bind, and the person
+  approving may be at a different machine entirely — so a redirect flow has nothing to redirect
+  to. An issuer without it needs the RFC 8252 loopback-with-PKCE fallback instead, which is a
+  deployment note rather than a second code path (ADR-0041)
 
 **One identity, and one port, from every side.** A client is handed the issuer's address in the
 ledger's protected-resource metadata and goes to it directly, so a port mapped to a different
