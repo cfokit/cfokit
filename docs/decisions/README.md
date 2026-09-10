@@ -85,6 +85,7 @@ nothing cites these but this repository. They are added when something breaks wi
 | [0039](0039-roles-are-rows-privileges-are-code.md) | Roles are rows, privileges are code, and only `owner` exists yet | Proposed |
 | [0040](0040-import-is-the-first-module.md) | Import is the first in-process module, and the file never passes through a model | Proposed |
 | [0041](0041-import-is-parsed-where-the-file-is.md) | An import is parsed where the file is, and the books arrive as a neutral shape | Proposed |
+| [0042](0042-person-only-acts-are-a-capability.md) | A person-only act is gated by a capability, and `actor_class` describes provenance rather than authority | Proposed |
 
 ## Deferred — decided in principle, waiting on a need
 
