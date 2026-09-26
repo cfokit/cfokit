@@ -19,15 +19,17 @@ import pytest
 
 # `tests` is not a package, so this is an absolute import: pytest puts the test file's
 # own directory on `sys.path` under the default import mode.
-from conformance import LOADER, Case, load
+from conformance import CASE_NAMES, LOADER, TOTAL_LINES, Case, load
 
 from cfokit.ledger.presentation import (
     PresentedReconciliation,
     SourceBalance,
+    present_balance_sheet,
+    present_profit_and_loss,
     present_reconciliation,
 )
 from cfokit.ledger.repository.unit_of_work import Database
-from cfokit.ledger.service.reports import trial_balance
+from cfokit.ledger.service.reports import balance_sheet, profit_and_loss, trial_balance
 
 pytestmark = pytest.mark.integration
 
@@ -167,3 +169,80 @@ def test_agreement_is_not_the_default(database: Database, washington_1907: Case)
     assert not report.agrees
     assert len(report.disagreements) == len(washington_1907.source)
     assert all(c.only_ours for c in report.disagreements)
+
+
+# --- Every case, whatever shape its answer takes -------------------------------------------
+
+
+def published_totals(database: Database, case: Case) -> dict[str, Decimal]:
+    """The figures a statement case's source printed, as our own statement computes them.
+
+    A published statement asserts its totals — total assets, net profit — and those are what
+    a case compares. `presentation` computes them already, so this reads the same numbers a
+    customer sees rather than a sum assembled for the test.
+    """
+    if case.answer == "profit_and_loss":
+        assert case.since is not None, f"{case.name}: a profit and loss needs [expected].since"
+        statement = present_profit_and_loss(
+            profit_and_loss(
+                database,
+                entity_id=case.entity_id,
+                principal=LOADER,
+                since=case.since,
+                as_of=case.as_of,
+            )
+        )
+        return {
+            "total_income": statement.total_income,
+            "total_expenses": statement.total_expenses,
+            "net_income": statement.net_income,
+        }
+
+    sheet = present_balance_sheet(
+        balance_sheet(database, entity_id=case.entity_id, principal=LOADER, as_of=case.as_of)
+    )
+    return {
+        "total_assets": sheet.total_assets,
+        "total_liabilities": sheet.total_liabilities,
+        "total_equity": sheet.total_equity,
+    }
+
+
+@pytest.mark.parametrize("name", CASE_NAMES, ids=str)
+def test_every_case_agrees_with_its_published_answer(database: Database, name: str) -> None:
+    """**This is `NFR-01`'s evidence, for the whole corpus rather than one case of it.**
+
+    Parameterised over the fixture directory rather than over named cases, for the reason
+    `tests/test_conformance_corpus.py` gives: a check written against the cases that exist
+    today holds only for them, and a case added later joins the gate by being added.
+    """
+    case = load(database, name)
+
+    if case.answer == "trial_balance":
+        report = reconcile(database, case)
+        assert report.agrees, [
+            (c.account_code, str(c.ours), str(c.theirs)) for c in report.disagreements
+        ]
+        return
+
+    ours = published_totals(database, case)
+    assert case.totals, f"{name}: a statement answer that asserts no total asserts nothing"
+
+    disagreements = {
+        line: (str(ours[line]), str(printed))
+        for line, printed in case.totals.items()
+        if ours[line] != printed
+    }
+    assert not disagreements, disagreements
+
+
+@pytest.mark.parametrize("name", CASE_NAMES, ids=str)
+def test_a_statement_case_asserts_only_lines_that_exist(database: Database, name: str) -> None:
+    """A misspelled total silently asserts nothing, because the comparison above iterates the
+    lines a case names. This is the check that stops a typo reading as agreement."""
+    case = load(database, name)
+    if case.answer == "trial_balance":
+        pytest.skip("per-account answer; the reconciler covers the missing-account case")
+
+    unknown = set(case.totals) - TOTAL_LINES[case.answer]
+    assert not unknown, f"{name}: names {sorted(unknown)}, which no statement publishes"

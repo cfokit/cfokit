@@ -1,0 +1,5 @@
+code,name,type,parent
+1000,Cash at bank,asset,
+1400,Prepaid insurance,asset,
+3000,Owner capital,equity,
+6200,Insurance expense,expense,

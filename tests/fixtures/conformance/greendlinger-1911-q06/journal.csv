@@ -1,0 +1,24 @@
+ref,date,description,account_code,amount,commodity
+1,1902-12-31,The accounts as the examination states them before closing,1000,4900.00,USD
+1,1902-12-31,The accounts as the examination states them before closing,1100,12400.00,USD
+1,1902-12-31,The accounts as the examination states them before closing,1200,250.00,USD
+1,1902-12-31,The accounts as the examination states them before closing,1210,700.00,USD
+1,1902-12-31,The accounts as the examination states them before closing,1220,650.00,USD
+1,1902-12-31,The accounts as the examination states them before closing,1230,850.00,USD
+1,1902-12-31,The accounts as the examination states them before closing,4000,32000.00,USD
+1,1902-12-31,The accounts as the examination states them before closing,5000,2520.00,USD
+1,1902-12-31,The accounts as the examination states them before closing,4200,480.00,USD
+1,1902-12-31,The accounts as the examination states them before closing,5100,866.00,USD
+1,1902-12-31,The accounts as the examination states them before closing,4000,-27000.00,USD
+1,1902-12-31,The accounts as the examination states them before closing,4100,-2760.00,USD
+1,1902-12-31,The accounts as the examination states them before closing,4200,-950.00,USD
+1,1902-12-31,The accounts as the examination states them before closing,4300,-1520.00,USD
+1,1902-12-31,The accounts as the examination states them before closing,2000,-1890.00,USD
+1,1902-12-31,The accounts as the examination states them before closing,2100,-240.00,USD
+1,1902-12-31,The accounts as the examination states them before closing,2110,-500.00,USD
+1,1902-12-31,The accounts as the examination states them before closing,2120,-100.00,USD
+1,1902-12-31,The accounts as the examination states them before closing,2200,-7556.00,USD
+1,1902-12-31,The accounts as the examination states them before closing,3000,-8400.00,USD
+1,1902-12-31,The accounts as the examination states them before closing,3100,-4700.00,USD
+2,1902-12-31,Merchandise inventory taken up at 31 December,1300,10500.00,USD
+2,1902-12-31,Merchandise inventory taken up at 31 December,4000,-10500.00,USD

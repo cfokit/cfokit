@@ -86,6 +86,8 @@ nothing cites these but this repository. They are added when something breaks wi
 | [0040](0040-import-is-the-first-module.md) | Import is the first in-process module, and the file never passes through a model | Proposed |
 | [0041](0041-import-is-parsed-where-the-file-is.md) | An import is parsed where the file is, and the books arrive as a neutral shape | Proposed |
 | [0042](0042-person-only-acts-are-a-capability.md) | A person-only act is gated by a capability, and `actor_class` describes provenance rather than authority | Proposed |
+| [0043](0043-conformance-is-claimed-in-three-bands.md) | Conformance is claimed in three bands, and accounting policy is not one of them | Proposed |
+| [0044](0044-an-expected-value-comes-from-a-redistributable-source.md) | An expected value comes only from a source we can redistribute | Proposed |
 
 ## Deferred — decided in principle, waiting on a need
 
@@ -123,20 +125,24 @@ Every other record is `kind: requirement-driven` and must cite at least one requ
 
 ## Status of this corpus
 
-**Eight records are `accepted`; the rest are `draft`.**
+**Nine records are `accepted`; the rest are `draft`.**
 
 Acceptance is not a claim of confidence. It means changes from here leave a trail: a changed mind
 becomes a superseding record, and the superseded one stays in place with its reasoning intact. The
 cost of accepting a record that later proves wrong is one more record. The cost of leaving it
 `draft` is that a rewrite leaves nothing behind at all.
 
-So the trigger is not "reviewed enough" — it is **about to become irreversible**. The eight accepted
+So the trigger is not "reviewed enough" — it is **about to become irreversible**. Eight of the nine
 are the ones the first migration and the booking engine embody in something that cannot be taken
 back: `ADR-0003` Postgres-specific mechanisms in the schema, `ADR-0005` `NUMERIC(28,10)`, `ADR-0006`
 the deferred zero-sum trigger, `ADR-0007` append-only enforcement and every row written under it,
 `ADR-0013` `recorded_at`, `ADR-0029` the idempotency key in schema and published contract, `ADR-0033`
 the attribution columns, and `ADR-0037` obligation and settlement as linked postings. Each was read
 for staleness before acceptance rather than accepted in a batch.
+
+The ninth, `ADR-0019`, rests on a different footing: its reversal cost is low by construction, but
+its conformance contract is written, verified by a test, and depended on by every deployment's
+issuer configuration.
 
 Everything else stays `draft` because building the ledger does not embody it. Records move to
 `accepted` deliberately, one at a time, and not before.

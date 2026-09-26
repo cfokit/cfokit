@@ -1,0 +1,61 @@
+# A recognition case: a published *rule*, and a fact pattern of our own (ADR-0044).
+#
+# This is the weaker evidence class and the manifest says so by citing something different.
+# A conformance case transcribes an answer somebody else computed. Here nobody computed our
+# answer, because nobody was asked our question — the fact pattern is ours. What is cited is
+# the rule that determines the treatment, and the arithmetic from rule to postings is short
+# enough that a reader can check it without trusting us.
+#
+# Nothing is copied. A rule is a procedure, which 17 USC § 102(b) excludes from copyright,
+# and the authority here is a work of the United States Government, which carries no
+# copyright at all (17 USC § 105) and could be quoted in full if quoting helped.
+
+name = "prepaid-insurance-12-months"
+
+[rule]
+authority = "IRS Publication 538 (01/2022), Accounting Periods and Methods"
+locator = "Accrual Method — Expenses: the all-events test and economic performance"
+url = "https://www.irs.gov/publications/p538"
+licence = "public-domain"
+# US Government work. No term, no renewal, no determination needed.
+basis = "tax"
+
+[coverage]
+areas = ["prepaid-expenses"]
+requirements = ["LED-04", "BKP-04"]
+
+[entity]
+accounting_basis = "accrual"
+fiscal_year_end_month = 12
+fiscal_year_end_day = 31
+functional_currency = "USD"
+
+[expected]
+answer = "profit_and_loss"
+since = 2025-01-01
+as_of = 2025-12-31
+source_is_rounded = false
+
+[derivation]
+# The fact pattern, ours: a calendar-year business pays 2,400.00 on 1 July 2025 for twelve
+# months' insurance cover running to 30 June 2026.
+#
+# The rule, cited: under an accrual method an expense is deducted when the all-events test is
+# met *and* economic performance has occurred, and for services economic performance occurs
+# as the services are provided. Cover for a month that has not elapsed is a service not yet
+# provided, so the payment is not an expense of 2025 merely because it was paid in 2025.
+#
+# The arithmetic, ours and checkable: 2,400.00 buys twelve months at 200.00 a month. Six of
+# them — July to December — fall in 2025. So 1,200.00 is the expense of 2025 and 1,200.00
+# remains an asset at 31 December. Nothing here rounds: 2400/12 is exact.
+#
+# **Tax authority, and where GAAP differs.** `basis = "tax"` because the cited rule is the
+# IRS's. On this fact pattern accrual GAAP reaches the same figures for the same reason, so
+# the case is not sensitive to the difference. It would be under the twelve-month rule of the
+# same publication, which can allow a cash-method taxpayer to deduct the whole 2,400.00 in
+# the year paid — a divergence from accrual, and the reason this case cites the accrual
+# section rather than that one.
+#
+# **What this case does and does not evidence.** It shows that a treatment somebody else
+# decided is recorded and presented correctly. It does not show that CFOKit would choose this
+# treatment, because CFOKit does not choose treatments (ADR-0043 band 3).

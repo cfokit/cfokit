@@ -8,7 +8,6 @@
 # question, solved by a practising accountant, published fourteen years before any of us.
 
 name = "greendlinger-1911-q25"
-case = 2
 
 [source]
 title = "Accountancy Problems with Solutions"
@@ -22,6 +21,16 @@ scan = "https://archive.org/details/accountancyprob00greegoog"
 # states the copyright has expired and the book has entered the public domain. Published 1911,
 # so it is public domain in the United States on the pre-1931 rule.
 licence = "public-domain"
+# How it reached the public domain, not merely that it did (ADR-0044). Published 1911, so the
+# 95-year term expired; no renewal question arises and no determination is needed.
+pd_basis = "term-expired"
+
+[coverage]
+# What this case is evidence for, in the vocabulary of docs/conformance/coverage.md. The
+# published answer is a trial balance produced from a journal, so it evidences those two and
+# not the chart itself: the case uses accounts, it does not exercise hierarchy or type rules.
+areas = ["recording", "trial-balance"]
+requirements = ["LED-03", "LED-04", "RPT-01"]
 
 [entity]
 accounting_basis = "accrual"
@@ -30,6 +39,7 @@ fiscal_year_end_day = 31
 functional_currency = "USD"
 
 [expected]
+answer = "trial_balance"
 as_of = 1907-09-30
 # The published trial balance carries whole dollars, so no rounding question arises. Set true
 # only where a source's own figures have been rounded from something more precise.
