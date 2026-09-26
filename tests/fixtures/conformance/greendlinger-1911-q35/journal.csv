@@ -1,0 +1,19 @@
+ref,date,description,account_code,amount,commodity
+1,1902-01-01,Cash the company already held; see [transcription],1010,20000.00,USD
+1,1902-01-01,Cash the company already held; see [transcription],3000,-20000.00,USD
+2,1902-12-31,"1902 reserve: 50 stores @ 75, 10 stores half-year @ 37.50, warehouse 600",3100,4725.00,USD
+2,1902-12-31,"1902 reserve: 50 stores @ 75, 10 stores half-year @ 37.50, warehouse 600",3300,-4725.00,USD
+3,1903-01-01,Deposit the 1902 reserve with the Trust Co. at 3%,1400,4725.00,USD
+3,1903-01-01,Deposit the 1902 reserve with the Trust Co. at 3%,1010,-4725.00,USD
+4,1903-12-31,"1903 reserve: 65 stores @ 75, warehouse 600",3100,5475.00,USD
+4,1903-12-31,"1903 reserve: 65 stores @ 75, warehouse 600",3300,-5475.00,USD
+5,1903-12-31,"3% interest on 4,725 credited to the fund",1400,141.75,USD
+5,1903-12-31,"3% interest on 4,725 credited to the fund",3300,-141.75,USD
+6,1904-01-01,Deposit the 1903 reserve with the Trust Co. at 3%,1400,5475.00,USD
+6,1904-01-01,Deposit the 1903 reserve with the Trust Co. at 3%,1010,-5475.00,USD
+7,1904-12-31,"1904 reserve: 75 stores @ 75, warehouse 600",3100,6225.00,USD
+7,1904-12-31,"1904 reserve: 75 stores @ 75, warehouse 600",3300,-6225.00,USD
+8,1904-12-31,"3% interest on the deposit of 10,341.75",1400,310.25,USD
+8,1904-12-31,"3% interest on the deposit of 10,341.75",3300,-310.25,USD
+9,1905-01-01,Deposit the 1904 reserve with the Trust Co. at 3%,1400,6225.00,USD
+9,1905-01-01,Deposit the 1904 reserve with the Trust Co. at 3%,1010,-6225.00,USD

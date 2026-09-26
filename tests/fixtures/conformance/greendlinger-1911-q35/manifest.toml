@@ -1,0 +1,84 @@
+# A conformance case: figures and answer taken from a published source, not from us.
+#
+# A second, independent case on adjusting entries, and the corpus's first spanning several
+# periods — nine entries across three year ends, with the answer asked for as at a date in
+# the middle of the sequence rather than at the end of it.
+
+name = "greendlinger-1911-q35"
+
+[source]
+title = "Accountancy Problems with Solutions"
+author = "Leo Greendlinger"
+publisher = "Business Book Bureau"
+year = 1911
+problem = "Question 35"
+# This one cites no examination. The book says so: "although it is not taken from a C. P. A.
+# examination, it is included here". So the published answer is the author's, a practising
+# accountant writing for candidates, rather than a state board's — weaker provenance than
+# the other cases, and recorded rather than glossed.
+origin = "Not from an examination; Greendlinger's own worked problem"
+scan = "https://archive.org/details/accountancyprob00greegoog"
+licence = "public-domain"
+pd_basis = "term-expired"
+
+[coverage]
+areas = ["adjusting-entries", "trial-balance"]
+requirements = ["LED-04", "RPT-01"]
+
+[entity]
+accounting_basis = "accrual"
+fiscal_year_end_month = 12
+fiscal_year_end_day = 31
+functional_currency = "USD"
+
+[expected]
+answer = "trial_balance"
+# "the condition of these accounts on January 1, 1905" — the question's own words. The last
+# entry falls on that date and is included.
+as_of = 1905-01-01
+source_is_rounded = false
+
+[transcription]
+method = "double-blind"
+# The journal was built from the problem statement and the expected balances from the
+# published solution, by separate passes, neither reading CFOKit's source or output.
+#
+# Each year's premium reproduces the source's printed sub-total from its own printed detail:
+# 50 x 75 + 10 x 37.50 + 600 = 4,725 for 1902 (the ten stores opened 1 July carry half a
+# year); 65 x 75 + 600 = 5,475 for 1903; 75 x 75 + 600 = 6,225 for 1904. The store counts
+# 50, 65 and 75 are the source's and match the openings it describes.
+#
+# Interest is credited to the reserve and debited to the fund, never to income — the book's
+# own editorial note is explicit that it "is not under any circumstances a credit to the
+# Investment account". 3% x 4,725 = 141.75 exactly. The second year's base, 10,341.75, is
+# printed in the source and is independently recomputed here as 4,725 + 141.75 + 5,475.
+# 3% of it is 310.2525, and the source prints 310.25; the case follows the source, and
+# `source_is_rounded` stays false because 310.25 is the figure the books were written with
+# rather than a rounding of something they held more precisely.
+#
+# **The strongest check in the corpus.** The source prints two ledger columns of five items
+# each, in different orders — the Reserve's credits and the Fund's debits. Both foot to
+# 16,877.00. A misread digit in any of the five would break one column and not the other.
+#
+# **Cash is ours.** The problem never states a cash balance, and three deposits totalling
+# 16,425.00 leave it negative from nothing. Entry 1 seeds 20,000.00 against capital so the
+# books are a going concern. That figure is not Greendlinger's. It is inert: no other entry
+# touches capital, and the two balances the question actually asks for — the fund and the
+# reserve, both 16,877.00 — are identical at any seed.
+verified_against = "the reserve and fund ledger columns, both footing to 16,877.00"
+
+[divergence]
+# As in `greendlinger-1911-q11`, the source prints a figure contradicted by its own others.
+#
+# The 1903 year-end entry is printed with a debit of 5,475.00 and a credit of 4,725.00 — the
+# previous year's figure, repeated. Its own printed detail foots to 5,475 (65 stores at 75,
+# plus a 600 warehouse), and the fund and reserve columns both need 5,475 to reach the
+# 16,877.00 they print. The detail line is also printed "65 stores I yr. @ $75 $4375" where
+# 65 x 75 is 4,875, which the printed 5,475 sub-total confirms.
+#
+# So the case uses 5,475.00 and 4,875.00. Both are typesetting or scanning defects in the
+# source rather than disagreements with CFOKit, and both are recorded rather than quietly
+# corrected.
+entry = "1903 year-end reserve"
+source_prints = "4725.00 credit, and a detail line of 4375.00"
+case_uses = "5475.00 credit, from a detail of 4875.00 plus 600.00"

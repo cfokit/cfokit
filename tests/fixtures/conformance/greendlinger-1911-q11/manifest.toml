@@ -1,0 +1,83 @@
+# A conformance case: figures and answer taken from a published source, not from us.
+#
+# The corpus's first case carrying a recorded divergence from its own source. The published
+# solution prints one figure that contradicts two others it prints; see [divergence].
+
+name = "greendlinger-1911-q11"
+
+[source]
+title = "Accountancy Problems with Solutions"
+author = "Leo Greendlinger"
+publisher = "Business Book Bureau"
+year = 1911
+problem = "Question 11"
+origin = "State of Washington Examination, April 1906"
+scan = "https://archive.org/details/accountancyprob00greegoog"
+licence = "public-domain"
+pd_basis = "term-expired"
+
+[coverage]
+# Depreciation and bad debts are band 3 areas CFOKit declines to decide — but a 1906 examiner
+# did set the problem, so here the evidence is a published answer rather than a rule we
+# derived from, which is the stronger kind (ADR-0044).
+areas = ["adjusting-entries", "depreciation", "bad-debts"]
+requirements = ["LED-04", "RPT-01", "AR-18", "BKP-04"]
+
+[entity]
+accounting_basis = "accrual"
+fiscal_year_end_month = 12
+fiscal_year_end_day = 31
+functional_currency = "USD"
+
+[expected]
+answer = "trial_balance"
+as_of = 1905-12-31
+source_is_rounded = false
+
+[transcription]
+method = "double-blind"
+# The journal was built from the problem statement and the expected balances from the
+# published solution, by separate passes, neither reading CFOKit's source or output
+# (`.claude/commands/conformance-case.md`).
+#
+# OCR repairs, each confirmed by the problem's own stated rate: "$4*1^5" and "$4»I35" are
+# 4,125.00, which is 7.5% of 55,000. "$3»ooo" is 3,000.00, 6% of 50,000. "$7t500" is
+# 7,500.00, stated outright. "$if500" is 1,500.00, stated outright. "7}^%" is 7.5%.
+#
+# Every charge reproduces a rate the problem gives: 7.5% x 55,000 = 4,125; 2% x (40,700 -
+# 1,500) = 784; 6% x 50,000 = 3,000; 15% x 150,000 = 22,500. Running the profit and loss
+# balance down by all five charges gives exactly the 20,591.00 the source prints as the
+# transfer to undivided profits, which is a single chain confirming every figure at once.
+#
+# **The problem states a position, not a trial balance.** Its five balances — profit and loss
+# 60,000 credit, accounts receivable 40,700, plant 55,000, preferred 50,000, common 150,000 —
+# do not balance, because a corporation has assets the problem had no reason to mention.
+# Account 1900 carries the 164,300.00 difference so the books can be opened at all. **That
+# figure is ours, not Greendlinger's.** It is inert: no charge touches it, and every asserted
+# balance below would be identical at any other value.
+#
+# The source states no date. 1905-12-31 is the year end before the April 1906 sitting, chosen
+# for realism; nothing depends on it, as every entry carries the same date.
+#
+# Profit and loss closes to exactly zero, which is the whole object of the exercise. It is
+# absent from the expected balances rather than listed at zero, because `RPT-01` reports
+# accounts with a balance. What evidences the close is that the remaining eleven balances
+# tie — they sum to zero only if the six charges consumed the whole 60,000.
+verified_against = "the published charge amounts and the printed 20,591.00 residual"
+
+[divergence]
+# **The source prints an internally inconsistent figure, and we follow the other two.**
+#
+# The second entry is printed "Profit and Loss $2,264" against credits of "Accounts
+# Receivable $1,500" and "Reserve for Bad Debts 784". Those credits sum to 2,284, so the
+# entry as printed does not balance. Two independent checks give 2,284 and neither gives
+# 2,264: the entry's own credit lines, and the run-down of the profit and loss balance, which
+# reaches the printed 20,591.00 only with 2,284 and reaches 20,611.00 with 2,264.
+#
+# So the case uses 2,284.00. This is a defect in the source — a 6 for an 8, in the 1911
+# typesetting or in the scan — and not a disagreement between Greendlinger and CFOKit. It is
+# recorded here rather than silently corrected because a case edited into passing without a
+# record is how a corpus turns into a mirror.
+entry = "second, the bad debts charge"
+source_prints = "2264.00"
+case_uses = "2284.00"

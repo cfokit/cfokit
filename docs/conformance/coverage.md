@@ -28,17 +28,21 @@ tables below and fails if this section is wrong, so it cannot quietly go stale.
 
 | | `case` | `shape` | `internal` | `none` | total |
 |---|---|---|---|---|---|
-| **Band 1** — enforced | 1 | — | 4 | 8 | 13 |
+| **Band 1** — enforced | 2 | — | 4 | 7 | 13 |
 | **Band 2** — presented | 3 | — | 3 | 3 | 9 |
-| **Band 3** — recordable | — | 1 | — | 5 | 6 |
+| **Band 3** — recordable | 2 | 1 | — | 3 | 6 |
 | declined | — | — | — | — | 12 |
 | gap | — | — | — | — | 5 |
 
-**Four areas out of twenty-eight claimed ones carry a published answer.** That is the honest
-headline and it should be read before the tables. The apparatus around the corpus — the map,
-the gate, the provenance rules, the two evidence classes — is further along than the corpus
-itself, and apparatus is not evidence. The `none` rows are the work: twelve of the sixteen
-are questions a published problem could answer, and nobody has transcribed one yet.
+**Seven areas out of twenty-eight claimed ones carry a published answer, from five cases.**
+That is the honest headline and it should be read before the tables. The apparatus around
+the corpus — the map, the gate, the provenance rules, the evidence classes — is further along
+than the corpus itself, and apparatus is not evidence.
+
+Depth is thinner still than breadth: only `adjusting-entries` and `trial-balance` rest on
+more than one case, so most `case` rows would survive a single bad transcription. The
+thirteen `none` rows are the work, and every one of them is a question some examiner has
+already set and published an answer to.
 
 ## Status values
 
@@ -54,7 +58,7 @@ are questions a published problem could answer, and nobody has transcribed one y
 
 | Evidence | Meaning |
 |---|---|
-| `case` | A published answer somebody else computed agrees with ours. The strongest kind. |
+| `case` | A published answer somebody else computed agrees with ours. The strongest kind, and available for a band 3 area too wherever an examiner happened to set that problem. |
 | `shape` | A recognition case pins the booking shape against a cited rule. **Much weaker — see below.** |
 | `none` | Claimed, not yet evidenced, and a published answer could exist. This is the to-do list. |
 | `internal` | Our own tests, only. No published answer can exist, because the question is not one accountancy asks. |
@@ -91,7 +95,7 @@ finding aid for a reader who knows the Codification, not a claim of conformance 
 | **opening-balances** | — | `enforced` | `none` | LED-10 |
 | **period-close** | 270 | `enforced` | `none` | LED-11 |
 | **year-end-close** | — | `enforced` | `none` | LED-12 |
-| **adjusting-entries** | — | `enforced` | `none` | LED-04, RPT-01 |
+| **adjusting-entries** | — | `enforced` | `case` | LED-04, RPT-01 |
 | **obligation-settlement** | 310 | `enforced` | `none` | LED-17, AR-16 |
 | **functional-currency** | 830 | `enforced` | `internal` | LED-15 |
 | **attribution** | — | `enforced` | `internal` | LED-20 |
@@ -142,9 +146,9 @@ that a treatment someone else decided is recorded and presented correctly.
 | **cash-accrual-method** | — | `recordable` | `none` | LED-14, AR-16 |
 | **prepaid-expenses** | 340 | `recordable` | `shape` | LED-04, BKP-04 |
 | **accrued-liabilities** | 405 | `recordable` | `none` | LED-04, BKP-04 |
-| **depreciation** | 360 | `recordable` | `none` | BKP-04 |
+| **depreciation** | 360 | `recordable` | `case` | BKP-04 |
 | **internal-transfers** | — | `recordable` | `none` | BKP-14 |
-| **bad-debts** | 310 | `recordable` | `none` | AR-18 |
+| **bad-debts** | 310 | `recordable` | `case` | AR-18 |
 | **assignment** | — | `gap` | — | BKP-06, BKP-09, BKP-12 |
 | **revenue-recognition** | 606 | `declined` | — | — |
 | **leases** | 842 | `declined` | — | — |

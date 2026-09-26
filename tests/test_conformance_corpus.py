@@ -92,7 +92,11 @@ VALID_STATUS = NEEDS_CONFORMANCE | NEEDS_RECOGNITION | NEEDS_NOTHING
 # problem on who wrote a transaction. Naming that is better than leaving the row looking like
 # work nobody has got to yet.
 EVIDENCE_FOR = {
-    "case": NEEDS_CONFORMANCE,
+    # A published answer is the strongest evidence for any claim, including a band 3 one. A
+    # 1906 examiner did set problems on depreciation and bad debts, and a case transcribing
+    # one beats a rule we derived from — so `recordable` takes `case` where such a source
+    # exists, and falls back to `shape` where none does.
+    "case": NEEDS_CONFORMANCE | NEEDS_RECOGNITION,
     "shape": NEEDS_RECOGNITION,
     "none": NEEDS_CONFORMANCE | NEEDS_RECOGNITION,
     "internal": NEEDS_CONFORMANCE,
@@ -273,9 +277,9 @@ def test_a_case_declares_what_it_covers(case: str) -> None:
     assert areas, f"{case}: [coverage] names no areas"
     for area in areas:
         assert area in AREAS, f"{case}: covers {area!r}, which coverage.md does not define"
-        assert AREAS[area].status in NEEDS_CONFORMANCE, (
-            f"{case}: covers {area!r}, whose status is {AREAS[area].status!r}. A published "
-            "answer evidences `enforced` and `presented` areas; nothing else asks for one."
+        assert AREAS[area].status in VALID_STATUS - NEEDS_NOTHING, (
+            f"{case}: covers {area!r}, whose status is {AREAS[area].status!r}. An area CFOKit "
+            "declines or has not built cannot be evidenced by anything."
         )
 
     for rid in coverage.get("requirements", []):
@@ -417,3 +421,51 @@ def test_the_summary_counts_what_the_tables_hold() -> None:
             f"Band {band} ({status}): summary says {printed}, tables hold {actual} "
             "as [case, shape, internal, none, total]"
         )
+
+
+def test_the_headline_counts_the_cases_that_exist() -> None:
+    """The sentence a reader takes away, checked like any other figure.
+
+    It is the one line most likely to be written once and left, and the one where being
+    wrong costs most — overstating how much evidence exists is the failure this whole
+    document is arranged against.
+    """
+    text = COVERAGE.read_text(encoding="utf-8")
+    claimed = re.search(
+        r"\*\*([\w-]+) areas out of ([\w-]+) claimed ones carry a published answer, "
+        r"from ([\w-]+) cases\.\*\*",
+        text,
+    )
+    assert claimed, "the headline sentence is missing or has been reworded"
+
+    words = {
+        "one": 1,
+        "two": 2,
+        "three": 3,
+        "four": 4,
+        "five": 5,
+        "six": 6,
+        "seven": 7,
+        "eight": 8,
+        "nine": 9,
+        "ten": 10,
+        "eleven": 11,
+        "twelve": 12,
+        "thirteen": 13,
+        "fourteen": 14,
+        "fifteen": 15,
+        "sixteen": 16,
+        "seventeen": 17,
+        "eighteen": 18,
+        "nineteen": 19,
+        "twenty": 20,
+        "twenty-eight": 28,
+        "thirty": 30,
+    }
+    for word in claimed.groups():
+        assert word.lower() in words, f"headline says {word!r}, which is not a number I read"
+    evidenced, claimable, cases = (words[w.lower()] for w in claimed.groups())
+
+    assert evidenced == sum(1 for a in AREAS.values() if a.evidence == "case")
+    assert claimable == sum(1 for a in AREAS.values() if a.status not in NEEDS_NOTHING)
+    assert cases == len(CASE_NAMES)
