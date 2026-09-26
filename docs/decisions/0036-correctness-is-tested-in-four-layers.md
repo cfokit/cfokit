@@ -266,8 +266,9 @@ The rule this section's provenance rule replaces, and the one that looks like th
   ADR-0030's closed-period refusal are eval cases, not unit tests.
 - A regression case for every real failure, filed at the layer that should have caught it.
 - Eval cases for the bookkeeper skill's decision points, asserting on records as this record
-  requires: that `plan_import` precedes `apply_import`, that a blocked plan is abandoned rather
-  than forced, that skipped rows are reported rather than repaired. Those are the places the
+  requires: that `open_import` precedes `import_entries` and `reconcile_import`, that a
+  refused import is abandoned rather than forced, that skipped rows are reported rather than
+  repaired. Those are the places the
   skill either respects a boundary the ledger enforces or talks its way around one, and prose
   about the divergence is not evidence either way.
 - `NFR-01` is amended alongside this record: it named a mechanism — "an independent implementation" —

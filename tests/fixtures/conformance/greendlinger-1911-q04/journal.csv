@@ -1,0 +1,18 @@
+ref,date,description,account_code,amount,commodity
+1,1900-06-30,The trial balance as handed to the accountant,3100,1000.00,USD
+1,1900-06-30,The trial balance as handed to the accountant,1010,600.00,USD
+1,1900-06-30,The trial balance as handed to the accountant,1000,90.00,USD
+1,1900-06-30,The trial balance as handed to the accountant,4000,8600.00,USD
+1,1900-06-30,The trial balance as handed to the accountant,5000,87.50,USD
+1,1900-06-30,The trial balance as handed to the accountant,1100,6400.00,USD
+1,1900-06-30,The trial balance as handed to the accountant,1500,1350.00,USD
+1,1900-06-30,The trial balance as handed to the accountant,1400,1566.00,USD
+1,1900-06-30,The trial balance as handed to the accountant,5100,1860.00,USD
+1,1900-06-30,The trial balance as handed to the accountant,5200,1000.00,USD
+1,1900-06-30,The trial balance as handed to the accountant,1200,8000.00,USD
+1,1900-06-30,The trial balance as handed to the accountant,3200,3446.50,USD
+1,1900-06-30,The trial balance as handed to the accountant,3000,-20000.00,USD
+1,1900-06-30,The trial balance as handed to the accountant,2000,-4000.00,USD
+1,1900-06-30,The trial balance as handed to the accountant,2100,-10000.00,USD
+2,1900-06-30,Closing merchandise inventory taken up,1300,15000.00,USD
+2,1900-06-30,Closing merchandise inventory taken up,4000,-15000.00,USD

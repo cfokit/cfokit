@@ -165,6 +165,7 @@ addopts = "-ra --strict-markers --strict-config"
 markers = [
     "integration: requires the compose stack (Postgres, issuer)",
     "oracle: differential test against the Beancount oracle (ADR-0010)",
+    "eval: asserts on the records an agent's turn leaves behind (ADR-0036 § 4)",
 ]
 
 # ---------------------------------------------------------------------------

@@ -1,0 +1,59 @@
+# A conformance case: figures and answer taken from a published source, not from us.
+#
+# The corpus's first profit-and-loss answer. The examination states a set of account totals
+# and asks for the books closed; the published solution prints a profit and loss account
+# totalling $10,730.00 on each side and divides a net profit between two partners.
+
+name = "greendlinger-1911-q06"
+
+[source]
+title = "Accountancy Problems with Solutions"
+author = "Leo Greendlinger"
+publisher = "Business Book Bureau"
+year = 1911
+problem = "Question 6"
+origin = "Illinois Examination, November 1903"
+scan = "https://archive.org/details/accountancyprob00greegoog"
+licence = "public-domain"
+pd_basis = "term-expired"
+
+[coverage]
+areas = ["income-statement"]
+requirements = ["LED-02", "RPT-02"]
+
+[entity]
+accounting_basis = "accrual"
+fiscal_year_end_month = 12
+fiscal_year_end_day = 31
+functional_currency = "USD"
+
+[expected]
+answer = "profit_and_loss"
+since = 1902-01-01
+as_of = 1902-12-31
+source_is_rounded = false
+
+[transcription]
+# The examination gives account totals rather than a journal, so entry 1 states the position
+# it describes and entry 2 takes up the closing inventory the solution supplies. Entry 1
+# balances at 55,616.00 a side without being forced to, which is the check that the figures
+# were read correctly: a misread digit anywhere would break it.
+#
+# Three of the source's own figures cross-check the result independently. The published
+# profit and loss account totals 10,730.00 on each side. The partners' printed shares,
+# 5,386.43 and 1,477.57, sum to exactly the 6,864.00 asserted here. And "Notes Receivable
+# Discounted 7,556" — the most damaged figure in the OCR — is confirmed by the balance sheet,
+# where it is precisely the amount by which assets of 30,250.00 exceed everything else.
+#
+# **Only `net_income` is asserted, deliberately.** The source describes interest as one
+# account "debited $480; Cr. $950" and prints both sides in the profit and loss account, so
+# its column totals of 10,730.00 are gross where a single ledger account nets to 470.00
+# income. Whether to hold one interest account or two is a modelling choice the source did
+# not make, and asserting a gross total would be asserting ours rather than theirs. The net
+# profit is the same under either reading, which is why it is the figure that carries the
+# case.
+#
+# "Sundries" is what the source calls the profit and loss account's own prior entries, Dr 866
+# and Cr 1,520. They are held here as one income and one expense account so they land in the
+# profit and loss where the source puts them.
+verified_against = "published profit and loss totals and the two partners' printed shares"

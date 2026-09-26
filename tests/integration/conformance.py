@@ -25,8 +25,41 @@ from cfokit.ledger.service.administration import create_account, create_entity
 from cfokit.ledger.service.principal import ActorClass, Principal
 from cfokit.ledger.service.write import WriteContext, record_transaction
 
-CASES = Path(__file__).resolve().parent.parent / "fixtures" / "conformance"
+FIXTURES = Path(__file__).resolve().parent.parent / "fixtures"
+CASES = FIXTURES / "conformance"
+# Recognition cases (ADR-0044): a cited rule and a fact pattern of our own, rather than
+# someone else's published answer. Same file shape, loaded the same way, kept in a separate
+# tree so neither kind can be counted as the other.
+RECOGNITION = FIXTURES / "recognition"
 LOADER = Principal(id="user:conformance", actor_class=ActorClass.PERSON)
+
+# What a case's published answer is, and which file holds it.
+ANSWER_FILES = {
+    "trial_balance": "trial_balance.csv",
+    "profit_and_loss": "profit_and_loss.csv",
+    "balance_sheet": "balance_sheet.csv",
+}
+
+# A trial balance is published account by account, and a case compares it that way. A
+# statement is not: a published balance sheet summarises, printing "Capital: investment
+# 20,000, net profit 6, less withdrawals 1,000" where the ledger holds three accounts. Mapping
+# those summary lines back onto account codes is a step the source never published, and a
+# transcription that performs it has quietly become a derivation — which is the one thing
+# ADR-0036 § 5 says a conformance case may not be.
+#
+# So a statement case asserts the figures the source actually printed: its totals. They are
+# unambiguous, they are what the statement claims, and they are what `presentation` already
+# computes. Per-account agreement is the trial-balance case's job and is not repeated here.
+TOTAL_LINES = {
+    "profit_and_loss": {"total_income", "total_expenses", "net_income"},
+    "balance_sheet": {"total_assets", "total_liabilities", "total_equity"},
+}
+
+
+# Every case in the corpus. The behavioural tests parameterise over this rather than over
+# named cases, so a case added later joins the gate by being added.
+CASE_NAMES = sorted(child.name for child in CASES.iterdir() if child.is_dir())
+RECOGNITION_NAMES = sorted(child.name for child in RECOGNITION.iterdir() if child.is_dir())
 
 
 @dataclass(frozen=True, slots=True)
@@ -36,14 +69,24 @@ class Case:
     name: str
     manifest: dict[str, Any]
     entity_id: str
+    answer: str
     as_of: date
+    since: date | None
+    # Per-account, for a trial-balance answer. Empty for a statement.
     source: tuple[SourceBalance, ...]
+    # Named totals, for a statement answer. Empty for a trial balance.
+    totals: dict[str, Decimal]
     source_is_rounded: bool
 
 
-def load(database: Database, name: str) -> Case:
-    """Create an entity from a case's manifest, post its journal, and return its answer."""
-    directory = CASES / name
+def load(database: Database, name: str, *, tree: Path = CASES) -> Case:
+    """Create an entity from a case's manifest, post its journal, and return its answer.
+
+    `tree` selects the corpus or the recognition fixtures. The two differ in what their
+    manifests cite and in what that citation is worth, not in how they run — a case is data
+    either way, and both go through the write path a customer's writes take.
+    """
+    directory = tree / name
     manifest = tomllib.loads((directory / "manifest.toml").read_text(encoding="utf-8"))
     entity = manifest["entity"]
 
@@ -98,15 +141,26 @@ def load(database: Database, name: str) -> Case:
         )
 
     expected = manifest["expected"]
+    answer = expected["answer"]
+    rows = _rows(directory / ANSWER_FILES[answer])
     return Case(
         name=name,
         manifest=manifest,
         entity_id=entity_id,
+        answer=answer,
         as_of=expected["as_of"],
+        # A profit and loss covers a period, so its case states where the period starts. A
+        # balance-sheet or trial-balance answer is as of a date and has no start.
+        since=expected.get("since"),
         source=tuple(
             SourceBalance(account_code=row["account_code"], balance=Decimal(row["balance"]))
-            for row in _rows(directory / "trial_balance.csv")
-        ),
+            for row in rows
+        )
+        if answer == "trial_balance"
+        else (),
+        totals={row["line"]: Decimal(row["amount"]) for row in rows}
+        if answer != "trial_balance"
+        else {},
         source_is_rounded=bool(expected["source_is_rounded"]),
     )
 

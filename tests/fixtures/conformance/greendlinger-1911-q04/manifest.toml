@@ -1,0 +1,66 @@
+# A conformance case: figures and answer taken from a published source, not from us.
+#
+# The corpus's first statement-shaped answer. Where a trial-balance case compares account by
+# account, this compares what a published statement actually asserts — its totals. A balance
+# sheet of this period summarises ("Capital: investment 20,000, net profit 6, less withdrawals
+# 1,000") where the ledger holds three accounts, and mapping those summary lines back onto
+# account codes is a step the source never published (ADR-0043, ADR-0044).
+
+name = "greendlinger-1911-q04"
+
+[source]
+title = "Accountancy Problems with Solutions"
+author = "Leo Greendlinger"
+publisher = "Business Book Bureau"
+year = 1911
+problem = "Question 4"
+origin = "New York Examination, June 1900"
+scan = "https://archive.org/details/accountancyprob00greegoog"
+licence = "public-domain"
+# Published 1911, so the 95-year term expired. No renewal question arises.
+pd_basis = "term-expired"
+
+[coverage]
+# The published answer is a balance sheet assembled from a trial balance, so it evidences the
+# statement and the type-to-statement mapping that produces it.
+areas = ["balance-sheet"]
+requirements = ["LED-02", "RPT-03"]
+
+[entity]
+accounting_basis = "accrual"
+fiscal_year_end_month = 12
+fiscal_year_end_day = 31
+functional_currency = "USD"
+
+[expected]
+answer = "balance_sheet"
+as_of = 1900-06-30
+# The published figures are exact and the trial balance ties to the dollar, so nothing here
+# has been rounded from anything finer.
+source_is_rounded = false
+
+[transcription]
+# Read from the OCR of the scan, which garbles digits — "z,566xx)" is 1,566.00, "z,ooojoo" is
+# 1,000.00 and "$34,ooaoo" is 34,000.00. Every figure is confirmed by the published totals:
+# the trial balance sums to 34,000.00 on each side, and the balance sheet to 33,006.00 on
+# each side. A misread digit would break one of those sums.
+#
+# The problem says "if all the information required is not presented in this trial balance,
+# supply what is wanting". What is wanting is the closing inventory, and the published
+# solution supplies 15,000.00 — so that figure is the source's, not ours. It is entry 2.
+#
+# The source dates both statements "as on 190. . ." with the year left blank, so 1900-06-30 is
+# chosen to match the examination sitting. No figure depends on it: every entry carries the
+# same date and the answer is a position, not a period.
+#
+# The source's own arithmetic slips once. It prints "Net Profit for the year $3,453.50" where
+# 6,400.00 gross profit less 2,947.50 of losses is 3,452.50, and its own balance sheet needs
+# 3,452.50 to reach the 6.00 it then shows. The asserted totals are unaffected, and 3,452.50
+# is the figure the published balance sheet is built on.
+#
+# The published statement nets the brought-forward debit balance of profit and loss
+# (3,446.50) against the year's profit to print a single "Net Profit 6.00". CFOKit keeps the
+# two apart — the brought-forward balance is an equity account, the year's result is unclosed
+# earnings that `LED-12` moves only at a fiscal year end — and total equity is identical
+# either way, which is what this case asserts.
+verified_against = "published statement totals"

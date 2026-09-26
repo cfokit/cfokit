@@ -1,0 +1,7 @@
+ref,date,description,account_code,amount,commodity
+1,2025-01-01,Owner opens the business bank account,1000,10000.00,USD
+1,2025-01-01,Owner opens the business bank account,3000,-10000.00,USD
+2,2025-07-01,Twelve months' cover paid in advance,1400,2400.00,USD
+2,2025-07-01,Twelve months' cover paid in advance,1000,-2400.00,USD
+3,2025-12-31,Six months of cover taken to expense,6200,1200.00,USD
+3,2025-12-31,Six months of cover taken to expense,1400,-1200.00,USD
