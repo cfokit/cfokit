@@ -106,8 +106,21 @@ publishes a *rule* rather than a worked answer, a case cites the rule by locator
 pattern we wrote ourselves, and derives the expected postings from the rule by arithmetic short
 enough to check. Nothing is copied: a rule is a procedure, which 17 USC § 102(b) excludes from
 copyright, and the fact pattern is our own expression. These live in
-`tests/fixtures/recognition/`, under their own gate, and **may never count as corpus coverage**
-— a cited rule is weaker evidence than a published answer, because we did the derivation.
+`tests/fixtures/recognition/`, under their own gate, and **may never count as corpus coverage**.
+
+**How much weaker deserves stating plainly, because it is easy to oversell.** A recognition
+case supplies its own journal. Running it therefore shows that CFOKit adds up entries we
+handed it and presents the total correctly — which is close to tautological, and is nothing
+like a published answer disagreeing with us. The case cannot show that CFOKit would *choose*
+the treatment, because ADR-0043 band 3 says it does not choose treatments, so there is no
+choice to test.
+
+What the class is actually for is forward-looking: it pins a treatment's booking shape
+against a cited authority *before* `BKP-06`'s rules exist to produce it, so that when a rule
+is written the expected output is already recorded with something to justify it. That makes
+it a specification carrying a citation rather than evidence of conformance. The coverage map
+marks such an area `shape` and not `case` for exactly this reason, and a reader who treats
+the two as grades of one thing has been misled.
 
 The authorities that are both free and quotable cover more of what these users meet than the
 band-3 framing suggests: IRS Publication 538 on cash and accrual, the all-events test, economic
@@ -129,6 +142,9 @@ so a cited-rule case records which basis its rule comes from.
 * Bad, because cited-rule cases are weaker evidence and now have to be kept from being counted
   as the stronger kind, which is a rule a future reader has to be told about rather than
   discover.
+* Bad, because a recognition case is nearly circular — it supplies the journal whose totals it
+  then checks — so it reads as more validation than it is, and the separate `shape` marking is
+  a guard against our own presentation rather than against anything external.
 * Bad, because Tier B is a discipline with no mechanical enforcement: nothing stops someone
   reading a sample file and typing its figure into a fixture.
 * Neutral, because the existing case is unaffected. Greendlinger 1911 is `term-expired` and

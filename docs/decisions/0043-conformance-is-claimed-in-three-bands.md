@@ -127,9 +127,13 @@ tier, so it gates every commit rather than only the runs with a stack up. The be
 — whether a case's figures agree with its published answer — is
 `tests/integration/test_conformance.py`.
 
-Band 3's refusal is gated only where a capability enforces it. `PLT-23` is a capability
-boundary and holds whatever a skill is told; the bookkeeper skill's "you do not decide
-accounting policy" is prose in a prompt and holds only as far as a model follows it. Layer 4
+Band 3's refusal is gated only where a capability enforces it, and mostly it is not.
+`PLT-23` describes a capability boundary that would hold whatever a skill is told, but no
+such boundary exists: nothing in `src/` tracks what an agent has read, `authorise` takes no
+parameter through which it could learn, and the decision index already lists this as an
+unfixed conflict. The bookkeeper skill's "you do not decide accounting policy" and its
+untrusted-content rule are both prose in a prompt, and hold only as far as a model follows
+them. Layer 4
 evals assert on the records a turn leaves behind — that it drafted rather than posted, asked
 rather than guessed — which is evidence about behaviour and not a guarantee of it. The vision
 already grades these two kinds of guardrail against each other and says only one is

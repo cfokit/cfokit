@@ -13,13 +13,14 @@ than no reconciler, because it reports agreement it never established.
 
 from __future__ import annotations
 
+import csv
 from decimal import Decimal
 
 import pytest
 
 # `tests` is not a package, so this is an absolute import: pytest puts the test file's
 # own directory on `sys.path` under the default import mode.
-from conformance import CASE_NAMES, LOADER, TOTAL_LINES, Case, load
+from conformance import CASE_NAMES, CASES, LOADER, Case, load
 
 from cfokit.ledger.presentation import (
     PresentedReconciliation,
@@ -32,6 +33,11 @@ from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.reports import balance_sheet, profit_and_loss, trial_balance
 
 pytestmark = pytest.mark.integration
+
+
+def _chart(name: str) -> list[dict[str, str]]:
+    with (CASES / name / "accounts.csv").open(encoding="utf-8", newline="") as handle:
+        return list(csv.DictReader(handle))
 
 
 def reconcile(
@@ -177,9 +183,14 @@ def test_agreement_is_not_the_default(database: Database, washington_1907: Case)
 def published_totals(database: Database, case: Case) -> dict[str, Decimal]:
     """The figures a statement case's source printed, as our own statement computes them.
 
-    A published statement asserts its totals — total assets, net profit — and those are what
-    a case compares. `presentation` computes them already, so this reads the same numbers a
-    customer sees rather than a sum assembled for the test.
+    Both kinds come back in one mapping: the named totals a statement claims overall, and a
+    figure per account code where the source printed one. `presentation` computes both
+    already, so this reads the same numbers a customer sees rather than sums assembled here.
+
+    Per-account figures come back in the **natural** sign `StatementLine` uses — positive
+    means more of what the account is — which is how a published statement prints them. A
+    case's CSV therefore carries the source's figures as printed, with no sign conversion for
+    a transcription to get wrong.
     """
     if case.answer == "profit_and_loss":
         assert case.since is not None, f"{case.name}: a profit and loss needs [expected].since"
@@ -196,6 +207,7 @@ def published_totals(database: Database, case: Case) -> dict[str, Decimal]:
             "total_income": statement.total_income,
             "total_expenses": statement.total_expenses,
             "net_income": statement.net_income,
+            **{line.code: line.amount for line in (*statement.income, *statement.expenses)},
         }
 
     sheet = present_balance_sheet(
@@ -205,6 +217,10 @@ def published_totals(database: Database, case: Case) -> dict[str, Decimal]:
         "total_assets": sheet.total_assets,
         "total_liabilities": sheet.total_liabilities,
         "total_equity": sheet.total_equity,
+        **{
+            line.code: line.amount
+            for line in (*sheet.assets, *sheet.liabilities, *sheet.equity)
+        },
     }
 
 
@@ -228,9 +244,16 @@ def test_every_case_agrees_with_its_published_answer(database: Database, name: s
     ours = published_totals(database, case)
     assert case.totals, f"{name}: a statement answer that asserts no total asserts nothing"
 
+    expected = {**case.totals, **case.lines}
+    missing = set(expected) - set(ours)
+    assert not missing, (
+        f"{name}: asserts {sorted(missing)}, which the statement does not report. An account "
+        "with no balance does not appear, so this is a disagreement and not an absence."
+    )
+
     disagreements = {
         line: (str(ours[line]), str(printed))
-        for line, printed in case.totals.items()
+        for line, printed in expected.items()
         if ours[line] != printed
     }
     assert not disagreements, disagreements
@@ -244,5 +267,9 @@ def test_a_statement_case_asserts_only_lines_that_exist(database: Database, name
     if case.answer == "trial_balance":
         pytest.skip("per-account answer; the reconciler covers the missing-account case")
 
-    unknown = set(case.totals) - TOTAL_LINES[case.answer]
-    assert not unknown, f"{name}: names {sorted(unknown)}, which no statement publishes"
+    codes = {row["code"] for row in _chart(name)}
+    unknown = set(case.lines) - codes
+    assert not unknown, (
+        f"{name}: names {sorted(unknown)}, which is neither a total this statement publishes "
+        f"nor an account in its chart. A misspelling asserts nothing and reads as agreement."
+    )

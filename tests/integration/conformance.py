@@ -47,9 +47,17 @@ ANSWER_FILES = {
 # transcription that performs it has quietly become a derivation — which is the one thing
 # ADR-0036 § 5 says a conformance case may not be.
 #
-# So a statement case asserts the figures the source actually printed: its totals. They are
-# unambiguous, they are what the statement claims, and they are what `presentation` already
-# computes. Per-account agreement is the trial-balance case's job and is not repeated here.
+# So a statement case asserts the figures the source actually printed, and only those. Two
+# kinds appear in one file, told apart by the name in the `line` column:
+#
+#   a named total  — `total_assets`, `net_income`; what the statement claims overall
+#   an account code — where the source prints a figure against a single account
+#
+# Most published statements do both. The 1900 balance sheet in `greendlinger-1911-q04`
+# summarises its equity into three narrative lines, but prints cash, bank stock, notes and
+# accounts receivable, inventory and real estate individually — so those are assertable
+# exactly as printed, and only the equity side is not. Asserting the totals alone would let a
+# misclassification *within* one side of the statement pass unnoticed.
 TOTAL_LINES = {
     "profit_and_loss": {"total_income", "total_expenses", "net_income"},
     "balance_sheet": {"total_assets", "total_liabilities", "total_equity"},
@@ -74,8 +82,10 @@ class Case:
     since: date | None
     # Per-account, for a trial-balance answer. Empty for a statement.
     source: tuple[SourceBalance, ...]
-    # Named totals, for a statement answer. Empty for a trial balance.
+    # Named totals a statement answer asserts. Empty for a trial balance.
     totals: dict[str, Decimal]
+    # Per-account figures a statement answer asserts, where the source printed them.
+    lines: dict[str, Decimal]
     source_is_rounded: bool
 
 
@@ -158,9 +168,16 @@ def load(database: Database, name: str, *, tree: Path = CASES) -> Case:
         )
         if answer == "trial_balance"
         else (),
-        totals={row["line"]: Decimal(row["amount"]) for row in rows}
-        if answer != "trial_balance"
-        else {},
+        totals={
+            row["line"]: Decimal(row["amount"])
+            for row in rows
+            if answer != "trial_balance" and row["line"] in TOTAL_LINES[answer]
+        },
+        lines={
+            row["line"]: Decimal(row["amount"])
+            for row in rows
+            if answer != "trial_balance" and row["line"] not in TOTAL_LINES[answer]
+        },
         source_is_rounded=bool(expected["source_is_rounded"]),
     )
 

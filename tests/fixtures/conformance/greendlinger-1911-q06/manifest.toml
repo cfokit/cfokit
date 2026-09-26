@@ -34,6 +34,14 @@ as_of = 1902-12-31
 source_is_rounded = false
 
 [transcription]
+method = "single-pass"
+# How this case was transcribed, and therefore how much the independence is worth.
+# `single-pass`: one process read problem, solution and expected values, with CFOKit's
+# implementation in its context. The figures are checked against the source's own totals, but
+# nothing structurally prevented the transcription drifting toward what CFOKit does.
+# `double-blind`: the journal and the expected answer were produced by separate passes, each
+# reading only its half of the source and neither reading CFOKit. That is what
+# `.claude/commands/conformance-case.md` prescribes for a new case.
 # The examination gives account totals rather than a journal, so entry 1 states the position
 # it describes and entry 2 takes up the closing inventory the solution supplies. Entry 1
 # balances at 55,616.00 a side without being forced to, which is the check that the figures

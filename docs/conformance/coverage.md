@@ -21,6 +21,25 @@ here, and every requirement id cited below is live in `docs/product/requirements
 second direction is the one that matters over time — it stops a case being added while the map
 still says nothing evidences the area, and stops the map claiming evidence that was deleted.
 
+## Where this stands
+
+Counted rather than asserted: `tests/test_conformance_corpus.py` recomputes these from the
+tables below and fails if this section is wrong, so it cannot quietly go stale.
+
+| | `case` | `shape` | `internal` | `none` | total |
+|---|---|---|---|---|---|
+| **Band 1** — enforced | 1 | — | 4 | 8 | 13 |
+| **Band 2** — presented | 3 | — | 3 | 3 | 9 |
+| **Band 3** — recordable | — | 1 | — | 5 | 6 |
+| declined | — | — | — | — | 12 |
+| gap | — | — | — | — | 5 |
+
+**Four areas out of twenty-eight claimed ones carry a published answer.** That is the honest
+headline and it should be read before the tables. The apparatus around the corpus — the map,
+the gate, the provenance rules, the two evidence classes — is further along than the corpus
+itself, and apparatus is not evidence. The `none` rows are the work: twelve of the sixteen
+are questions a published problem could answer, and nobody has transcribed one yet.
+
 ## Status values
 
 | Status | Meaning | Evidence |
@@ -35,9 +54,26 @@ still says nothing evidences the area, and stops the map claiming evidence that 
 
 | Evidence | Meaning |
 |---|---|
-| `case` | At least one case of the kind the status requires exists, and the gate enforces it. |
-| `none` | Claimed, not yet evidenced. The gate enforces that no case claims this area. |
+| `case` | A published answer somebody else computed agrees with ours. The strongest kind. |
+| `shape` | A recognition case pins the booking shape against a cited rule. **Much weaker — see below.** |
+| `none` | Claimed, not yet evidenced, and a published answer could exist. This is the to-do list. |
+| `internal` | Our own tests, only. No published answer can exist, because the question is not one accountancy asks. |
 | `—` | No evidence is possible or wanted: the row is `declined` or `gap`. |
+
+**`shape` is worth much less than `case`, and the distance is not a matter of degree.** A
+recognition case supplies its own journal, so it shows that CFOKit adds up entries we handed
+it — which is nearly tautological. What it is actually for is pinning a treatment's booking
+shape against a cited rule *before* `BKP-06`'s rules exist to produce it, so that when they
+do, the expected output is already written down with an authority attached. It is a
+specification with a citation, not evidence of conformance, and a reader should discount it
+accordingly.
+
+**`internal` is an admission, not a status.** ADR-0036 § 5: agreement with our own tests is
+not evidence, because they encode the same understanding as the code. These rows are marked
+`internal` because no 1907 examiner ever set a problem on who wrote a transaction or whether
+a report states its basis on its face — the question is real, and the independent answer to
+it does not exist to be transcribed. Where such a row is wrong, nothing in the corpus will
+find it.
 
 ASC topic numbers index the area against the FASB Codification where one applies. They are a
 finding aid for a reader who knows the Codification, not a claim of conformance with it.
@@ -49,16 +85,16 @@ finding aid for a reader who knows the Codification, not a claim of conformance 
 | **chart-of-accounts** | 105 | `enforced` | `none` | LED-01, LED-02 |
 | **recording** | — | `enforced` | `case` | LED-03, LED-04 |
 | **allocation** | — | `enforced` | `none` | LED-05, LED-06 |
-| **draft-posted** | — | `enforced` | `none` | LED-07 |
+| **draft-posted** | — | `enforced` | `internal` | LED-07 |
 | **reversal** | 250 | `enforced` | `none` | LED-08 |
-| **cut-off** | 270 | `enforced` | `none` | LED-09, LED-13 |
+| **cut-off** | 270 | `enforced` | `internal` | LED-09, LED-13 |
 | **opening-balances** | — | `enforced` | `none` | LED-10 |
 | **period-close** | 270 | `enforced` | `none` | LED-11 |
 | **year-end-close** | — | `enforced` | `none` | LED-12 |
 | **adjusting-entries** | — | `enforced` | `none` | LED-04, RPT-01 |
 | **obligation-settlement** | 310 | `enforced` | `none` | LED-17, AR-16 |
-| **functional-currency** | 830 | `enforced` | `none` | LED-15 |
-| **attribution** | — | `enforced` | `none` | LED-20 |
+| **functional-currency** | 830 | `enforced` | `internal` | LED-15 |
+| **attribution** | — | `enforced` | `internal` | LED-20 |
 | **foreign-currency** | 830 | `gap` | — | LED-16 |
 
 `foreign-currency` — `LED-16` is `Could`/Deferred and `LED-15` refuses any commodity other
@@ -74,10 +110,10 @@ built. Deferred is not the same as absent, and the row says which.
 | **balance-sheet** | 210 | `presented` | `case` | RPT-03 |
 | **account-detail** | — | `presented` | `none` | RPT-05 |
 | **comparatives** | 205 | `presented` | `none` | RPT-07 |
-| **basis-disclosure** | 235 | `presented` | `none` | RPT-10, LED-14 |
+| **basis-disclosure** | 235 | `presented` | `internal` | RPT-10, LED-14 |
 | **rounding** | — | `presented` | `none` | RPT-12 |
-| **as-at-reproduction** | — | `presented` | `none` | RPT-11 |
-| **statement-issuance** | — | `presented` | `none` | RPT-17 |
+| **as-at-reproduction** | — | `presented` | `internal` | RPT-11 |
+| **statement-issuance** | — | `presented` | `internal` | RPT-17 |
 | **cash-flows** | 230 | `gap` | — | RPT-04 |
 | **receivables-ageing** | 310 | `gap` | — | — |
 | **journal-query** | — | `gap` | — | RPT-06 |
@@ -104,7 +140,7 @@ that a treatment someone else decided is recorded and presented correctly.
 | Area | ASC | Status | Evidence | Requirements |
 |---|---|---|---|---|
 | **cash-accrual-method** | — | `recordable` | `none` | LED-14, AR-16 |
-| **prepaid-expenses** | 340 | `recordable` | `case` | LED-04, BKP-04 |
+| **prepaid-expenses** | 340 | `recordable` | `shape` | LED-04, BKP-04 |
 | **accrued-liabilities** | 405 | `recordable` | `none` | LED-04, BKP-04 |
 | **depreciation** | 360 | `recordable` | `none` | BKP-04 |
 | **internal-transfers** | — | `recordable` | `none` | BKP-14 |

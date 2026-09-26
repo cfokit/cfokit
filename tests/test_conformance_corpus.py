@@ -63,6 +63,14 @@ REDISTRIBUTABLE = {"public-domain", "cc0"}
 PD_BASES = {"term-expired", "not-renewed", "us-government"}
 ANSWERS = {"trial_balance", "profit_and_loss", "balance_sheet"}
 
+# How a case was transcribed, which is how much its independence is worth. `double-blind` is
+# what `.claude/commands/conformance-case.md` prescribes: the journal and the expected answer
+# produced by separate passes, neither reading CFOKit. `single-pass` is one process reading
+# everything with the implementation in context — checked against the source's own totals,
+# but with nothing structural stopping it drifting toward what CFOKit already does. Recorded
+# rather than assumed, because a reader weighing the corpus should see which they are getting.
+METHODS = {"double-blind", "single-pass"}
+
 # Which kind of case an area's status demands. ADR-0043's bands decide this: a claim that the
 # ledger enforces or presents something is answerable by a published answer, and a claim that a
 # treatment is merely recordable is not, because nobody published an answer to a question we
@@ -71,7 +79,28 @@ NEEDS_CONFORMANCE = {"enforced", "presented"}
 NEEDS_RECOGNITION = {"recordable"}
 NEEDS_NOTHING = {"declined", "gap"}
 VALID_STATUS = NEEDS_CONFORMANCE | NEEDS_RECOGNITION | NEEDS_NOTHING
-VALID_EVIDENCE = {"case", "none", "—"}
+
+# What currently stands behind a claim, which is a different fact from the claim itself.
+#
+# `case` and `shape` are not two grades of the same thing. A `case` is a published answer
+# somebody else computed. A `shape` is a recognition case, which supplies its own journal and
+# therefore shows mainly that we add up what we were handed — its value is pinning a cited
+# treatment for `BKP-06` to produce later, not evidencing conformance now.
+#
+# `internal` is an admission. ADR-0036 § 5 says agreement with our own tests is not evidence,
+# and these are the rows where no independent answer exists to be had: no examiner ever set a
+# problem on who wrote a transaction. Naming that is better than leaving the row looking like
+# work nobody has got to yet.
+EVIDENCE_FOR = {
+    "case": NEEDS_CONFORMANCE,
+    "shape": NEEDS_RECOGNITION,
+    "none": NEEDS_CONFORMANCE | NEEDS_RECOGNITION,
+    "internal": NEEDS_CONFORMANCE,
+    "—": NEEDS_NOTHING,
+}
+VALID_EVIDENCE = set(EVIDENCE_FOR)
+# Evidence values that mean a case of some kind exists and the gate should find one.
+EVIDENCED = {"case", "shape"}
 
 # | **area-slug** | 250 | `enforced` | `none` | LED-08, RPT-01 |
 AREA_ROW = re.compile(
@@ -92,7 +121,7 @@ class Area:
 
     @property
     def claims_a_case(self) -> bool:
-        return self.evidence == "case"
+        return self.evidence in EVIDENCED
 
 
 def _areas() -> dict[str, Area]:
@@ -154,16 +183,13 @@ def test_an_area_states_a_valid_claim(area: str) -> None:
     assert row.status in VALID_STATUS, (
         f"{area}: status {row.status!r} is not one of {sorted(VALID_STATUS)}"
     )
-    assert row.evidence in VALID_EVIDENCE, f"{area}: evidence {row.evidence!r} is undefined"
-
-    if row.status in NEEDS_NOTHING:
-        assert row.evidence == "—", (
-            f"{area}: status {row.status!r} admits no evidence, so Evidence must be '—'"
-        )
-    else:
-        assert row.evidence in {"case", "none"}, (
-            f"{area}: status {row.status!r} is a claim, so Evidence must be `case` or `none`"
-        )
+    assert row.evidence in VALID_EVIDENCE, (
+        f"{area}: evidence {row.evidence!r} is not one of {sorted(VALID_EVIDENCE)}"
+    )
+    assert row.status in EVIDENCE_FOR[row.evidence], (
+        f"{area}: evidence {row.evidence!r} does not go with status {row.status!r}. "
+        f"It belongs to {sorted(EVIDENCE_FOR[row.evidence])}."
+    )
 
 
 @pytest.mark.parametrize("area", sorted(_areas()), ids=str)
@@ -255,6 +281,12 @@ def test_a_case_declares_what_it_covers(case: str) -> None:
     for rid in coverage.get("requirements", []):
         assert rid in live, f"{case}: cites {rid}, which requirements.md does not define"
 
+    method = manifest.get("transcription", {}).get("method")
+    assert method in METHODS, (
+        f"{case}: [transcription].method {method!r} is not one of {sorted(METHODS)}. How a "
+        "case was transcribed is how much it is worth, and it is not assumed."
+    )
+
     answer = manifest["expected"].get("answer")
     assert answer in ANSWERS, (
         f"{case}: [expected].answer {answer!r} is not one of {sorted(ANSWERS)}"
@@ -339,13 +371,49 @@ def test_the_map_reports_the_coverage_that_exists(area: str) -> None:
 
     if not row.claims_a_case:
         assert not found, (
-            f"{area}: Evidence is {row.evidence!r} but {found} covers it. Add the case to the "
-            "map by setting Evidence to `case`, or remove the claim from the case."
+            f"{area}: Evidence is {row.evidence!r} but {found} covers it. Set Evidence to "
+            f"{'`shape`' if row.status in NEEDS_RECOGNITION else '`case`'}, or remove the "
+            "claim from the case."
         )
         return
 
-    wanted = conformance if row.status in NEEDS_CONFORMANCE else recognition
+    wanted = conformance if row.evidence == "case" else recognition
     assert wanted, (
-        f"{area}: Evidence is `case` but no case of the kind status {row.status!r} requires "
-        "covers it. Either the case was deleted or the map was written ahead of it."
+        f"{area}: Evidence is {row.evidence!r} but no case of that kind covers it. Either the "
+        "case was deleted or the map was written ahead of it."
     )
+
+
+# --------------------------------------------------------------------------------------
+# The map's own summary of itself
+# --------------------------------------------------------------------------------------
+
+SUMMARY_ROW = re.compile(
+    r"^\| \*\*Band (\d)\*\* — [a-z]+ \| (\S+) \| (\S+) \| (\S+) \| (\S+) \| (\d+) \|$", re.M
+)
+BAND_STATUS = {"1": "enforced", "2": "presented", "3": "recordable"}
+
+
+def test_the_summary_counts_what_the_tables_hold() -> None:
+    """The "Where this stands" table is the first thing a reader sees and the easiest thing to
+    leave behind. Recomputing it here means the headline number cannot drift from the rows it
+    summarises — which matters more than usual, because the honest reading of this document is
+    that there is less evidence than apparatus, and a stale table would hide exactly that.
+    """
+    text = COVERAGE.read_text(encoding="utf-8")
+    claimed = {m.group(1): m.groups()[1:] for m in SUMMARY_ROW.finditer(text)}
+    assert set(claimed) == set(BAND_STATUS), (
+        f"summary names bands {sorted(claimed)}, expected {sorted(BAND_STATUS)}"
+    )
+
+    for band, status in BAND_STATUS.items():
+        rows = [area for area in AREAS.values() if area.status == status]
+        actual = [
+            sum(1 for r in rows if r.evidence == kind)
+            for kind in ("case", "shape", "internal", "none")
+        ] + [len(rows)]
+        printed = [0 if cell == "—" else int(cell) for cell in claimed[band]]
+        assert printed == actual, (
+            f"Band {band} ({status}): summary says {printed}, tables hold {actual} "
+            "as [case, shape, internal, none, total]"
+        )
