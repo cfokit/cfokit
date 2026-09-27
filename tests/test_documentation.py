@@ -238,3 +238,49 @@ def test_requirement_driven_records_cite_a_requirement(source: Path) -> None:
     assert REQUIREMENT_ID.search(text), (
         f"{source.name} is requirement-driven but cites no requirement id"
     )
+
+
+# --------------------------------------------------------------------------------------
+# A shipped skill cites nothing it does not ship with
+# --------------------------------------------------------------------------------------
+
+SHIPPED_PROMPTS = sorted((REPO_ROOT / "skills").rglob("SKILL.md"))
+
+
+@pytest.mark.parametrize("path", SHIPPED_PROMPTS, ids=lambda p: str(p.relative_to(REPO_ROOT)))
+def test_a_shipped_prompt_cites_no_repository_document(path: Path) -> None:
+    """A `SKILL.md` is a prompt, and the decision records do not ship with it.
+
+    A skill bundle is `SKILL.md` and its scripts; `docs/` is not in it. So a citation like
+    "(ADR-0007)" in a shipped prompt is a pointer its reader cannot follow — and that reader
+    is a model, in somebody else's environment, which may go looking for the document or
+    infer what it probably said. `.claude/commands/adr.md` already states half of this rule:
+    "Only decision records cite decision records by number." This makes it mechanical for
+    the file that leaves the building, and extends it to requirement ids, which are just as
+    absent from the bundle.
+
+    **Code is deliberately not covered.** `src/` cites records throughout its docstrings and
+    should, and so may a skill's bundled script: a comment is read during maintenance, by
+    someone who has the repository, and the interpreter ignores it entirely. The hazard here
+    is specific to a prompt, whose reader acts on what it says.
+
+    The reasoning is not lost either way. It lives in the records, which cite the skill;
+    derivation runs that way and the arrow never reverses. What belongs in a shipped prompt
+    is the instruction, stated so it stands on its own.
+
+    `skills/CLAUDE.md` is not matched: it is authoring guidance for this repository rather
+    than part of any bundle.
+    """
+    text = path.read_text(encoding="utf-8", errors="ignore")
+
+    records = sorted(set(re.findall(r"\bADR-\d{4}\b", text)))
+    assert not records, (
+        f"{path.relative_to(REPO_ROOT)} cites {records}, which does not ship with it. "
+        "State the rule instead, and leave the reasoning in the record."
+    )
+
+    requirements = sorted(set(re.findall(r"\b[A-Z]{2,4}-\d{2}\b", text)))
+    assert not requirements, (
+        f"{path.relative_to(REPO_ROOT)} cites {requirements}, which does not ship with it. "
+        "A requirement id means nothing to a reader holding only the bundle."
+    )

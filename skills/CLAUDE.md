@@ -60,6 +60,18 @@ skills/
 One directory per skill. Whether the tax, cash-flow, and compliance roles become separate
 skills or modes of one is undecided (ADR-0020) — do not pre-emptively split them.
 
+**A `SKILL.md` cites no decision record and no requirement id.** That directory is the whole
+bundle: `docs/` does not travel with it, so "(ADR-0007)" in a shipped prompt is a pointer its
+reader cannot follow, and that reader is a model in somebody else's environment that may go
+looking for the document or infer what it probably said. State the rule so it stands on its
+own and leave the reasoning in the record, which cites the skill rather than the other way
+round. `tests/test_documentation.py` enforces this.
+
+It applies to the prompt, not to code. A bundled script may cite records in its comments, as
+`src/` does throughout: a comment is read during maintenance by someone holding the
+repository, and the interpreter never sees it. This file is not a bundle either, which is why
+it cites freely.
+
 ## Review
 
 Anything affecting how a transaction is recorded is booking semantics and needs human
