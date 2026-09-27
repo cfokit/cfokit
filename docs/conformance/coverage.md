@@ -30,19 +30,19 @@ tables below and fails if this section is wrong, so it cannot quietly go stale.
 |---|---|---|---|---|---|
 | **Band 1** — enforced | 2 | — | 4 | 7 | 13 |
 | **Band 2** — presented | 3 | — | 3 | 3 | 9 |
-| **Band 3** — recordable | 2 | 1 | — | 3 | 6 |
+| **Band 3** — recordable | 3 | — | — | 3 | 6 |
 | declined | — | — | — | — | 12 |
 | gap | — | — | — | — | 5 |
 
-**Seven areas out of twenty-eight claimed ones carry a published answer, from five cases.**
+**Eight areas out of twenty-eight claimed ones carry a published answer, from six cases.**
 That is the honest headline and it should be read before the tables. The apparatus around
 the corpus — the map, the gate, the provenance rules, the evidence classes — is further along
 than the corpus itself, and apparatus is not evidence.
 
-Depth is thinner still than breadth: only `adjusting-entries` and `trial-balance` rest on
-more than one case, so most `case` rows would survive a single bad transcription. The
-thirteen `none` rows are the work, and every one of them is a question some examiner has
-already set and published an answer to.
+Depth has caught up a little: six of the eight evidenced areas now rest on more than one
+case, so a single bad transcription would be caught rather than believed. `recording` and
+`balance-sheet` still rest on one apiece. The thirteen `none` rows are the work, and every
+one of them is a question some examiner has already set and published an answer to.
 
 ## Status values
 
@@ -144,7 +144,7 @@ that a treatment someone else decided is recorded and presented correctly.
 | Area | ASC | Status | Evidence | Requirements |
 |---|---|---|---|---|
 | **cash-accrual-method** | — | `recordable` | `none` | LED-14, AR-16 |
-| **prepaid-expenses** | 340 | `recordable` | `shape` | LED-04, BKP-04 |
+| **prepaid-expenses** | 340 | `recordable` | `case` | LED-04, BKP-04 |
 | **accrued-liabilities** | 405 | `recordable` | `none` | LED-04, BKP-04 |
 | **depreciation** | 360 | `recordable` | `case` | BKP-04 |
 | **internal-transfers** | — | `recordable` | `none` | BKP-14 |
