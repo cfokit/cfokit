@@ -1,0 +1,37 @@
+ref,date,description,account_code,amount,commodity
+1,1897-01-01,The trial balance as taken at 1 January 1897,1500,35000.00,USD
+1,1897-01-01,The trial balance as taken at 1 January 1897,5010,38000.00,USD
+1,1897-01-01,The trial balance as taken at 1 January 1897,1200,15000.00,USD
+1,1897-01-01,The trial balance as taken at 1 January 1897,5030,24000.00,USD
+1,1897-01-01,The trial balance as taken at 1 January 1897,5080,6000.00,USD
+1,1897-01-01,The trial balance as taken at 1 January 1897,5090,2500.00,USD
+1,1897-01-01,The trial balance as taken at 1 January 1897,5130,600.00,USD
+1,1897-01-01,The trial balance as taken at 1 January 1897,5100,1200.00,USD
+1,1897-01-01,The trial balance as taken at 1 January 1897,5050,3500.00,USD
+1,1897-01-01,The trial balance as taken at 1 January 1897,5120,1250.00,USD
+1,1897-01-01,The trial balance as taken at 1 January 1897,5040,3000.00,USD
+1,1897-01-01,The trial balance as taken at 1 January 1897,5060,1150.00,USD
+1,1897-01-01,The trial balance as taken at 1 January 1897,5020,1500.00,USD
+1,1897-01-01,The trial balance as taken at 1 January 1897,5110,600.00,USD
+1,1897-01-01,The trial balance as taken at 1 January 1897,1100,25000.00,USD
+1,1897-01-01,The trial balance as taken at 1 January 1897,1010,200.00,USD
+1,1897-01-01,The trial balance as taken at 1 January 1897,1400,7000.00,USD
+1,1897-01-01,The trial balance as taken at 1 January 1897,3010,-40000.00,USD
+1,1897-01-01,The trial balance as taken at 1 January 1897,3020,-20000.00,USD
+1,1897-01-01,The trial balance as taken at 1 January 1897,4010,-95000.00,USD
+1,1897-01-01,The trial balance as taken at 1 January 1897,2010,-5000.00,USD
+1,1897-01-01,The trial balance as taken at 1 January 1897,2100,-4000.00,USD
+1,1897-01-01,The trial balance as taken at 1 January 1897,4020,-1500.00,USD
+2,1897-01-01,"10% written off machinery and plant for depreciation",5070,3500.00,USD
+2,1897-01-01,"10% written off machinery and plant for depreciation",1500,-3500.00,USD
+3,1897-01-01,"3% written off book debts for discount",5140,750.00,USD
+3,1897-01-01,"3% written off book debts for discount",1150,-750.00,USD
+4,1897-01-01,"Unexpired insurance taken into account, six months of twelve",1300,575.00,USD
+4,1897-01-01,"Unexpired insurance taken into account, six months of twelve",5060,-575.00,USD
+5,1897-01-01,Opening stock carried to cost,5015,15000.00,USD
+5,1897-01-01,Opening stock carried to cost,1200,-15000.00,USD
+6,1897-01-01,"Stock on hand at 1 January 1897 taken up",1200,23000.00,USD
+6,1897-01-01,"Stock on hand at 1 January 1897 taken up",5015,-23000.00,USD
+7,1897-01-01,"6% on each partner's capital for the year, before profits are ascertained",5130,3600.00,USD
+7,1897-01-01,"6% on each partner's capital for the year, before profits are ascertained",3010,-2400.00,USD
+7,1897-01-01,"6% on each partner's capital for the year, before profits are ascertained",3020,-1200.00,USD

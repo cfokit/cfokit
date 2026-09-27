@@ -46,6 +46,14 @@ as_of = 1907-09-30
 source_is_rounded = false
 
 [transcription]
+method = "single-pass"
+# How this case was transcribed, and therefore how much the independence is worth.
+# `single-pass`: one process read problem, solution and expected values, with CFOKit's
+# implementation in its context. The figures are checked against the source's own totals, but
+# nothing structurally prevented the transcription drifting toward what CFOKit does.
+# `double-blind`: the journal and the expected answer were produced by separate passes, each
+# reading only its half of the source and neither reading CFOKit. That is what
+# `.claude/commands/conformance-case.md` prescribes for a new case.
 # Read from the OCR of the scan, which garbles commas — "93>500.oo" is 93,500.00 and
 # "i5,ooaoo" is 15,000.00. Every figure below is confirmed by the published totals: the debit
 # column sums to 355,000.00 and the credit column to 355,000.00, and capital stock

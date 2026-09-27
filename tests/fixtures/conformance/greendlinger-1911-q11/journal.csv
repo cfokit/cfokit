@@ -1,0 +1,20 @@
+ref,date,description,account_code,amount,commodity
+1,1905-12-31,The position the problem states before the charges,1100,40700.00,USD
+1,1905-12-31,The position the problem states before the charges,1500,55000.00,USD
+1,1905-12-31,The position the problem states before the charges,1900,164300.00,USD
+1,1905-12-31,The position the problem states before the charges,3100,-60000.00,USD
+1,1905-12-31,The position the problem states before the charges,3010,-50000.00,USD
+1,1905-12-31,The position the problem states before the charges,3020,-150000.00,USD
+2,1905-12-31,"(a) 7.5% depreciation on plant and machinery",3100,4125.00,USD
+2,1905-12-31,"(a) 7.5% depreciation on plant and machinery",1550,-4125.00,USD
+3,1905-12-31,"(b) Bad debts written off, and 2% reserve on the remainder",3100,2284.00,USD
+3,1905-12-31,"(b) Bad debts written off, and 2% reserve on the remainder",1100,-1500.00,USD
+3,1905-12-31,"(b) Bad debts written off, and 2% reserve on the remainder",1150,-784.00,USD
+4,1905-12-31,"(c) Preferred stock dividend for the year, 6%",3100,3000.00,USD
+4,1905-12-31,"(c) Preferred stock dividend for the year, 6%",2100,-3000.00,USD
+5,1905-12-31,(d) Bonus to employees,3100,7500.00,USD
+5,1905-12-31,(d) Bonus to employees,2300,-7500.00,USD
+6,1905-12-31,"(e) Common stock dividend for the year, 15%",3100,22500.00,USD
+6,1905-12-31,"(e) Common stock dividend for the year, 15%",2200,-22500.00,USD
+7,1905-12-31,(f) Balance remaining carried to undivided profits,3100,20591.00,USD
+7,1905-12-31,(f) Balance remaining carried to undivided profits,3200,-20591.00,USD

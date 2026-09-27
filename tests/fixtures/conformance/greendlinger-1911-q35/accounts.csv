@@ -1,0 +1,6 @@
+code,name,type,parent
+1010,Cash,asset,
+1400,Insurance fund (deposited in Trust Co.),asset,
+3000,Capital,equity,
+3100,Profit and loss,equity,
+3300,Reserve for insurance,equity,

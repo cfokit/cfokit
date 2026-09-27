@@ -1,0 +1,13 @@
+code,name,type,parent
+1100,Accounts receivable,asset,
+1150,Reserve for bad debts,asset,
+1500,Plant and machinery,asset,
+1550,Reserve for depreciation,asset,
+1900,Other assets the problem does not itemise,asset,
+2100,Dividend payable — preferred stock,liability,
+2200,Dividend payable — common stock,liability,
+2300,Bonus to employees,liability,
+3010,Preferred stock (6%),equity,
+3020,Common stock,equity,
+3100,Profit and loss,equity,
+3200,Undivided profits,equity,

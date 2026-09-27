@@ -56,6 +56,14 @@ source_is_rounded = false
 # the year paid — a divergence from accrual, and the reason this case cites the accrual
 # section rather than that one.
 #
-# **What this case does and does not evidence.** It shows that a treatment somebody else
-# decided is recorded and presented correctly. It does not show that CFOKit would choose this
-# treatment, because CFOKit does not choose treatments (ADR-0043 band 3).
+# **What this case does and does not evidence — the honest version.** It supplies its own
+# journal, including the 1,200.00 adjusting entry, and then checks that the profit and loss
+# reports 1,200.00. That is close to circular: it shows CFOKit adds up what it was handed.
+# It does not show that CFOKit would choose this treatment, because CFOKit does not choose
+# treatments (ADR-0043 band 3), and it is nothing like a published answer disagreeing with us.
+#
+# Its value is forward-looking. When `BKP-06`'s stored rules exist, a rule that books a
+# prepayment has to produce some particular postings, and this records which ones with an
+# authority attached — written before the rule, so the rule is written to the expectation
+# rather than the expectation to the rule. Until then the coverage map marks the area `shape`
+# rather than `case`, and the distance between those two words is most of what matters here.
