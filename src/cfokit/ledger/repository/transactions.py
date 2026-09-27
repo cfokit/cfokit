@@ -10,7 +10,7 @@ find out.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
@@ -104,20 +104,38 @@ def add_postings(
     entity_id: str,
     transaction_id: str,
     postings: Sequence[Posting],
+    assigned_by: Mapping[int, str] | None = None,
 ) -> None:
     """Insert postings for a transaction.
 
     `entity_id` is written onto every posting rather than joined from the transaction, because
     row-level security is keyed on it: a posting without it would be invisible to the policies
     that isolate entities (ADR-0003).
+
+    `assigned_by` names, per posting, what decided its account (`BKP-10`). Written here at
+    insert for the reason `derived_from` is, one function above: lineage that can be attached
+    later is lineage that can be changed. Keyed by position rather than carried on `Posting`,
+    because `Posting` belongs to the pure engine and a rule is a module's concept the engine
+    must not learn (ADR-0022). Opaque, and deliberately not a foreign key — see migration
+    0012.
     """
+    attribution = assigned_by or {}
     with conn.cursor() as cur:
         cur.executemany(
-            "INSERT INTO posting (transaction_id, entity_id, account_id, amount, commodity)"
-            " VALUES (%s, %s, %s, %s, %s)",
+            "INSERT INTO posting"
+            " (transaction_id, entity_id, account_id, amount, commodity,"
+            "  assigned_by_rule_version_id)"
+            " VALUES (%s, %s, %s, %s, %s, %s)",
             [
-                (transaction_id, entity_id, p.account_id, p.amount, p.commodity)
-                for p in postings
+                (
+                    transaction_id,
+                    entity_id,
+                    p.account_id,
+                    p.amount,
+                    p.commodity,
+                    attribution.get(index),
+                )
+                for index, p in enumerate(postings)
             ],
         )
 

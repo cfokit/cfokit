@@ -53,10 +53,41 @@ TABLES: tuple[tuple[str, str], ...] = (
     (
         "posting",
         "SELECT p.id, p.transaction_id, p.account_id, p.amount, p.commodity, p.cost_amount,"
-        " p.cost_commodity, p.lot_id, p.created_at FROM posting p"
+        " p.cost_commodity, p.lot_id, p.created_at, p.assigned_by_rule_version_id"
+        " FROM posting p"
         " JOIN ledger_transaction t ON t.id = p.transaction_id"
         " WHERE p.entity_id = %(entity_id)s"
         " ORDER BY t.transaction_date, t.recorded_at, p.transaction_id, p.id",
+    ),
+    (
+        # `EXP-02`: "rule definitions and the attribution linking them to postings,
+        # approvals". Versions before predicates and decisions, because both name one.
+        "assignment_rule_version",
+        "SELECT id, rule_id, version, status, label, account_id, precedence,"
+        " effective_from, approved_by, approved_at FROM assignment_rule_version"
+        " WHERE entity_id = %(entity_id)s ORDER BY effective_from, rule_id, version",
+    ),
+    (
+        "assignment_predicate",
+        "SELECT id, rule_version_id, position, field, operator, value_text, value_numeric,"
+        " value_uuid FROM assignment_predicate"
+        " WHERE entity_id = %(entity_id)s ORDER BY rule_version_id, position",
+    ),
+    (
+        "assignment_decision",
+        "SELECT id, transaction_id, decided_at, outcome, winning_rule_version_id,"
+        " resolved_by, match_count, rule_set_digest, evaluator_version,"
+        " supersedes_decision_id, candidate_payee, candidate_payee_raw,"
+        " candidate_description, candidate_amount, candidate_commodity,"
+        " candidate_source_account_id, candidate_transaction_date, candidate_source_kind,"
+        " candidate_fingerprint FROM assignment_decision"
+        " WHERE entity_id = %(entity_id)s ORDER BY decided_at, id",
+    ),
+    (
+        "assignment_decision_match",
+        "SELECT id, decision_id, rule_version_id, rank, order_key"
+        " FROM assignment_decision_match"
+        " WHERE entity_id = %(entity_id)s ORDER BY decision_id, rank",
     ),
     (
         "obligation",

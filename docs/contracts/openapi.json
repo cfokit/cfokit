@@ -244,6 +244,77 @@
         "title": "AppliedModel",
         "type": "object"
       },
+      "ApplyRequest": {
+        "properties": {
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/CandidateModel"
+            },
+            "title": "Candidates",
+            "type": "array"
+          }
+        },
+        "required": [
+          "candidates"
+        ],
+        "title": "ApplyRequest",
+        "type": "object"
+      },
+      "ApproveRequest": {
+        "description": "Approve a rule, an edit to one, or its retirement. A person's own act.",
+        "properties": {
+          "account_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Id"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "precedence": {
+            "title": "Precedence",
+            "type": "integer"
+          },
+          "predicates": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/PredicateModel"
+            },
+            "title": "Predicates",
+            "type": "array"
+          },
+          "retire": {
+            "default": false,
+            "title": "Retire",
+            "type": "boolean"
+          },
+          "rule_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The rule this supersedes. Omit to create a new one.",
+            "title": "Rule Id"
+          }
+        },
+        "required": [
+          "label",
+          "precedence"
+        ],
+        "title": "ApproveRequest",
+        "type": "object"
+      },
       "BalanceSheetResponse": {
         "description": "Assets, liabilities and equity as of a date (RPT-03).",
         "properties": {
@@ -331,6 +402,62 @@
           "balances"
         ],
         "title": "BalanceSheetResponse",
+        "type": "object"
+      },
+      "CandidateModel": {
+        "description": "One incoming transaction, before anything has decided where it belongs.",
+        "properties": {
+          "amount": {
+            "description": "Signed as a posting is signed: positive is a debit.",
+            "examples": [
+              "100.00",
+              "-1250.5000000000"
+            ],
+            "title": "Amount",
+            "type": "string"
+          },
+          "commodity": {
+            "title": "Commodity",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "payee": {
+            "title": "Payee",
+            "type": "string"
+          },
+          "source_account_id": {
+            "description": "The entity's own account it appeared on.",
+            "title": "Source Account Id",
+            "type": "string"
+          },
+          "source_kind": {
+            "$ref": "#/components/schemas/SourceKind"
+          },
+          "transaction_date": {
+            "format": "date",
+            "title": "Transaction Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "payee",
+          "amount",
+          "commodity",
+          "source_account_id",
+          "transaction_date",
+          "source_kind"
+        ],
+        "title": "CandidateModel",
         "type": "object"
       },
       "CarriedBalanceModel": {
@@ -735,6 +862,20 @@
         "title": "ErrorResponse",
         "type": "object"
       },
+      "Field": {
+        "description": "What a predicate may look at. A closed set, and the second half of the enforcement —\nmigration 0012's `predicate_is_well_typed` is the first, so the two must agree and a test\nasserts it (ADR-0036 § 5: an expected value comes from a second enforcement point).\n\nAdding one is a migration and a code change together. That is the deliberate cost of a\nclosed set, paid to keep clear of ADR-0012's custom-query-language gate (ADR-0045).",
+        "enum": [
+          "payee",
+          "description",
+          "amount",
+          "direction",
+          "commodity",
+          "source_kind",
+          "source_account_id"
+        ],
+        "title": "Field",
+        "type": "string"
+      },
       "GrantResponse": {
         "properties": {
           "grant_id": {
@@ -1132,6 +1273,22 @@
         "title": "OpenedBooksResponse",
         "type": "object"
       },
+      "Operator": {
+        "description": "How a predicate compares. Closed, for the same reason `Field` is.",
+        "enum": [
+          "equals",
+          "not_equals",
+          "contains",
+          "starts_with",
+          "ends_with",
+          "greater_than",
+          "greater_or_equal",
+          "less_than",
+          "less_or_equal"
+        ],
+        "title": "Operator",
+        "type": "string"
+      },
       "OutstandingResponse": {
         "properties": {
           "as_of": {
@@ -1259,6 +1416,29 @@
         "title": "PostingModel",
         "type": "object"
       },
+      "PredicateModel": {
+        "description": "One condition. Conditions are ANDed; there is no OR and no nesting, so where an\noperator needs a disjunction they approve two rules (ADR-0045).",
+        "properties": {
+          "field": {
+            "$ref": "#/components/schemas/Field"
+          },
+          "operator": {
+            "$ref": "#/components/schemas/Operator"
+          },
+          "value": {
+            "description": "Compared as text, or as a decimal where the field is an amount. A string either way, so an amount keeps the scale it was written at.",
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "operator",
+          "value"
+        ],
+        "title": "PredicateModel",
+        "type": "object"
+      },
       "ProfitAndLossResponse": {
         "description": "Income and expense over a period (RPT-02).",
         "properties": {
@@ -1333,6 +1513,47 @@
           "net_income"
         ],
         "title": "ProfitAndLossResponse",
+        "type": "object"
+      },
+      "ProposeRequest": {
+        "description": "What a rule would do, before it exists. Nothing is written.",
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "string"
+          },
+          "candidates": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/CandidateModel"
+            },
+            "title": "Candidates",
+            "type": "array"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "precedence": {
+            "description": "Lower wins. Two live rules may not share one.",
+            "title": "Precedence",
+            "type": "integer"
+          },
+          "predicates": {
+            "items": {
+              "$ref": "#/components/schemas/PredicateModel"
+            },
+            "title": "Predicates",
+            "type": "array"
+          }
+        },
+        "required": [
+          "label",
+          "precedence",
+          "account_id",
+          "predicates"
+        ],
+        "title": "ProposeRequest",
         "type": "object"
       },
       "ReconcileImportRequest": {
@@ -1776,6 +1997,16 @@
         ],
         "title": "SourceEntryModel",
         "type": "object"
+      },
+      "SourceKind": {
+        "description": "How a candidate reached us. Matchable, because it is a legitimate discriminator:\na figure keyed by hand and one delivered by a feed are not equally trusted.",
+        "enum": [
+          "feed",
+          "upload",
+          "manual"
+        ],
+        "title": "SourceKind",
+        "type": "string"
       },
       "SourceLineModel": {
         "description": "One posting line. Positive is a debit, as everywhere else.",
@@ -2638,6 +2869,458 @@
         "summary": "Account detail for a period",
         "tags": [
           "reports"
+        ]
+      }
+    },
+    "/entities/{entity_id}/assignment-replay": {
+      "get": {
+        "description": "`BKP-06`'s acceptance, as a call rather than only as a test.\n\nPublished because a control an auditor can run is worth more than one only CI runs\n(ADR-0033 § 3). It writes nothing.",
+        "operationId": "assignment_replay_entities__entity_id__assignment_replay_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Assignment Replay Entities  Entity Id  Assignment Replay Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Re-decide every recorded decision against the rule set in force at the time",
+        "tags": [
+          "assignment"
+        ]
+      }
+    },
+    "/entities/{entity_id}/assignment-rules": {
+      "post": {
+        "description": "`BKP-09`. A person's own act, and refused for a delegated session (ADR-0042).",
+        "operationId": "approve_rule_entities__entity_id__assignment_rules_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Approve Rule Entities  Entity Id  Assignment Rules Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Approve a rule, an edit to one, or its retirement",
+        "tags": [
+          "assignment"
+        ]
+      }
+    },
+    "/entities/{entity_id}/assignment-rules/proposals": {
+      "post": {
+        "description": "`BKP-08`: the operator sees which rule would win, and why, before approving either.\n\nA read. It writes nothing, so a delegated agent may call it — proposing is not the\nreserved act, approving is.",
+        "operationId": "propose_rule_entities__entity_id__assignment_rules_proposals_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProposeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Propose Rule Entities  Entity Id  Assignment Rules Proposals Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "See what a rule would do before approving it",
+        "tags": [
+          "assignment"
+        ]
+      }
+    },
+    "/entities/{entity_id}/assignment-runs": {
+      "post": {
+        "description": "`BKP-06` and `BKP-12`. `unresolved` is the operator's worklist, and nothing in it was\nguessed at or parked in a holding account.",
+        "operationId": "run_assignment_entities__entity_id__assignment_runs_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Request-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Run Assignment Entities  Entity Id  Assignment Runs Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Book what the rules resolve, and report what they do not",
+        "tags": [
+          "assignment"
         ]
       }
     },

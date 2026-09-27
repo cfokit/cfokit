@@ -130,6 +130,7 @@ def test_the_mcp_tool_surface_is_published() -> None:
 
     assert [tool["name"] for tool in published] == [
         "account_detail",
+        "approve_assignment_rule",
         "balance_sheet",
         "comparative_profit_and_loss",
         "create_entity",
@@ -142,11 +143,14 @@ def test_the_mcp_tool_surface_is_published() -> None:
         "outstanding_obligations",
         "post_transaction",
         "profit_and_loss",
+        "propose_assignment_rule",
         "read_transaction",
         "reconcile",
         "reconcile_import",
         "record_transaction",
+        "replay_assignments",
         "reverse_transaction",
+        "run_assignment",
         "trial_balance",
     ]
     assert all(tool["description"] for tool in published), "every tool describes itself"

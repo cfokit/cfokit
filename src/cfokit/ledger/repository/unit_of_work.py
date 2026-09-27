@@ -17,7 +17,7 @@ service that needs to do several things in one transaction.
 
 from __future__ import annotations
 
-from collections.abc import Iterator, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -415,12 +415,18 @@ class EntityWrite:
             derived_from=derived_from,
         )
 
-    def add_postings(self, transaction_id: str, postings: Sequence[Posting]) -> None:
+    def add_postings(
+        self,
+        transaction_id: str,
+        postings: Sequence[Posting],
+        assigned_by: Mapping[int, str] | None = None,
+    ) -> None:
         transactions.add_postings(
             self._conn,
             entity_id=self._entity_id,
             transaction_id=transaction_id,
             postings=postings,
+            assigned_by=assigned_by,
         )
 
     def mark_posted(self, transaction_id: str) -> None:

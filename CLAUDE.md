@@ -29,10 +29,15 @@ buys. Boundaries between capabilities are enforced by `import-linter` on module 
 works the same either way. `src/cfokit/` is a PEP 420 namespace package: **do not add
 `src/cfokit/__init__.py`**. A skill is not a package and never goes here (ADR-0014, ADR-0020).
 
-**`ledger` is the only capability.** There was a `connectors` package holding no code; it
-was removed rather than renamed, because a package that exists before its capability is known is a
-boundary drawn around a guess (ADR-0012, ADR-0022 § 5, ADR-0031). Create a package when the
-capability it provides is known and there is code to put in it.
+**Four capabilities exist**: `ledger`, `imports` (ADR-0040), `receivables`, and `assignment`
+(ADR-0045). `server` is not one — it is the composition point, the only place that knows the
+module list, and a file in it that decides something about accounting is in the wrong place.
+
+There was a `connectors` package holding no code; it was removed rather than renamed, because
+a package that exists before its capability is known is a boundary drawn around a guess
+(ADR-0012, ADR-0022 § 5, ADR-0031). **Create a package when the capability it provides is
+known and there is code to put in it** — which is why there is no package yet for getting
+transactions in, and none for payables.
 
 **The ledger stays tiny.** It owns the double-entry primitive and nothing else. If the ledger needs
 to know what a customer is, the boundary has moved wrongly. There is no `core` module — the ledger
@@ -44,11 +49,19 @@ an **in-process module** (must commit atomically with a ledger write) or a **sep
 In-process is the default; separation must be earned.
 
 **Name things for the capability they provide** — not for a vendor, and not for the mechanism.
-`plaid-sync` named a vendor; `connectors` names a mechanism. Both are wrong.
+`plaid-sync` named a vendor; `connectors` names a mechanism. Both are wrong. So is naming a
+capability after one of its mechanisms: getting transactions in has three — an uploaded
+statement, a fetched one, and an unattended feed — and `upload`, `fetch` and `sync` are each
+the name of one of them.
 
 **`migration` means a change to the database schema, and nothing else.** Moving a company's books
 between accounting systems is import and export (`IMP-`, `EXP-`). One word held both senses once;
 keeping them apart costs a line here, and separating them again cost a corpus-wide rename.
+
+**`import` means landing a company's existing books from the system it already runs (`IMP-`),
+and nothing else.** Transactions arriving from a bank feed, an uploaded statement or a
+downloaded one are account activity (`BKP-`), and calling that an import is how the line
+above came to be needed. Written now, while the word still holds one sense.
 
 **The hard boundary:** the skills and the ledger are separate systems with separate
 dependency graphs that share a tool contract. Never add a code dependency between
