@@ -14,6 +14,10 @@ a moment onward and one mechanism is fewer than two (`BKP-11`).
 candidate produces no posting at all — `BKP-12` and `NFR-16` forbid a guess and forbid a
 holding account, so the caller asks the operator.
 
+**An uploaded candidate is only ever drafted.** Its figures were read out of a document the
+organisation did not author, by a model, in the session that is now asking to post them
+(`PLT-23`, ADR-0047). A rule decides where it belongs; a person decides that it happened.
+
 **Nothing here stores a candidate.** The caller supplies them; a decision and the draft it
 coded are what persist. Letting this module hold a queue of unassigned activity is how
 `connectors` would have gone wrong (ADR-0031).
@@ -35,7 +39,7 @@ from cfokit.assignment import (
     RuleVersion,
     Status,
 )
-from cfokit.assignment.candidate import Candidate
+from cfokit.assignment.candidate import Candidate, SourceKind
 from cfokit.assignment.engine import (
     EVALUATOR_VERSION,
     digest,
@@ -45,12 +49,15 @@ from cfokit.assignment.engine import (
 )
 from cfokit.assignment.errors import PrecedenceTaken, RuleNotFound
 from cfokit.assignment.repository import (
+    answered_decision,
+    decision_for_transaction,
     insert_decision,
     insert_rule_version,
     load_decisions,
     load_versions,
     next_version,
     precedence_taken,
+    unanswered_decision,
 )
 from cfokit.ledger.engine import Entry, Posting
 from cfokit.ledger.repository.unit_of_work import Database
@@ -220,9 +227,14 @@ def apply_rules(
     entries are: its own audit row, its own idempotency claim, its own advisory lock.
 
     A resolved candidate posts straight through, because the person already approved the
-    pattern — `BKP-09`'s "an approved pattern is never asked about again". An unresolved one
-    becomes a one-legged draft: it cannot be posted, because the engine requires two
-    postings, so the ledger itself refuses to let an unanswered question reach the books.
+    pattern — `BKP-09`'s "an approved pattern is never asked about again" — **unless it was
+    uploaded**, in which case it is a complete draft a person posts (ADR-0047). An
+    unresolved one becomes a one-legged draft: it cannot be posted, because the engine
+    requires two postings, so the ledger itself refuses to let an unanswered question reach
+    the books.
+
+    Running a candidate again is safe. The same answer replays; an answer to a question
+    asked earlier is a new decision that names the one it supersedes.
     """
     booked: list[Booked] = []
     unresolved: list[Booked] = []
@@ -232,6 +244,23 @@ def apply_rules(
             in_force = rule_set_as_of(
                 load_versions(write.connection, entity_id=entity_id), _now()
             )
+            answered = answered_decision(
+                write.connection, entity_id=entity_id, source_ref=candidate.source_ref
+            )
+        if answered is not None:
+            # Already coded. `BKP-11`: a rule changed since affects future assignments
+            # only, so a line booked once is reported as it was booked, not re-decided.
+            decision_id, transaction_id, label = answered
+            booked.append(
+                Booked(
+                    candidate=candidate,
+                    transaction_id=transaction_id,
+                    decision_id=decision_id,
+                    outcome=Outcome.ASSIGNED,
+                    rule_label=label,
+                )
+            )
+            continue
         resolution = evaluate(candidate, in_force)
         outcome = _book(
             database,
@@ -257,12 +286,17 @@ def _book(
     resolution: Resolution,
     rule_set: RuleSet,
 ) -> Booked:
-    """One candidate's transaction and its decision, in one `COMMIT`.
+    """One candidate's transaction and its decision.
 
     That they land together is the whole reason assignment is in-process rather than a
     separate component (ADR-0022 § 3): a decision naming a transaction that rolled back, or
     a coding no record explains, is the gap `RPT-08` exists to close.
+
+    A replayed write gets no second decision. The first one already explains the
+    transaction, and a decision per retry would make a replay's count of decisions a count
+    of how often a client retried.
     """
+    resolved = resolution.outcome is Outcome.ASSIGNED
     assigned_leg = (
         Posting(
             account_id=resolution.winner.account_id or "",
@@ -287,15 +321,19 @@ def _book(
             entity_id=entity_id,
             principal=principal,
             request_id=request_id,
-            idempotency_key=_key(candidate),
+            idempotency_key=_key(candidate, resolved=resolved),
         ),
         entry=Entry(
             transaction_date=candidate.transaction_date,
             postings=postings,
             description=candidate.description or candidate.payee,
         ),
-        post=resolution.outcome is Outcome.ASSIGNED,
-        derived_from={"source_kind": str(candidate.source_kind), "payee": candidate.payee},
+        post=resolved and candidate.source_kind is not SourceKind.UPLOAD,
+        derived_from={
+            "source_kind": str(candidate.source_kind),
+            "source_ref": candidate.source_ref,
+            "payee": candidate.payee,
+        },
         assigned=(
             ()
             if resolution.winner is None
@@ -306,6 +344,18 @@ def _book(
     )
 
     with database.entity_write(entity_id) as write:
+        if written.replayed:
+            existing = decision_for_transaction(
+                write.connection, entity_id=entity_id, transaction_id=written.transaction_id
+            )
+            if existing is not None:
+                return Booked(
+                    candidate=candidate,
+                    transaction_id=written.transaction_id,
+                    decision_id=existing,
+                    outcome=resolution.outcome,
+                    rule_label=resolution.winner.label if resolution.winner else None,
+                )
         decision_id = insert_decision(
             write.connection,
             entity_id=entity_id,
@@ -318,6 +368,15 @@ def _book(
             matches=resolution.matches,
             rule_set_digest=digest(rule_set),
             evaluator_version=EVALUATOR_VERSION,
+            # An answer names the question it answers. Only a resolved decision can: a
+            # second unresolved one is a replay and never reaches here.
+            supersedes=(
+                unanswered_decision(
+                    write.connection, entity_id=entity_id, source_ref=candidate.source_ref
+                )
+                if resolved
+                else None
+            ),
         )
 
     return Booked(
@@ -347,10 +406,22 @@ def fingerprint(candidate: Candidate) -> str:
     return hashlib.sha256("|".join(parts).encode("utf-8")).hexdigest()
 
 
-def _key(candidate: Candidate) -> str:
-    """Derived from the candidate, not minted, so a re-run of the same statement replays
-    rather than double-booking — the device `imports` uses for the same reason."""
-    return f"assignment:{fingerprint(candidate)[:48]}"
+def _key(candidate: Candidate, *, resolved: bool) -> str:
+    """Derived from the source's reference, not minted, so a re-run of the same statement
+    replays rather than double-booking — the device `imports` uses for the same reason.
+
+    **Never from the content.** Two identical coffees on one statement share every fact and
+    differ only in which line they are; a key built from `fingerprint` gave them one key,
+    and the second was replayed as the first and lost (ADR-0029).
+
+    **An unanswered candidate has a key of its own.** Its write is a question — a one-legged
+    draft — and the operator answering it by approving a rule makes the next run a
+    different write. Under one key that would be a key reused with different parameters,
+    which the ledger rightly refuses; under two, the answer is its own transaction and its
+    decision names the question it supersedes.
+    """
+    reference = hashlib.sha256(candidate.source_ref.encode("utf-8")).hexdigest()[:48]
+    return f"assignment:{reference}" if resolved else f"assignment:{reference}:unresolved"
 
 
 def _draft_version(

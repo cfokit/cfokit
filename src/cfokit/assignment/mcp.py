@@ -43,6 +43,7 @@ class CandidateArgument(BaseModel):
     source_account_id: str
     transaction_date: date
     source_kind: SourceKind
+    source_ref: str
     description: str | None = None
 
 
@@ -85,6 +86,7 @@ def _candidates(models: list[CandidateArgument]) -> tuple[Candidate, ...]:
             source_account_id=model.source_account_id,
             transaction_date=model.transaction_date,
             source_kind=model.source_kind,
+            source_ref=model.source_ref,
             description=model.description,
         )
         for model in models
@@ -178,7 +180,9 @@ def register(server: MCPServer, database: Database, *, acting: Callable[[], Prin
         description=(
             "Book the supplied transactions against the approved rules. Anything no rule "
             "resolves is returned unresolved and nothing is posted for it — never guessed, "
-            "never parked in a holding account."
+            "never parked in a holding account. An uploaded transaction is only ever "
+            "drafted, even where a rule resolves it: a person posts it. source_ref is the "
+            "source's own name for the line; running a line again never books it twice."
         ),
     )
     def run_tool(entity_id: str, candidates: list[CandidateArgument]) -> dict[str, Any]:
@@ -193,11 +197,19 @@ def register(server: MCPServer, database: Database, *, acting: Callable[[], Prin
             return {
                 "ok": True,
                 "booked": [
-                    {"transaction_id": b.transaction_id, "rule": b.rule_label}
+                    {
+                        "source_ref": b.candidate.source_ref,
+                        "transaction_id": b.transaction_id,
+                        "rule": b.rule_label,
+                    }
                     for b in applied.booked
                 ],
                 "unresolved": [
-                    {"transaction_id": b.transaction_id, "payee": b.candidate.payee}
+                    {
+                        "source_ref": b.candidate.source_ref,
+                        "transaction_id": b.transaction_id,
+                        "payee": b.candidate.payee,
+                    }
                     for b in applied.unresolved
                 ],
             }

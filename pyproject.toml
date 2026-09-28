@@ -232,7 +232,12 @@ allow_indirect_imports = true
 name = "The ledger depends on no module (ADR-0022)"
 type = "forbidden"
 source_modules = ["cfokit.ledger"]
-forbidden_modules = ["cfokit.imports", "cfokit.receivables", "cfokit.assignment"]
+forbidden_modules = [
+    "cfokit.imports",
+    "cfokit.receivables",
+    "cfokit.assignment",
+    "cfokit.activity",
+]
 
 [[tool.importlinter.contracts]]
 # ADR-0022 forbids module-to-module dependencies: "modules depend on the ledger, never on each
@@ -243,7 +248,7 @@ forbidden_modules = ["cfokit.imports", "cfokit.receivables", "cfokit.assignment"
 # direction is the thing forbidden.
 name = "Modules depend on the ledger, never on each other (ADR-0022)"
 type = "independence"
-modules = ["cfokit.imports", "cfokit.receivables", "cfokit.assignment"]
+modules = ["cfokit.imports", "cfokit.receivables", "cfokit.assignment", "cfokit.activity"]
 
 # NOTE: a contract forbidding provider SDKs at module scope (ADR-0004) is added when
 # the first provider SDK is introduced — import-linter errors on modules it cannot find.

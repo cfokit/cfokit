@@ -56,6 +56,10 @@
     "error": "LastOwner"
   },
   {
+    "code": "line_outside_period",
+    "error": "LineOutsidePeriod"
+  },
+  {
     "code": "line_without_income",
     "error": "LineWithoutIncome"
   },
@@ -106,6 +110,22 @@
   {
     "code": "rule_not_found",
     "error": "RuleNotFound"
+  },
+  {
+    "code": "statement_does_not_balance",
+    "error": "StatementDoesNotBalance"
+  },
+  {
+    "code": "statement_invalid",
+    "error": "StatementInvalid"
+  },
+  {
+    "code": "statement_not_found",
+    "error": "StatementNotFound"
+  },
+  {
+    "code": "statement_overlaps",
+    "error": "StatementOverlaps"
   },
   {
     "code": "transaction_already_posted",

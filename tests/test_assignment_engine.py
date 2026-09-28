@@ -56,6 +56,7 @@ def candidates(draw: st.DrawFn) -> Candidate:
         source_account_id=ACCOUNT,
         transaction_date=EPOCH.date(),
         source_kind=draw(st.sampled_from(list(SourceKind))),
+        source_ref=draw(WORDS),
         description=draw(st.one_of(st.none(), WORDS)),
     )
 
@@ -283,6 +284,7 @@ def acme(amount: str) -> Candidate:
         source_account_id=ACCOUNT,
         transaction_date=EPOCH.date(),
         source_kind=SourceKind.FEED,
+        source_ref="feed-1",
     )
 
 

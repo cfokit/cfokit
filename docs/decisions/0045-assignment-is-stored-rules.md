@@ -30,8 +30,8 @@ Together they require that a past assignment stay explicable by the rule *as it 
 while the rule is free to change. `BKP-08` adds that overlapping rules resolve "by a stated,
 inspectable order rather than by whichever is found first. Determinism depends on this."
 
-Nothing currently brings transactions in — `BKP-01`, `BKP-02` and `BKP-03` are all unbuilt —
-so whatever is decided here has to work before a feed exists and must not presume its shape.
+Transactions arrive by three routes — `BKP-01`, `BKP-02` and `BKP-03` — with different shapes,
+so whatever is decided here must not presume any one of them.
 
 ## Decision Drivers
 
@@ -180,8 +180,8 @@ made and is never an authority check (ADR-0042 § 3), so it widens nothing.
   copy of facts that also exist on the transaction.
 * Bad, because the evaluator version is an escape hatch no constraint can close: change what
   matching means, bump it, and the whole history stops being compared.
-* Neutral, because nothing yet produces candidates. The module is reachable and useful today
-  only to a caller holding a statement.
+* Neutral, because the module acts only on candidates a caller supplies. The first producer is
+  a recorded statement ([ADR-0046](0046-a-statement-proves-itself.md)).
 
 ### Confirmation
 
@@ -288,8 +288,8 @@ set is argued against), ADR-0036 (the testing layers this is verified at).
 
 * An operator asks for a disjunction the closed set cannot express, which is the trigger for
   reconsidering an expression language rather than adding a fourth operator family.
-* Something starts producing candidates — the upload path, a fetching skill, or a feed — which
-  is when the `Candidate` shape meets a producer that did not design it.
+* A fetching skill or a feed starts producing candidates, which is when the `Candidate` shape
+  meets a producer beyond the statement it was fitted to.
 * `BKP-13` or `BKP-14` lands, which extends the outcome set and adds a counterpart search.
 * A rule set grows past a few hundred per entity, at which point loading every version on
   every evaluation stops being obviously cheap.

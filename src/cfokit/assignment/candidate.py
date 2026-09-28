@@ -68,6 +68,12 @@ class Candidate:
     source_account_id: str
     transaction_date: date
     source_kind: SourceKind
+    # The source's own name for this line — a statement line, a feed's transaction id. **The
+    # candidate's identity**, and the only thing its idempotency key is derived from: two
+    # identical coffees on one statement are two lines, and a key built from their content
+    # would replay the second as the first (ADR-0029, ADR-0046). Opaque here; what it names
+    # belongs to whoever produced the candidate. Never matched on.
+    source_ref: str
     description: str | None = None
 
     @property
