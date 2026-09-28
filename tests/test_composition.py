@@ -109,3 +109,38 @@ def test_the_rest_surface_matches_the_published_contract() -> None:
     )
 
     assert sorted(published["paths"]) == sorted(rest_app(settings()).openapi()["paths"])
+
+
+# --- The assignment module (ADR-0045) -----------------------------------------------------
+
+
+def test_the_composed_app_serves_the_assignment_routes() -> None:
+    served = routes(rest_app(settings()))
+
+    assert {
+        "/entities/{entity_id}/assignment-rules",
+        "/entities/{entity_id}/assignment-rules/proposals",
+        "/entities/{entity_id}/assignment-runs",
+        "/entities/{entity_id}/assignment-replay",
+    } <= served
+
+
+def test_the_ledger_alone_serves_no_assignment_route() -> None:
+    """**The contract, as a test.** ADR-0022 forbids the ledger depending on a module, and a
+    ledger adapter that had quietly mounted this module's router would show up here even
+    though `import-linter` would also catch it. Two layers, because the surface is what a
+    deployment actually serves."""
+    assert [path for path in routes(create_app(settings())) if "assignment" in path] == []
+
+
+def test_the_assignment_tools_are_served_and_need_no_configuration() -> None:
+    first = {tool.name for tool in asyncio.run(mcp_server(settings()).list_tools())}
+    second = {tool.name for tool in asyncio.run(mcp_server(settings()).list_tools())}
+
+    assert {
+        "propose_assignment_rule",
+        "approve_assignment_rule",
+        "run_assignment",
+        "replay_assignments",
+    } <= first
+    assert first == second

@@ -17,6 +17,8 @@ from __future__ import annotations
 from fastapi import FastAPI
 from mcp.server import MCPServer
 
+from cfokit.assignment import api as assignment_api
+from cfokit.assignment import mcp as assignment_mcp
 from cfokit.imports import api as imports_api
 from cfokit.imports import mcp as imports_mcp
 from cfokit.ledger.api import create_app
@@ -44,6 +46,7 @@ def mcp_server(settings: Settings, authenticator: Authenticator | None = None) -
     """
     server = create_server(settings, authenticator=authenticator)
     imports_mcp.register(server, Database(settings.database_url), acting=acting)
+    assignment_mcp.register(server, Database(settings.database_url), acting=acting)
     return server
 
 
@@ -57,4 +60,5 @@ def rest_app(settings: Settings, authenticator: Authenticator | None = None) -> 
     """
     app = create_app(settings, authenticator=authenticator)
     app.include_router(imports_api.router)
+    app.include_router(assignment_api.router)
     return app

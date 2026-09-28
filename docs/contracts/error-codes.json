@@ -96,8 +96,16 @@
     "error": "PeriodNotClosed"
   },
   {
+    "code": "precedence_taken",
+    "error": "PrecedenceTaken"
+  },
+  {
     "code": "retained_earnings_unset",
     "error": "RetainedEarningsUnset"
+  },
+  {
+    "code": "rule_not_found",
+    "error": "RuleNotFound"
   },
   {
     "code": "transaction_already_posted",

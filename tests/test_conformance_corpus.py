@@ -460,6 +460,7 @@ def test_the_headline_counts_the_cases_that_exist() -> None:
         "nineteen": 19,
         "twenty": 20,
         "twenty-eight": 28,
+        "twenty-nine": 29,
         "thirty": 30,
     }
     for word in claimed.groups():

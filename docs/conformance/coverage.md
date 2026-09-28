@@ -28,13 +28,13 @@ tables below and fails if this section is wrong, so it cannot quietly go stale.
 
 | | `case` | `shape` | `internal` | `none` | total |
 |---|---|---|---|---|---|
-| **Band 1** — enforced | 2 | — | 4 | 7 | 13 |
+| **Band 1** — enforced | 2 | — | 5 | 7 | 14 |
 | **Band 2** — presented | 3 | — | 3 | 3 | 9 |
 | **Band 3** — recordable | 3 | — | — | 3 | 6 |
 | declined | — | — | — | — | 12 |
-| gap | — | — | — | — | 5 |
+| gap | — | — | — | — | 4 |
 
-**Eight areas out of twenty-eight claimed ones carry a published answer, from six cases.**
+**Eight areas out of twenty-nine claimed ones carry a published answer, from six cases.**
 That is the honest headline and it should be read before the tables. The apparatus around
 the corpus — the map, the gate, the provenance rules, the evidence classes — is further along
 than the corpus itself, and apparatus is not evidence.
@@ -99,6 +99,7 @@ finding aid for a reader who knows the Codification, not a claim of conformance 
 | **obligation-settlement** | 310 | `enforced` | `none` | LED-17, AR-16 |
 | **functional-currency** | 830 | `enforced` | `internal` | LED-15 |
 | **attribution** | — | `enforced` | `internal` | LED-20 |
+| **assignment** | — | `enforced` | `internal` | BKP-06, BKP-08, BKP-09, BKP-11, BKP-12 |
 | **foreign-currency** | 830 | `gap` | — | LED-16 |
 
 `foreign-currency` — `LED-16` is `Could`/Deferred and `LED-15` refuses any commodity other
@@ -149,7 +150,6 @@ that a treatment someone else decided is recorded and presented correctly.
 | **depreciation** | 360 | `recordable` | `case` | BKP-04 |
 | **internal-transfers** | — | `recordable` | `none` | BKP-14 |
 | **bad-debts** | 310 | `recordable` | `case` | AR-18 |
-| **assignment** | — | `gap` | — | BKP-06, BKP-09, BKP-12 |
 | **revenue-recognition** | 606 | `declined` | — | — |
 | **leases** | 842 | `declined` | — | — |
 | **inventory-costing** | 330 | `declined` | — | LED-18, LED-19 |
@@ -161,14 +161,16 @@ that a treatment someone else decided is recorded and presented correctly.
 | **share-based-payment** | 718 | `declined` | — | — |
 | **materiality** | — | `declined` | — | — |
 
-`assignment` is **the largest conformance hole in the product**, and no test closes it.
-`BKP-06` requires that assignment to an account be governed by stored rules applied
-deterministically, with acceptance that "replaying the full history against an unchanged rule
-set reproduces every assignment identically". It is `Must`/Approved. There is no rule engine,
-no rule tool among the published MCP tools, and no categorisation guidance in the bookkeeper
-skill. Until it is built, either categorisation does not happen or it happens by a model
-deciding per transaction, which the requirement was written to prevent. Only building it
-closes this row.
+`assignment` was the largest hole in this map and is now built (ADR-0045). It is `internal`
+rather than `case` for the reason the label exists: no examiner ever set a problem on whether
+a bookkeeping system replays its own decisions, so there is no published answer to transcribe
+and our own tests are the only evidence there can be. `BKP-06`'s acceptance — "replaying the
+full history against an unchanged rule set reproduces every assignment identically" — runs in
+`tests/integration/test_assignment.py`, and the determinism it depends on is property-tested
+without infrastructure in `tests/test_assignment_engine.py`.
+
+What remains unbuilt beside it is getting transactions in (`BKP-01`, `BKP-02`, `BKP-03`), so
+today the caller supplies the candidates.
 
 `materiality` is declined in `docs/product/requirements.md` in terms: it "is not used as a
 system threshold anywhere in this document, and that is deliberate… an accountant's judgement

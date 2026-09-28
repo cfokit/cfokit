@@ -51,6 +51,130 @@
     "name": "account_detail"
   },
   {
+    "description": "Approve a rule, an edit to one, or its retirement. A person's own act: a delegated session is refused. Pass rule_id to supersede an existing rule; the prior version stays, so what it already coded is untouched.",
+    "inputSchema": {
+      "$defs": {
+        "Field": {
+          "description": "What a predicate may look at. A closed set, and the second half of the enforcement —\nmigration 0012's `predicate_is_well_typed` is the first, so the two must agree and a test\nasserts it (ADR-0036 § 5: an expected value comes from a second enforcement point).\n\nAdding one is a migration and a code change together. That is the deliberate cost of a\nclosed set, paid to keep clear of ADR-0012's custom-query-language gate (ADR-0045).",
+          "enum": [
+            "payee",
+            "description",
+            "amount",
+            "direction",
+            "commodity",
+            "source_kind",
+            "source_account_id"
+          ],
+          "title": "Field",
+          "type": "string"
+        },
+        "Operator": {
+          "description": "How a predicate compares. Closed, for the same reason `Field` is.",
+          "enum": [
+            "equals",
+            "not_equals",
+            "contains",
+            "starts_with",
+            "ends_with",
+            "greater_than",
+            "greater_or_equal",
+            "less_than",
+            "less_or_equal"
+          ],
+          "title": "Operator",
+          "type": "string"
+        },
+        "PredicateArgument": {
+          "properties": {
+            "field": {
+              "$ref": "#/$defs/Field"
+            },
+            "operator": {
+              "$ref": "#/$defs/Operator"
+            },
+            "value": {
+              "title": "Value",
+              "type": "string"
+            }
+          },
+          "required": [
+            "field",
+            "operator",
+            "value"
+          ],
+          "title": "PredicateArgument",
+          "type": "object"
+        }
+      },
+      "properties": {
+        "account_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Account Id"
+        },
+        "entity_id": {
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "precedence": {
+          "title": "Precedence",
+          "type": "integer"
+        },
+        "predicates": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/PredicateArgument"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Predicates"
+        },
+        "retire": {
+          "default": false,
+          "title": "Retire",
+          "type": "boolean"
+        },
+        "rule_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rule Id"
+        }
+      },
+      "required": [
+        "entity_id",
+        "label",
+        "precedence"
+      ],
+      "title": "approve_toolArguments",
+      "type": "object"
+    },
+    "name": "approve_assignment_rule"
+  },
+  {
     "description": "Assets, liabilities and equity as of a date. Equity includes unclosed_earnings — income and expense not yet closed to retained earnings, which happens only at a fiscal year end — so the statement balances mid-year as well as after a close.",
     "inputSchema": {
       "properties": {
@@ -543,6 +667,174 @@
     "name": "profit_and_loss"
   },
   {
+    "description": "See what a rule would do before approving it: which of the supplied transactions it would book, and which an existing rule already claims. Writes nothing.",
+    "inputSchema": {
+      "$defs": {
+        "CandidateArgument": {
+          "properties": {
+            "amount": {
+              "title": "Amount",
+              "type": "string"
+            },
+            "commodity": {
+              "title": "Commodity",
+              "type": "string"
+            },
+            "description": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Description"
+            },
+            "payee": {
+              "title": "Payee",
+              "type": "string"
+            },
+            "source_account_id": {
+              "title": "Source Account Id",
+              "type": "string"
+            },
+            "source_kind": {
+              "$ref": "#/$defs/SourceKind"
+            },
+            "transaction_date": {
+              "format": "date",
+              "title": "Transaction Date",
+              "type": "string"
+            }
+          },
+          "required": [
+            "payee",
+            "amount",
+            "commodity",
+            "source_account_id",
+            "transaction_date",
+            "source_kind"
+          ],
+          "title": "CandidateArgument",
+          "type": "object"
+        },
+        "Field": {
+          "description": "What a predicate may look at. A closed set, and the second half of the enforcement —\nmigration 0012's `predicate_is_well_typed` is the first, so the two must agree and a test\nasserts it (ADR-0036 § 5: an expected value comes from a second enforcement point).\n\nAdding one is a migration and a code change together. That is the deliberate cost of a\nclosed set, paid to keep clear of ADR-0012's custom-query-language gate (ADR-0045).",
+          "enum": [
+            "payee",
+            "description",
+            "amount",
+            "direction",
+            "commodity",
+            "source_kind",
+            "source_account_id"
+          ],
+          "title": "Field",
+          "type": "string"
+        },
+        "Operator": {
+          "description": "How a predicate compares. Closed, for the same reason `Field` is.",
+          "enum": [
+            "equals",
+            "not_equals",
+            "contains",
+            "starts_with",
+            "ends_with",
+            "greater_than",
+            "greater_or_equal",
+            "less_than",
+            "less_or_equal"
+          ],
+          "title": "Operator",
+          "type": "string"
+        },
+        "PredicateArgument": {
+          "properties": {
+            "field": {
+              "$ref": "#/$defs/Field"
+            },
+            "operator": {
+              "$ref": "#/$defs/Operator"
+            },
+            "value": {
+              "title": "Value",
+              "type": "string"
+            }
+          },
+          "required": [
+            "field",
+            "operator",
+            "value"
+          ],
+          "title": "PredicateArgument",
+          "type": "object"
+        },
+        "SourceKind": {
+          "description": "How a candidate reached us. Matchable, because it is a legitimate discriminator:\na figure keyed by hand and one delivered by a feed are not equally trusted.",
+          "enum": [
+            "feed",
+            "upload",
+            "manual"
+          ],
+          "title": "SourceKind",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "account_id": {
+          "title": "Account Id",
+          "type": "string"
+        },
+        "candidates": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/CandidateArgument"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Candidates"
+        },
+        "entity_id": {
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "precedence": {
+          "title": "Precedence",
+          "type": "integer"
+        },
+        "predicates": {
+          "items": {
+            "$ref": "#/$defs/PredicateArgument"
+          },
+          "title": "Predicates",
+          "type": "array"
+        }
+      },
+      "required": [
+        "entity_id",
+        "label",
+        "precedence",
+        "account_id",
+        "predicates"
+      ],
+      "title": "propose_toolArguments",
+      "type": "object"
+    },
+    "name": "propose_assignment_rule"
+  },
+  {
     "description": "Read a transaction and its postings, including what wrote it.",
     "inputSchema": {
       "properties": {
@@ -825,6 +1117,23 @@
     "name": "record_transaction"
   },
   {
+    "description": "Re-decide every recorded assignment against the rule set that was in force when it was taken. Reports how many reproduced, and how many are not comparable because a rule changed since. Writes nothing.",
+    "inputSchema": {
+      "properties": {
+        "entity_id": {
+          "title": "Entity Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity_id"
+      ],
+      "title": "replay_toolArguments",
+      "type": "object"
+    },
+    "name": "replay_assignments"
+  },
+  {
     "description": "Correct a posted transaction by reversing it. Both the original and the reversal remain visible; nothing is edited or removed.",
     "inputSchema": {
       "properties": {
@@ -862,6 +1171,93 @@
       "type": "object"
     },
     "name": "reverse_transaction"
+  },
+  {
+    "description": "Book the supplied transactions against the approved rules. Anything no rule resolves is returned unresolved and nothing is posted for it — never guessed, never parked in a holding account.",
+    "inputSchema": {
+      "$defs": {
+        "CandidateArgument": {
+          "properties": {
+            "amount": {
+              "title": "Amount",
+              "type": "string"
+            },
+            "commodity": {
+              "title": "Commodity",
+              "type": "string"
+            },
+            "description": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Description"
+            },
+            "payee": {
+              "title": "Payee",
+              "type": "string"
+            },
+            "source_account_id": {
+              "title": "Source Account Id",
+              "type": "string"
+            },
+            "source_kind": {
+              "$ref": "#/$defs/SourceKind"
+            },
+            "transaction_date": {
+              "format": "date",
+              "title": "Transaction Date",
+              "type": "string"
+            }
+          },
+          "required": [
+            "payee",
+            "amount",
+            "commodity",
+            "source_account_id",
+            "transaction_date",
+            "source_kind"
+          ],
+          "title": "CandidateArgument",
+          "type": "object"
+        },
+        "SourceKind": {
+          "description": "How a candidate reached us. Matchable, because it is a legitimate discriminator:\na figure keyed by hand and one delivered by a feed are not equally trusted.",
+          "enum": [
+            "feed",
+            "upload",
+            "manual"
+          ],
+          "title": "SourceKind",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "candidates": {
+          "items": {
+            "$ref": "#/$defs/CandidateArgument"
+          },
+          "title": "Candidates",
+          "type": "array"
+        },
+        "entity_id": {
+          "title": "Entity Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity_id",
+        "candidates"
+      ],
+      "title": "run_toolArguments",
+      "type": "object"
+    },
+    "name": "run_assignment"
   },
   {
     "description": "Every account with a non-zero balance as of a date. Pass watermark to reproduce the books as they stood at an earlier moment, unchanged by anything posted since. Figures are decimal strings rounded for display; totals are computed unrounded, so a column summed by hand may differ from the printed total.",

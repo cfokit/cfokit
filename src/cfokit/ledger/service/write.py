@@ -45,7 +45,7 @@ from cfokit.ledger.errors import (
 )
 from cfokit.ledger.repository.unit_of_work import Database, EntityWrite
 from cfokit.ledger.service.authorisation import Capability, authorise
-from cfokit.ledger.service.principal import Principal
+from cfokit.ledger.service.principal import ActorClass, Principal
 
 __all__ = [
     "WriteContext",
@@ -81,6 +81,20 @@ class Applied:
 
     obligation_id: str
     amount: Decimal
+
+
+@dataclass(frozen=True, slots=True)
+class Assigned:
+    """Which posting a rule coded, and which version of the rule did it (`BKP-10`).
+
+    Positional rather than carried on `Posting`, because `Posting` belongs to the pure engine
+    and a rule is a module's concept the engine must not learn (ADR-0022). `rule_version_id`
+    is opaque here for the same reason `decision_record_id` is: the ledger holds the
+    identifier without importing what it points at.
+    """
+
+    posting_index: int
+    rule_version_id: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -136,6 +150,7 @@ def record_transaction(
     raises_obligation: Decimal | None = None,
     settles: tuple[Applied, ...] = (),
     derived_from: dict[str, Any] | None = None,
+    assigned: tuple[Assigned, ...] = (),
 ) -> WrittenTransaction:
     """Record a transaction, as a draft or posted straight through.
 
@@ -156,6 +171,23 @@ def record_transaction(
     Both need the transaction posted. A draft is not in the books (`LED-07`), so an obligation
     raised by one would be owed by nobody and a settlement against one would apply to nothing.
 
+    **`assigned` records that a rule chose a coding, and which rule version** (`BKP-10`).
+    ADR-0042 § 4 reserved this: "`RULE` arrives when the rules engine does — as a value the
+    write path sets on a posting whose coding a rule determined, not as a branch in
+    `principal_from_claims`", because a token cannot tell you a coding was rule-assigned —
+    the rule runs after authentication, and one credential carries both a rule-assigned
+    posting and a judgement in the same session.
+
+    Per posting, because `BKP-05` splits a transaction across accounts and a feed's two legs
+    are decided by different things: the bank leg is the account the feed belongs to and no
+    rule chose it. `RPT-08` walks back from a posting, so that is where the answer lives.
+
+    It also sets the transaction's `actor_class` to `rule`, which is the one thing here that
+    is not per posting. ADR-0033 § 3 wants that class maximised because "a rule-assigned
+    coding is deterministic and re-derivable, and an auditor tests it cheaply and once"; it
+    describes **why a posting was made** and is never an authority check (ADR-0042 § 3), so
+    it does not widen what the caller may do. `actor_principal_id` still records who called.
+
     **`derived_from` says what this entry came from outside the books** — the source system and
     the record within it (`IMP-04`, `BKP-19`, `SOC1-14`). It is lineage, not content: it never
     affects what is posted, what balances, or what any statement shows, and it is written once
@@ -174,6 +206,7 @@ def record_transaction(
         post,
         [(p.account_id, str(p.amount), p.commodity) for p in entry.postings],
         derived_from,
+        [(a.posting_index, a.rule_version_id) for a in assigned],
     )
 
     with database.entity_write(context.entity_id) as write:
@@ -208,11 +241,20 @@ def record_transaction(
             reverses_id=entry.reverses_id,
             entry_kind=entry_kind,
             actor_principal_id=context.principal.id,
-            actor_class=context.principal.actor_class.value,
+            # `rule` when a rule chose a coding, and the caller's own class otherwise. It
+            # records why the posting was made rather than who may make it (ADR-0042 § 3),
+            # so this narrows nothing and widens nothing.
+            actor_class=(
+                ActorClass.RULE.value if assigned else context.principal.actor_class.value
+            ),
             acting_for_principal_id=context.principal.acting_for,
             derived_from=derived_from,
         )
-        write.add_postings(transaction_id, entry.postings)
+        write.add_postings(
+            transaction_id,
+            entry.postings,
+            assigned_by={a.posting_index: a.rule_version_id for a in assigned},
+        )
 
         if raises_obligation is not None:
             write.raise_obligation(

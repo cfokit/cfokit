@@ -88,6 +88,7 @@ nothing cites these but this repository. They are added when something breaks wi
 | [0042](0042-person-only-acts-are-a-capability.md) | A person-only act is gated by a capability, and `actor_class` describes provenance rather than authority | Proposed |
 | [0043](0043-conformance-is-claimed-in-three-bands.md) | Conformance is claimed in three bands, and accounting policy is not one of them | Proposed |
 | [0044](0044-an-expected-value-comes-from-a-redistributable-source.md) | An expected value comes only from a source we can redistribute | Proposed |
+| [0045](0045-assignment-is-stored-rules.md) | Assignment is stored rules in a module of their own, matched by a closed predicate set | Proposed |
 
 ## Deferred — decided in principle, waiting on a need
 
