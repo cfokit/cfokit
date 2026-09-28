@@ -89,6 +89,8 @@ nothing cites these but this repository. They are added when something breaks wi
 | [0043](0043-conformance-is-claimed-in-three-bands.md) | Conformance is claimed in three bands, and accounting policy is not one of them | Proposed |
 | [0044](0044-an-expected-value-comes-from-a-redistributable-source.md) | An expected value comes only from a source we can redistribute | Proposed |
 | [0045](0045-assignment-is-stored-rules.md) | Assignment is stored rules in a module of their own, matched by a closed predicate set | Proposed |
+| [0046](0046-a-statement-proves-itself.md) | Account activity is a module, and a statement is recorded only if it accounts for its own balances | Proposed |
+| [0047](0047-an-uploaded-line-is-drafted.md) | A transaction read from an uploaded document is drafted, never posted by a rule | Proposed |
 
 ## Deferred — decided in principle, waiting on a need
 

@@ -330,7 +330,7 @@
           },
           "assets": {
             "items": {
-              "$ref": "#/components/schemas/StatementLineModel"
+              "$ref": "#/components/schemas/StatementLineModel-Output"
             },
             "title": "Assets",
             "type": "array"
@@ -346,14 +346,14 @@
           },
           "equity": {
             "items": {
-              "$ref": "#/components/schemas/StatementLineModel"
+              "$ref": "#/components/schemas/StatementLineModel-Output"
             },
             "title": "Equity",
             "type": "array"
           },
           "liabilities": {
             "items": {
-              "$ref": "#/components/schemas/StatementLineModel"
+              "$ref": "#/components/schemas/StatementLineModel-Output"
             },
             "title": "Liabilities",
             "type": "array"
@@ -443,6 +443,11 @@
           "source_kind": {
             "$ref": "#/components/schemas/SourceKind"
           },
+          "source_ref": {
+            "description": "The source's own name for this line. Its identity: running the same line again replays rather than booking it twice, and two identical lines are two lines.",
+            "title": "Source Ref",
+            "type": "string"
+          },
           "transaction_date": {
             "format": "date",
             "title": "Transaction Date",
@@ -455,7 +460,8 @@
           "commodity",
           "source_account_id",
           "transaction_date",
-          "source_kind"
+          "source_kind",
+          "source_ref"
         ],
         "title": "CandidateModel",
         "type": "object"
@@ -1458,14 +1464,14 @@
           },
           "expenses": {
             "items": {
-              "$ref": "#/components/schemas/StatementLineModel"
+              "$ref": "#/components/schemas/StatementLineModel-Output"
             },
             "title": "Expenses",
             "type": "array"
           },
           "income": {
             "items": {
-              "$ref": "#/components/schemas/StatementLineModel"
+              "$ref": "#/components/schemas/StatementLineModel-Output"
             },
             "title": "Income",
             "type": "array"
@@ -2161,7 +2167,48 @@
         "title": "StatementComparisonModel",
         "type": "object"
       },
-      "StatementLineModel": {
+      "StatementLineModel-Input": {
+        "description": "One line, as printed.",
+        "properties": {
+          "amount": {
+            "description": "Signed as a posting is signed: positive is a debit.",
+            "examples": [
+              "100.00",
+              "-1250.5000000000"
+            ],
+            "title": "Amount",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "payee": {
+            "title": "Payee",
+            "type": "string"
+          },
+          "transaction_date": {
+            "format": "date",
+            "title": "Transaction Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "transaction_date",
+          "payee",
+          "amount"
+        ],
+        "title": "StatementLineModel",
+        "type": "object"
+      },
+      "StatementLineModel-Output": {
         "description": "One line of a statement, signed so positive means more of what the account is.",
         "properties": {
           "account_id": {
@@ -2193,6 +2240,66 @@
           "amount"
         ],
         "title": "StatementLineModel",
+        "type": "object"
+      },
+      "StatementModel": {
+        "description": "An account statement. Every figure signed as a posting is signed: positive is a debit,\nso a card's balance owed is negative.",
+        "properties": {
+          "account_id": {
+            "description": "The entity's own account the statement is for.",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "closing_balance": {
+            "examples": [
+              "100.00",
+              "-1250.5000000000"
+            ],
+            "title": "Closing Balance",
+            "type": "string"
+          },
+          "commodity": {
+            "title": "Commodity",
+            "type": "string"
+          },
+          "lines": {
+            "description": "In the order they were printed.",
+            "items": {
+              "$ref": "#/components/schemas/StatementLineModel-Input"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "opening_balance": {
+            "examples": [
+              "100.00",
+              "-1250.5000000000"
+            ],
+            "title": "Opening Balance",
+            "type": "string"
+          },
+          "period_end": {
+            "description": "Inclusive, as the statement prints it.",
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "period_start",
+          "period_end",
+          "opening_balance",
+          "closing_balance",
+          "commodity",
+          "lines"
+        ],
+        "title": "StatementModel",
         "type": "object"
       },
       "TransactionResponse": {
@@ -2592,6 +2699,243 @@
         "summary": "Create an entity and assign its first owner",
         "tags": [
           "administration"
+        ]
+      }
+    },
+    "/entities/{entity_id}/account-statements": {
+      "post": {
+        "description": "`BKP-03`. Posts nothing and codes nothing: `candidates` is what to send to assignment,\neach carrying the reference its transaction will record (`BKP-19`). The same statement\nsent again replays; a different one overlapping it is refused.",
+        "operationId": "record_account_statement_entities__entity_id__account_statements_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Request-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatementModel"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Record Account Statement Entities  Entity Id  Account Statements Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Record an account statement, refused unless its lines account for its balances",
+        "tags": [
+          "activity"
+        ]
+      }
+    },
+    "/entities/{entity_id}/account-statements/{statement_id}/agreement": {
+      "get": {
+        "description": "Two figures and whether they agree, for the opening and the closing balance. Drafts are\nnot in the books, so a statement whose lines await posting disagrees by what is waiting.",
+        "operationId": "account_statement_agreement_entities__entity_id__account_statements__statement_id__agreement_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "statement_id",
+            "required": true,
+            "schema": {
+              "title": "Statement Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Account Statement Agreement Entities  Entity Id  Account Statements  Statement Id  Agreement Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Whether the books' posted balances match the statement's",
+        "tags": [
+          "activity"
         ]
       }
     },
@@ -3199,7 +3543,7 @@
     },
     "/entities/{entity_id}/assignment-runs": {
       "post": {
-        "description": "`BKP-06` and `BKP-12`. `unresolved` is the operator's worklist, and nothing in it was\nguessed at or parked in a holding account.",
+        "description": "`BKP-06` and `BKP-12`. `unresolved` is the operator's worklist, and nothing in it was\nguessed at or parked in a holding account. An uploaded candidate is drafted even where a\nrule resolves it: a person posts it (ADR-0047).",
         "operationId": "run_assignment_entities__entity_id__assignment_runs_post",
         "parameters": [
           {

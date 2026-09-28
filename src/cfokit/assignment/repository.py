@@ -49,6 +49,8 @@ class StoredDecision:
 
 
 __all__ = [
+    "answered_decision",
+    "decision_for_transaction",
     "insert_decision",
     "insert_rule_version",
     "load_decisions",
@@ -56,6 +58,7 @@ __all__ = [
     "next_version",
     "precedence_taken",
     "rule_for_posting",
+    "unanswered_decision",
 ]
 
 
@@ -231,6 +234,7 @@ def insert_decision(
     matches: Iterable[Match],
     rule_set_digest: str,
     evaluator_version: int,
+    supersedes: str | None = None,
 ) -> str:
     """Record what was decided and the contest behind it, in the caller's transaction.
 
@@ -246,8 +250,10 @@ def insert_decision(
             "  match_count, rule_set_digest, evaluator_version, candidate_payee,"
             "  candidate_payee_raw, candidate_description, candidate_amount,"
             "  candidate_commodity, candidate_source_account_id, candidate_transaction_date,"
-            "  candidate_source_kind, candidate_fingerprint)"
-            " VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+            "  candidate_source_kind, candidate_fingerprint, candidate_source_ref,"
+            "  supersedes_decision_id)"
+            " VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,"
+            "         %s, %s)"
             " RETURNING id",
             (
                 entity_id,
@@ -267,6 +273,8 @@ def insert_decision(
                 candidate.transaction_date,
                 str(candidate.source_kind),
                 fingerprint,
+                candidate.source_ref,
+                supersedes,
             ),
         )
         row = cur.fetchone()
@@ -285,6 +293,66 @@ def insert_decision(
     return decision_id
 
 
+def decision_for_transaction(
+    conn: psycopg.Connection[Any], *, entity_id: str, transaction_id: str
+) -> str | None:
+    """The decision that explains a transaction, if one was recorded.
+
+    Asked when the ledger replays a write: the transaction exists, and the only question is
+    whether its decision reached the database too, since the two commit separately.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT id FROM assignment_decision WHERE entity_id = %s AND transaction_id = %s"
+            " ORDER BY decided_at LIMIT 1",
+            (entity_id, transaction_id),
+        )
+        row = cur.fetchone()
+    return str(row[0]) if row else None
+
+
+def answered_decision(
+    conn: psycopg.Connection[Any], *, entity_id: str, source_ref: str
+) -> tuple[str, str, str] | None:
+    """The decision that coded this source line, as (decision, transaction, rule label).
+
+    Once a line is coded it stays coded: a rule changed since affects future assignments
+    only (`BKP-11`), so a re-run reports this rather than deciding again.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT d.id, d.transaction_id, v.label"
+            "  FROM assignment_decision d JOIN assignment_rule_version v"
+            "    ON v.id = d.winning_rule_version_id"
+            " WHERE d.entity_id = %s AND d.candidate_source_ref = %s"
+            "   AND d.outcome = 'assigned'"
+            " ORDER BY d.decided_at LIMIT 1",
+            (entity_id, source_ref),
+        )
+        row = cur.fetchone()
+    return (str(row[0]), str(row[1]), str(row[2])) if row else None
+
+
+def unanswered_decision(
+    conn: psycopg.Connection[Any], *, entity_id: str, source_ref: str
+) -> str | None:
+    """The unmatched decision for this source line, if it was asked about and not answered.
+
+    What a resolved decision supersedes — `supersedes_decision_id` has existed since 0012
+    for this, and the source reference is what makes the earlier decision findable: the
+    fingerprint is the content, and the content is what two identical lines share.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT id FROM assignment_decision"
+            " WHERE entity_id = %s AND candidate_source_ref = %s AND outcome = 'unmatched'"
+            " ORDER BY decided_at DESC LIMIT 1",
+            (entity_id, source_ref),
+        )
+        row = cur.fetchone()
+    return str(row[0]) if row else None
+
+
 def load_decisions(
     conn: psycopg.Connection[Any], *, entity_id: str
 ) -> tuple[StoredDecision, ...]:
@@ -300,7 +368,7 @@ def load_decisions(
             "       rule_set_digest, evaluator_version, candidate_payee_raw,"
             "       candidate_description, candidate_amount, candidate_commodity,"
             "       candidate_source_account_id, candidate_transaction_date,"
-            "       candidate_source_kind"
+            "       candidate_source_kind, candidate_source_ref"
             "  FROM assignment_decision WHERE entity_id = %s ORDER BY decided_at, id",
             (entity_id,),
         )
@@ -323,6 +391,7 @@ def load_decisions(
                 source_account_id=str(row[11]),
                 transaction_date=row[12],
                 source_kind=SourceKind(row[13]),
+                source_ref=row[14],
             ),
         )
         for row in rows

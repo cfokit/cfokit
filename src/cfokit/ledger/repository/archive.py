@@ -80,7 +80,7 @@ TABLES: tuple[tuple[str, str], ...] = (
         " supersedes_decision_id, candidate_payee, candidate_payee_raw,"
         " candidate_description, candidate_amount, candidate_commodity,"
         " candidate_source_account_id, candidate_transaction_date, candidate_source_kind,"
-        " candidate_fingerprint FROM assignment_decision"
+        " candidate_fingerprint, candidate_source_ref FROM assignment_decision"
         " WHERE entity_id = %(entity_id)s ORDER BY decided_at, id",
     ),
     (
@@ -88,6 +88,22 @@ TABLES: tuple[tuple[str, str], ...] = (
         "SELECT id, decision_id, rule_version_id, rank, order_key"
         " FROM assignment_decision_match"
         " WHERE entity_id = %(entity_id)s ORDER BY decision_id, rank",
+    ),
+    (
+        # `BKP-19`: a transaction derived from a statement names its line, and an export that
+        # dropped the statement would leave that name pointing nowhere. After `account`,
+        # which a statement names; lines after the statement they belong to.
+        "account_statement",
+        "SELECT id, account_id, period_start, period_end, opening_balance, closing_balance,"
+        " commodity, source_kind, content_digest, recorded_by, recorded_at"
+        " FROM account_statement"
+        " WHERE entity_id = %(entity_id)s ORDER BY account_id, period_start, id",
+    ),
+    (
+        "account_statement_line",
+        "SELECT id, statement_id, line, transaction_date, payee, description, amount"
+        " FROM account_statement_line"
+        " WHERE entity_id = %(entity_id)s ORDER BY statement_id, line",
     ),
     (
         "obligation",

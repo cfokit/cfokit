@@ -55,14 +55,22 @@ def entity(owned_books: tuple[str, str, str]) -> str:
     return owned_books[0]
 
 
-def acme(chart: dict[str, str], amount: str) -> Candidate:
+def acme(
+    chart: dict[str, str],
+    amount: str,
+    *,
+    ref: str | None = None,
+    kind: SourceKind = SourceKind.FEED,
+) -> Candidate:
+    """An ACME line. Each call is a distinct line unless `ref` says it is the same one."""
     return Candidate(
         payee="ACME Insurance Co",
         amount=Decimal(amount),
         commodity="USD",
         source_account_id=chart["Bank"],
         transaction_date=WHEN,
-        source_kind=SourceKind.UPLOAD,
+        source_kind=kind,
+        source_ref=ref or f"line-{uuid.uuid4()}",
     )
 
 
@@ -383,6 +391,7 @@ def busy(chart: dict[str, str]) -> list[Candidate]:
                 source_account_id=chart["Bank"],
                 transaction_date=WHEN,
                 source_kind=SourceKind.FEED,
+                source_ref=f"unfamiliar-{n}",
             )
             for n in range(3)
         ),
@@ -492,3 +501,187 @@ def test_replay_writes_nothing(
     replay(database, entity_id=entity)
 
     assert snapshot() == before
+
+
+# --- A line's identity is its source reference, never its content (ADR-0029, ADR-0046) ----
+
+
+def counts(app_conn: psycopg.Connection[Any], entity: str) -> tuple[int, int]:
+    """(transactions, decisions) for the entity."""
+    with app_conn.cursor() as cur:
+        cur.execute("SELECT set_config('cfokit.entity_id', %s, false)", (entity,))
+        cur.execute("SELECT count(*) FROM ledger_transaction WHERE entity_id = %s", (entity,))
+        transactions = int((cur.fetchone() or [0])[0])
+        cur.execute("SELECT count(*) FROM assignment_decision WHERE entity_id = %s", (entity,))
+        decisions = int((cur.fetchone() or [0])[0])
+    return transactions, decisions
+
+
+def test_two_identical_lines_are_two_transactions(
+    database: Database, entity: str, chart: dict[str, str], app_conn: psycopg.Connection[Any]
+) -> None:
+    """ADR-0029's own case: "two five-dollar coffees on the same day are two transactions".
+    Every fact matches; only the source says they are different lines."""
+    applied = apply_rules(
+        database,
+        entity_id=entity,
+        principal=OWNER,
+        request_id="run-1",
+        candidates=[acme(chart, "-5.00", ref="line-1"), acme(chart, "-5.00", ref="line-2")],
+    )
+
+    assert len({b.transaction_id for b in applied.unresolved}) == 2
+    assert counts(app_conn, entity) == (2, 2)
+
+
+def test_running_a_line_again_books_nothing_new(
+    database: Database, entity: str, chart: dict[str, str], app_conn: psycopg.Connection[Any]
+) -> None:
+    """A statement sent twice must not book twice, and a retry is not a new decision."""
+    approve(
+        database,
+        entity_id=entity,
+        principal=OWNER,
+        label="ACME to insurance",
+        precedence=10,
+        account_id=chart["Insurance"],
+        predicates=payee_rule(),
+    )
+    line = acme(chart, "-240.00", ref="line-1")
+    first = apply_rules(
+        database, entity_id=entity, principal=OWNER, request_id="run-1", candidates=[line]
+    )
+    again = apply_rules(
+        database, entity_id=entity, principal=OWNER, request_id="run-2", candidates=[line]
+    )
+
+    assert again.booked[0].transaction_id == first.booked[0].transaction_id
+    assert counts(app_conn, entity) == (1, 1)
+
+
+def test_an_unanswered_line_asked_again_is_still_one_question(
+    database: Database, entity: str, chart: dict[str, str], app_conn: psycopg.Connection[Any]
+) -> None:
+    """`BKP-12`'s question is asked once per line, however often the statement is run."""
+    line = acme(chart, "-240.00", ref="line-1")
+    for run in ("run-1", "run-2"):
+        apply_rules(
+            database, entity_id=entity, principal=OWNER, request_id=run, candidates=[line]
+        )
+
+    assert counts(app_conn, entity) == (1, 1)
+
+
+def test_an_answer_supersedes_the_question_it_answers(
+    database: Database, entity: str, chart: dict[str, str], app_conn: psycopg.Connection[Any]
+) -> None:
+    """`BKP-12` answered by `BKP-09`: the operator is asked, approves a rule, and the line is
+    run again. The answer is a decision of its own that names the question, since nothing
+    here is updated."""
+    line = acme(chart, "-240.00", ref="line-1")
+    asked = apply_rules(
+        database, entity_id=entity, principal=OWNER, request_id="run-1", candidates=[line]
+    )
+    approve(
+        database,
+        entity_id=entity,
+        principal=OWNER,
+        label="ACME to insurance",
+        precedence=10,
+        account_id=chart["Insurance"],
+        predicates=payee_rule(),
+    )
+    answered = apply_rules(
+        database, entity_id=entity, principal=OWNER, request_id="run-2", candidates=[line]
+    )
+
+    assert [b.rule_label for b in answered.booked] == ["ACME to insurance"]
+    with app_conn.cursor() as cur:
+        cur.execute("SELECT set_config('cfokit.entity_id', %s, false)", (entity,))
+        cur.execute(
+            "SELECT supersedes_decision_id FROM assignment_decision WHERE id = %s",
+            (answered.booked[0].decision_id,),
+        )
+        supersedes = (cur.fetchone() or [None])[0]
+    assert str(supersedes) == asked.unresolved[0].decision_id
+
+
+def test_a_coded_line_is_not_recoded_when_its_rule_changes(
+    database: Database, entity: str, chart: dict[str, str], app_conn: psycopg.Connection[Any]
+) -> None:
+    """`BKP-11`: a rule change affects future assignments only. Running an already-coded line
+    again reports how it was coded rather than coding it a second way."""
+    version = approve(
+        database,
+        entity_id=entity,
+        principal=OWNER,
+        label="ACME to insurance",
+        precedence=10,
+        account_id=chart["Insurance"],
+        predicates=payee_rule(),
+    )
+    line = acme(chart, "-240.00", ref="line-1")
+    first = apply_rules(
+        database, entity_id=entity, principal=OWNER, request_id="run-1", candidates=[line]
+    )
+    with app_conn.cursor() as cur:
+        cur.execute("SELECT set_config('cfokit.entity_id', %s, false)", (entity,))
+        cur.execute("SELECT rule_id FROM assignment_rule_version WHERE id = %s", (version,))
+        rule_id = str((cur.fetchone() or [""])[0])
+    approve(
+        database,
+        entity_id=entity,
+        principal=OWNER,
+        label="ACME now prepaid",
+        precedence=10,
+        account_id=chart["Prepaid"],
+        predicates=payee_rule(),
+        rule_id=rule_id,
+    )
+
+    again = apply_rules(
+        database, entity_id=entity, principal=OWNER, request_id="run-2", candidates=[line]
+    )
+
+    assert again.booked[0].transaction_id == first.booked[0].transaction_id
+    assert again.booked[0].rule_label == "ACME to insurance"
+    assert counts(app_conn, entity) == (1, 1)
+
+
+# --- An uploaded line is drafted, whatever resolves it (PLT-23, ADR-0047) -----------------
+
+
+def test_an_uploaded_line_a_rule_resolves_is_a_complete_draft(
+    database: Database, entity: str, chart: dict[str, str], app_conn: psycopg.Connection[Any]
+) -> None:
+    """Its figures were read out of a document the organisation did not author, in the session
+    now asking to post them. The rule decides where it belongs — both legs are there — and a
+    person decides that it happened."""
+    approve(
+        database,
+        entity_id=entity,
+        principal=OWNER,
+        label="ACME to insurance",
+        precedence=10,
+        account_id=chart["Insurance"],
+        predicates=payee_rule(),
+    )
+    applied = apply_rules(
+        database,
+        entity_id=entity,
+        principal=OWNER,
+        request_id="run-1",
+        candidates=[acme(chart, "-240.00", kind=SourceKind.UPLOAD)],
+    )
+
+    assert [b.rule_label for b in applied.booked] == ["ACME to insurance"]
+    with app_conn.cursor() as cur:
+        cur.execute("SELECT set_config('cfokit.entity_id', %s, false)", (entity,))
+        cur.execute(
+            "SELECT status, (SELECT count(*) FROM posting p WHERE p.transaction_id = t.id)"
+            "  FROM ledger_transaction t WHERE t.entity_id = %s",
+            (entity,),
+        )
+        status, legs = cur.fetchone() or (None, None)
+    assert status == "draft"
+    assert legs == 2

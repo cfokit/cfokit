@@ -51,6 +51,11 @@ class CandidateModel(BaseModel):
     source_account_id: str = Body(description="The entity's own account it appeared on.")
     transaction_date: date
     source_kind: SourceKind
+    source_ref: str = Body(
+        description="The source's own name for this line. Its identity: running the same "
+        "line again replays rather than booking it twice, and two identical lines are two "
+        "lines."
+    )
     description: str | None = None
 
 
@@ -108,6 +113,7 @@ def _candidates(models: list[CandidateModel]) -> tuple[Candidate, ...]:
             source_account_id=model.source_account_id,
             transaction_date=model.transaction_date,
             source_kind=model.source_kind,
+            source_ref=model.source_ref,
             description=model.description,
         )
         for model in models
@@ -193,7 +199,8 @@ def run_assignment(
     request_id: Annotated[str | None, Header(alias="X-Request-Id")] = None,
 ) -> dict[str, Any]:
     """`BKP-06` and `BKP-12`. `unresolved` is the operator's worklist, and nothing in it was
-    guessed at or parked in a holding account."""
+    guessed at or parked in a holding account. An uploaded candidate is drafted even where a
+    rule resolves it: a person posts it (ADR-0047)."""
     applied = apply_rules(
         database,
         entity_id=entity_id,
@@ -204,6 +211,7 @@ def run_assignment(
     return {
         "booked": [
             {
+                "source_ref": b.candidate.source_ref,
                 "transaction_id": b.transaction_id,
                 "rule": b.rule_label,
                 "payee": b.candidate.payee,
@@ -211,7 +219,11 @@ def run_assignment(
             for b in applied.booked
         ],
         "unresolved": [
-            {"transaction_id": b.transaction_id, "payee": b.candidate.payee}
+            {
+                "source_ref": b.candidate.source_ref,
+                "transaction_id": b.transaction_id,
+                "payee": b.candidate.payee,
+            }
             for b in applied.unresolved
         ],
     }

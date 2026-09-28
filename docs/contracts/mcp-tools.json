@@ -51,6 +51,28 @@
     "name": "account_detail"
   },
   {
+    "description": "Compare a recorded statement's opening and closing balances with the books' posted balances for that account over the same period. Drafts are not in the books, so a statement whose lines are still drafts disagrees by what is waiting to be posted. Writes nothing.",
+    "inputSchema": {
+      "properties": {
+        "entity_id": {
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "statement_id": {
+          "title": "Statement Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity_id",
+        "statement_id"
+      ],
+      "title": "agreement_toolArguments",
+      "type": "object"
+    },
+    "name": "account_statement_agreement"
+  },
+  {
     "description": "Approve a rule, an edit to one, or its retirement. A person's own act: a delegated session is refused. Pass rule_id to supersede an existing rule; the prior version stays, so what it already coded is untouched.",
     "inputSchema": {
       "$defs": {
@@ -703,6 +725,10 @@
             "source_kind": {
               "$ref": "#/$defs/SourceKind"
             },
+            "source_ref": {
+              "title": "Source Ref",
+              "type": "string"
+            },
             "transaction_date": {
               "format": "date",
               "title": "Transaction Date",
@@ -715,7 +741,8 @@
             "commodity",
             "source_account_id",
             "transaction_date",
-            "source_kind"
+            "source_kind",
+            "source_ref"
           ],
           "title": "CandidateArgument",
           "type": "object"
@@ -987,6 +1014,101 @@
     "name": "reconcile_import"
   },
   {
+    "description": "Record a bank or card statement for one of the entity's accounts. Every figure is signed as a posting is: positive is a debit, so a deposit is positive and a card purchase or a card's balance owed is negative. Lines go in printed order. Refused with statement_does_not_balance unless opening balance plus every line equals closing balance exactly. Posts nothing: returns each line as a candidate to pass unchanged to run_assignment. Sending the same statement again replays; one overlapping a recorded period is refused.",
+    "inputSchema": {
+      "$defs": {
+        "StatementLineArgument": {
+          "properties": {
+            "amount": {
+              "title": "Amount",
+              "type": "string"
+            },
+            "description": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Description"
+            },
+            "payee": {
+              "title": "Payee",
+              "type": "string"
+            },
+            "transaction_date": {
+              "format": "date",
+              "title": "Transaction Date",
+              "type": "string"
+            }
+          },
+          "required": [
+            "transaction_date",
+            "payee",
+            "amount"
+          ],
+          "title": "StatementLineArgument",
+          "type": "object"
+        }
+      },
+      "properties": {
+        "account_id": {
+          "title": "Account Id",
+          "type": "string"
+        },
+        "closing_balance": {
+          "title": "Closing Balance",
+          "type": "string"
+        },
+        "commodity": {
+          "title": "Commodity",
+          "type": "string"
+        },
+        "entity_id": {
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "lines": {
+          "items": {
+            "$ref": "#/$defs/StatementLineArgument"
+          },
+          "title": "Lines",
+          "type": "array"
+        },
+        "opening_balance": {
+          "title": "Opening Balance",
+          "type": "string"
+        },
+        "period_end": {
+          "format": "date",
+          "title": "Period End",
+          "type": "string"
+        },
+        "period_start": {
+          "format": "date",
+          "title": "Period Start",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity_id",
+        "account_id",
+        "period_start",
+        "period_end",
+        "opening_balance",
+        "closing_balance",
+        "commodity",
+        "lines"
+      ],
+      "title": "record_toolArguments",
+      "type": "object"
+    },
+    "name": "record_account_statement"
+  },
+  {
     "description": "Record a transaction in an entity's books, as a draft or posted straight through. Postings must sum to zero per commodity to post. Requires an idempotency key; replaying one books nothing further. Pass raises_obligation to record it as an invoice or anything else owed, and settles to apply it against obligations — both need post.",
     "inputSchema": {
       "$defs": {
@@ -1173,7 +1295,7 @@
     "name": "reverse_transaction"
   },
   {
-    "description": "Book the supplied transactions against the approved rules. Anything no rule resolves is returned unresolved and nothing is posted for it — never guessed, never parked in a holding account.",
+    "description": "Book the supplied transactions against the approved rules. Anything no rule resolves is returned unresolved and nothing is posted for it — never guessed, never parked in a holding account. An uploaded transaction is only ever drafted, even where a rule resolves it: a person posts it. source_ref is the source's own name for the line; running a line again never books it twice.",
     "inputSchema": {
       "$defs": {
         "CandidateArgument": {
@@ -1209,6 +1331,10 @@
             "source_kind": {
               "$ref": "#/$defs/SourceKind"
             },
+            "source_ref": {
+              "title": "Source Ref",
+              "type": "string"
+            },
             "transaction_date": {
               "format": "date",
               "title": "Transaction Date",
@@ -1221,7 +1347,8 @@
             "commodity",
             "source_account_id",
             "transaction_date",
-            "source_kind"
+            "source_kind",
+            "source_ref"
           ],
           "title": "CandidateArgument",
           "type": "object"

@@ -29,15 +29,17 @@ buys. Boundaries between capabilities are enforced by `import-linter` on module 
 works the same either way. `src/cfokit/` is a PEP 420 namespace package: **do not add
 `src/cfokit/__init__.py`**. A skill is not a package and never goes here (ADR-0014, ADR-0020).
 
-**Four capabilities exist**: `ledger`, `imports` (ADR-0040), `receivables`, and `assignment`
-(ADR-0045). `server` is not one — it is the composition point, the only place that knows the
-module list, and a file in it that decides something about accounting is in the wrong place.
+**Five capabilities exist**: `ledger`, `imports` (ADR-0040), `receivables`, `assignment`
+(ADR-0045), and `activity` (ADR-0046). `server` is not one — it is the composition point, the
+only place that knows the module list, and a file in it that decides something about
+accounting is in the wrong place.
 
 There was a `connectors` package holding no code; it was removed rather than renamed, because
 a package that exists before its capability is known is a boundary drawn around a guess
 (ADR-0012, ADR-0022 § 5, ADR-0031). **Create a package when the capability it provides is
-known and there is code to put in it** — which is why there is no package yet for getting
-transactions in, and none for payables.
+known and there is code to put in it** — which is why there is none for payables. Getting
+transactions in is `activity`, named for the account activity it receives rather than for the
+statement upload that is its first producer.
 
 **The ledger stays tiny.** It owns the double-entry primitive and nothing else. If the ledger needs
 to know what a customer is, the boundary has moved wrongly. There is no `core` module — the ledger

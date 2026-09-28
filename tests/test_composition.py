@@ -50,6 +50,18 @@ def test_the_composed_app_serves_the_import_routes() -> None:
     assert "/entities/{entity_id}/imports/{import_id}/reconciliation" in served
 
 
+def test_the_composed_deployable_serves_account_statements() -> None:
+    """Activity is a module, so its surface is reachable only from above the ledger: a
+    statement read in a Claude Desktop chat arrives over MCP, and one read by a script over
+    REST (ADR-0046)."""
+    served = routes(rest_app(settings()))
+    tools = {tool.name for tool in asyncio.run(mcp_server(settings()).list_tools())}
+
+    assert "/entities/{entity_id}/account-statements" in served
+    assert {"record_account_statement", "account_statement_agreement"} <= tools
+    assert not [path for path in routes(create_app(settings())) if "account-statements" in path]
+
+
 def test_the_ledger_alone_serves_none_of_them() -> None:
     """**The contract, as a test.** "The ledger depends on no module" is enforced by
     `import-linter` over import paths; this is the same rule observed at the surface, where a
