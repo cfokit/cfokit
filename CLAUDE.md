@@ -283,3 +283,8 @@ websockets, SSE transport, or an event bus. (ADR-0012)
   you proceed.
 - If you make a decision future work should be bound by, propose an ADR rather than
   burying it in a code comment.
+- **Merge by labelling, not by `gh pr merge`.** Add the `merge` label and stop. That label
+  runs the reviewer, which approves and auto-merges only what `scripts/review_policy.py`
+  allows, and marks everything else `needs-human`. Paths in `.github/CODEOWNERS` always need
+  a person. Use `--admin` only when the user tells you to merge a pull request the reviewer
+  escalated. (ADR-0048)
