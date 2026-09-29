@@ -70,6 +70,9 @@ JOURNAL: Rows = [
     [None, "02/02/2026", "Expense", None, None, "Coffee", "Meals:Client Meals", 12.50, None],
     [None, None, None, None, None, "Coffee", "Checking", None, 12.50],
     [None, None, None, None, None, None, None, 12.50, 12.50],
+    # The grand total the journal prints for itself, above its footer. It carries no
+    # accounting basis, because a journal is the record rather than a view of one (ADR-0050).
+    ["TOTAL", None, None, None, None, None, None, 1212.50, 1212.50],
     [
         "Saturday, Sep 05, 2026 07:31:11 AM GMT-7",
         None,
@@ -209,7 +212,32 @@ def test_it_emits_the_published_shape(books: dict[str, Any]) -> None:
         "balances",
         "rollups",
         "statements",
+        "journal_total",
     }
+
+
+def test_the_journal_total_is_read_from_its_own_TOTAL_row(books: dict[str, Any]) -> None:
+    """**The only figure in an export carrying no accounting basis** (ADR-0050).
+
+    Read rather than summed: the value of this figure is that the source produced it, so a
+    reader computing it would be checking its own arithmetic against itself. The fixture's two
+    transactions are 1,200.00 and 12.50. Asserted as a value rather than a spelling: this
+    fixture writes its cells through openpyxl, which stores 1212.50 as a float and loses the
+    trailing zero, where a real export holds the text QuickBooks wrote.
+    """
+    total = books["journal_total"]
+
+    assert Decimal(total["debits"]) == Decimal("1212.50")
+    assert Decimal(total["credits"]) == Decimal("1212.50")
+
+
+def test_an_export_whose_journal_prints_no_total_reports_none(tmp_path: Path) -> None:
+    """Never fabricated. A source that states no total has the per-account half only."""
+    without = [row for row in JOURNAL if str(row[0] or "").strip().upper() != "TOTAL"]
+    done = run(export(**{"Journal.xlsx": without}), tmp_path=tmp_path)
+
+    assert done.returncode == 0
+    assert json.loads(done.stdout)["journal_total"] is None
 
 
 def test_the_journal_states_no_basis_and_the_ledger_states_cash(books: dict[str, Any]) -> None:

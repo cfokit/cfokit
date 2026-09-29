@@ -58,7 +58,10 @@ __all__ = [
     "Opened",
     "Posted",
     "Refusal",
+    "TotalAgreement",
+    "check_total",
     "compare",
+    "nets_to_zero",
     "open_books",
     "post_entries",
 ]
@@ -389,6 +392,89 @@ def _blocking(books: SourceBooks, basis: str, commodity: str) -> str | None:
         # IMP-07, on the same terms as any other foreign amount (`LED-15`).
         return f"the source carries {', '.join(foreign)} and this entity is {commodity}"
     return None
+
+
+@dataclass(frozen=True, slots=True)
+class TotalAgreement:
+    """The source's own journal total against ours (`IMP-08`, ADR-0050).
+
+    **Basis-free.** Every report in an export is run on whichever basis the company keeps, so a
+    per-account comparison against one diverges on the obligation accounts by exactly what is
+    unsettled. The journal prints no basis, because it is the record rather than a view, so this
+    comparison holds whatever the reports say.
+
+    It proves the file was read completely and at the right magnitude. It proves nothing about
+    which account a row landed in — two accounts transposed total the same — which is what the
+    per-account comparison is for.
+    """
+
+    stated_debits: Decimal
+    stated_credits: Decimal
+    our_debits: Decimal
+    our_credits: Decimal
+
+    @property
+    def agrees(self) -> bool:
+        return self.our_debits == self.stated_debits and self.our_credits == self.stated_credits
+
+    @property
+    def difference(self) -> Decimal:
+        """How far our debits are from theirs — the figure to go looking with."""
+        return self.our_debits - self.stated_debits
+
+
+def check_total(
+    database: Database,
+    *,
+    entity_id: str,
+    principal: Principal,
+    books: SourceBooks,
+    as_of: date | None = None,
+) -> TotalAgreement | None:
+    """Our totals against the total the source states for its own journal.
+
+    `None` where the source prints none. Not computed in that case: summing the rows ourselves
+    and comparing that against the books we loaded them into would be comparing our arithmetic
+    against itself, which is the thing `IMP-08` exists to avoid (`NFR-01`).
+
+    Totalled over the whole entity rather than over this import, because that is what the source
+    stated — an export's journal is the company's history, and a second import into the same
+    books would make the two figures answer different questions. A reconciliation run against
+    books that already held transactions is one an operator should read as such.
+    """
+    if books.journal_total is None:
+        return None
+    report = trial_balance(
+        database,
+        entity_id=entity_id,
+        principal=principal,
+        as_of=as_of or date.max,
+    )
+    ours = [row.balance for row in report.rows]
+    return TotalAgreement(
+        stated_debits=books.journal_total.debits,
+        stated_credits=books.journal_total.credits,
+        our_debits=sum((b for b in ours if b > 0), Decimal(0)),
+        our_credits=-sum((b for b in ours if b < 0), Decimal(0)),
+    )
+
+
+def nets_to_zero(divergences: Sequence[tuple[str, Decimal, Decimal]]) -> bool:
+    """Whether a set of divergences is consistent with an accounting-basis difference.
+
+    **Cash basis excludes whole transactions.** An unpaid invoice is a debit to receivables
+    and a credit to income; dropping it removes both. So the difference between an accrual
+    journal and a cash-basis report is composed of balanced transactions and sums to zero in
+    posting signs.
+
+    A set that nets is reported as a basis difference. A set that does not is a defect, and
+    `NFR-01` forbids carrying it either way — this is what makes the reported difference an
+    arithmetic result rather than a note somebody has to agree with (ADR-0050).
+
+    **Necessary, not sufficient.** A transaction posted to the wrong account also nets to zero.
+    The guard against that is the accounts that agree exactly, and the journal total above.
+    """
+    return sum((ours - theirs for _, ours, theirs in divergences), Decimal(0)) == 0
 
 
 def _reconcile(

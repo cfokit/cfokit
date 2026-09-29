@@ -33,7 +33,7 @@ from typing import Any
 
 from mcp.server import MCPServer
 
-from cfokit.imports import Refusal, compare, open_books, post_entries
+from cfokit.imports import Refusal, check_total, compare, nets_to_zero, open_books, post_entries
 from cfokit.imports import _import_id as import_id_for
 from cfokit.imports import _reconcile as reconcile_balances
 from cfokit.imports.source import (
@@ -43,6 +43,7 @@ from cfokit.imports.source import (
     SourceLine,
     StatedBalance,
     StatedStatement,
+    StatedTotal,
 )
 from cfokit.ledger.errors import LedgerError
 from cfokit.ledger.repository.unit_of_work import Database
@@ -339,8 +340,10 @@ def register(server: MCPServer, database: Database, *, acting: Callable[[], Prin
             "Check the imported books against the figures the source states for itself, and "
             "compare the statements it printed. Balances are 'account|amount' lines from the "
             "source's own general ledger totals; statements are what its profit and loss and "
-            "balance sheet printed. This is the answer an import is for: anything short of "
-            "exact "
+            "balance sheet printed. journal_total is 'debits|credits' from the journal's own "
+            "TOTAL row — the one figure in an export carrying no accounting basis, so it holds "
+            "however the reports beside it were run. This is the answer an import is for: "
+            "anything short of "
             "agreement is a finding to report, never a rounding to explain away. Where the "
             "source's reports were run on a different accounting basis from its journal, the "
             "receivable and the income behind it differ by exactly what is unsettled — that "
@@ -354,6 +357,7 @@ def register(server: MCPServer, database: Database, *, acting: Callable[[], Prin
         profit_and_loss: list[str] | None = None,
         balance_sheet: list[str] | None = None,
         their_basis: str = "unknown",
+        journal_total: str | None = None,
     ) -> dict[str, Any]:
         """`IMP-08`, and the reason any of this is trustworthy.
 
@@ -381,12 +385,25 @@ def register(server: MCPServer, database: Database, *, acting: Callable[[], Prin
                             lines=_stated(lines, report),
                         )
                     )
+            stated_total = None
+            if journal_total:
+                stated_debits, _, stated_credits = journal_total.partition("|")
+                if not stated_credits:
+                    raise ImportToolError(
+                        "invalid_argument",
+                        "journal_total is 'debits|credits' from the journal's own TOTAL row",
+                    )
+                stated_total = StatedTotal(
+                    debits=_amount(stated_debits, "journal_total"),
+                    credits=_amount(stated_credits, "journal_total"),
+                )
             books = SourceBooks(
                 system="",
                 fingerprint="",
                 basis="unknown",
                 balances_basis=their_basis,
                 commodity="",
+                journal_total=stated_total,
                 balances=_stated(balances, "balances"),
                 statements=tuple(statements),
             )
@@ -394,13 +411,26 @@ def register(server: MCPServer, database: Database, *, acting: Callable[[], Prin
             agreed, compared, divergences = reconcile_balances(
                 database, entity_id=entity_id, principal=principal, books=books
             )
+            total = check_total(database, entity_id=entity_id, principal=principal, books=books)
             reply: dict[str, Any] = {
                 "ok": True,
                 "agreed": agreed,
                 "compared": compared,
                 "divergences": _divergences(divergences),
                 "reconciled": compared > 0 and agreed == compared,
+                # Cash basis excludes whole transactions, so a basis difference sums to zero in
+                # posting signs. False means the difference is not the basis, and is a defect.
+                "divergences_net_to_zero": nets_to_zero(divergences),
             }
+            if total is not None:
+                reply["journal_total"] = {
+                    "stated_debits": str(total.stated_debits),
+                    "our_debits": str(total.our_debits),
+                    "stated_credits": str(total.stated_credits),
+                    "our_credits": str(total.our_credits),
+                    "agrees": total.agrees,
+                    "difference": str(total.difference),
+                }
             reply["statements"] = [
                 {
                     "report": c.report,

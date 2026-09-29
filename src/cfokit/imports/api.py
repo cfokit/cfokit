@@ -32,7 +32,9 @@ from pydantic import BaseModel, Field
 from cfokit.imports import (
     ImportRefused,
     Refusal,
+    check_total,
     compare,
+    nets_to_zero,
     open_books,
     post_entries,
 )
@@ -45,6 +47,7 @@ from cfokit.imports.source import (
     SourceLine,
     StatedBalance,
     StatedStatement,
+    StatedTotal,
 )
 from cfokit.ledger.api import ERRORS, get_database, get_principal
 from cfokit.ledger.api.models import Money
@@ -185,10 +188,28 @@ class PostEntriesResponse(BaseModel):
     refusals: list[RefusalModel] = Field(default_factory=list)
 
 
+class StatedTotalModel(BaseModel):
+    """What the source's raw journal says it sums to.
+
+    The only figure in an accounting export that carries no basis, because a journal is the
+    record rather than a view of one — so this comparison holds whatever basis the reports
+    beside it were run on (ADR-0050).
+    """
+
+    debits: Money
+    credits: Money
+
+
 class ReconcileImportRequest(BaseModel):
     """The figures the source states for itself, for `IMP-08`'s comparison."""
 
     balances: list[StatedBalanceModel] = Field(default_factory=list)
+    journal_total: StatedTotalModel | None = Field(
+        default=None,
+        description="The total the source prints on its own raw journal. Omitted where it"
+        " prints none — never computed, because summing the rows and comparing that against"
+        " the books they were loaded into is our arithmetic against itself.",
+    )
     statements: list[StatedStatementModel] = Field(default_factory=list)
     since: date | None = Field(
         default=None,
@@ -218,11 +239,34 @@ class StatementComparisonModel(BaseModel):
     unmatched: list[str] = Field(default_factory=list)
 
 
+class TotalAgreementModel(BaseModel):
+    """`IMP-08`'s "totals" half. Basis-free, and blind to which account a row landed in."""
+
+    stated_debits: Money
+    stated_credits: Money
+    our_debits: Money
+    our_credits: Money
+    agrees: bool
+    difference: Money
+
+
 class ReconcileImportResponse(BaseModel):
     """No tolerance. `NFR-01`: "a tolerance is a defect, not a target"."""
 
     agreed: int
     compared: int
+    journal_total: TotalAgreementModel | None = Field(
+        default=None,
+        description="Our totals against the one the source states for its raw journal. Null"
+        " where the source printed none.",
+    )
+    divergences_net_to_zero: bool = Field(
+        default=True,
+        description="Whether the divergences are consistent with an accounting-basis"
+        " difference. Cash basis excludes whole transactions, so the difference between an"
+        " accrual journal and a cash-basis report sums to zero in posting signs. False means"
+        " the difference is not the basis and is a defect.",
+    )
     divergences: list[DivergenceModel] = Field(default_factory=list)
     statements: list[StatementComparisonModel] = Field(default_factory=list)
 
@@ -368,6 +412,13 @@ def reconcile_import(
             StatedBalance(account_code=line.account_code, balance=line.balance)
             for line in body.balances
         ),
+        journal_total=(
+            None
+            if body.journal_total is None
+            else StatedTotal(
+                debits=body.journal_total.debits, credits=body.journal_total.credits
+            )
+        ),
         statements=tuple(
             StatedStatement(
                 report=statement.report,
@@ -384,9 +435,25 @@ def reconcile_import(
     agreed, compared, divergences = reconcile_balances(
         database, entity_id=entity_id, principal=acting, books=books, as_of=body.as_of
     )
+    total = check_total(
+        database, entity_id=entity_id, principal=acting, books=books, as_of=body.as_of
+    )
     return ReconcileImportResponse(
         agreed=agreed,
         compared=compared,
+        journal_total=(
+            None
+            if total is None
+            else TotalAgreementModel(
+                stated_debits=total.stated_debits,
+                stated_credits=total.stated_credits,
+                our_debits=total.our_debits,
+                our_credits=total.our_credits,
+                agrees=total.agrees,
+                difference=total.difference,
+            )
+        ),
+        divergences_net_to_zero=nets_to_zero(divergences),
         divergences=_divergences(divergences),
         statements=[
             StatementComparisonModel(

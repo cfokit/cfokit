@@ -27,6 +27,7 @@ __all__ = [
     "SourceLine",
     "StatedBalance",
     "StatedStatement",
+    "StatedTotal",
 ]
 
 
@@ -80,6 +81,24 @@ class StatedBalance:
 
     account_code: str
     balance: Decimal
+
+
+@dataclass(frozen=True, slots=True)
+class StatedTotal:
+    """The source's own total over its raw journal — its arithmetic, over the rows we import.
+
+    **The only figure in a QuickBooks export that carries no accounting basis**, because the
+    journal is the record rather than a view of one. Every report beside it is run on whichever
+    basis the company keeps, so a per-account comparison against one diverges on the obligation
+    accounts by exactly what is unsettled; this does not (ADR-0050).
+
+    It is `IMP-08`'s "totals" half, and it catches what an import actually gets wrong — a row
+    dropped, an amount misread, a batch posted twice. It says nothing about which account a row
+    landed in: two accounts transposed total the same.
+    """
+
+    debits: Decimal
+    credits: Decimal
 
 
 @dataclass(frozen=True, slots=True)
@@ -139,6 +158,10 @@ class SourceBooks:
     entries: tuple[SourceEntry, ...] = ()
     # What the source says the answer is, per account.
     balances: tuple[StatedBalance, ...] = ()
+    # What the raw journal says it sums to, where the source prints it. `None` where it does
+    # not, and never computed here: summing the rows ourselves and calling it an oracle would
+    # compare our arithmetic against itself (ADR-0050).
+    journal_total: StatedTotal | None = None
     # Subtotals the source prints over a parent and everything beneath it. Held apart from
     # `balances` because nothing posts to a subtotal: comparing one against a chart account
     # would report a divergence that is really a difference in what the two figures are.
