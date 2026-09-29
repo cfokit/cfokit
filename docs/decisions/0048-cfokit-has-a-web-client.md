@@ -7,7 +7,8 @@ decision-makers: [Geoff]
 
 # ADR-0048: CFOKit has a web client, served by the API and signed in through the issuer
 
-**Requirements served:** `PLT-24`, `IAM-06`, `IAM-10`, `NFR-19`.
+**Requirements served:** `PLT-24`, `IAM-06`, `IAM-10`, `IAM-22`, `IAM-23`, `IAM-24`, `IAM-25`,
+`IAM-26`, `NFR-19`.
 
 ## Context and Problem Statement
 
@@ -30,12 +31,17 @@ product surface with "its own auth, session handling, XSS surface, and design wo
 is that gate being passed deliberately, and it has to answer each of the four rather than wave
 them through.
 
-`IAM-10` constrains the answer before anything else: identity is delegated, and CFOKit never
-issues credentials, stores passwords, or operates a login flow.
+Signing in is what any commercial web product offers: an account with a password, reset without
+an administrator, a second factor, passkeys, and Google and Microsoft accounts (`IAM-22` to
+`IAM-26`). `IAM-10` bounds how: a person signs in themselves, in a browser, and credentials never
+pass through an agent, a model or CFOKit's own API. Authentication is delegated to the identity
+provider rather than written here.
 
 ## Decision Drivers
 
-* `IAM-10`: no password, no credential issued, no login form of CFOKit's own.
+* Credentials reach the identity provider and nothing else — no agent, no model, not CFOKit's API
+  (`IAM-10`).
+* Sign-in and sign-up look and behave like the rest of the product.
 * One authorisation path. The web client may do nothing an agent holding the same person's grants
   could not, or permissions exist in two places and diverge.
 * One image and one deployable (ADR-0023); portable to any target and to a laptop (ADR-0004).
@@ -67,13 +73,22 @@ deployable and no second authorisation path.
 > endpoints of its own. Its first job is onboarding, end to end: create an account, create the
 > entity, import its books.
 
-### 1. Auth is the issuer's
+### 1. Sign-in is the issuer's, and looks like CFOKit
 
-The page redirects to the issuer, the issuer renders its own login, and the page receives a code
-it exchanges for a token as a public client — no secret, because a browser cannot keep one. CFOKit
-still issues nothing and shows no login form (`IAM-10`). The token is the person's own, carrying
-no `act` claim, so acts reserved to a person (ADR-0042) are available to them here exactly as the
-API already decides.
+The page redirects to the issuer and receives a code it exchanges for a token as a public client
+— no secret, because a browser cannot keep one. The token is the person's own, carrying no `act`
+claim, so acts reserved to a person (ADR-0042) are available to them here exactly as the API
+already decides.
+
+The screens on the way — sign-in, sign-up, password reset, second factor, passkey — are the
+issuer's pages rendered through a login theme built from the web client's own React components
+and Tailwind theme, with Keycloakify (MIT). They are CFOKit's screens to the person using them;
+the password, the second factor and the passkey go to the issuer and nowhere else (`IAM-10`).
+
+Password, second-factor, passkey and Google and Microsoft sign-in are the issuer's features,
+enabled in its configuration, not application code. The theme belongs to the bundled issuer, beside
+its realm in `infra/keycloak/`; a deployment that uses another issuer brands that one, and the
+application is unchanged (ADR-0019).
 
 ### 2. State lives on the server; the browser keeps almost nothing
 
@@ -103,9 +118,10 @@ storage or a server-held session, and that is decided when a page is used daily.
 
 ### 3. Onboarding is three steps, and each is someone else's act
 
-* **Create an account** is the issuer's registration page, reached from the sign-in redirect. The
-  issuer runs it, so CFOKit still issues no credential and stores no password (`IAM-10`). Whether a
+* **Create an account** is the issuer's registration page in CFOKit's theme (§ 1), reached from the
+  sign-in redirect, or a Google or Microsoft account (`IAM-22`, `IAM-25`, `IAM-26`). Whether a
   deployment allows open registration, and what it verifies, is that deployment's configuration.
+  The bundled issuer allows it, so a deployment on one machine onboards as a hosted one does.
 * **Create the entity** is the existing `create_entity` operation, which needs an authenticated
   identity and no prior role and makes the caller the owner (`IAM-05`, `IAM-06`).
 * **Import its books** is ADR-0049.
@@ -160,6 +176,7 @@ The build is a stage of the one image; nothing is served from a Node process.
 | Styling | Tailwind, its theme generated from the design system's `tokens.json` | One source for colour, type and spacing, shared with the designs (§ 9) |
 | Tables | TanStack Table | Ledgers, trial balances and reconciliations: sorting, virtualised long lists |
 | Forms | React Hook Form + Zod | Validation declared once; schemas can come from the contract |
+| Sign-in screens | Keycloakify | The issuer's pages written as React components on the client's theme (§ 1) |
 | Auth | `oidc-client-ts` + `react-oidc-context` | Maintained PKCE, refresh and redirect handling. Configured with an in-memory user store; only its sign-in state uses `sessionStorage`, as § 2 requires |
 | Money | `big.js` | Amounts arrive as decimal strings and are displayed without ever becoming a JavaScript `number` |
 | Parsing | A Web Worker, called through Comlink | A large export does not block the page (ADR-0049) |
@@ -220,6 +237,10 @@ client's Tailwind theme is generated. A change of look is a change of tokens, ma
   static file — the "no endpoints of its own" rule, observed at the surface.
 * The public client in `infra/keycloak/cfokit-realm.json` permits only the authorization code
   flow with PKCE (S256).
+* CI fails when a copyleft licence appears in the production bundle, the web client's or the
+  sign-in theme's.
+* A lint rule forbids converting an amount to a JavaScript `number` and forbids
+  `dangerouslySetInnerHTML`.
 * Not gated: that page code renders external text as text. That is review, backed by the CSP.
 
 ## Pros and Cons of the Options
@@ -257,8 +278,6 @@ does.
 * Bad, because the server holds a session per person, which a scale-to-zero service loses on every
   cold start or has to store somewhere, and ADR-0012 excludes a caching layer.
 * Bad, because a cookie the browser attaches on its own brings CSRF back.
-* Bad, because CFOKit would be running the code exchange and holding the session — the nearest
-  thing to operating a login flow short of rendering one, which `IAM-10` is written against.
 
 ### Server-rendered pages from a template engine
 
@@ -267,29 +286,6 @@ does.
 * Bad, because the first page reads a file in the browser anyway, so the script cannot be avoided.
 
 ## More Information
-
-**Follow-on obligations.**
-
-* A public client for the web client in `infra/keycloak/cfokit-realm.json`: authorization code with
-  PKCE, refresh tokens issued, redirect URIs under the REST service's `PUBLIC_BASE_URL`. A
-  deployment sets its own.
-* Registration enabled in the shipped realm, so a local deployment onboards as a hosted one does.
-  `infra/README.md` states that open registration, and its verification, are a deployment's choice.
-* A read the web client needs to place the operator in onboarding — whether an entity has been
-  imported — is added to the REST API if it does not exist, reviewed as a contract change.
-* Playwright as a dev dependency, and a CI job for the three engines.
-* A top-level `web/` directory for the client, added to the repository map in root `CLAUDE.md`, with
-  its own rules file for the money rule and the forbidden list above.
-* A Node stage in the Dockerfile that builds `web/` into the runtime image's static files, pinned
-  like the other base images; a CI job for type-check, lint and tests; the `npm` ecosystem in
-  `.github/dependabot.yml`.
-* A licence check in CI that fails on a copyleft licence in the production bundle.
-* A CFOKit Design System artifact holding `tokens.json`, and the step that generates the Tailwind
-  theme from it.
-* ADR-0012's table notes that the web UI gate is passed by this record, and the admin console's is
-  not.
-* A root `CLAUDE.md` rule, derived from § 4 and § 6: the web client has no endpoints of its own,
-  and loads nothing from another origin.
 
 **Reversal cost.** Low while the web client is one page; rising with every page added.
 

@@ -310,7 +310,7 @@ Who may reach an entity, what they may do there, and how that is evidenced.
 | **IAM-07** | An identity that can grant roles can grant one to a person who has no identity yet. The grant is recorded as an invitation, confers nothing until they authenticate, and binds to their identity when they first do. | Must | Approved |
 | **IAM-08** | One identity holds independent roles in each entity it can reach, and holds none in the rest. An advisor working across many entities is the ordinary case, not an exception. | Must | Approved |
 | **IAM-09** | A role can be granted for a stated period, after which it lapses without anyone acting. An advisor's access ending with the engagement does not depend on someone remembering. | Should | Approved |
-| **IAM-10** | Identity is delegated to the identity provider the organisation already uses. CFOKit never issues credentials, stores passwords, or operates a login flow. | Must | Approved |
+| **IAM-10** | A person signs in themselves, in a browser, through the identity provider. Credentials never pass through an agent, a model, or CFOKit's own API. CFOKit issues no credentials and does not store or verify passwords: authentication is delegated to a proven identity provider, whose sign-in and sign-up screens a deployment may present as its own. | Must | Approved |
 | **IAM-11** | An agent skill acts on behalf of an identified person. Every action carries both the skill's own principal and that person's, and its effective authority is the intersection of the two. No shared credential, service account, or ambient authority stands in for either. | Must | Approved |
 | **IAM-12** | A person authorises a skill to act for them separately for each entity, and can revoke any one of those authorisations without affecting the others. Authorising a skill in one entity never reaches another. | Must | Approved |
 | **IAM-13** | Every grant, invitation, revocation, lapse, and role change is recorded, with who made it and when. | Must | Approved |
@@ -322,6 +322,11 @@ Who may reach an entity, what they may do there, and how that is evidenced.
 | **IAM-19** | Deployment-scoped administrative capabilities are enumerable and individually assignable — among them configuring a provider that receives customer data, setting the retention schedule, authorising a disposal batch, reviewing security events, and approving privileged access. The set grows as capabilities are added and the system can state it at any time. Each is held by a named identity at all times, and the system can say which. | Must | Approved |
 | **IAM-20** | The read paths that require no identity are enumerable, and the system can state them. Each reaches exactly one artifact and nothing else about the entity, uses a link that cannot be guessed or arrived at by enumeration, and can be revoked. A path that exposes more than one artifact, or that cannot be revoked, is not one of them. | Must | Approved |
 | **IAM-21** | An entity is held by one or more owners, and an owner holds every capability in the entity, administering included. Two are an owner's alone: granting or revoking ownership, and deleting the entity. An administrator cannot revoke an owner. Ownership cannot be granted for a stated period — it ends only when an owner revokes it, so an entity is never left unheld by the passage of time. | Must | Approved |
+| **IAM-22** | A person can create an account, sign in with a password, and reset a forgotten password, with no administrator involved. | Must | Approved |
+| **IAM-23** | A person can protect their sign-in with a second factor — an authenticator app or a security key. | Should | Approved |
+| **IAM-24** | A person can sign in with a passkey instead of a password. | Should | Approved |
+| **IAM-25** | A person can sign in with a Google account. | Should | Approved |
+| **IAM-26** | A person can sign in with a Microsoft account. | Could | Approved |
 
 **Acceptance, IAM-21.** An administrator's attempt to revoke an owner is refused, an owner may revoke another owner, and an attempt to revoke the last one is refused whichever of them makes it.
 
@@ -964,7 +969,7 @@ serving no objective does not belong here.
 | **OBJ-5** The recurring cost goes away | BKP-01–BKP-06, BKP-13–BKP-18, AR-01–AR-19, RPT-01–RPT-09, IMP-01–IMP-09, PLT-24, NFR-19, NFR-20 |
 | **OBJ-6** Output accepted as it stands | LED-01, LED-02, LED-14, LED-17, RPT-01–RPT-05, RPT-07, RPT-09, RPT-10, RPT-12, RPT-13, RPT-14, RPT-16, RPT-17, RPT-18, RPT-19, NFR-01, NFR-16, NFR-22 |
 | **OBJ-7** Never forced off by growing | LED-10, LED-13, LED-14, LED-15, LED-16, LED-17, LED-18, LED-19, RPT-19, RPT-20, RPT-21, IAM-08, IAM-09, PLT-04, PLT-08, NFR-09 |
-| **OBJ-8** Only authorised people reach the books | IAM-01–IAM-07, IAM-11, IAM-12, IAM-15, IAM-16, IAM-17, IAM-20, IAM-21, AR-08, PLT-05, PLT-23, NFR-04, NFR-05, NFR-06 |
+| **OBJ-8** Only authorised people reach the books | IAM-01–IAM-07, IAM-11, IAM-12, IAM-15, IAM-16, IAM-17, IAM-20, IAM-21, IAM-22–IAM-26, AR-08, PLT-05, PLT-23, NFR-04, NFR-05, NFR-06 |
 | **OBJ-9** Provable to an examiner | IAM-13, IAM-14, IAM-18, IAM-19, PLT-15–PLT-19, PLT-22, NFR-18, SOC1-01–SOC1-36, SOC2-01–SOC2-24, SOC2-27–SOC2-30 |
 | **OBJ-10** Leave with everything, at any time | EXP-01–EXP-04, PLT-09, PLT-10, PLT-11, PLT-12, PLT-13, PLT-21, NFR-07, NFR-17 |
 | **OBJ-11** Runs with no vendor relationship | BKP-03, IAM-10, PLT-01, PLT-02, PLT-03, PLT-06, NFR-10, NFR-11, NFR-14, NFR-17 |

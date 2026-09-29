@@ -198,15 +198,6 @@ conversation. It would give this page's behaviour without the operator leaving t
 
 ## More Information
 
-**Follow-on obligations.**
-
-* The MCP service learns the page's address from a variable within the existing environment shape;
-  `infra/README.md` names it (ADR-0016 requires no record for a variable within the shape).
-* A migration for the recorded reconciliation, in the imports module's tables.
-* `skills/bookkeeper/SKILL.md` offers the link and reads the reconciliation back; the `--mcp` mode
-  and its instructions are removed. `docs/connect-claude-desktop.md` follows.
-* The page's layout is designed in Claude Design against the states in § 2.
-
 **Reversal cost.** Low to medium. The page and the JavaScript reader are additive and could be
 removed. Restoring § 6 means restoring two published tools and the skill's `--mcp` mode, which is
 a contract change but not a data change: books imported either way are identical.

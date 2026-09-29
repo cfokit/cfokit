@@ -153,8 +153,7 @@ in an agent runtime is a credential sitting where a great deal can read it, in e
 convenience on an operation a company performs approximately once. A run that dies is resumed by
 signing in again, which is safe because ADR-0029's derived keys make the repeat a replay.
 
-CFOKit issues nothing. `IAM-10` says it "never issues credentials, stores passwords, or operates a
-login flow", so an endpoint minting a short-lived import token was considered and rejected outright
+CFOKit issues nothing. `IAM-10` says it "issues no credentials", so an endpoint minting a short-lived import token was considered and rejected outright
 rather than weighed.
 
 **Device flow is not universal, and that is a contract line rather than a surprise.** It joins the
