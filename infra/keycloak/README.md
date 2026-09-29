@@ -73,7 +73,7 @@ every request. The roles in a token are Keycloak's business, and `offline_access
 one anything here consults.
 
 **That is a deployment posture, and it holds only while the issuer is not reachable.** On a
-laptop it costs nothing: anyone who can reach `localhost:8180` can already reach the ledger. A
+laptop it costs nothing: anyone who can reach `keycloak.localhost:8443` can already reach the ledger. A
 deployment reachable by anything else must close it — by registering clients deliberately
 instead, which `mcp-remote --static-oauth-client-info` and Claude's connector settings both
 support.

@@ -68,7 +68,7 @@ def test_the_issuer_is_reachable_at_the_same_address_inside_and_out() -> None:
     `keycloak:8080` reaches the ledger and is answered.
     """
     issuer_port = urlparse(setting("AUTH_ISSUER_URL")).port
-    container_port = setting("KC_HTTP_PORT")
+    container_port = setting("KC_HTTPS_PORT")
 
     assert str(issuer_port) == container_port, (
         f"AUTH_ISSUER_URL names port {issuer_port} and the issuer listens on {container_port}"
@@ -82,7 +82,7 @@ def test_the_issuer_is_reachable_at_the_same_address_inside_and_out() -> None:
 def test_the_issuer_and_the_ledger_do_not_share_a_port() -> None:
     """Two services on one port is how the address above stops being ambiguous and starts
     being wrong: the wrong service answers rather than nothing answering."""
-    issuer = setting("KC_HTTP_PORT")
+    issuer = setting("KC_HTTPS_PORT")
     ledger = urlparse(setting("PUBLIC_BASE_URL")).port
 
     assert str(ledger) != issuer
@@ -122,3 +122,12 @@ def test_the_issuer_answers_to_the_name_it_advertises() -> None:
         f"nothing in compose.yaml answers to {host!r}: the issuer service needs it as its own"
         " name or as a network alias"
     )
+
+
+def test_the_issuer_is_https() -> None:
+    """OAuth clients refuse to send credentials to a plain-HTTP token endpoint unless its host
+    is literally `localhost`, and the issuer's host is `keycloak.localhost`. An issuer on HTTP
+    lets a person sign in and then fails the token exchange, which reads as a login fault."""
+    assert urlparse(setting("AUTH_ISSUER_URL")).scheme == "https"
+    assert urlparse(setting("KC_HOSTNAME")).scheme == "https"
+    assert setting("KC_HTTP_ENABLED") == "false"

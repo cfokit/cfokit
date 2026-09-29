@@ -19,6 +19,19 @@ that runs `mcp-remote`, a stdio-to-HTTP proxy that also performs the OAuth flow.
 docker compose up -d --wait
 ```
 
+The first run generates a local certificate authority into `.local/tls/`, and the identity
+provider serves HTTPS with a certificate it signs. OAuth clients refuse to send credentials to
+a plain-HTTP token endpoint, so the sign-in does not work without it.
+
+**Trust that CA once**, so your browser opens the sign-in page without a certificate warning.
+macOS asks for your password:
+
+```
+security add-trusted-cert -r trustRoot -k ~/Library/Keychains/login.keychain-db .local/tls/ca/ca.pem
+```
+
+It stays trusted until you delete `.local/tls/`, which makes a new CA on the next start.
+
 ## 2. Create a user to sign in as
 
 The realm ships with no users. On Windows, first add this line to your hosts file:
@@ -27,7 +40,7 @@ The realm ships with no users. On Windows, first add this line to your hosts fil
 127.0.0.1 keycloak.localhost
 ```
 
-**1. Open http://keycloak.localhost:8180** and sign in with `admin` / `admin`.
+**1. Open https://keycloak.localhost:8443** and sign in with `admin` / `admin`.
 
 You will see a yellow banner: *"You are logged in as a temporary admin user."* It does not
 block anything here.
@@ -55,8 +68,8 @@ Keycloak demand a new password at first sign-in. Any non-empty password is accep
 in again on every launch.
 
 ```bash
-curl -s -X POST \
-  http://keycloak.localhost:8180/realms/cfokit/clients-registrations/openid-connect \
+curl -s --cacert .local/tls/ca/ca.pem -X POST \
+  https://keycloak.localhost:8443/realms/cfokit/clients-registrations/openid-connect \
   -H 'content-type: application/json' -d '{
     "client_name":"CFOKit for Claude Desktop",
     "redirect_uris":["http://localhost:44196/oauth/callback",
@@ -76,7 +89,8 @@ Keep the `client_id` and `client_secret` it returns. Then in
       "command": "npx",
       "args": ["-y", "mcp-remote@0.14.3", "http://localhost:8081/mcp", "44196",
                "--static-oauth-client-info",
-               "{\"client_id\":\"…\",\"client_secret\":\"…\"}"]
+               "{\"client_id\":\"…\",\"client_secret\":\"…\"}"],
+      "env": {"NODE_EXTRA_CA_CERTS": "/path/to/cfokit/.local/tls/ca/ca.pem"}
     }
   }
 }
@@ -88,10 +102,9 @@ Keep the `client_id` and `client_secret` it returns. Then in
 and a release that changes behaviour changes your setup without anything in this repository
 changing.
 
-**Known issue: sign-in fails at the token exchange.** `mcp-remote` refuses to send credentials
-to a token endpoint that is not HTTPS, unless its host is literally `localhost`, `127.0.0.1` or
-`::1`. The issuer here is `http://keycloak.localhost:8180`, so the browser sign-in succeeds and
-the log then shows `InsecureTokenEndpointError`. The fix is serving the issuer over HTTPS.
+`NODE_EXTRA_CA_CERTS` takes the absolute path to the CA from step 1. `mcp-remote` runs on Node,
+which trusts its own certificate list rather than the macOS keychain, so trusting the CA for
+your browser does not reach it.
 
 Quit Claude Desktop fully and reopen it — closing the window is not enough. On first use a
 browser window opens; sign in as the user from step 2.
@@ -147,10 +160,13 @@ QuickBooks Online, USD
 Nothing has been sent yet. When you are satisfied, add `--post`:
 
 ```
-python3 skills/bookkeeper/scripts/read_quickbooks.py \
+SSL_CERT_FILE=.local/tls/ca/ca.pem python3 skills/bookkeeper/scripts/read_quickbooks.py \
   "~/exports/Growth Science LLC Sep 5, 2026.zip" \
   --post http://localhost:8080 --entity <entity-id>
 ```
+
+`SSL_CERT_FILE` is there because the script signs you in with the identity provider over HTTPS,
+and Python trusts its own certificate list rather than the macOS keychain.
 
 It prints a URL and a short code. **Approve it in a browser as yourself** — importing is a
 person's act, and a token from a delegated agent session is refused with `not_a_person`

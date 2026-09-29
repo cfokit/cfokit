@@ -43,6 +43,23 @@ services:
     # No ports published. Nothing outside the compose network needs the database; the dev
     # overlay exposes it deliberately.
 
+  # A local certificate authority and the issuer's certificate, generated once into .local/tls
+  # (git-ignored) by our own image, which already carries `cryptography`. The issuer serves
+  # HTTPS because OAuth clients refuse to send credentials to a plain-HTTP token endpoint unless
+  # its host is literally `localhost` — and the issuer's host is `keycloak.localhost`. The CA is
+  # kept, so trusting it once lasts; the certificate is reissued as it nears expiry.
+  # infra/tls/generate.py says what is written where.
+  tls:
+    build:
+      context: .
+      target: runtime
+    # Writes into a bind mount, which on Linux is owned by whoever created it.
+    user: root
+    command: ["python", "/opt/tls/generate.py", "/tls"]
+    volumes:
+      - ./infra/tls/generate.py:/opt/tls/generate.py:ro
+      - ./.local/tls:/tls
+
   # The identity provider. A default, not a coupling — the application reads AUTH_ISSUER_URL
   # and AUTH_AUDIENCE and nothing else, and any issuer meeting the conformance contract in
   # infra/README.md can replace it (ADR-0019). Apache 2.0; no copyleft in the shipped stack.
@@ -52,15 +69,17 @@ services:
   # deployment to be usable as it stands — so the issuer has to bring its own user store and
   # login pages, or a self-hoster is left to supply the one thing we may not write.
   keycloak:
-    image: quay.io/keycloak/keycloak:26.0.8@sha256:09a381c715ab0b111835b70f2905955274843a219c6f27efb348e4d9f4086858
+    image: quay.io/keycloak/keycloak:26.7.4@sha256:82a77884f3af238beab1e7afd63b5f530e1b5c0590bd7aa60b40a40463e29b2c
     restart: unless-stopped
-    # `start-dev` serves plain HTTP, which is why same-machine access over localhost needs no
-    # TLS. Cross-device access requires a tunnel and KC_HOSTNAME set to the public hostname
-    # (ADR-0018), the same condition PUBLIC_BASE_URL already carries.
+    # HTTPS only, with the certificate from the `tls` step above. Cross-device access requires
+    # a tunnel and KC_HOSTNAME set to the public hostname (ADR-0018), the same condition
+    # PUBLIC_BASE_URL already carries.
     command: ["start-dev", "--import-realm"]
     depends_on:
       postgres:
         condition: service_healthy
+      tls:
+        condition: service_completed_successfully
     environment:
       # The realm is imported at startup from the file mounted below.
       KC_DB: postgres
@@ -89,11 +108,16 @@ services:
       # advertised address wrong for exactly one of the two — and on this network 8080 is the
       # ledger, so a browser following the chain to `keycloak:8080` would reach the ledger and
       # be answered.
-      KC_HTTP_PORT: "8180"
-      KC_HOSTNAME: ${KC_HOSTNAME:-http://keycloak.localhost:8180}
+      KC_HTTPS_PORT: "8443"
+      KC_HTTPS_CERTIFICATE_FILE: /opt/keycloak/conf/tls/cert.pem
+      KC_HTTPS_CERTIFICATE_KEY_FILE: /opt/keycloak/conf/tls/key.pem
+      KC_HOSTNAME: ${KC_HOSTNAME:-https://keycloak.localhost:8443}
       KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "false"
-      KC_HTTP_ENABLED: "true"
+      KC_HTTP_ENABLED: "false"
       KC_HEALTH_ENABLED: "true"
+      # Health stays on plain HTTP on the management port, which is not published. The check
+      # below has no TLS client to speak to it with otherwise.
+      KC_HTTP_MANAGEMENT_SCHEME: http
       # The first administrator. Local-only, like POSTGRES_PASSWORD above; a managed
       # deployment injects this from a secret store, and IaC creates secret containers rather
       # than values (ADR-0016). Change it before exposing this to anything.
@@ -111,8 +135,9 @@ services:
       # and the registration policy that lets a client register itself. infra/keycloak/README.md
       # explains each part.
       - ./infra/keycloak/cfokit-realm.json:/opt/keycloak/data/import/cfokit-realm.json:ro
+      - ./.local/tls/keycloak:/opt/keycloak/conf/tls:ro
     ports:
-      - "${KEYCLOAK_PORT:-8180}:8180"
+      - "${KEYCLOAK_PORT:-8443}:8443"
     healthcheck:
       # The management port, which is where Keycloak serves health from. Readiness rather than
       # liveness here, because everything else waits on this one being able to issue tokens.
@@ -147,9 +172,15 @@ services:
       # must never hold (ADR-0003, ADR-0007). Same variable, different value per entrypoint.
       DATABASE_URL: postgresql://cfokit_app:${POSTGRES_APP_PASSWORD:-cfokit_app}@postgres:5432/cfokit
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
-      AUTH_ISSUER_URL: ${AUTH_ISSUER_URL:-http://keycloak.localhost:8180/realms/cfokit}
+      AUTH_ISSUER_URL: ${AUTH_ISSUER_URL:-https://keycloak.localhost:8443/realms/cfokit}
+      # The CA the issuer's certificate is signed by (the `tls` step). A standard OpenSSL
+      # variable rather than one of ours: it replaces the trust store for this process,
+      # which here reaches nothing over TLS but the issuer.
+      SSL_CERT_FILE: /etc/cfokit/tls/ca.pem
       AUTH_AUDIENCE: ${AUTH_AUDIENCE:-cfokit-ledger}
       LOG_LEVEL: ${LOG_LEVEL:-info}
+    volumes:
+      - ./.local/tls/ca:/etc/cfokit/tls:ro
     ports:
       - "${PORT:-8080}:8080"
     healthcheck:
@@ -198,7 +229,8 @@ services:
       # PUBLIC_BASE_URL is what a client fetches protected-resource metadata from, so it is
       # this service's own address rather than the REST service's (ADR-0004).
       PUBLIC_BASE_URL: ${MCP_PUBLIC_BASE_URL:-http://localhost:8081}
-      AUTH_ISSUER_URL: ${AUTH_ISSUER_URL:-http://keycloak.localhost:8180/realms/cfokit}
+      AUTH_ISSUER_URL: ${AUTH_ISSUER_URL:-https://keycloak.localhost:8443/realms/cfokit}
+      SSL_CERT_FILE: /etc/cfokit/tls/ca.pem
       AUTH_AUDIENCE: ${AUTH_AUDIENCE:-cfokit-ledger}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       PORT: "8081"
@@ -206,6 +238,8 @@ services:
       # not registered at all — a tool taking a path is a file-read primitive, and one any
       # holder of a token can reach should not exist unless it was asked for (ADR-0040).
       #
+    volumes:
+      - ./.local/tls/ca:/etc/cfokit/tls:ro
     ports:
       - "${MCP_PORT:-8081}:8081"
     healthcheck:
@@ -244,13 +278,16 @@ services:
       DATABASE_OWNER_URL: postgresql://cfokit:${POSTGRES_PASSWORD:-cfokit}@postgres:5432/cfokit
       # What the conformance suite measures. The same two variables the application reads,
       # so the suite checks the issuer a deployment would actually use (ADR-0019).
-      AUTH_ISSUER_URL: ${AUTH_ISSUER_URL:-http://keycloak.localhost:8180/realms/cfokit}
+      AUTH_ISSUER_URL: ${AUTH_ISSUER_URL:-https://keycloak.localhost:8443/realms/cfokit}
+      SSL_CERT_FILE: /etc/cfokit/tls/ca.pem
       AUTH_AUDIENCE: ${AUTH_AUDIENCE:-cfokit-ledger}
       # Hydra implements RFC 7591 here but does not advertise it, so a client cannot discover
       # it. Stated for the conformance suite alone, so the token-issuing half of the contract
       # is measured instead of skipped behind that failure. Not part of the application's
       # configuration surface, and not read by anything that serves traffic.
       AUTH_REGISTRATION_ENDPOINT: ${AUTH_REGISTRATION_ENDPOINT:-}
+    volumes:
+      - ./.local/tls/ca:/etc/cfokit/tls:ro
 
 volumes:
   ledger-data:
