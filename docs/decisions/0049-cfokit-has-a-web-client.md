@@ -57,7 +57,6 @@ provider rather than written here.
 * A single-page application built to static files, served by the REST service, signing in with PKCE
 * A separately deployed single-page application
 * An offline-first client that keeps the books on the device and queues writes
-* Native iOS and Android applications
 * Static pages with no framework and no build step
 * A backend-for-frontend holding the session in a server-side cookie
 * Server-rendered pages from a template engine
@@ -234,8 +233,7 @@ client's Tailwind theme is generated. A change of look is a change of tokens, ma
 ### Consequences
 
 * Good, because onboarding is deterministic from account to imported books, on any deployment.
-* Good, because one code base serves desktop, tablet and phone, installed or in a tab, with no
-  app store between a fix and the people it fixes.
+* Good, because one code base serves desktop, tablet and phone, installed or in a tab.
 * Good, because a reload, a new tab or another device resumes where the server says the operator
   is, in any of the four browsers.
 * Good, because there is no password, no session store and no second permission model to secure.
@@ -243,8 +241,6 @@ client's Tailwind theme is generated. A change of look is a change of tokens, ma
 * Bad, because signing in on every visit will be friction once pages are used daily.
 * Bad, because a reload mid-import means choosing the file again; the parsed books are not kept.
 * Bad, because the installed app does nothing useful offline except say so.
-* Bad, because iOS installs a web app only from Safari's Share menu, with no prompt the page can
-  offer, so installing on an iPhone has to be explained rather than offered.
 * Bad, because three browser engines in CI add minutes to every run, and Playwright's WebKit is a
   close proxy for Safari rather than Safari itself.
 * Bad, because the repository gains a Node toolchain, an npm dependency tree shipped to browsers,
@@ -314,14 +310,6 @@ reconcile when the connection returns.
   entry or changed the rule since, and resolving that on reconnection is a sync engine this
   product does not need yet.
 
-### Native iOS and Android applications
-
-* Good, because an app-store listing is how many people look for software, and native apps get
-  the device's full capabilities.
-* Bad, because it is two more code bases beside the web client, each with its own release and
-  review cycle between a fix and the person waiting for it.
-* Bad, because nothing onboarding or reconciliation needs is missing from the web platform.
-
 ### A backend-for-frontend holding the session in a server-side cookie
 
 The strongest security posture for tokens: they never reach page script, only an `HttpOnly` cookie
@@ -355,4 +343,3 @@ to a person), ADR-0051 (the first page).
   client needs, which would reopen the static, same-origin shape.
 * A host renders MCP Apps well enough that pages could live inside the conversation instead.
 * Operators ask to record or review the books without a connection, which reopens offline-first.
-* An app-store presence becomes a commercial requirement, which reopens native applications.
