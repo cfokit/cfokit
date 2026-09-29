@@ -1,0 +1,30 @@
+# Paths a person reviews, whatever the reviewer concludes (ADR-0048).
+#
+# The "Pull requests are reviewed" ruleset requires a code owner's approval, so an approval
+# from the reviewing app satisfies it only for a pull request touching none of these. That is
+# the boundary, and GitHub enforces it — not the reviewer, and not scripts/review_policy.py,
+# which reads this file so the list exists once.
+#
+# Only three pattern forms, because the policy script refuses any other: an anchored
+# directory (/infra/), an anchored file (/REVIEW.md), a bare name at any depth (CLAUDE.md).
+
+# CI, this file, the dependency schedule, the review workflow — and the gates and the policy
+# themselves. A change that weakens CI is a blocker, so it is never self-approved.
+/.github/                 @geoffscott
+/scripts/                 @geoffscott
+/REVIEW.md                @geoffscott
+
+# Booking semantics, the write path, authentication and the schema migrations all live in
+# the ledger, and CLAUDE.md puts each behind human review.
+/src/cfokit/ledger/       @geoffscott
+
+# Infrastructure and the environment contract (ADR-0016).
+/infra/                   @geoffscott
+
+# The constitution: the rules, the records that hold their reasoning, and what they derive from.
+CLAUDE.md                 @geoffscott
+/docs/decisions/          @geoffscott
+/docs/product/            @geoffscott
+
+# The published interfaces. A diff here is a contract change (ADR-0015).
+/docs/contracts/          @geoffscott

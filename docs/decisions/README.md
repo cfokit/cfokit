@@ -91,6 +91,7 @@ nothing cites these but this repository. They are added when something breaks wi
 | [0045](0045-assignment-is-stored-rules.md) | Assignment is stored rules in a module of their own, matched by a closed predicate set | Proposed |
 | [0046](0046-a-statement-proves-itself.md) | Account activity is a module, and a statement is recorded only if it accounts for its own balances | Proposed |
 | [0047](0047-an-uploaded-line-is-drafted.md) | A transaction read from an uploaded document is drafted, never posted by a rule | Proposed |
+| [0048](0048-merge-eligibility-is-policy.md) | A deterministic policy decides whether a pull request may merge; a reviewing model can only withhold it | Proposed |
 | [0049](0049-cfokit-has-a-web-client.md) | CFOKit has a web client, served by the API and signed in through the issuer | Proposed |
 | [0051](0051-books-are-imported-through-the-web-client.md) | Books are imported through the web client, which reads the export, not through a model | Proposed |
 
@@ -125,6 +126,7 @@ this shape, and they cite no requirement (ADR-0001).
 | 0020 | Repository layout by artifact kind |
 | 0024 | The ledger is synchronous |
 | 0031 | Packages named for capabilities |
+| 0048 | Merge eligibility is decided by policy, not by a reviewer |
 
 Every other record is `kind: requirement-driven` and must cite at least one requirement id.
 
