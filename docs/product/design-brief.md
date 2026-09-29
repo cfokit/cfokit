@@ -32,6 +32,10 @@ canvas from this file.
 > everywhere), spacing, radii, borders and shadows. Money must be easy to scan in columns:
 > right-aligned, tabular figures, clear negatives.
 >
+> The system covers phone, tablet and desktop: breakpoints, column grids and gutters for each,
+> a compact size of the headline, heading and total-figure styles for phones, a 16px size for text
+> typed into inputs (iOS zooms into anything smaller), and a 44px minimum tap target.
+>
 > Include the core components: buttons (primary, secondary, destructive, link), text inputs with
 > labels and errors, file drop zone, progress bar, step indicator, alert or notice, data table with
 > numeric columns, card, and the app frame (a header with the company name, the signed-in person,
@@ -40,8 +44,9 @@ canvas from this file.
 
 ## Prompt 2 — onboarding
 
-> Using the CFOKit design system, design the onboarding flow for a new customer at desktop size
-> (1440 wide), with each screen also working at phone width. The flow: create an account → create
+> Using the CFOKit design system, design the onboarding flow for a new customer at three sizes:
+> phone (390 wide), tablet (834 wide) and desktop (1440 wide). CFOKit is a progressive web app, used
+> in a browser or installed to a home screen. The flow: create an account → create
 > the company → import its books from QuickBooks → see whether the books agree with QuickBooks →
 > return to Claude, where their assistant explains the results.
 >
@@ -80,8 +85,13 @@ canvas from this file.
 >     assistant walks through the results. This is an instruction, not an automatic redirect.
 >
 > **States that apply anywhere:** signed out while working (sign in again and return to the same
-> step), lost access to the company, the server cannot be reached, and a second browser tab open on
-> the same step.
+> step), lost access to the company, the server cannot be reached, a second browser tab open on the
+> same step, offline in the installed app (it says so and changes nothing), and a new version ready
+> ("Reload to update", never automatic).
+>
+> On a phone, the primary action sits in a bar at the bottom of the screen; the drop zone is a
+> "Choose file" button that opens the device's file picker; and the reconciliation's two-figure
+> table becomes a list with the account name above its two labelled figures.
 >
 > No filler or lorem ipsum: use realistic figures from a small consulting business, about 5,500
 > transactions over eight years. Names read from a file are shown as plain text. Accounting terms

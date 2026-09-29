@@ -366,7 +366,7 @@ records about itself.
 | **PLT-05** | Presence in a channel confers no access. A request is permitted only where a linked CFOKit identity independently holds a role for the entity that channel is bound to. The binding is a stored decision and is never inferred from a channel's name, topic, or contents. | Should | Approved |
 | **PLT-06** | CFOKit sends email on an entity's behalf where the deployment supplies a mail service, and requires no particular provider. Where none is supplied, invoices and reminders remain available as documents and stable links for an operator to deliver by hand (AR-07), and CFOKit records that it did not send rather than reporting a delivery it cannot make (AR-19). | Should | Approved |
 | **PLT-07** | CFOKit reaches the people who operate an entity when something needs them — a transaction no rule resolves, a delivery that failed, a change in cash position beyond an alerting threshold the entity sets, a scheduled run that did not complete. Where they are reached is theirs to set, and any class of it can be turned off. | Must | Approved |
-| **PLT-24** | The operator can reach CFOKit through a web client, signed in as themselves through the identity provider (IAM-10). The web client and an agent act on the same books through the same published interface, with the same permissions. | Should | Approved |
+| **PLT-24** | The operator can reach CFOKit through a web client — in a browser on a desktop, tablet or phone, or installed to a home screen — signed in as themselves through the identity provider (IAM-10). The web client and an agent act on the same books through the same published interface, with the same permissions. | Should | Approved |
 
 #### Entity settings and lifecycle
 

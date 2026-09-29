@@ -56,6 +56,7 @@ provider rather than written here.
 
 * A single-page application built to static files, served by the REST service, signing in with PKCE
 * A separately deployed single-page application
+* An offline-first client that keeps the books on the device and queues writes
 * Static pages with no framework and no build step
 * A backend-for-frontend holding the session in a server-side cookie
 * Server-rendered pages from a template engine
@@ -71,7 +72,8 @@ deployable and no second authorization path.
 > issuer with the authorization code flow and PKCE, keeps its tokens in page memory, keeps what it
 > knows about progress on the server, and calls the same REST API an agent calls. It has no
 > endpoints of its own. Its first job is onboarding, end to end: create an account, create the
-> entity, import its books.
+> entity, import its books. It is a progressive web app: one set of pages for desktop, tablet and
+> phone, installable to a home screen, keeping nothing about the books on the device.
 
 ### 1. Sign-in is the issuer's, and looks like CFOKit
 
@@ -144,21 +146,42 @@ get wrong, and the web client ships in the one image to wherever that image runs
 `Content-Security-Policy: default-src 'self'`, and no script, style or font from another origin:
 everything the client needs is built into its own bundle. Anything read from a user's file or
 from the books is rendered as text, never as markup — which React does by default, and
-`dangerouslySetInnerHTML` is forbidden by lint. Whatever ships to the browser carries no copyleft
-license.
+`dangerouslySetInnerHTML` is forbidden by lint. Whatever code ships to the browser carries no
+copyleft license.
 
-### 7. Browser support is the current releases, and needs nothing unusual
+### 7. Every page works on desktop, tablet and phone, in current browsers
 
-The current and previous major versions of Chrome, Edge, Firefox and Safari on desktop. Every
-browser API the web client depends on is Baseline — supported by all four — and none is
+The current and previous major versions of Chrome, Edge, Firefox and Safari on desktop; Safari on
+iOS and iPadOS, which is also the engine of every other browser there; and Chrome on Android.
+Every browser API the web client depends on is Baseline — supported by all of them — and none is
 experimental: `fetch`, the File API, `DecompressionStream` with `deflate-raw`, `DOMParser`, Web
-Workers, `sessionStorage`, and `crypto.subtle.digest` for the PKCE challenge. The last requires a
-secure context, which HTTPS gives on a deployment and `http://localhost` gives on one machine.
+Workers, service workers, `sessionStorage`, and `crypto.subtle.digest` for the PKCE challenge.
+The last two require a secure context, which HTTPS gives on a deployment and `http://localhost`
+gives on one machine.
 
-Pages must not break on a phone, but onboarding is designed for a desktop, because exports are
-downloaded and handled there.
+Every page is designed at phone, tablet and desktop widths, and the layout follows the design
+system's breakpoints. Nothing depends on hover or on dragging: choosing a file is a button that
+opens the device's picker, and dropping one on a desktop is a shortcut beside it. Import works
+from a phone as from a desktop, because the export is read wherever the page runs (ADR-0051).
 
-### 8. The stack
+### 8. Installable, and nothing about the books is kept on the device
+
+The web client is a progressive web app, so an operator can install it to a home screen or a
+desktop and open it like an application.
+
+* **A web app manifest**, served with the pages: the name, the icons from the design system,
+  standalone display, and a theme color matching the page ground in each theme.
+* **A service worker that caches the application, never the books.** It serves the static build —
+  HTML, script, styles, fonts, icons — versioned per build, and its scope is the web client's path,
+  so API routes are outside it. No API response, no figure, and no token is ever cached or written
+  to device storage (§ 2).
+* **Offline, it says so and changes nothing.** The installed app opens and shows that it is
+  offline. No write is attempted or queued for later: a change to the books needs the server,
+  where the idempotency keys, the lock and the audit record are.
+* **An update is offered, never forced.** A new build waits until the operator chooses "Reload to
+  update", because a reload in the middle of an import costs them the parsed file (ADR-0051).
+
+### 9. The stack
 
 A single-page application in TypeScript, built by Vite into static files the REST service serves.
 The build is a stage of the one image; nothing is served from a Node process.
@@ -173,7 +196,7 @@ The build is a stage of the one image; nothing is served from a Node process.
 | API client | `openapi-typescript` + `openapi-fetch`, generated from `docs/contracts/openapi.json` | The contract gate 5 already guards becomes the client's types |
 | Client state | Component state and context; Zustand only if something is genuinely global | There is little that is not server state or the URL |
 | Components | Radix primitives | Accessible behavior — focus, keyboard, ARIA — with no imposed look |
-| Styling | Tailwind, its theme generated from the design system's `tokens.json` | One source for color, type and spacing, shared with the designs (§ 9) |
+| Styling | Tailwind, its theme generated from the design system's `tokens.json` | One source for color, type and spacing, shared with the designs (§ 10) |
 | Tables | TanStack Table | Ledgers, trial balances and reconciliations: sorting, virtualised long lists |
 | Forms | React Hook Form + Zod | Validation declared once; schemas can come from the contract |
 | Sign-in screens | Keycloakify | The issuer's pages written as React components on the client's theme (§ 1) |
@@ -181,10 +204,14 @@ The build is a stage of the one image; nothing is served from a Node process.
 | Money | `big.js` | Amounts arrive as decimal strings and are displayed without ever becoming a JavaScript `number` |
 | Parsing | A Web Worker, called through Comlink | A large export does not block the page (ADR-0051) |
 | Tests | Vitest, Testing Library, MSW; Playwright end to end; axe for accessibility | Component, contract-mocked and cross-browser layers |
+| Fonts | Public Sans (interface and money) and Archivo Narrow (display), bundled from their upstream releases | The design system's faces, served from the client's own origin with their license texts beside them; the system interface font is every stack's fallback |
 | Tooling | pnpm with a pinned lockfile; ESLint with typescript-eslint; Prettier | Pinned and updated by Dependabot, like every other dependency |
 
-Licenses, checked against each project's repository: everything that ships to the browser is MIT
-or Apache-2.0. axe-core is MPL-2.0 and is test tooling only; it must never enter the bundle.
+Licenses, checked against each project's repository: all code that ships to the browser is MIT
+or Apache-2.0. The two fonts are under the SIL Open Font License 1.1, the license open-source
+fonts are published under: free to bundle and redistribute with any software, on the condition
+that the license text travels with the font files. axe-core is MPL-2.0 and is test tooling only;
+it must never enter the bundle.
 
 **Money gets the rule the server already has.** A float never touches an amount (ADR-0005): the
 client never converts one to `number`, never sums one, and displays totals the API computed. A
@@ -197,7 +224,7 @@ maps onto a Tailwind theme directly and onto CSS Modules only by convention. Rea
 stronger accessibility library; Radix has the larger ecosystem of styled components built on it.
 Redux solves a client-state problem this application does not have.
 
-### 9. Layout is designed in Claude Design, against shared tokens
+### 10. Layout is designed in Claude Design, against shared tokens
 
 What the pages look like is designed in Claude Design and implemented against the behavior each
 page's record states. A record names the states a page must handle; it does not draw them.
@@ -210,12 +237,14 @@ client's Tailwind theme is generated. A change of look is a change of tokens, ma
 ### Consequences
 
 * Good, because onboarding is deterministic from account to imported books, on any deployment.
+* Good, because one code base serves desktop, tablet and phone, installed or in a tab.
 * Good, because a reload, a new tab or another device resumes where the server says the operator
   is, in any of the four browsers.
 * Good, because there is no password, no session store and no second permission model to secure.
 * Good, because it ships and deploys with everything else.
 * Bad, because signing in on every visit will be friction once pages are used daily.
 * Bad, because a reload mid-import means choosing the file again; the parsed books are not kept.
+* Bad, because the installed app does nothing useful offline except say so.
 * Bad, because three browser engines in CI add minutes to every run, and Playwright's WebKit is a
   close proxy for Safari rather than Safari itself.
 * Bad, because the repository gains a Node toolchain, an npm dependency tree shipped to browsers,
@@ -230,7 +259,10 @@ client's Tailwind theme is generated. A change of look is a change of tokens, ma
 * An end-to-end onboarding test runs in CI in Chromium, Firefox and WebKit through Playwright
   (Apache-2.0, CI-only tooling): register, create the entity, import the synthetic export, reload
   mid-import and finish, and check the recorded reconciliation. It also asserts that nothing but
-  the sign-in round trip is left in browser storage.
+  the sign-in round trip is left in browser storage. It runs at desktop width and, with touch
+  emulation, at phone and tablet widths — emulation, not a real iPhone or Android device.
+* A test asserts the service worker's cache holds only files of the static build, and that
+  offline the installed app shows the offline notice and sends no request that changes the books.
 * A test asserts every web-client response carries the CSP header, and that no page references
   another origin.
 * A test asserts the REST service serves no route under the web client's path that is not a
@@ -238,7 +270,8 @@ client's Tailwind theme is generated. A change of look is a change of tokens, ma
 * The public client in `infra/keycloak/cfokit-realm.json` permits only the authorization code
   flow with PKCE (S256).
 * CI fails when a copyleft license appears in the production bundle, the web client's or the
-  sign-in theme's.
+  sign-in theme's. Font files under OFL-1.1 are the one allowance, and only with their license
+  texts beside them.
 * A lint rule forbids converting an amount to a JavaScript `number` and forbids
   `dangerouslySetInnerHTML`.
 * Not gated: that page code renders external text as text. That is review, backed by the CSP.
@@ -268,6 +301,19 @@ The smallest thing that serves one import page: plain modules, no toolchain, not
 * Bad, because the client is meant to grow past onboarding, and a hand-rolled stack is outgrown
   and rewritten at the point it holds the most pages. Routing, server-state caching, accessible
   components, forms and OIDC would each be written here instead of maintained elsewhere.
+
+### An offline-first client that keeps the books on the device and queues writes
+
+The strongest case for an installed app: read the books and record a receipt on a plane, and
+reconcile when the connection returns.
+
+* Good, because the app would be useful with no connection.
+* Bad, because a company's books would sit in device storage, which Safari clears on its own
+  schedule and which outlives the person's sign-in — financial data at rest on every phone that
+  ever opened it.
+* Bad, because a queued write reaches a ledger that may have closed the period, reversed the
+  entry or changed the rule since, and resolving that on reconnection is a sync engine this
+  product does not need yet.
 
 ### A backend-for-frontend holding the session in a server-side cookie
 
@@ -301,3 +347,4 @@ to a person), ADR-0051 (the first page).
 * React Server Components or a server-rendered framework become necessary for something this
   client needs, which would reopen the static, same-origin shape.
 * A host renders MCP Apps well enough that pages could live inside the conversation instead.
+* Operators ask to record or review the books without a connection, which reopens offline-first.
