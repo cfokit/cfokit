@@ -510,6 +510,29 @@ def _statement(rows: list[tuple[Any, ...]], report: str, posted_to: set[str]) ->
     }
 
 
+def _journal_total(rows: list[tuple[Any, ...]]) -> dict[str, str] | None:
+    """What the journal says it sums to, from its own TOTAL row.
+
+    **The only figure in the export carrying no accounting basis.** Every report beside it is
+    run on whichever basis the company keeps — most small companies keep cash — so a
+    per-account comparison against one diverges on the obligation accounts by exactly what is
+    unsettled. The journal is the record rather than a view of it, so this does not
+    (ADR-0050).
+
+    Read rather than computed. Summing the rows here and calling it an oracle would be the
+    reader's arithmetic checked against its own; the value of this figure is
+    that QuickBooks produced it.
+    """
+    for row in reversed(rows):
+        label = row[0] if row else None
+        if label is None or str(label).strip().upper() != "TOTAL":
+            continue
+        stated_debits = _amount(_at(row, _DEBIT))
+        stated_credits = _amount(_at(row, _CREDIT))
+        return {"debits": str(stated_debits), "credits": str(stated_credits)}
+    return None
+
+
 def _ledger_totals(
     rows: list[tuple[Any, ...]], posted_to: set[str]
 ) -> tuple[list[dict[str, str]], list[dict[str, str]], str]:
@@ -632,6 +655,7 @@ def read(archive_bytes: bytes) -> dict[str, Any]:
             for name in used
         ],
         "entries": entries,
+        "journal_total": _journal_total(sheets["Journal.xlsx"]),
         "balances": balances,
         "rollups": rollups,
         "statements": statements,
@@ -807,7 +831,11 @@ def post(books: dict[str, Any], base: str, entity_id: str, token: str, *, out: A
 
     checked = _http(
         f"{base}/entities/{entity_id}/imports/{opened['import_id']}/reconciliation",
-        payload={"balances": books["balances"], "statements": books["statements"]},
+        payload={
+            "balances": books["balances"],
+            "statements": books["statements"],
+            "journal_total": books["journal_total"],
+        },
         token=token,
     )
     return _report(posted, replayed, refusals, checked, out=out)
@@ -903,6 +931,14 @@ def for_mcp(books: dict[str, Any]) -> str:
             },
             "import_entries": entries,
             "reconcile_import": {
+                # The journal's own TOTAL, which carries no accounting basis — the one figure
+                # that holds however the reports beside it were run (ADR-0050). Absent where the
+                # source printed none; never fabricated.
+                "journal_total": (
+                    f"{books['journal_total']['debits']}|{books['journal_total']['credits']}"
+                    if books["journal_total"]
+                    else None
+                ),
                 "balances": stated,
                 "profit_and_loss": printed.get("profit_and_loss", []),
                 "balance_sheet": printed.get("balance_sheet", []),

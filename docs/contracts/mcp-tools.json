@@ -954,7 +954,7 @@
     "name": "reconcile"
   },
   {
-    "description": "Check the imported books against the figures the source states for itself, and compare the statements it printed. Balances are 'account|amount' lines from the source's own general ledger totals; statements are what its profit and loss and balance sheet printed. This is the answer an import is for: anything short of exact agreement is a finding to report, never a rounding to explain away. Where the source's reports were run on a different accounting basis from its journal, the receivable and the income behind it differ by exactly what is unsettled — that is arithmetic, not a defect.",
+    "description": "Check the imported books against the figures the source states for itself, and compare the statements it printed. Balances are 'account|amount' lines from the source's own general ledger totals; statements are what its profit and loss and balance sheet printed. journal_total is 'debits|credits' from the journal's own TOTAL row — the one figure in an export carrying no accounting basis, so it holds however the reports beside it were run. This is the answer an import is for: anything short of agreement is a finding to report, never a rounding to explain away. Where the source's reports were run on a different accounting basis from its journal, the receivable and the income behind it differ by exactly what is unsettled — that is arithmetic, not a defect.",
     "inputSchema": {
       "properties": {
         "balance_sheet": {
@@ -982,6 +982,18 @@
         "entity_id": {
           "title": "Entity Id",
           "type": "string"
+        },
+        "journal_total": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Journal Total"
         },
         "profit_and_loss": {
           "anyOf": [

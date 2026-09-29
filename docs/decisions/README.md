@@ -93,6 +93,7 @@ nothing cites these but this repository. They are added when something breaks wi
 | [0047](0047-an-uploaded-line-is-drafted.md) | A transaction read from an uploaded document is drafted, never posted by a rule | Proposed |
 | [0048](0048-merge-eligibility-is-policy.md) | A deterministic policy decides whether a pull request may merge; a reviewing model can only withhold it | Proposed |
 | [0049](0049-cfokit-has-a-web-client.md) | CFOKit has a web client, served by the API and signed in through the issuer | Proposed |
+| [0050](0050-the-import-oracle-is-basis-free.md) | An import is checked against the journal's own total, and a basis difference must net to zero | Proposed |
 | [0051](0051-books-are-imported-through-the-web-client.md) | Books are imported through the web client, which reads the export, not through a model | Proposed |
 
 ## Deferred — decided in principle, waiting on a need

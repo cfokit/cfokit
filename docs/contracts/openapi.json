@@ -1585,6 +1585,17 @@
             "title": "Balances",
             "type": "array"
           },
+          "journal_total": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StatedTotalModel"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The total the source prints on its own raw journal. Omitted where it prints none — never computed, because summing the rows and comparing that against the books they were loaded into is our arithmetic against itself."
+          },
           "since": {
             "anyOf": [
               {
@@ -1626,6 +1637,23 @@
             },
             "title": "Divergences",
             "type": "array"
+          },
+          "divergences_net_to_zero": {
+            "default": true,
+            "description": "Whether the divergences are consistent with an accounting-basis difference. Cash basis excludes whole transactions, so the difference between an accrual journal and a cash-basis report sums to zero in posting signs. False means the difference is not the basis and is a defect.",
+            "title": "Divergences Net To Zero",
+            "type": "boolean"
+          },
+          "journal_total": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TotalAgreementModel"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Our totals against the one the source states for its raw journal. Null where the source printed none."
           },
           "statements": {
             "items": {
@@ -2111,6 +2139,33 @@
         "title": "StatedStatementModel",
         "type": "object"
       },
+      "StatedTotalModel": {
+        "description": "What the source's raw journal says it sums to.\n\nThe only figure in an accounting export that carries no basis, because a journal is the\nrecord rather than a view of one — so this comparison holds whatever basis the reports\nbeside it were run on (ADR-0050).",
+        "properties": {
+          "credits": {
+            "examples": [
+              "100.00",
+              "-1250.5000000000"
+            ],
+            "title": "Credits",
+            "type": "string"
+          },
+          "debits": {
+            "examples": [
+              "100.00",
+              "-1250.5000000000"
+            ],
+            "title": "Debits",
+            "type": "string"
+          }
+        },
+        "required": [
+          "debits",
+          "credits"
+        ],
+        "title": "StatedTotalModel",
+        "type": "object"
+      },
       "StatementComparisonModel": {
         "properties": {
           "agreed": {
@@ -2300,6 +2355,65 @@
           "lines"
         ],
         "title": "StatementModel",
+        "type": "object"
+      },
+      "TotalAgreementModel": {
+        "description": "`IMP-08`'s \"totals\" half. Basis-free, and blind to which account a row landed in.",
+        "properties": {
+          "agrees": {
+            "title": "Agrees",
+            "type": "boolean"
+          },
+          "difference": {
+            "examples": [
+              "100.00",
+              "-1250.5000000000"
+            ],
+            "title": "Difference",
+            "type": "string"
+          },
+          "our_credits": {
+            "examples": [
+              "100.00",
+              "-1250.5000000000"
+            ],
+            "title": "Our Credits",
+            "type": "string"
+          },
+          "our_debits": {
+            "examples": [
+              "100.00",
+              "-1250.5000000000"
+            ],
+            "title": "Our Debits",
+            "type": "string"
+          },
+          "stated_credits": {
+            "examples": [
+              "100.00",
+              "-1250.5000000000"
+            ],
+            "title": "Stated Credits",
+            "type": "string"
+          },
+          "stated_debits": {
+            "examples": [
+              "100.00",
+              "-1250.5000000000"
+            ],
+            "title": "Stated Debits",
+            "type": "string"
+          }
+        },
+        "required": [
+          "stated_debits",
+          "stated_credits",
+          "our_debits",
+          "our_credits",
+          "agrees",
+          "difference"
+        ],
+        "title": "TotalAgreementModel",
         "type": "object"
       },
       "TransactionResponse": {
