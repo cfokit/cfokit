@@ -41,17 +41,27 @@ A skill can carry a script, and where that script runs on the host it makes its 
 with no model in the path. That makes "where does parsing happen" a real choice rather than a
 consequence of the transport.
 
-**Where the script runs is not ours to choose, and one runtime cannot reach us at all.** Measured
-in Claude Desktop: skill code runs in a sandbox with Python 3.11 and egress through a proxy with a
-domain allowlist — `pypi.org` and `github.com` answer, `example.com` returns 403, and no port on
-the operator's own machine is reachable. A tunnel does not help, because a tunnel's hostname is
-not on that list either. Desktop's MCP servers are unaffected: they are host processes, which is
-why the earlier end-to-end over MCP worked and this does not.
+**Where the script runs is not ours to choose, and one runtime cannot reach us at all.** In
+Claude Desktop, skill code runs in a sandbox with Python 3.11, and its only way out is a proxy
+with a domain allowlist. Anything not on the list is refused, and that includes the operator's
+own machine and any tunnel to it, because neither hostname is on the list. Desktop's MCP servers
+are unaffected: they are host processes, which is why the earlier end-to-end over MCP worked and
+this does not.
 
-The interpreter version is not documented for Desktop, and it may differ by platform. It read
-3.11.15 when `python3 --version` was run in a Desktop chat on 2026-09-29, and Anthropic documents
-3.11 for the API's code-execution tool. `tests/test_reader_script.py` runs the reader on that
-version, and ruff holds `skills/` to it.
+None of this is documented for Desktop, and it may differ by platform. What it rests on is a
+script run in a Desktop chat on 2026-09-29:
+
+| Probe | Result |
+|---|---|
+| `sys.version` | 3.11.15 |
+| `https://pypi.org/simple/` | 200 |
+| `https://github.com` | 400 from GitHub itself. The proxy let the connection through |
+| `https://example.com` | the proxy refused the tunnel: 403 |
+| `https://www.google.com` | the proxy refused the tunnel: 403 |
+
+Anthropic documents 3.11 for the API's code-execution tool, which agrees.
+`tests/test_reader_script.py` runs the reader on 3.11, and ruff holds `skills/` to it. Re-run the
+probe before relying on any of this for a new decision.
 
 So the transport is not one question but two, and they have different answers:
 
