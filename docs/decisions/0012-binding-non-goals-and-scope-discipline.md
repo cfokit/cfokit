@@ -51,7 +51,7 @@ Chosen option: the following are **binding non-goals**. Do not build them, and d
 
 | Non-goal | Why it is listed |
 |---|---|
-| Web UI or admin console | A second product surface: its own auth, session handling, XSS surface, and design work |
+| Web UI or admin console | A second product surface: its own auth, session handling, XSS surface, and design work. The web client passed this gate in [ADR-0048](0048-cfokit-has-a-web-client.md); an admin console has not |
 | Plugin system | Extension points cannot be designed before there are extensions to generalise from |
 | Custom query language | Reimplementing SQL, worse, against a database chosen for its query capability |
 | Caching or rollup layer | ADR-0003 chose derived balances deliberately; materialisation belongs behind profiler evidence |

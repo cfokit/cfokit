@@ -164,7 +164,7 @@ PKCE (RFC 8252) is the documented fallback for an issuer without it.
 
 ### 6. A sandboxed runtime imports over MCP, and the model is the bridge
 
-**Superseded by [ADR-0048](0048-books-are-imported-through-a-browser-page.md).** Sections 1–5 stand.
+**Superseded by [ADR-0049](0049-books-are-imported-through-the-web-client.md).** Sections 1–5 stand.
 
 Where the runtime cannot reach CFOKit, the same neutral shape arrives as MCP tool arguments. The
 sandbox parses the archive and hands the model a compact rendering; the model calls the tool.

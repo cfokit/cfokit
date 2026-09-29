@@ -5,9 +5,9 @@ date: 2026-09-29
 decision-makers: [Geoff]
 ---
 
-# ADR-0048: Books are imported through a browser page that reads the export, not through a model
+# ADR-0049: Books are imported through the web client, which reads the export, not through a model
 
-**Requirements served:** `IMP-01`, `IMP-05`, `IMP-08`, `NFR-01`, `NFR-19`.
+**Requirements served:** `IMP-01`, `IMP-05`, `IMP-08`, `IMP-09`, `NFR-01`.
 
 ## Context and Problem Statement
 
@@ -39,7 +39,8 @@ so transcription error is detected rather than silent — but it is still introd
 allows no tolerance for it to be carried.
 
 What § 6 rests on is that the sandbox is the only thing near the file that cannot reach CFOKit.
-A browser tab is also near the file, and can.
+A browser tab is also near the file, and can — and CFOKit has a web client
+([ADR-0048](0048-cfokit-has-a-web-client.md)).
 
 ## Decision Drivers
 
@@ -48,14 +49,12 @@ A browser tab is also near the file, and can.
 * The untrusted archive stays out of the process that serves every tenant (`NFR-04`, ADR-0041 § 3).
 * Works against a hosted deployment with nothing installed on the operator's machine.
 * Importing remains a person's own act (ADR-0040 § 7, ADR-0042).
-* Operable by someone who runs a business (`NFR-19`): no terminal, no path, no script.
-* ADR-0012's objections to a web UI — its own auth, session handling, XSS surface and design work
-  — are answered rather than waived.
+* Operable by someone who runs a business: no terminal, no path, no script.
 * Nothing copyleft shipped to the operator's machine (`CLAUDE.md`, Licensing).
 
 ## Considered Options
 
-* A browser page served by CFOKit, reading the export in the browser with a dependency-free reader
+* A web-client page reading the export in the browser with a dependency-free reader
 * The same page, running the skill's Python reader under Pyodide
 * Upload the archive to the server and parse it there
 * Keep the model as the bridge (ADR-0041 § 6)
@@ -63,41 +62,16 @@ A browser tab is also near the file, and can.
 
 ## Decision Outcome
 
-Chosen option: "A browser page served by CFOKit, reading the export in the browser with a
-dependency-free reader", because it removes the model from a transfer that needs none while
+Chosen option: "A web-client page reading the export in the browser with a dependency-free
+reader", because it removes the model from a transfer that needs none while
 keeping every property ADR-0041 chose parsing-where-the-file-is for.
 
-> CFOKit serves one page, `/import`, from the REST service. The page reads the export in the
-> browser, signs the person in, and posts the neutral `SourceBooks` shape to the existing REST
-> import endpoints. The model's part is to hand the operator the link and, afterwards, to explain
-> the reconciliation. The MCP import tools that carried transactions are retired.
+> Import is a page of the web client. It reads the export in the browser and posts the neutral
+> `SourceBooks` shape to the existing REST import endpoints as the signed-in person. The model's
+> part is to hand the operator the link and, afterwards, to explain the reconciliation. The MCP
+> import tools that carried transactions are retired.
 
-### 1. One page, and only this page
-
-ADR-0012 gates a web UI because it is a second product surface. This is one page with one job, and
-the gate is answered clause by clause:
-
-* **Auth** is the issuer's. The page runs the authorization code flow with PKCE against a public
-  client, as the person. CFOKit still issues nothing and operates no login (`IAM-10`).
-* **Session handling** does not exist. The token is held in page memory for the duration of the
-  import and never written to storage or a cookie; closing the tab ends it. That is ADR-0041 § 5's
-  "one sign-in per run, nothing cached", in a browser.
-* **XSS.** The page is static HTML and a script of our own, served with
-  `Content-Security-Policy: default-src 'self'` and no third-party script. Text read from the
-  export — account names, payees, descriptions — is rendered with `textContent` and never as
-  markup, because it is somebody else's file.
-* **Design work** is one form: choose the file, see what will be created (`IMP-05`), confirm, watch
-  progress, read the reconciliation.
-
-It is not a precedent for a console. A second page needs its own record.
-
-### 2. Served by the REST service, so it is same-origin with the API
-
-The page and the endpoints it calls share `PUBLIC_BASE_URL`, so there is no CORS configuration to
-get wrong and nothing to deploy separately — it is part of the one image (ADR-0023) and reaches
-the maintained cloud target with the rest.
-
-### 3. The reader runs in the browser, and has no dependencies
+### 1. The reader runs in the browser, and has no dependencies
 
 A `.xlsx` export is a zip of XML. The browser has both halves natively: `DecompressionStream`
 with the `deflate-raw` format (Baseline, widely available since May 2023) and `DOMParser`. The
@@ -109,18 +83,23 @@ somebody else's file, now opened in its owner's browser rather than our process.
 both against the synthetic export and requires identical `SourceBooks`. A divergence between them
 is a failed build, not a customer's wrong books.
 
-### 4. The reconciliation is recorded, and the model reads it back
+### 2. The reconciliation is recorded, and the model reads it back
 
-The page posts the source's stated balances with the reconciliation request, as the model does
-today. The result is stored with the import — the source's claims and the comparison, append-only,
+The page posts the source's stated balances with the reconciliation request, which is the shape
+the endpoint already takes. The result is stored with the import — the source's claims and the comparison, append-only,
 in the imports module — and a read-only MCP tool returns it. The operator goes back to the chat
 and the model explains what agreed and what did not, which is the part of an import a model is
 for.
 
+The page must handle, whatever it looks like: signed out; choosing a file; a file the reader
+refuses, with the bound it crossed; the summary of what will be created and what will not
+(`IMP-05`); confirmation; progress through the batches, resumable after a dropped connection;
+the reconciliation; and the way back to the conversation.
+
 The skill offers the page as a link built from configuration, never from a request header
 (`PUBLIC_BASE_URL`, ADR-0004).
 
-### 5. The model-as-bridge route is retired, not kept as a fallback
+### 3. The model-as-bridge route is retired, not kept as a fallback
 
 `open_import` and `import_entries` leave the MCP surface, and the skill loses its `--mcp` mode.
 ADR-0041 argued that "a convenience kept alongside a supported route becomes a supported route by
@@ -139,10 +118,10 @@ and a script posting it is still a client like any other.
   derived keys make a repeated batch a replay.
 * Good, because the untrusted archive still never reaches a shared process.
 * Good, because the operator needs a browser and nothing else, against any deployment.
+* Good, because import becomes the first page of the web client rather than a special case.
 * Bad, because there are two readers, and every change to the export format lands in both.
 * Bad, because the operator leaves the chat for a tab and comes back; nothing links the tab back
   to the conversation.
-* Bad, because the product now has a browser surface to keep secure, however small.
 * Bad, because the published MCP contract loses two tools (gate 5, ADR-0015).
 * Neutral, because a model can still read and reason about the imported books; only the transfer
   moved.
@@ -152,23 +131,18 @@ and a script posting it is still a client like any other.
 * CI runs the JavaScript reader and the Python reader over the synthetic export and requires
   identical output — ADR-0036 layer 3, the same way the Python reader is already tested as a
   client.
-* A test asserts the page's `Content-Security-Policy` header and that it loads no script from
-  another origin.
 * `tests/test_published_contracts.py` pins the MCP surface without `open_import` and
   `import_entries`.
 * The import endpoints already refuse a delegated token (`not_a_person`); the page's token is the
   person's own, so that check is the enforcement and nothing new is added.
-* Not gated: that text from the export is only ever rendered as text. That is review, backed by the
-  CSP.
 
 ## Pros and Cons of the Options
 
-### A browser page served by CFOKit, reading the export in the browser with a dependency-free reader
+### A web-client page reading the export in the browser with a dependency-free reader
 
 * Good, because it meets every driver.
 * Good, because it adds no dependency to the server or to the page.
 * Bad, because the reader exists twice.
-* Bad, because it is a web surface, however narrow.
 
 ### The same page, running the skill's Python reader under Pyodide
 
@@ -212,27 +186,25 @@ conversation. It would give this page's behaviour without the operator leaving t
 
 **Follow-on obligations.**
 
-* A public client for the page in `infra/keycloak/cfokit-realm.json`, authorization code with
-  PKCE, its redirect URI under `PUBLIC_BASE_URL`. A deployment sets the redirect for its own
-  hostname.
 * The MCP service learns the page's address from a variable within the existing environment shape;
   `infra/README.md` names it (ADR-0016 requires no record for a variable within the shape).
 * A migration for the recorded reconciliation, in the imports module's tables.
 * `skills/bookkeeper/SKILL.md` offers the link and reads the reconciliation back; the `--mcp` mode
   and its instructions are removed. `docs/connect-claude-desktop.md` follows.
-* ADR-0012's table gains nothing: the gate stands, and this record is what satisfied it for one page.
+* The page's layout is designed in Claude Design against the states in § 2.
 
 **Reversal cost.** Low to medium. The page and the JavaScript reader are additive and could be
 removed. Restoring § 6 means restoring two published tools and the skill's `--mcp` mode, which is
 a contract change but not a data change: books imported either way are identical.
 
-Related: ADR-0040 (the principle this restores), ADR-0041 (§ 6 superseded; §§ 1–5 unchanged),
-ADR-0012 (the gate answered in § 1), ADR-0015 (the contract change), ADR-0036 (the differential test).
+Related: ADR-0048 (the web client this is a page of), ADR-0040 (the principle this restores),
+ADR-0041 (§ 6 superseded; §§ 1–5 unchanged), ADR-0015 (the contract change), ADR-0036 (the
+differential test).
 
 ## Revisit when
 
 * Claude Desktop is verified to render an MCP App that can post an import as the signed-in person,
-  which is the trigger for moving this page inside the chat.
+  which is the trigger for moving this page inside the conversation.
 * The differential test between the two readers fails more than once for the same kind of export
   change, which says one reader should be generated from the other or retired.
 * A second source system's reader lands, which doubles the cost of two readers per source.

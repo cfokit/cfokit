@@ -56,7 +56,7 @@ These are decided. Each bounds what the product may promise.
 | Not in scope | Boundary |
 |---|---|
 | Acting as a CFO | CFOKit does the bookkeeper and controller work beneath the role. The role is always held by a person. |
-| A web application or admin console | CFOKit is agents and an interface, not a dashboard. Reversible only by deliberate decision, not by drift. |
+| An admin console, or a web client that duplicates the agent | The agent keeps and questions the books. The web client carries work a conversation does badly, beginning with import (PLT-24, IMP-09), and each capability added to it is a deliberate decision, not drift. |
 | Moving money | CFOKit reads financial data and keeps books. It does not initiate payment. |
 | Filing returns | CFOKit produces the closed year and supporting detail. A preparer files. |
 | Being hosted-only | Self-hosting is a product promise, not a trial edition. |
@@ -147,6 +147,7 @@ Getting an existing company's books in, from whatever the company runs today.
 | **IMP-06** | An import declares the accounting basis of the data it carries, and is refused where that conflicts with the entity's declared basis. | Should | Approved |
 | **IMP-07** | An import carrying amounts in a currency other than the entity's functional currency is refused, on the same terms as any other foreign amount. | Should | Approved |
 | **IMP-08** | An import produces a reconciliation the operator can check against the source system — balances by account, and totals by period — so that agreement is demonstrated rather than assumed. | Should | Approved |
+| **IMP-09** | An operator can import a company's books from the web client, with no agent involved in the transfer and no figure retyped by a model or a person. | Should | Approved |
 
 **Acceptance, IMP-08.** The operator compares two figures per account and either agrees the
 import or rejects it, without exporting anything from the source system a second time.
@@ -360,6 +361,7 @@ records about itself.
 | **PLT-05** | Presence in a channel confers no access. A request is permitted only where a linked CFOKit identity independently holds a role for the entity that channel is bound to. The binding is a stored decision and is never inferred from a channel's name, topic, or contents. | Should | Approved |
 | **PLT-06** | CFOKit sends email on an entity's behalf where the deployment supplies a mail service, and requires no particular provider. Where none is supplied, invoices and reminders remain available as documents and stable links for an operator to deliver by hand (AR-07), and CFOKit records that it did not send rather than reporting a delivery it cannot make (AR-19). | Should | Approved |
 | **PLT-07** | CFOKit reaches the people who operate an entity when something needs them — a transaction no rule resolves, a delivery that failed, a change in cash position beyond an alerting threshold the entity sets, a scheduled run that did not complete. Where they are reached is theirs to set, and any class of it can be turned off. | Must | Approved |
+| **PLT-24** | The operator can reach CFOKit through a web client, signed in as themselves through the identity provider (IAM-10). The web client and an agent act on the same books through the same published interface, with the same permissions. | Should | Approved |
 
 #### Entity settings and lifecycle
 
@@ -959,7 +961,7 @@ serving no objective does not belong here.
 | **OBJ-2** Current, and a close never waiting on us | BKP-16, LED-11, LED-12, PLT-07, PLT-14, NFR-15 |
 | **OBJ-3** Exact, and unchanged once posted | LED-03, LED-04, LED-05, LED-06, LED-07, LED-08, BKP-07, BKP-08, BKP-11, BKP-12, BKP-14, BKP-20, BKP-21, IMP-05, IMP-08, PLT-23, RPT-09, RPT-12, NFR-01, NFR-02, NFR-03, NFR-22, NFR-23 |
 | **OBJ-4** Every number explains itself | LED-08, LED-09, LED-20, BKP-10, BKP-19, IMP-04, IAM-13, PLT-16, PLT-20, RPT-08, RPT-11, NFR-02, NFR-23, SOC1-14, SOC1-15, SOC1-22, SOC1-23, SOC1-36 |
-| **OBJ-5** The recurring cost goes away | BKP-01–BKP-06, BKP-13–BKP-18, AR-01–AR-19, RPT-01–RPT-09, IMP-01–IMP-08, NFR-19, NFR-20 |
+| **OBJ-5** The recurring cost goes away | BKP-01–BKP-06, BKP-13–BKP-18, AR-01–AR-19, RPT-01–RPT-09, IMP-01–IMP-09, PLT-24, NFR-19, NFR-20 |
 | **OBJ-6** Output accepted as it stands | LED-01, LED-02, LED-14, LED-17, RPT-01–RPT-05, RPT-07, RPT-09, RPT-10, RPT-12, RPT-13, RPT-14, RPT-16, RPT-17, RPT-18, RPT-19, NFR-01, NFR-16, NFR-22 |
 | **OBJ-7** Never forced off by growing | LED-10, LED-13, LED-14, LED-15, LED-16, LED-17, LED-18, LED-19, RPT-19, RPT-20, RPT-21, IAM-08, IAM-09, PLT-04, PLT-08, NFR-09 |
 | **OBJ-8** Only authorised people reach the books | IAM-01–IAM-07, IAM-11, IAM-12, IAM-15, IAM-16, IAM-17, IAM-20, IAM-21, AR-08, PLT-05, PLT-23, NFR-04, NFR-05, NFR-06 |

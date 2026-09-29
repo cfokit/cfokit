@@ -425,9 +425,11 @@ These are decided, and they bound what the positioning may promise:
   never vacant — a fractional CFO holds it where one is engaged, and otherwise the founder or
   the owner-operator does. Where that person wants help with the judgement rather than with the
   books, the guidance skill answers a bounded set of questions and states its limits.
-- **Not a web application.** CFOKit is agents and an API rather than a dashboard you log into.
-  This is a **gate, not a prohibition**: a web UI or an admin console takes a deliberate
-  decision to reverse, not a drift. Rendered report output has not been decided either way.
+- **Not a dashboard you run the business from.** The agent is how the books are kept and
+  questioned. A web client, signed in through the identity provider, carries the work a
+  conversation does badly — landing a company's books to begin with. Each thing it grows to do
+  is a deliberate decision, not a drift, and an admin console is not one of them. Rendered
+  report output has not been decided either way.
 - **Not a bank.** It reads financial data and keeps books; it does not move money.
 - **Not a filing agent.** It produces the closed year, the schedules, and the supporting
   detail a preparer works from. Whoever prepares the return files it.
