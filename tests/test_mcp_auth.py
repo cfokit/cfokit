@@ -8,9 +8,11 @@ claims travel intact so the principal is derived by the same rule REST uses.
 
 from __future__ import annotations
 
+import warnings
 from typing import Any
 
 import pytest
+from mcp.shared.exceptions import MCPDeprecationWarning
 from starlette.testclient import TestClient
 
 from cfokit.ledger.config import Settings
@@ -153,6 +155,40 @@ def test_the_advertised_resource_comes_from_public_base_url(settings: Settings) 
         ).json()
 
     assert metadata["resource"].startswith(settings.public_base_url)
+
+
+def test_a_token_the_verifier_accepts_is_not_refused_for_its_resource(
+    settings: Settings,
+) -> None:
+    """The audience is the verifier's to check, against AUTH_AUDIENCE (ADR-0019).
+
+    ADR-0019's conformance contract doesn't ask an issuer to bind tokens to PUBLIC_BASE_URL
+    as an RFC 8707 resource indicator, so the verifier reports no resource. If the SDK also
+    required one, every token from every conforming issuer would get a 401.
+    """
+    app = create_server(
+        settings, authenticator=Accepts({"sub": "user:ana"})
+    ).streamable_http_app(stateless_http=True, json_response=True)
+    with TestClient(app) as client:
+        response = client.post(
+            "/mcp",
+            json={"jsonrpc": "2.0", "id": 1, "method": "ping"},
+            headers={
+                "Accept": "application/json, text/event-stream",
+                "Content-Type": "application/json",
+                "Authorization": "Bearer anything",
+            },
+        )
+
+    assert response.status_code != 401
+
+
+def test_building_the_server_raises_no_deprecation(settings: Settings) -> None:
+    """Every setting the SDK plans to change the default of is stated, so a major upgrade
+    of the SDK can't quietly change how tokens are checked."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", MCPDeprecationWarning)
+        create_server(settings, authenticator=DenyAll())
 
 
 # --- Operations ---------------------------------------------------------------------------

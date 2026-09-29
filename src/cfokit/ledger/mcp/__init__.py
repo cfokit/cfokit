@@ -322,6 +322,12 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
         auth=AuthSettings(
             issuer_url=AnyHttpUrl(settings.auth_issuer_url),
             resource_server_url=AnyHttpUrl(settings.public_base_url),
+            # The verifier checks the token's audience against AUTH_AUDIENCE on every request,
+            # the one audience rule ADR-0019 requires of an issuer. Checking it a second time
+            # against an RFC 8707 resource indicator would reject every token, because the
+            # contract asks no issuer to bind tokens to PUBLIC_BASE_URL. Stated explicitly
+            # because the SDK changes the default to True in 3.0.
+            validate_token_resource=False,
         ),
         instructions=(
             "The double-entry ledger. Every write names the entity it acts on and carries an "
