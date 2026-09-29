@@ -21,8 +21,11 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # Keep this in step with requires-python in pyproject.toml.
-  PYTHON_VERSION: "3.12"
+  # The interpreter the image ships (Dockerfile), so every test runs on what production runs.
+  # Code still targets requires-python, 3.12: ruff and mypy check against that floor.
+  PYTHON_VERSION: "3.14"
+  # uv otherwise picks any interpreter satisfying requires-python, including the runner's own.
+  UV_PYTHON: "3.14"
   # The uv the image copies in (Dockerfile). Dependabot updates that one; keep this in step.
   UV_VERSION: "0.11.33"
 
