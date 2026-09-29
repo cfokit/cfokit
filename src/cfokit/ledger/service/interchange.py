@@ -57,6 +57,21 @@ from cfokit.ledger.service.reports import trial_balance
 
 __all__ = ["Complete", "Interchange", "export_complete", "export_interchange"]
 
+# Every archive entry carries this timestamp rather than the time it was written. ZIP records
+# a modification time per entry, and `writestr` with a bare name stamps the wall clock, so two
+# exports of unchanged books differed whenever they straddled ZIP's two-second resolution. The
+# earliest time ZIP can represent is the conventional choice for a reproducible archive.
+ENTRY_TIME = (1980, 1, 1, 0, 0, 0)
+
+
+def _entry(name: str) -> zipfile.ZipInfo:
+    """An archive entry whose bytes depend only on its name and contents."""
+    info = zipfile.ZipInfo(name, date_time=ENTRY_TIME)
+    info.compress_type = zipfile.ZIP_STORED
+    info.external_attr = 0o600 << 16  # what `writestr` gives a bare name: rw for the owner
+    return info
+
+
 # The archive's own version, not the application's. A receiving deployment reads this to decide
 # whether it understands the file; bumping it is a decision about what an older CFOKit can
 # still read, which is why it does not follow anything else.
@@ -110,7 +125,7 @@ def export_interchange(
     # one, and `ZIP_STORED` keeps a diff of two exports legible.
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_STORED) as archive:
         archive.writestr(
-            "accounts.csv",
+            _entry("accounts.csv"),
             _csv(
                 ACCOUNT_COLUMNS,
                 (
@@ -125,7 +140,7 @@ def export_interchange(
             ),
         )
         archive.writestr(
-            "journal.csv",
+            _entry("journal.csv"),
             _csv(
                 JOURNAL_COLUMNS,
                 (
@@ -142,7 +157,7 @@ def export_interchange(
             ),
         )
         archive.writestr(
-            "trial_balance.csv",
+            _entry("trial_balance.csv"),
             _csv(
                 TRIAL_BALANCE_COLUMNS,
                 ((row.code, str(row.balance)) for row in report.rows),
@@ -224,7 +239,7 @@ def export_complete(
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_STORED) as bundle:
         bundle.writestr(
-            "manifest.json",
+            _entry("manifest.json"),
             json.dumps(
                 {
                     "archive_format": ARCHIVE_FORMAT,
@@ -241,10 +256,10 @@ def export_complete(
             + "\n",
         )
         for name, (columns, rows) in tables.items():
-            bundle.writestr(f"tables/{name}.jsonl", _jsonl(columns, rows))
+            bundle.writestr(_entry(f"tables/{name}.jsonl"), _jsonl(columns, rows))
         with zipfile.ZipFile(io.BytesIO(interchange.archive)) as inner:
             for member in sorted(inner.namelist()):
-                bundle.writestr(f"interchange/{member}", inner.read(member))
+                bundle.writestr(_entry(f"interchange/{member}"), inner.read(member))
 
     return Complete(
         entity_id=entity_id,

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import csv
 import io
+import time
 import uuid
 import zipfile
 from collections import defaultdict
@@ -201,6 +202,33 @@ def test_two_exports_of_unchanged_books_are_identical(
     entity_id, _, _, _ = stocked
 
     first = export_interchange(database, entity_id=entity_id, principal=PERSON, as_of=AS_OF)
+    second = export_interchange(database, entity_id=entity_id, principal=PERSON, as_of=AS_OF)
+
+    assert first.archive == second.archive
+
+
+def test_an_export_does_not_depend_on_the_clock(
+    database: Database, stocked: tuple[str, str, str, str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The same books exported a minute apart are still byte-identical.
+
+    ZIP records a modification time per entry, to two-second resolution. An entry stamped
+    with the wall clock makes the test above pass or fail depending on whether both exports
+    land in the same two seconds. Moving the clock `zipfile` reads makes that deterministic.
+    """
+    entity_id, _, _, _ = stocked
+    first = export_interchange(database, entity_id=entity_id, principal=PERSON, as_of=AS_OF)
+
+    class Later:
+        """`zipfile`'s view of the time module, a minute ahead."""
+
+        localtime = staticmethod(time.localtime)
+
+        @staticmethod
+        def time() -> int:
+            return int(time.time()) + 60
+
+    monkeypatch.setattr("zipfile.time", Later)
     second = export_interchange(database, entity_id=entity_id, principal=PERSON, as_of=AS_OF)
 
     assert first.archive == second.archive
