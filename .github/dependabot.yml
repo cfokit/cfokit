@@ -1,6 +1,6 @@
 # Every dependency is pinned exactly — uv.lock, action commit SHAs, image tags with digests — so
 # nothing changes unless a pull request changes it. This file is what keeps the pins from going
-# stale: each week it proposes the updates, and CI tests them like any other change.
+# stale: each month it proposes the updates, and CI tests them like any other change.
 #
 # Minor and patch updates are grouped into one pull request per ecosystem. Major updates arrive
 # one at a time, because a major version is where behaviour changes and each deserves its own
@@ -8,6 +8,11 @@
 #
 # An update to an existing dependency is not the decision CLAUDE.md reserves. Adding a runtime
 # dependency is, and nothing here adds one.
+#
+# Monthly, with a cooldown, and reviewed by the Monday sweep in review.yml (ADR-0048). A release
+# is not proposed until it has been public for a week — a month for a major — because a
+# compromised release is usually caught and yanked inside that window, before any advisory
+# exists to flag it. Security updates ignore both the schedule and the cooldown.
 
 version: 2
 
@@ -15,7 +20,11 @@ updates:
   - package-ecosystem: uv
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
+    cooldown:
+      default-days: 7
+      semver-major-days: 30
+    open-pull-requests-limit: 5
     groups:
       python:
         update-types: [minor, patch]
@@ -23,7 +32,11 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
+    cooldown:
+      default-days: 7
+      semver-major-days: 30
+    open-pull-requests-limit: 5
     groups:
       actions:
         update-types: [minor, patch]
@@ -32,7 +45,11 @@ updates:
   - package-ecosystem: docker
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
+    cooldown:
+      default-days: 7
+      semver-major-days: 30
+    open-pull-requests-limit: 5
     groups:
       images:
         update-types: [minor, patch]
@@ -41,7 +58,11 @@ updates:
   - package-ecosystem: docker-compose
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
+    cooldown:
+      default-days: 7
+      semver-major-days: 30
+    open-pull-requests-limit: 5
     groups:
       services:
         update-types: [minor, patch]
