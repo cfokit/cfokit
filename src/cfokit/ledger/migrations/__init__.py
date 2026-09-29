@@ -51,7 +51,7 @@ CREATE TABLE IF NOT EXISTS schema_migration (
 )
 """
 
-# Serialises concurrent migration runs. Two instances starting at once is exactly the
+# Serializes concurrent migration runs. Two instances starting at once is exactly the
 # race that made migrations-at-startup unacceptable (ADR-0004); the explicit command
 # does not get to have the same bug.
 MIGRATION_LOCK_KEY = 8_474_021_100_001

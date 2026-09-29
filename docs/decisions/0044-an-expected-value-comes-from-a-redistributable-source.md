@@ -13,7 +13,7 @@ decision-makers: [Geoff Scott]
 
 ADR-0036 § 2 says a conformance case may come from "intermediate accounting exercises,
 released examination problems, standard-setter illustrative examples".
-`tests/test_conformance_corpus.py` accepts a case whose licence is `public-domain`, `cc0` or
+`tests/test_conformance_corpus.py` accepts a case whose license is `public-domain`, `cc0` or
 `cc-by-4.0`, and requires a public-domain work to predate 1931.
 
 Those two statements are inconsistent, and nobody has noticed because there is one case. No
@@ -28,7 +28,7 @@ share-alike source carries share-alike into the repository; one derived from a n
 source cannot ship in a commercial product at all. "It is only a test" is not a distinction
 copyright makes.
 
-Checking specific publications rather than licence families produces a sharper picture than
+Checking specific publications rather than license families produces a sharper picture than
 expected, and a worse one:
 
 | Source | Terms | Usable |
@@ -38,7 +38,7 @@ expected, and a worse one:
 | US books 1931–1963, never renewed | Public domain; renewal was required and most works never got one | Yes, where already determined |
 | OpenStax, *Principles of Accounting* | CC BY-**NC**-SA 4.0 | No |
 | Dauderis & Annand, *Introduction to Financial Accounting* | CC BY-**NC**-SA 3.0 | No |
-| FASB Accounting Standards Codification, including Basic View | Copyright, plus a licence accepted at registration | No |
+| FASB Accounting Standards Codification, including Basic View | Copyright, plus a license accepted at registration | No |
 | FASB / XBRL US GAAP Financial Reporting Taxonomy | Verbatim and unmodified only, with its own notice | No |
 | Beancount's test corpus | GPL-2.0 | No as fixtures; fine as CI tooling (ADR-0010) |
 
@@ -56,11 +56,11 @@ for copying while remaining perfectly citable.
 ## Decision Drivers
 
 * A fixture must impose nothing on a fork. `NFR-14` is a `Must` and says "permanently".
-* The licence question must be answerable per case by a check, not per case by a judgment.
+* The license question must be answerable per case by a check, not per case by a judgment.
 * We are not qualified to make a copyright determination and must never be in the position of
   having made one.
 * Whatever the rule is, it must leave a usable path to the evidence band 3 needs (ADR-0043),
-  or it has solved the licence problem by abandoning the claim.
+  or it has solved the license problem by abandoning the claim.
 * The distinction between a published answer and a cited rule must survive contact with a
   future reader, or the weaker evidence will be counted as the stronger.
 
@@ -77,9 +77,9 @@ Chosen option: "Public domain and CC0 only, with a separate cited-rule class", b
 the only option under which no fixture carries any obligation at all, and because the band the
 public domain cannot reach turns out not to need copying in the first place.
 
-**Tier A — in the repository.** `licence` narrows to `public-domain` or `cc0`. `cc-by-4.0` is
+**Tier A — in the repository.** `license` narrows to `public-domain` or `cc0`. `cc-by-4.0` is
 removed: nothing in accounting uses it, and admitting it would import an attribution regime —
-title, author, URI, licence, and a statement of changes, per case — for no source that exists.
+title, author, URI, license, and a statement of changes, per case — for no source that exists.
 A new `pd_basis` records *how* the work reached the public domain, because "public domain" is a
 conclusion and the gate should check the premise:
 
@@ -132,7 +132,7 @@ so a cited-rule case records which basis its rule comes from.
 
 * Good, because no fixture in the repository carries any downstream obligation whatsoever, which
   is what `NFR-14` asks for and what a narrower rule than the previous one delivers.
-* Good, because `pd_basis` makes the licence claim checkable rather than asserted, and makes the
+* Good, because `pd_basis` makes the license claim checkable rather than asserted, and makes the
   1931 cutoff a property of one basis instead of a fact about the whole corpus.
 * Good, because `not-renewed` widens the reachable vein by three decades without us ever making
   a copyright call.
@@ -152,7 +152,7 @@ so a cited-rule case records which basis its rule comes from.
 
 ### Confirmation
 
-`tests/test_conformance_corpus.py` enforces Tier A: the licence is `public-domain` or `cc0`,
+`tests/test_conformance_corpus.py` enforces Tier A: the license is `public-domain` or `cc0`,
 `pd_basis` is one of the three, `term-expired` requires a year before the cutoff, and
 `not-renewed` requires a determination URL. The cutoff is a constant reviewed each 1 January
 rather than computed from the clock, because a gate whose verdict changes with the date is a
@@ -161,7 +161,7 @@ in the same file, which refuses a case naming no authority, no locator and no ba
 refuses any attempt to count one as corpus coverage.
 
 The two rules that are not gated, stated plainly rather than implied. Nothing detects a Tier B
-source being used as an oracle: the licence field is self-reported, and a figure typed in from
+source being used as an oracle: the license field is self-reported, and a figure typed in from
 a sample file looks exactly like a figure read from a scan. Nothing verifies that a
 `pd_determination` URL says what the case claims it says. Both are review, and ADR-0036 § 5
 already concedes what review is worth here, because the reviewer and the author are the same
@@ -190,7 +190,7 @@ the obligation is only attribution — which Apache 2.0 imposes anyway.
   other open accounting text checked; the permission has been in the gate since it was written
   and has never been exercised.
 * Bad, because CC BY 4.0's attribution is more specific than Apache 2.0's — title, author, URI,
-  licence, and an indication of changes — so honoring it means a NOTICE regime and a
+  license, and an indication of changes — so honoring it means a NOTICE regime and a
   per-case attribution string, built and maintained for a hypothetical.
 * Bad, because a permission nobody uses is a permission nobody checks, and it would be the
   obvious thing to stretch when a tempting NC-SA source turns up.
@@ -206,7 +206,7 @@ so the copyright argument is genuinely strong.
 * Good, because the copyright analysis is probably right: a locator is a fact and a figure is a
   fact.
 * Bad, because copyright is not the only constraint. Access to the Codification is granted under
-  a licence accepted at registration, and a contract can bind where copyright would not — so the
+  a license accepted at registration, and a contract can bind where copyright would not — so the
   analysis that matters is the one we have not read and are not qualified to read.
 * Bad, because it builds machinery before a case needs it. ADR-0043 declines band 3, so the
   first case requiring this does not exist, and the class can be added by the record that needs
@@ -224,7 +224,7 @@ modern worked examples with answers, exactly what the corpus is short of.
   in it. CFOKit is a commercial product; shipping an NC fixture inside it is the case the clause
   exists to prevent.
 * Bad, because share-alike is worse than non-commercial here: it reaches derivatives, so a
-  fixture derived from an SA source argues for SA over the fixture, and a licence argument
+  fixture derived from an SA source argues for SA over the fixture, and a license argument
   inside an Apache 2.0 repository is precisely what `NFR-14` says must never exist.
 * Bad, because "a test is not really distribution" is the kind of reasoning that is cheap to
   adopt and expensive to unwind, and unwinding means deleting cases and whatever they were
@@ -242,25 +242,25 @@ modern worked examples with answers, exactly what the corpus is short of.
   MACRS against useful lives, the twelve-month rule against deferral — and a case that blurs
   them is worse than no case.
 * `.claude/commands/conformance-case.md` carries the procedure for building a case, including
-  the source-vetting step, so the licence question is asked before transcription rather than at
+  the source-vetting step, so the license question is asked before transcription rather than at
   review.
 
-**Reversal cost.** Low. The enum is one line, the corpus is small, and widening a licence rule
+**Reversal cost.** Low. The enum is one line, the corpus is small, and widening a license rule
 never invalidates work done under a narrower one. The asymmetry runs the other way: a case built
 on a source later found unfree has to be deleted along with whatever it evidenced, which is why
 the rule is set narrow now rather than relaxed and tightened later.
 
 Related: ADR-0043 (what the evidence is for), ADR-0036 (the layers and the provenance rule),
-ADR-0026 (Apache 2.0), ADR-0010 (Beancount as CI-only tooling, the same licence question
+ADR-0026 (Apache 2.0), ADR-0010 (Beancount as CI-only tooling, the same license question
 answered for a dependency rather than a fixture).
 
 ## Revisit when
 
 * An accounting source with worked answers appears under CC BY 4.0, CC0 or a public-domain
   dedication. The narrowing is worth reopening for a real source and not before.
-* A standard setter publishes illustrative examples under an open licence, which would make the
+* A standard setter publishes illustrative examples under an open license, which would make the
   cite-not-reproduce option unnecessary rather than merely premature.
 * A band-3 case is needed that a cited rule cannot carry, which is the trigger for the
-  cite-not-reproduce class and for reading the Codification's licence properly.
+  cite-not-reproduce class and for reading the Codification's license properly.
 * `LED-18` activates and the differential oracle turns on, which supplies evidence with no
-  licence question at all and may reduce how much corpus band 1 needs.
+  license question at all and may reduce how much corpus band 1 needs.

@@ -145,7 +145,7 @@ otherwise get wrong, because absence isn't visible in a manifest:
   almost no concurrency to reclaim in exchange. (ADR-0024)
 - **Runtime dependencies are load-bearing and few.** Adding one is a decision, not a
   convenience. Ask before adding any. Currently **five**, in the root `pyproject.toml`, each
-  with its reason and verified licence in a comment there: `psycopg[binary]` (driver), `fastapi`
+  with its reason and verified license in a comment there: `psycopg[binary]` (driver), `fastapi`
   (REST + OpenAPI), `uvicorn` (ASGI server), `mcp` (tool surface), `pyjwt[crypto]` (audience
   validation). Those five pull **36** packages in total — `uv export --no-dev
   --no-emit-project --no-hashes | grep -c '^[a-z]'` — and the MCP SDK is most of it, accepted
@@ -235,19 +235,19 @@ generated; provenance is, which is why a layer 2 case without a citation is refu
 
 ## Licensing
 
-Scope the question by **what triggers the obligation**, not by the licence name.
+Scope the question by **what triggers the obligation**, not by the license name.
 
 - **Things we ship to a user's machine** — skills, plugins, apps: **no copyleft.** This is
   genuine distribution of our artifact, and it is the case the rule exists for.
 - **Anything AGPL or network-copyleft in the server stack: excluded.** AGPL triggers on
   network interaction rather than distribution, so it reaches a hosted service.
   (ADR-0019)
-- **Ordinary server-side runtime dependencies: licence is not a constraint.** They are
+- **Ordinary server-side runtime dependencies: license is not a constraint.** They are
   resolved from an index at install time; GPL and LGPL obligations trigger on
-  distribution, and CFOKit is hosted or self-hosted under a licence we choose. LGPL
+  distribution, and CFOKit is hosted or self-hosted under a license we choose. LGPL
   dependencies are fine.
 - **CI-only tooling: fine**, including copyleft. (ADR-0010)
-- Check the licence before adding any dependency, and verify it currently rather than
+- Check the license before adding any dependency, and verify it currently rather than
   from memory — but weigh it against the scope above rather than reflexively.
 - OpenTofu, not Terraform — Terraform 1.6+ is BUSL. (ADR-0016)
 

@@ -130,9 +130,9 @@ The natural first thought, and the cheapest mechanism if it worked.
 Store a running total per transaction and constrain it to zero.
 
 * Good, because the constraint then becomes expressible as a simple `CHECK`.
-* Bad, because it denormalises state that is derivable, and correctness then depends on the column
+* Bad, because it denormalizes state that is derivable, and correctness then depends on the column
   being maintained correctly — the same class of problem one layer down, now with the added
-  possibility of the materialised value disagreeing with the postings it summarises.
+  possibility of the materialised value disagreeing with the postings it summarizes.
 * Bad, because ADR-0003 rejected materialised balances generally, on the grounds that they should
   be introduced under profiler evidence rather than as a correctness mechanism.
 
@@ -149,7 +149,7 @@ Check continuously in code, and sweep for violations nightly.
 
 * Good, because it would prevent some concurrency anomalies without a trigger.
 * Bad, because it addresses concurrency, not correctness of a single transaction's contents. A
-  single-threaded write of an unbalanced transaction is perfectly serialisable and still wrong.
+  single-threaded write of an unbalanced transaction is perfectly serializable and still wrong.
 
 ## More Information
 

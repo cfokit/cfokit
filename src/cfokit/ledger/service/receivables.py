@@ -24,7 +24,7 @@ from datetime import date
 from cfokit.ledger.errors import ObligationNotFound
 from cfokit.ledger.repository.obligations import Obligation, Settlement
 from cfokit.ledger.repository.unit_of_work import Database
-from cfokit.ledger.service.authorisation import Capability, authorise
+from cfokit.ledger.service.authorization import Capability, authorize
 from cfokit.ledger.service.principal import Principal
 
 __all__ = ["ObligationDetail", "obligation_detail", "outstanding_obligations"]
@@ -52,7 +52,7 @@ def outstanding_obligations(
     still owed". Passing false gives the full history, settled ones included.
     """
     with database.entity_write(entity_id) as write:
-        authorise(write, Capability.READ, principal)
+        authorize(write, Capability.READ, principal)
         return tuple(write.outstanding(as_of=as_of, unsettled_only=unsettled_only))
 
 
@@ -61,7 +61,7 @@ def obligation_detail(
 ) -> ObligationDetail:
     """One obligation read as both events: what was committed, and what has settled it."""
     with database.entity_write(entity_id) as write:
-        authorise(write, Capability.READ, principal)
+        authorize(write, Capability.READ, principal)
         found = write.outstanding(obligation_id=obligation_id)
         if not found:
             raise ObligationNotFound(f"no obligation {obligation_id} in this entity")

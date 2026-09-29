@@ -5,7 +5,7 @@
 
 **Checked server-side regardless of token contents** (ADR-0011, ADR-0019). A token says who
 the caller is; it never says what they may do, because a claim the caller can influence is not
-an authorisation.
+an authorization.
 
 **An agent's authority is the intersection of two principals** (`IAM-11`): "Every action
 carries both the skill's own principal and that person's, and its effective authority is the
@@ -20,11 +20,11 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from enum import StrEnum
 
-from cfokit.ledger.errors import NotAPerson, NotAuthorised
+from cfokit.ledger.errors import NotAPerson, NotAuthorized
 from cfokit.ledger.repository.unit_of_work import EntityWrite
 from cfokit.ledger.service.principal import Principal
 
-__all__ = ["Capability", "authorise", "authorise_own_act", "effective", "require"]
+__all__ = ["Capability", "authorize", "authorize_own_act", "effective", "require"]
 
 
 class Capability(StrEnum):
@@ -62,7 +62,7 @@ class Capability(StrEnum):
 
 
 def _known(privileges: frozenset[str]) -> frozenset[Capability]:
-    """The privileges the code defines, from what the catalogue returned.
+    """The privileges the code defines, from what the catalog returned.
 
     A row naming a privilege this enum does not have confers nothing. Failing closed is the
     only safe direction: a typo in a migration must not widen anyone's authority.
@@ -94,17 +94,17 @@ def require(
     actor_privileges: frozenset[str],
     acted_for_privileges: frozenset[str],
 ) -> None:
-    """Raise `NotAuthorised` unless the capability is in force.
+    """Raise `NotAuthorized` unless the capability is in force.
 
     The message names the capability and not the roles held. What a caller is missing is
     useful to them; the shape of someone else's access is not.
     """
     if capability not in effective(principal, actor_privileges, acted_for_privileges):
-        raise NotAuthorised(f"this principal may not {capability.value} in this entity")
+        raise NotAuthorized(f"this principal may not {capability.value} in this entity")
 
 
-def authorise(write: EntityWrite, capability: Capability, principal: Principal) -> None:
-    """Raise `NotAuthorised` unless `principal` holds `capability` in this entity, now.
+def authorize(write: EntityWrite, capability: Capability, principal: Principal) -> None:
+    """Raise `NotAuthorized` unless `principal` holds `capability` in this entity, now.
 
     **The way a service or a module checks a capability.** `require` above is the pure rule and
     takes both privilege sets as arguments; this reads them, which is the half every call site
@@ -134,7 +134,7 @@ def authorise(write: EntityWrite, capability: Capability, principal: Principal) 
     require(capability, principal, write.privileges_in_force(principal.id, now), acted_for)
 
 
-def authorise_own_act(write: EntityWrite, principal: Principal) -> None:
+def authorize_own_act(write: EntityWrite, principal: Principal) -> None:
     """Raise unless this principal may perform an act reserved to its own judgment.
 
     **Two conditions, and neither implies the other** (ADR-0042).
@@ -161,4 +161,4 @@ def authorise_own_act(write: EntityWrite, principal: Principal) -> None:
         raise NotAPerson(
             "this act is the principal's own; a delegated session may not perform it"
         )
-    authorise(write, Capability.ACT_AS_PRINCIPAL, principal)
+    authorize(write, Capability.ACT_AS_PRINCIPAL, principal)

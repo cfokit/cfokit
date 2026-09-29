@@ -23,7 +23,7 @@ Give every business a finance function it can afford to run.
 | **GitHub** | `github.com/cfokit/cfokit` |
 | **Domain** | cfokit.ai |
 | **Brand** | The open source CFO toolkit |
-| **Licence** | Apache 2.0 |
+| **License** | Apache 2.0 |
 
 ## The problem
 
@@ -263,7 +263,7 @@ a slogan; these are the statements CFOKit can be held to.
 
 | | Objective | Measure of success |
 |---|---|---|
-| **OBJ-8** | Only the people an entity has authorised reach its books | Cross-entity access does not occur, and is prevented at the data layer rather than by convention. Every access resolves to the principal that made it — the person, and the skill acting for them where one did — and to the role held at the time. Authority is determined server-side, whatever the caller asserts |
+| **OBJ-8** | Only the people an entity has authorized reach its books | Cross-entity access does not occur, and is prevented at the data layer rather than by convention. Every access resolves to the principal that made it — the person, and the skill acting for them where one did — and to the role held at the time. Authority is determined server-side, whatever the caller asserts |
 | **OBJ-9** | The company can prove all of this to an examiner | The system supplies, from its own records, the access, change, and processing evidence a SOC 1 and a SOC 2 Type II examination require, over a period of operation rather than at a moment. What the software cannot evidence — the operator's own controls — is stated rather than implied |
 
 **OBJ-9 is gated on demand, not on a date.** It becomes work when a commercial offering is

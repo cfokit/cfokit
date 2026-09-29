@@ -22,7 +22,7 @@ import pytest
 
 from cfokit.ledger.engine import Entry, Posting
 from cfokit.ledger.engine.periods import Period, period_of
-from cfokit.ledger.errors import NotAPerson, NotAuthorised, PeriodClosed, PeriodNotClosed
+from cfokit.ledger.errors import NotAPerson, NotAuthorized, PeriodClosed, PeriodNotClosed
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.administration import grant_role
 from cfokit.ledger.service.periods import close_period, reopen_period
@@ -228,7 +228,7 @@ def test_closing_requires_the_close_privilege(
         role="poster",
     )
 
-    with pytest.raises(NotAuthorised):
+    with pytest.raises(NotAuthorized):
         close_period(
             database,
             entity_id=entity_id,

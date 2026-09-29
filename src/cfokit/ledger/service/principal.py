@@ -27,7 +27,7 @@ class ActorClass(StrEnum):
     one to maximize, and making it invisible in the data removes the incentive to.
 
     **This records why a posting was made. It is never an authority check** (ADR-0042). Whether
-    a caller may do something is `authorise`'s question, read from entity grants server-side.
+    a caller may do something is `authorize`'s question, read from entity grants server-side.
     The two were conflated once, and `PERSON` does not mean a human authenticated — it means the
     token carried no RFC 8693 delegation, which a component's token also does not.
 

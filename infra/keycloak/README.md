@@ -67,7 +67,7 @@ None is adjustable into something that admits a normal client and still means an
 four are gone and **anonymous registration is open to whoever can reach the issuer**.
 
 Losing `Full Scope Disabled` costs less than it appears: it controls which realm roles reach a
-token, and **CFOKit authorises on none of them**. What a caller may do is decided by the entity
+token, and **CFOKit authorizes on none of them**. What a caller may do is decided by the entity
 grant held against their `sub` (ADR-0011, `IAM-01`), read from this deployment's own database on
 every request. The roles in a token are Keycloak's business, and `offline_access` is the only
 one anything here consults.

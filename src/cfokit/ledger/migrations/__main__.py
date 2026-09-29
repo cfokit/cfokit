@@ -4,7 +4,7 @@ Runs only when invoked. Never on container startup, never on import (ADR-0004).
 
 Each migration is applied in its own transaction and recorded in ``schema_migration``
 within that same transaction, so a failure leaves the database at a known version rather
-than partway through one. A session-level advisory lock serialises concurrent runs.
+than partway through one. A session-level advisory lock serializes concurrent runs.
 """
 
 from __future__ import annotations

@@ -39,7 +39,7 @@ step. This is an auditability requirement, not a taste preference. (ADR-0028)
 - Every write takes `pg_advisory_xact_lock` for its entity. **Lock on `entity.lock_key`, never
   on a hash of `entity.id`.** ADR-0011 requires a documented, collision-free scheme; the advisory
   namespace is a global `bigint` and entity ids are uuids, so a hash is collision-*resistant* at
-  best, and a collision silently serialises two unrelated entities against each other.
+  best, and a collision silently serializes two unrelated entities against each other.
   `lock_key` is an identity column, so it is collision-free by construction. (ADR-0011)
 - Row-level security keyed on `entity_id`, **plus** explicit service-layer filtering. Two
   layers, because RLS misconfiguration is silent.
@@ -118,7 +118,7 @@ change and needs review. (ADR-0015)
 
 Booking semantics, auth, and the write path need human review **before** you proceed. So does
 adding any runtime dependency. The list lives in the root `pyproject.toml`, each entry carrying
-its reason and its verified licence in a comment beside it; read it there and count them there.
+its reason and its verified license in a comment beside it; read it there and count them there.
 Whatever the number is, the next one is a decision rather than a convenience.
 
 The count is deliberately not restated here. It was, and it drifted: this file said five while

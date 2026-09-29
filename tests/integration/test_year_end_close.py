@@ -20,7 +20,7 @@ import pytest
 
 from cfokit.ledger.engine import Entry, Posting
 from cfokit.ledger.errors import (
-    NotAuthorised,
+    NotAuthorized,
     NothingToClose,
     RetainedEarningsUnset,
     YearAlreadyClosed,
@@ -178,7 +178,7 @@ def test_retained_earnings_must_be_an_equity_account(
 ) -> None:
     entity_id, _, _ = owned_books
 
-    with pytest.raises(NotAuthorised, match="equity"):
+    with pytest.raises(NotAuthorized, match="equity"):
         create_account(
             database,
             entity_id=entity_id,
@@ -205,7 +205,7 @@ def test_closing_a_year_requires_the_close_privilege(
         role="poster",
     )
 
-    with pytest.raises(NotAuthorised):
+    with pytest.raises(NotAuthorized):
         close_fiscal_year(
             database,
             entity_id=entity_id,

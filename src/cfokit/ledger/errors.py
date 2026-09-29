@@ -31,7 +31,7 @@ class MigrationError(LedgerError):
 class NotAuthenticated(LedgerError):
     """The caller was not authenticated.
 
-    Distinct from an authorisation failure by design: ADR-0030 requires "period closed" to be
+    Distinct from an authorization failure by design: ADR-0030 requires "period closed" to be
     distinguishable from "not permitted" so a skill can surface the right question, and the
     same reasoning applies here — "log in" and "you may not" are different answers.
     """
@@ -39,7 +39,7 @@ class NotAuthenticated(LedgerError):
     code = "not_authenticated"
 
 
-class NotAuthorised(LedgerError):
+class NotAuthorized(LedgerError):
     """The caller is known and holds no role permitting this (`IAM-01`).
 
     Distinct from `not_authenticated` on purpose: "log in" and "you may not" are different
@@ -52,13 +52,13 @@ class NotAuthorised(LedgerError):
     "not found" sends them to support instead of to an administrator.
     """
 
-    code = "not_authorised"
+    code = "not_authorized"
 
 
 class PeriodClosed(LedgerError):
     """The transaction's period is closed (`LED-11`, ADR-0030).
 
-    Distinct from `not_authorised`: the caller may post, and this period is not open to
+    Distinct from `not_authorized`: the caller may post, and this period is not open to
     anyone. Reopening it is a separate, recorded act — telling them "not permitted" would send
     them to ask for a capability that would not help.
     """
@@ -77,7 +77,7 @@ class NotAPerson(LedgerError):
 
     Reopening a closed period is the case: the control only survives a single-operator entity
     because it is a capability the agent does not hold, so it cannot auto-acknowledge its way
-    through. Distinct from `not_authorised`, which would be false — the person it acts for may
+    through. Distinct from `not_authorized`, which would be false — the person it acts for may
     well hold it, and saying otherwise would send them to fix the wrong thing.
     """
 
@@ -153,7 +153,7 @@ class NothingToClose(LedgerError):
 
 
 class UnknownRole(LedgerError):
-    """No such role in the catalogue (`IAM-01`, ADR-0039).
+    """No such role in the catalog (`IAM-01`, ADR-0039).
 
     Roles are rows, so the set of valid names is not fixed at build time and the API cannot
     enumerate them in its schema. This is what a caller gets instead of a constraint violation.
@@ -165,7 +165,7 @@ class UnknownRole(LedgerError):
 class LastOwner(LedgerError):
     """The last owner cannot be revoked or demoted (`IAM-04`, `IAM-21`).
 
-    Distinct from `not_authorised`: the caller is permitted to revoke grants, and this
+    Distinct from `not_authorized`: the caller is permitted to revoke grants, and this
     particular one would leave the entity unheld. Telling them "not permitted" would send them
     to ask for a capability they already hold.
     """

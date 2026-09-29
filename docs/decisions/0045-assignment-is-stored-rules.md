@@ -129,7 +129,7 @@ possible causes — a determinism defect, or an operator legitimately editing a 
 `BKP-11` — and a test unable to tell them apart either fails constantly or asserts nothing.
 
 The candidate's facts are stored on the decision for the same reason. The facts matched on
-are not the facts booked: a normalised payee and the source kind never reach a posting, so a
+are not the facts booked: a normalized payee and the source kind never reach a posting, so a
 replay reconstructing its inputs from its outputs would be asserting that the code agrees
 with itself.
 
@@ -223,7 +223,7 @@ replay reports it.
 
 Genuinely strong, and stronger than it was: Google's official CEL implementation for Python
 shipped in March 2026 under Apache-2.0, is non-Turing-complete and mutation-free by design,
-and is built for safely evaluating expressions somebody else wrote. CLAUDE.md makes licence a
+and is built for safely evaluating expressions somebody else wrote. CLAUDE.md makes license a
 non-issue for a server-side runtime dependency. Adopting it would satisfy ADR-0012 better
 than arguing a closed set is not a language.
 

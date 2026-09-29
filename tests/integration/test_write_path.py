@@ -4,9 +4,9 @@ Each is "a bug if missed" rather than a nice-to-have, and none of them is visibl
 test: the lock, the idempotency check and the audit row are all properties of what happens in
 one database transaction.
 
-- **The entity lock** serialises writes (ADR-0011). ADR-0011 is explicit that this must be
+- **The entity lock** serializes writes (ADR-0011). ADR-0011 is explicit that this must be
   proved "by actually running concurrent writes, not by inspection", which is what
-  `test_writes_to_one_entity_serialise` does.
+  `test_writes_to_one_entity_serialize` does.
 - **The idempotency key** is mandatory, and a replay returns the original result without
   repeating the work (ADR-0029).
 - **Exactly one audit row** per state change — and none for a replay, because a replayed
@@ -447,16 +447,16 @@ def test_both_entries_remain_visible_after_a_correction(
     assert transaction_count(owner_conn, entity_id) == 2
 
 
-# --- Serialisation (ADR-0011) -------------------------------------------------------------
+# --- Serialization (ADR-0011) -------------------------------------------------------------
 
 
-def test_writes_to_one_entity_serialise(
+def test_writes_to_one_entity_serialize(
     database: Database,
     owner_conn: psycopg.Connection[Any],
     owner_dsn: str,
     books: tuple[str, str, str],
 ) -> None:
-    """ADR-0011: "Tests must prove serialisation by actually running concurrent writes, not by
+    """ADR-0011: "Tests must prove serialization by actually running concurrent writes, not by
     inspection."
 
     Holds the entity's advisory lock on one connection and starts a service write on another.
@@ -465,7 +465,7 @@ def test_writes_to_one_entity_serialise(
 
     The lock key is `entity.lock_key`, an identity column, never a hash of `entity.id`: the
     advisory namespace is a global bigint, and a hash collision would not fail, it would
-    silently serialise two unrelated entities against each other.
+    silently serialize two unrelated entities against each other.
     """
     entity_id, cash, revenue = books
     finished = threading.Event()

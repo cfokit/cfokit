@@ -23,7 +23,7 @@ from cfokit.ledger.engine.periods import period_of
 from cfokit.ledger.errors import (
     AlreadyOpened,
     CommodityNotPermitted,
-    NotAuthorised,
+    NotAuthorized,
     OpeningBalanceAccountUnset,
     PeriodClosed,
     TransactionIncomplete,
@@ -289,7 +289,7 @@ def test_opening_with_nothing_is_refused(
 def test_opening_requires_the_post_privilege(
     database: Database, chart: tuple[str, str, str, str]
 ) -> None:
-    """The caller chooses the amounts, which is what `POST` authorises."""
+    """The caller chooses the amounts, which is what `POST` authorizes."""
     entity_id, cash, _, _ = chart
     grant_role(
         database,
@@ -300,7 +300,7 @@ def test_opening_requires_the_post_privilege(
         role="reader",
     )
 
-    with pytest.raises(NotAuthorised):
+    with pytest.raises(NotAuthorized):
         open_balances(
             database,
             entity_id=entity_id,

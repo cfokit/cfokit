@@ -7,7 +7,7 @@ license = "Apache-2.0"
 requires-python = ">=3.14"
 
 # Runtime dependencies are load-bearing and few. Adding one is a decision, not a
-# convenience — ask before adding any (CLAUDE.md). Licences verified 2026-08-19.
+# convenience — ask before adding any (CLAUDE.md). Licenses verified 2026-08-19.
 dependencies = [
     # Postgres driver. Returns NUMERIC as Decimal, which ADR-0005 makes a selection
     # criterion. Dual-mode: we use the synchronous API, and AsyncConnection exists if
@@ -73,7 +73,7 @@ dev = [
     # MPL-2.0 (verified 2026-09-01 from the installed artifact's License-Expression, not
     # from memory). Weak copyleft, triggering on distribution of the covered files — which
     # never happens: it is dev-group only, the image builds with `uv sync --no-dev`, and
-    # `uv export --no-dev` does not contain it. CLAUDE.md scopes the licence question by
+    # `uv export --no-dev` does not contain it. CLAUDE.md scopes the license question by
     # what triggers the obligation, and CI-only tooling is fine including copyleft.
     # Pulls sortedcontainers (Apache-2.0), likewise dev-only.
     "hypothesis>=6.167.1",

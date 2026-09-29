@@ -38,5 +38,5 @@ docs/        Vision, requirements, and decision records
 
 Apache License 2.0. It carries an explicit patent grant, makes contributions
 inbound-equals-outbound without a separate CLA, and reserves the project's name — see
-[ADR-0026](docs/decisions/0026-apache-2-0-as-the-project-licence.md). No copyleft component
+[ADR-0026](docs/decisions/0026-apache-2-0-as-the-project-license.md). No copyleft component
 ships in the distributed artifact ([ADR-0019](docs/decisions/0019-identity-provider-conformance-contract.md)).

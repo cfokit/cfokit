@@ -54,7 +54,7 @@ nothing cites these but this repository. They are added when something breaks wi
 | [0008](0008-layered-architecture-pure-engine.md) | Four layers, with a pure booking engine at the bottom | Draft |
 | [0009](0009-one-app-two-protocol-adapters.md) | One application, two protocol adapters; MCP calls the service in-process | Draft |
 | [0010](0010-beancount-as-test-oracle.md) | Beancount is a differential test oracle, never a runtime dependency | Draft |
-| [0011](0011-entity-advisory-lock.md) | Writes serialise on a per-entity advisory lock | Draft |
+| [0011](0011-entity-advisory-lock.md) | Writes serialize on a per-entity advisory lock | Draft |
 | [0012](0012-binding-non-goals-and-scope-discipline.md) | Binding non-goals, enforced as a gate rather than a ban | Draft |
 | [0013](0013-two-dates-bitemporality.md) | Two dates per transaction, and bitemporality for free | Accepted |
 | [0014](0014-single-tool-surface-hosted-backend-only.md) | One tool surface; skills target the hosted backend only | Draft |
@@ -69,7 +69,7 @@ nothing cites these but this repository. They are added when something breaks wi
 | [0023](0023-one-image-many-entrypoints.md) | Components ship as one image with many entrypoints | Draft |
 | [0024](0024-synchronous-application-code.md) | The ledger is synchronous; async is permitted outside it | Draft |
 | [0025](0025-rounding-and-allocation.md) | The ledger never rounds; presentation rounds half-up, allocation uses largest remainder | Draft |
-| [0026](0026-apache-2-0-as-the-project-licence.md) | Apache 2.0 is the project licence | Draft |
+| [0026](0026-apache-2-0-as-the-project-license.md) | Apache 2.0 is the project license | Draft |
 | [0027](0027-reopening-does-not-cascade.md) | Reopening does not cascade; a stale year-end close is re-run | Draft |
 | [0028](0028-hand-written-sql-no-orm.md) | Hand-written SQL in the repository layer, rather than an ORM | Draft |
 | [0029](0029-mandatory-idempotency-keys.md) | Idempotency keys are mandatory on every write | Accepted |
@@ -184,7 +184,7 @@ that synchronous code makes the ledger concurrency-safe — it removes an `await
 and the guarantees come from ADR-0006, ADR-0011 and ADR-0029.
 
 **Resolved.** The period-close contradiction between ADR-0007, ADR-0030 and `LED-11` is settled in
-favor of `LED-11`: a closed period is reopened, never overridden. The licence is settled in
+favor of `LED-11`: a closed period is reopened, never overridden. The license is settled in
 ADR-0026.
 
 ### The SOC 1 and SOC 2 sections were never swept
@@ -213,7 +213,7 @@ A sweep found five conflicts and eight unserved requirements. None is fixed.
 | `SOC1-08` | Gapless verifiable sequencing — sequence numbers, a hash chain, or both, with different failure modes |
 | `SOC1-04`, `SOC1-33` | Per-entity versioned configuration of what an agent may complete without a person |
 | `SOC1-28`–`SOC1-32` | The exception queue: durable, dispositioned, reportable. A subsystem, not a field |
-| `SOC1-27`, `SOC2-23` | Break-glass operator access — time-bounded, individually authorised, visible to the customer |
+| `SOC1-27`, `SOC2-23` | Break-glass operator access — time-bounded, individually authorized, visible to the customer |
 | `SOC2-09`, `SOC2-10` | A provider registry the system maintains, enforcing zero-retention terms as configuration validation |
 | `SOC2-16` | Entity isolation across derived artifacts — embeddings, conversation memory, indexes |
 | `SOC2-18` | Deletion reaching derived artifacts and representations held by a provider |

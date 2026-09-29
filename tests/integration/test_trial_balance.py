@@ -14,7 +14,7 @@ from decimal import Decimal
 import pytest
 
 from cfokit.ledger.engine import Entry, Posting
-from cfokit.ledger.errors import NotAuthorised
+from cfokit.ledger.errors import NotAuthorized
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.administration import grant_role
 from cfokit.ledger.service.principal import ActorClass, Principal
@@ -160,7 +160,7 @@ def test_reading_requires_the_read_privilege(
     """`IAM-01`: an identity holding no role can do nothing with the entity."""
     entity_id, _, _ = owned_books
 
-    with pytest.raises(NotAuthorised):
+    with pytest.raises(NotAuthorized):
         trial_balance(
             database,
             entity_id=entity_id,

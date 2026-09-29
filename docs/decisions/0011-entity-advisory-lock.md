@@ -5,7 +5,7 @@ date: 2026-08-17
 decision-makers: [Geoff]
 ---
 
-# ADR-0011: Writes serialise on a per-entity advisory lock
+# ADR-0011: Writes serialize on a per-entity advisory lock
 
 **Requirements served:** `LED-13`, `NFR-02`.
 
@@ -23,14 +23,14 @@ viable for a fractional CFO holding many clients (`LED-13`), and losing it would
 multi-tenant workload into a single-writer system.
 
 Retry safety is a separate problem with a separate mechanism, held in
-[ADR-0029](0029-mandatory-idempotency-keys.md). Serialisation does not make a retry safe, and
+[ADR-0029](0029-mandatory-idempotency-keys.md). Serialization does not make a retry safe, and
 idempotency does not order concurrent writes; conflating them produces a design that does neither
 well.
 
 ## Decision Drivers
 
 * Writes across entities must never contend, or multi-tenant hosting stops being viable (`LED-13`).
-* Serialisation must be deterministic and testable, rather than dependent on conflict detection that
+* Serialization must be deterministic and testable, rather than dependent on conflict detection that
   is hard to reproduce.
 * No failure path may leak a held lock.
 * The mechanism must protect both protocol surfaces, including MCP, which never passes through HTTP
@@ -47,7 +47,7 @@ well.
 ## Decision Outcome
 
 Chosen option: "Per-entity `pg_advisory_xact_lock`, taken in the service layer", because it gives
-deterministic serialisation scoped exactly to the entity, with no lock to leak and no retry logic
+deterministic serialization scoped exactly to the entity, with no lock to leak and no retry logic
 pushed onto callers.
 
 > Every write takes `pg_advisory_xact_lock` keyed on the entity, in the service layer, before the
@@ -60,7 +60,7 @@ pushed onto callers.
   across both protocol surfaces.
 
 Entity grants are validated server-side on every request regardless of token contents. That is
-authorisation rather than concurrency, and is noted here only because `CLAUDE.md` groups them.
+authorization rather than concurrency, and is noted here only because `CLAUDE.md` groups them.
 
 ### Consequences
 
@@ -69,7 +69,7 @@ authorisation rather than concurrency, and is noted here only because `CLAUDE.md
 * Good, because the lock is transaction-scoped, so no failure path leaks it.
 * Good, because an advisory lock says what it is, rather than overloading a data row with a control
   meaning.
-* Bad, because writes to one entity serialise, so a long-running write blocks others for that entity.
+* Bad, because writes to one entity serialize, so a long-running write blocks others for that entity.
   Acceptable given per-entity write concurrency is low by workload assumption, and it is the reason
   any long-running operation belongs on a non-request path (ADR-0017).
 * Bad, because advisory lock keys must be derived from `entity_id` by a documented, collision-free
@@ -77,8 +77,8 @@ authorisation rather than concurrency, and is noted here only because `CLAUDE.md
 
 ### Confirmation
 
-Serialisation is proved by actually running concurrent writes rather than by inspection.
-`tests/integration/test_write_path.py::test_writes_to_one_entity_serialise` holds the entity's
+Serialization is proved by actually running concurrent writes rather than by inspection.
+`tests/integration/test_write_path.py::test_writes_to_one_entity_serialize` holds the entity's
 advisory lock on one connection and starts a service write on another: the write must block, which
 it would not do had it failed to take the same lock, and must complete once the lock is released.
 
@@ -105,7 +105,7 @@ holding the lock, because async constructs are rejected throughout the ledger's 
   the retries already arriving from agents — a client retry of a transaction that itself retried
   internally is difficult to reason about, and the ambiguity compounds.
 * Bad, because it would be insufficient on its own for read-modify-write against lot state, which
-  ADR-0003 explicitly cited as a serialisation requirement, so it would need supplementing anyway.
+  ADR-0003 explicitly cited as a serialization requirement, so it would need supplementing anyway.
 
 ### `SELECT ... FOR UPDATE` on the entity row
 
@@ -118,19 +118,19 @@ fallback should the backend change.
   row's lifecycle, so deleting or replacing the row has concurrency consequences that are not obvious
   from reading it.
 * Bad, because it conflates data with a control mechanism: a reader of the schema cannot tell the row
-  is load-bearing for serialisation.
+  is load-bearing for serialization.
 
 ### Table-level or global locking
 
 * Good, because it is simplest to reason about and trivially correct.
-* Bad, because it serialises writes across all entities, which destroys the high-parallelism property
+* Bad, because it serializes writes across all entities, which destroys the high-parallelism property
   that makes one deployment viable for a fractional CFO with many clients (`LED-13`).
 
 ### `SERIALIZABLE` isolation instead of explicit locking
 
 * Good, because Postgres would detect conflicting interleavings and abort one transaction, with no
   lock discipline required of application code.
-* Bad, because it produces serialisation failures under contention that every caller must handle,
+* Bad, because it produces serialization failures under contention that every caller must handle,
   which is retry logic again, now triggered by conditions that are hard to reproduce in tests.
 
 ## More Information
@@ -152,6 +152,6 @@ deliberately does not.
 
 ## Revisit when
 
-- A single entity's write concurrency makes per-entity serialisation a **measured** bottleneck.
+- A single entity's write concurrency makes per-entity serialization a **measured** bottleneck.
   ADR-0003 names this as a revisit trigger for the storage decision too.
 - The storage backend changes to one without advisory locks, which is the documented DSQL scenario.

@@ -1,4 +1,4 @@
-"""Reads, which are authorised like everything else.
+"""Reads, which are authorized like everything else.
 
 A read is not a state change, so it writes no audit row and needs no idempotency key. It does
 need a grant: `IAM-01` says an identity holding no role for an entity "can do nothing with
@@ -12,7 +12,7 @@ from __future__ import annotations
 from cfokit.ledger.errors import TransactionNotFound
 from cfokit.ledger.repository.transactions import StoredTransaction
 from cfokit.ledger.repository.unit_of_work import Database
-from cfokit.ledger.service.authorisation import Capability, authorise
+from cfokit.ledger.service.authorization import Capability, authorize
 from cfokit.ledger.service.principal import Principal
 
 __all__ = ["read_transaction"]
@@ -28,7 +28,7 @@ def read_transaction(
     entity's existence (`NFR-04`).
     """
     with database.entity_write(entity_id) as write:
-        authorise(write, Capability.READ, principal)
+        authorize(write, Capability.READ, principal)
         stored = write.load_transaction(transaction_id)
 
     if stored is None:

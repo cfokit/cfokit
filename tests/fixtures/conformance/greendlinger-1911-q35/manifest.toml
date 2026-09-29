@@ -18,7 +18,7 @@ problem = "Question 35"
 # the other cases, and recorded rather than glossed.
 origin = "Not from an examination; Greendlinger's own worked problem"
 scan = "https://archive.org/details/accountancyprob00greegoog"
-licence = "public-domain"
+license = "public-domain"
 pd_basis = "term-expired"
 
 [coverage]

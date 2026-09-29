@@ -916,7 +916,7 @@
             "type": "string"
           },
           "role": {
-            "description": "A role name from this deployment's catalogue. Roles are rows rather than a fixed enumeration, so the set is not enumerable here; an unknown name is refused with `unknown_role` (ADR-0039).",
+            "description": "A role name from this deployment's catalog. Roles are rows rather than a fixed enumeration, so the set is not enumerable here; an unknown name is refused with `unknown_role` (ADR-0039).",
             "title": "Role",
             "type": "string"
           }

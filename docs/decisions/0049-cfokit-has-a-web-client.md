@@ -42,7 +42,7 @@ provider rather than written here.
 * Credentials reach the identity provider and nothing else — no agent, no model, not CFOKit's API
   (`IAM-10`).
 * Sign-in and sign-up look and behave like the rest of the product.
-* One authorisation path. The web client may do nothing an agent holding the same person's grants
+* One authorization path. The web client may do nothing an agent holding the same person's grants
   could not, or permissions exist in two places and diverge.
 * One image and one deployable (ADR-0023); portable to any target and to a laptop (ADR-0004).
 * No stateful sessions against a scale-to-zero service (ADR-0017).
@@ -65,7 +65,7 @@ provider rather than written here.
 
 Chosen option: "A single-page application built to static files, served by the REST service,
 signing in with PKCE", because it is the only option that adds no session state, no second
-deployable and no second authorisation path.
+deployable and no second authorization path.
 
 > The web client is a React single-page application in TypeScript, built to static files and
 > served by the REST service under its own `PUBLIC_BASE_URL`. It signs the person in through the
@@ -291,7 +291,7 @@ The conventional shape for a modern web client.
 * Good, because the client releases independently of the server.
 * Bad, because it is a second deployable with its own hosting on every target, including a laptop,
   against ADR-0023 and ADR-0004.
-* Bad, because a second origin means CORS, and a misconfigured CORS policy is an authorisation bug.
+* Bad, because a second origin means CORS, and a misconfigured CORS policy is an authorization bug.
 
 ### Static pages with no framework and no build step
 

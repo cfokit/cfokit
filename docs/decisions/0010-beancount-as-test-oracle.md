@@ -38,7 +38,7 @@ part is commodity, and agreeing with a known-good implementation about commodity
 point.
 
 What CFOKit does *not* take from Beancount is everything that makes it a product: multi-tenancy,
-per-entity authorisation, an audit trail, a published API, a draft/posted boundary. **ADR-0007 has
+per-entity authorization, an audit trail, a published API, a draft/posted boundary. **ADR-0007 has
 no Beancount analogue at all** — a Beancount ledger is a text file you edit, so immutability at
 posting is a genuine divergence rather than a difference in degree.
 
@@ -149,8 +149,8 @@ By far the most attractive option on the surface.
   point of the system: no concurrent writers, no deferred constraint triggers, and no path to
   per-entity locking. Adopting it as the engine would re-adopt the constraints ADR-0003 exists to
   escape.
-* Neutral on **licence**. GPL-2.0-only is not a reason against this option. GPL triggers on
-  distribution, and CFOKit is hosted or self-hosted under a licence we choose, with dependencies
+* Neutral on **license**. GPL-2.0-only is not a reason against this option. GPL triggers on
+  distribution, and CFOKit is hosted or self-hosted under a license we choose, with dependencies
   resolved from an index rather than shipped by us. Copyleft would bite only if Beancount were
   distributed into agent skill runtimes, which is not how it is used.
 

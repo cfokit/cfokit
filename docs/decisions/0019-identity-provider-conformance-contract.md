@@ -29,14 +29,14 @@ Together they mean the default issuer must be a **complete identity provider** �
 and a login flow included — because anything less leaves the self-hoster to supply the missing
 half, and the half missing is precisely the one `IAM-10` forbids CFOKit from writing.
 
-Licence and capability are also not stable inputs. Zitadel moved from Apache 2.0 to AGPL 3.0 at
+License and capability are also not stable inputs. Zitadel moved from Apache 2.0 to AGPL 3.0 at
 v3, putting network copyleft in scope for a candidate that had been eliminated on other grounds
 anyway. Ory markets an Enterprise License for self-hosted production alongside its Apache 2.0
 build and provides no security SLA on the open-source version. The registration mechanism is
 mid-transition too: MCP 2026-07-28 deprecated RFC 7591 Dynamic Client Registration in favor of
 Client ID Metadata Documents, retaining DCR for at least twelve months.
 
-So the conclusion to draw is not only which issuer to pick. It is that **the issuer's licence
+So the conclusion to draw is not only which issuer to pick. It is that **the issuer's license
 and capabilities are not stable inputs**, which makes the swap cost the thing worth engineering.
 
 ## Decision Drivers
@@ -48,7 +48,7 @@ and capabilities are not stable inputs**, which makes the swap cost the thing wo
   refuses a request meant for somewhere else. *How* the issuer binds it is not a driver — see
   § 2.
 * No AGPL or other network-copyleft component in the default stack (`NFR-14`, ADR-0026).
-* Licence and capability volatility is the observed condition, so the cost of swapping matters
+* License and capability volatility is the observed condition, so the cost of swapping matters
   more than the merits of any single candidate.
 * Light enough to run on a laptop alongside the rest of the stack.
 
@@ -65,7 +65,7 @@ and capabilities are not stable inputs**, which makes the swap cost the thing wo
 
 Chosen option: "A swappable dependency behind a written conformance contract, defaulting to
 Keycloak", because a default that cannot log a person in fails `IAM-06` on the day it ships, and
-because every candidate's licence and capabilities proved unstable during selection itself —
+because every candidate's license and capabilities proved unstable during selection itself —
 which makes the swap cost the thing worth engineering rather than the choice.
 
 > The identity provider is a swappable dependency behind a written conformance contract,
@@ -120,7 +120,7 @@ server-side on every call regardless of anything in the token (ADR-0011, `IAM-01
 
 * Good, because a deployment can authenticate a person on the strength of `docker compose up`,
   which is what `IAM-06` asks for and what a product promise of self-hosting has to mean.
-* Good, because a licence change or capability gap becomes a configuration swap plus a
+* Good, because a license change or capability gap becomes a configuration swap plus a
   conformance run, rather than a rebuild.
 * Good, because the contract states what "supported issuer" means, so the claim is testable
   rather than a marketing sentence.
@@ -155,7 +155,7 @@ import would also be visible to review as a new dependency.
 * Good, because it is a complete identity provider: a user store, login and account pages, and
   an admin console, so a deployment satisfies `IAM-06` with nothing provisioned into it.
 * Good, because it is mature, widely deployed, and under a foundation rather than a vendor,
-  which makes a Zitadel-style relicence unlikely. Apache 2.0.
+  which makes a Zitadel-style relicense unlikely. Apache 2.0.
 * Good, because it meets every other contract line as it ships — RFC 8414 metadata, an
   advertised registration endpoint, RFC 9207, and JWT access tokens by default.
 * Bad, because it is the heaviest option by an order of magnitude, and a laptop deployment
@@ -222,7 +222,7 @@ to start, and single-purpose in a way that reads as good engineering.
   validated server-side regardless (ADR-0011).
 * DCR support now, CIMD support before DCR's removal window closes. Track SEP-991.
 
-**Reversal cost.** Low by construction — that is the point of the record. A licence change or
+**Reversal cost.** Low by construction — that is the point of the record. A license change or
 capability gap makes the default a config swap plus a conformance run.
 
 ## Revisit when
