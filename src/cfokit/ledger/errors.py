@@ -219,7 +219,7 @@ class IdempotencyKeyRequired(LedgerError):
     """A write arrived without an idempotency key (ADR-0029).
 
     Mandatory rather than optional, because "the write that omits a key is the write that
-    double-books" — making it required moves the decision from runtime judgement to a
+    double-books" — making it required moves the decision from runtime judgment to a
     property every write path can assume.
     """
 

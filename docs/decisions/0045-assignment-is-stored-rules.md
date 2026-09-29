@@ -13,7 +13,7 @@ decision-makers: [Geoff Scott]
 
 `BKP-06` is `Must`/`Approved` and nothing implements it: "assignment of an incoming
 transaction to an account is governed by stored rules applied deterministically". Until
-something does, categorisation either does not happen or a model decides per transaction —
+something does, categorization either does not happen or a model decides per transaction —
 which is what the requirement was written to prevent, and which `ActorClass`'s own docstring
 records: "nothing assigns it yet because no rules engine exists".
 
@@ -169,7 +169,7 @@ made and is never an authority check (ADR-0042 § 3), so it widens nothing.
 * Good, because `BKP-11` needs no enforcement: the row that decided is immutable and a later
   version is simply not in the earlier set.
 * Good, because `ActorClass.RULE` finally means something, which ADR-0033 § 3 wanted
-  maximised — "a rule-assigned coding is deterministic and re-derivable, and an auditor tests
+  maximized — "a rule-assigned coding is deterministic and re-derivable, and an auditor tests
   it cheaply and once".
 * Good, because a rule is data an operator can read: every condition is a row, so "which
   rules touch this account" is a query rather than a text search.

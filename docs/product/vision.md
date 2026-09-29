@@ -235,7 +235,7 @@ retention-limited audit log behind it.
 platform, and Intuit Assist with "Continuously Clean Books" is shipping into the higher
 tiers now. *"AI does your bookkeeping"* is the incumbent's current roadmap and is not a
 differentiator. Consistency and traceability are, and both are hard to reach from a
-probabilistic categoriser sitting on a retention-limited audit log.
+probabilistic categorizer sitting on a retention-limited audit log.
 
 ## Objectives
 
@@ -289,7 +289,7 @@ asking, and the self-hosted build is complete rather than a limited edition.
 The commercial product is the hosted service, and what it sells is assurance.
 
 Nobody reads the source to decide whether to trust their general ledger to it. Early
-adopters trust it because trying it costs nothing and because people they recognise are
+adopters trust it because trying it costs nothing and because people they recognize are
 already running it. Everyone downstream — a fractional CFO, an accountant, a lender —
 trusts it because an independent auditor has attested to how the hosted service is operated.
 That report is the one asset a fork cannot copy, and the operating history behind it takes
@@ -321,12 +321,12 @@ platforms, and a token bill that moves with provider prices. That is the cost of
 actually being sold, and a price reaching ordinary SaaS margins has not accounted for it.
 
 The interface both paths imply is the same, and it follows from the books being reachable by
-agent software the organisation chooses — whatever that software is, including ours. What we
+agent software the organization chooses — whatever that software is, including ours. What we
 expose has to be a complete, well-described data interface and not only a fixed menu of
 reports.
 
 The standard statements are standard: a profit and loss, a balance sheet, a cash flow
-statement, and a receivables ageing report have settled definitions, and CFOKit produces them
+statement, and a receivables aging report have settled definitions, and CFOKit produces them
 deterministically rather than composing them afresh each time somebody asks. That determinism
 is also what makes them the part of the output CFOKit can warrant. The data interface is what
 answers the questions nobody wrote a report for.
@@ -362,7 +362,7 @@ the books are kept — a lender, an acquirer, a customer's auditor — that is w
 service sells, and it is the one thing a self-hosted build cannot produce for itself.
 
 **For the owner-operator.** You already pay for QuickBooks and still do the work. CFOKit does
-the work: transactions categorised as they arrive, books that are current rather than
+the work: transactions categorized as they arrive, books that are current rather than
 reconstructed in April, and straight answers about what you can afford.
 
 **For the fractional CFO.** You were hired for the plan and the capital, and the first month
@@ -410,7 +410,7 @@ open source agents – here's the ledger design"
 >
 > Open source, agent-maintained books.
 >
-> • Bank and card feeds in, categorised by rules you approve once
+> • Bank and card feeds in, categorized by rules you approve once
 > • Real double-entry, append-only, tested against worked examples with published answers
 > • Statements a lender or your accountant will accept
 > • Apache 2.0 licensed, runs on your laptop, no cloud account
@@ -423,7 +423,7 @@ These are decided, and they bound what the positioning may promise:
 
 - **Not a CFO.** It does the bookkeeper and controller work a CFO relies on. The role itself is
   never vacant — a fractional CFO holds it where one is engaged, and otherwise the founder or
-  the owner-operator does. Where that person wants help with the judgement rather than with the
+  the owner-operator does. Where that person wants help with the judgment rather than with the
   books, the guidance skill answers a bounded set of questions and states its limits.
 - **Not a dashboard you run the business from.** The agent is how the books are kept and
   questioned. A web client, signed in through the identity provider, carries the work a

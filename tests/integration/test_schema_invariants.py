@@ -1,7 +1,7 @@
 """The guarantees the schema makes, exercised against a real database.
 
 ADR-0006 and ADR-0007 are both `accepted` — the first migration embodies them in something
-that cannot be taken back — and until now neither was tested behaviourally. What existed was
+that cannot be taken back — and until now neither was tested behaviorally. What existed was
 `test_migrations.py` asserting that the string `append_only_violated` appears in the DDL,
 which proves the text was written, not that the trigger fires.
 

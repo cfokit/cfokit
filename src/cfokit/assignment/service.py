@@ -15,7 +15,7 @@ candidate produces no posting at all — `BKP-12` and `NFR-16` forbid a guess an
 holding account, so the caller asks the operator.
 
 **An uploaded candidate is only ever drafted.** Its figures were read out of a document the
-organisation did not author, by a model, in the session that is now asking to post them
+organization did not author, by a model, in the session that is now asking to post them
 (`PLT-23`, ADR-0047). A rule decides where it belongs; a person decides that it happened.
 
 **Nothing here stores a candidate.** The caller supplies them; a decision and the draft it

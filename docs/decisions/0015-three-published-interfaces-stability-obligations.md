@@ -28,7 +28,7 @@ not detect that the change requiring a major bump has occurred.
 ## Decision Drivers
 
 * A breaking change must become visible to a reviewer who was not thinking about compatibility.
-* One source of truth for behaviour. ADR-0009 makes the service layer the single definition, and
+* One source of truth for behavior. ADR-0009 makes the service layer the single definition, and
   nothing here may create a second.
 * Internal structure must stay free to change; only what is published is frozen.
 * Additive evolution must stay cheap, or a published interface stops growing.
@@ -47,7 +47,7 @@ not detect that the change requiring a major bump has occurred.
 
 Chosen option: "Three published interfaces, each with a committed generated artifact and a CI diff
 gate", because a committed artifact is the only mechanism that detects a breaking change rather than
-relying on the author to recognise one.
+relying on the author to recognize one.
 
 `PLT-03` obliges a documented interface for third parties carrying stated obligations about how and
 when it may change, and `NFR-13` obliges breaking changes to be announced rather than discovered.
@@ -103,7 +103,7 @@ output would make the diff meaningless rather than merely noisy.
 ### Three published interfaces, each with a committed artifact and a CI diff gate
 
 * Good, because it detects breaking changes mechanically instead of relying on the author's
-  judgement.
+  judgment.
 * Good, because it leaves internal structure entirely free.
 * Bad, because it puts generated files in the repository and in every review.
 * Bad, because it requires a deterministic generator, which is a real constraint on tooling choice.
@@ -113,8 +113,8 @@ output would make the diff meaningless rather than merely noisy.
 The conventional approach: declare a version, bump it appropriately, publish a changelog.
 
 * Good, because it is universally understood and communicates intent to consumers.
-* Bad, because it detects nothing. It relies on the author of a change recognising it as breaking,
-  which is precisely the judgement that fails — the whole difficulty is that breaking changes do not
+* Bad, because it detects nothing. It relies on the author of a change recognizing it as breaking,
+  which is precisely the judgment that fails — the whole difficulty is that breaking changes do not
   announce themselves at the keystroke. Versioning remains useful *on top* of this, as a way to
   communicate a change we have already detected.
 
@@ -135,7 +135,7 @@ because it is authored deliberately.
 * Good, because the contract is then designed rather than emergent, and review happens before the
   code exists.
 * Bad, because it inverts a dependency ADR-0009 deliberately set. The service layer is the single
-  definition of behaviour, with two thin adapters over it; a hand-written contract would become a
+  definition of behavior, with two thin adapters over it; a hand-written contract would become a
   third definition, able to disagree with both adapters.
 
 ### Publish only REST, and treat MCP as internal

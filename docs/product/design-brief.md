@@ -1,11 +1,11 @@
 # Design brief: the web client
 
 What the web client must look like and handle, written to be given to Claude Design. It describes
-behaviour and states; the designs decide how they look.
+behavior and states; the designs decide how they look.
 
 ## How this is used
 
-**The design system comes first.** Claude Design produces its tokens — colour, type, spacing,
+**The design system comes first.** Claude Design produces its tokens — color, type, spacing,
 radii — and the web client's Tailwind theme is generated from that `tokens.json`, so the designs
 and the product share one source for how things look. Once the client's components exist in code,
 they are published back to the design system with `/design-sync`, and later designs are drawn with
@@ -26,7 +26,7 @@ canvas from this file.
 > and precise — a financial tool you would let near your company's books — without looking like a
 > bank or a generic SaaS dashboard.
 >
-> Define tokens for colour (a neutral ground, text, one or two accents, and semantic colours for
+> Define tokens for color (a neutral ground, text, one or two accents, and semantic colors for
 > success, warning, error and info that stay distinguishable without relying on red versus green),
 > typography (a display face and a body face, plus a tabular-figures style for money, which appears
 > everywhere), spacing, radii, borders and shadows. Money must be easy to scan in columns:

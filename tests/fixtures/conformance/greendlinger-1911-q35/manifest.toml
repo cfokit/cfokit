@@ -13,7 +13,7 @@ publisher = "Business Book Bureau"
 year = 1911
 problem = "Question 35"
 # This one cites no examination. The book says so: "although it is not taken from a C. P. A.
-# examination, it is included here". So the published answer is the author's, a practising
+# examination, it is included here". So the published answer is the author's, a practicing
 # accountant writing for candidates, rather than a state board's — weaker provenance than
 # the other cases, and recorded rather than glossed.
 origin = "Not from an examination; Greendlinger's own worked problem"

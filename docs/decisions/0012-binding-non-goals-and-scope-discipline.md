@@ -38,7 +38,7 @@ so that the decision is made deliberately once rather than drifted into.
 ## Considered Options
 
 * A binding non-goals list, enforced as a gate requiring an ADR
-* No list; rely on judgement
+* No list; rely on judgment
 * Hard prohibitions instead of a gate
 * A permitted list instead of a forbidden one
 * Put the non-goals in the product documentation only
@@ -93,7 +93,7 @@ rejected and the record says why.
 * Bad, because legitimate work is slowed by a writing step. That is the intended trade, and it will
   occasionally be genuinely annoying.
 * Bad, because the list will look wrong in hindsight for whichever items eventually pass the gate.
-  That is not a failure of the list — a gate that nothing ever passes is a ban that was mislabelled.
+  That is not a failure of the list — a gate that nothing ever passes is a ban that was mislabeled.
 * Bad, because it needs maintaining: an item that has passed should be marked as such rather than
   silently removed, so the reasoning history survives.
 
@@ -112,13 +112,13 @@ mechanical property.
 * Good, because it permits the right answer to be "yes, and here is the record" rather than "no".
 * Bad, because it requires maintenance, and an unmaintained list decays into noise.
 
-### No list; rely on judgement
+### No list; rely on judgment
 
 The usual approach, and it works in teams with shared context and a habit of saying no.
 
 * Good, because it costs nothing and slows nothing.
 * Bad, because the primary builder here is an agent, which has no accumulated sense of what this
-  project has already declined. Judgement that lives only in one person's head is not available at
+  project has already declined. Judgment that lives only in one person's head is not available at
   the moment a proposal is made, and the proposals arrive with reasons attached.
 
 ### Hard prohibitions instead of a gate
@@ -171,5 +171,5 @@ mechanically and costs the forcing function entirely.
 - An item passes the gate, which is a routine update rather than a revisit.
 - A category of proposal recurs that is not on the list, indicating a temptation that was not
   foreseen and should be named.
-- CFOKit acquires a team large enough that shared judgement replaces the need for a written list —
+- CFOKit acquires a team large enough that shared judgment replaces the need for a written list —
   which is a long way off and should not be assumed early.

@@ -100,7 +100,7 @@ def test_a_float_literal_is_caught_when_literals_are_rejected() -> None:
 
 
 def test_a_float_literal_is_allowed_by_default() -> None:
-    """A fixture modelling a foreign file format legitimately holds one: an .xlsx cell is an
+    """A fixture modeling a foreign file format legitimately holds one: an .xlsx cell is an
     IEEE double and openpyxl hands back exactly that, so the faithful fixture carries the
     float. The default is what runs over tests/."""
     assert offending_python_lines("cell = 647.75") == []

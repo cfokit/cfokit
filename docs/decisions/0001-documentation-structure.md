@@ -41,7 +41,7 @@ question does not get reopened.
 * A defined home per kind, chosen by audience and lifecycle, each governed by a published standard
 * One documentation tree — everything under `docs/`
 * Diátaxis for the whole corpus
-* No prescribed structure; per-document judgement
+* No prescribed structure; per-document judgment
 
 ## Decision Outcome
 
@@ -193,8 +193,8 @@ valid `status` and a valid `kind`, that every `superseded by ADR-NNNN` resolves 
 `vision.md` cite no record, and that every `kind: requirement-driven` record cites at least one
 live requirement id.
 
-The `kind` field is what makes the last assertion checkable. Without it the rule is a judgement
-call, and a judgement call is not a gate.
+The `kind` field is what makes the last assertion checkable. Without it the rule is a judgment
+call, and a judgment call is not a gate.
 
 That check is `scripts/check_decisions.py`, run as `uv run task check-decisions` and as CI gate 6.
 It additionally asserts that the mandatory sections above are present and that `Pros and Cons of the
@@ -236,7 +236,7 @@ containing "and" is a signal for review, not a failure condition.
   status.
 * Bad, because it has no concept of a document whose lifecycle differs from the rest.
 
-### No prescribed structure; per-document judgement
+### No prescribed structure; per-document judgment
 
 * Good, because it costs nothing to adopt and never blocks anyone.
 * Bad, because the question then gets re-answered by whoever writes the next document, differently

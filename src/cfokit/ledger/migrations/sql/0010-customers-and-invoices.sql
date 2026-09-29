@@ -117,7 +117,7 @@ CREATE TABLE invoice_series (
 -- and both the original and the correction stay visible.
 --
 -- Enforced here rather than in the service layer for the same reason as the ledger's own
--- append-only rules: the guarantee is the product, and a rule only the application honours is
+-- append-only rules: the guarantee is the product, and a rule only the application honors is
 -- a rule the next bulk-import script will not (ADR-0007).
 -- ---------------------------------------------------------------------------
 CREATE FUNCTION invoice_append_only() RETURNS trigger

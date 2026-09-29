@@ -99,7 +99,7 @@ Keep the `client_id` and `client_secret` it returns. Then in
 `44196` is the callback port the client above was registered with.
 
 `mcp-remote` is pinned. Without a version, `npx` fetches the newest release on every launch,
-and a release that changes behaviour changes your setup without anything in this repository
+and a release that changes behavior changes your setup without anything in this repository
 changing.
 
 `NODE_EXTRA_CA_CERTS` takes the absolute path to the CA from step 1. `mcp-remote` runs on Node,
@@ -187,7 +187,7 @@ balance_sheet: 10 agree, 1 diverge (theirs cash, ours accrual)
 ```
 
 **Those two divergences are the same figure**, 25,469.00, appearing as the receivable and as the
-income not yet recognised against it. The journal is accrual and the reports were run on a cash
+income not yet recognized against it. The journal is accrual and the reports were run on a cash
 basis, so they differ by exactly what is unsettled — ADR-0037 predicts it. To compare like with
 like, set QuickBooks' accounting method to Accrual and re-export.
 
@@ -223,7 +223,7 @@ docker compose up -d --build mcp ledger
 **Three statements, one divergence, appearing twice.** On a real set of books the trial balance
 agreed on 25 of 27 accounts, the profit and loss on 44 of 45, and the balance sheet on 10 of 11
 — and every disagreement was the same figure: receivables outstanding, once as the receivable
-and once as the revenue not yet recognised against it.
+and once as the revenue not yet recognized against it.
 
 That is the difference between an accrual ledger and cash-basis statements, which ADR-0037
 predicts. `expect_obligation_accounts_to_differ` says so before you look. **The prediction is

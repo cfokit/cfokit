@@ -33,7 +33,7 @@ Licence and capability are also not stable inputs. Zitadel moved from Apache 2.0
 v3, putting network copyleft in scope for a candidate that had been eliminated on other grounds
 anyway. Ory markets an Enterprise License for self-hosted production alongside its Apache 2.0
 build and provides no security SLA on the open-source version. The registration mechanism is
-mid-transition too: MCP 2026-07-28 deprecated RFC 7591 Dynamic Client Registration in favour of
+mid-transition too: MCP 2026-07-28 deprecated RFC 7591 Dynamic Client Registration in favor of
 Client ID Metadata Documents, retaining DCR for at least twelve months.
 
 So the conclusion to draw is not only which issuer to pick. It is that **the issuer's licence
@@ -104,13 +104,13 @@ Requiring RFC 8707 resource indicators specifically would be a requirement no is
 Hydra ignores `resource` and returns `aud: []`; Keycloak ignores it and returns its own default;
 Microsoft Entra ID **rejects** the parameter at the authorization endpoint and signals the
 audience through scope instead. RFC 6749 obliges a server to ignore parameters it does not
-recognise, so ignoring it is conformant behaviour rather than a defect, and the MCP
+recognize, so ignoring it is conformant behavior rather than a defect, and the MCP
 specification's own `MUST` is under challenge for exactly this reason.
 
 Binding the audience by issuer configuration is therefore not a workaround at the security
 layer. It is the mechanism the ecosystem actually uses, it is configuration rather than code,
 and the property `NFR-06` depends on — that a token issued for somewhere else is refused — is
-identical either way. Prefer `resource` where an issuer honours it.
+identical either way. Prefer `resource` where an issuer honors it.
 
 **Audience validation is not the tenancy boundary.** It stops a token issued for another
 resource server being replayed here. What separates entities is the entity grant, validated

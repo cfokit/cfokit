@@ -17,7 +17,7 @@ because our own unit tests encode our own understanding, and therefore cannot de
 understanding is wrong. Tests written by the same person who wrote the booking logic will agree
 with it about the wrong answer.
 
-The defence against that class of bug is a differential comparison against an implementation
+The defense against that class of bug is a differential comparison against an implementation
 derived independently. [Beancount](https://beancount.github.io/) is a mature, widely used
 double-entry accounting implementation with precise, documented booking semantics, and it is the
 system CFOKit's model most closely resembles — the commodity concept and the booking-method
@@ -34,7 +34,7 @@ record would be dishonest not to say so.
 
 What the oracle pins down is **booking arithmetic and lot semantics**, and those are not Beancount
 inventions: they are correct double-entry, which any conforming implementation must agree on. That
-part is commodity, and agreeing with a known-good implementation about commodity behaviour is the
+part is commodity, and agreeing with a known-good implementation about commodity behavior is the
 point.
 
 What CFOKit does *not* take from Beancount is everything that makes it a product: multi-tenancy,

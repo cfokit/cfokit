@@ -120,7 +120,7 @@ built. Deferred is not the same as absent, and the row says which.
 | **as-at-reproduction** | — | `presented` | `internal` | RPT-11 |
 | **statement-issuance** | — | `presented` | `internal` | RPT-17 |
 | **cash-flows** | 230 | `gap` | — | RPT-04 |
-| **receivables-ageing** | 310 | `gap` | — | — |
+| **receivables-aging** | 310 | `gap` | — | — |
 | **journal-query** | — | `gap` | — | RPT-06 |
 | **consolidation** | 810 | `declined` | — | RPT-21 |
 | **budget-variance** | — | `declined` | — | RPT-20 |
@@ -128,10 +128,10 @@ built. Deferred is not the same as absent, and the row says which.
 `cash-flows` — the largest gap in band 2. `RPT-04` is `Should`/Approved and there is no
 cash-flow code at all.
 
-`receivables-ageing` — **no requirement defines it.** It was named once, in `RPT-09`'s list of
+`receivables-aging` — **no requirement defines it.** It was named once, in `RPT-09`'s list of
 reports that "are defined, tested capabilities", and nowhere else in the corpus; that sentence
 has been corrected to reference `RPT-01` to `RPT-05` instead. Outstanding obligations are
-derived (`service/receivables.py`), but an ageing report is neither built nor required, so the
+derived (`service/receivables.py`), but an aging report is neither built nor required, so the
 row cites nothing. Whoever wants one writes the requirement first.
 
 `consolidation`, `budget-variance` — `Could`/Deferred with named activation triggers. Declined
@@ -173,7 +173,7 @@ What remains unbuilt beside it is getting transactions in (`BKP-01`, `BKP-02`, `
 today the caller supplies the candidates.
 
 `materiality` is declined in `docs/product/requirements.md` in terms: it "is not used as a
-system threshold anywhere in this document, and that is deliberate… an accountant's judgement
+system threshold anywhere in this document, and that is deliberate… an accountant's judgment
 about a set of statements, not a setting the system holds, and CFOKit does not offer to make
 it."
 

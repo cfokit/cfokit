@@ -63,7 +63,7 @@ engine        pure booking logic
 - **No layer may be skipped.** An adapter reaching into `repository` has bypassed audit logging,
   entity locking, and grant validation in a single move.
 - **Adapters are siblings and must not import each other.** ADR-0009 makes both thin wrappers over
-  the service; a dependency between them would make one adapter's behaviour depend on the other's.
+  the service; a dependency between them would make one adapter's behavior depend on the other's.
 
 ### Consequences
 

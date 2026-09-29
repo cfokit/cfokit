@@ -172,7 +172,7 @@ async def test_an_account_is_named_by_its_position_in_the_chart(
 @pytest.mark.anyio
 async def test_an_index_outside_the_chart_is_refused(server: Any, entity: str) -> None:
     """A wrong index is the one thing a caller can get wrong invisibly, so it must not reach for
-    a neighbouring account."""
+    a neighboring account."""
     import_id = (await opened(server, entity))["import_id"]
 
     result = await call(

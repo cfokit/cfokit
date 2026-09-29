@@ -12,7 +12,7 @@ is the reason receivables is a module rather than a separate component.
 books; issuing assigns a number, posts the entry, and raises the obligation, in one
 transaction. That boundary is the same one `LED-07` draws between a draft transaction and a
 posted one, and it is enforced by triggers rather than by this code, because a rule only the
-application honours is a rule the next bulk-import script will not (ADR-0007).
+application honors is a rule the next bulk-import script will not (ADR-0007).
 
 **Amounts are `Decimal` and are never rounded here.** A line's total is quantity times unit
 amount at full precision; rounding happens once, at presentation (ADR-0025).

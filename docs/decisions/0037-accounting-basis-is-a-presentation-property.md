@@ -22,7 +22,7 @@ posted, or only what gets shown?** The requirements point both ways:
   with the alternate view available — which only makes sense if basis is presentation.
 - `AR-03` says *"an issued invoice is a posting rather than only a document"*, so the obligation
   posts at issue.
-- `AR-16` says a cash-basis entity *"recognises the revenue on settlement rather than on issue"*,
+- `AR-16` says a cash-basis entity *"recognizes the revenue on settlement rather than on issue"*,
   which reads as an instruction about what to post.
 
 Those produce **materially different ledgers from identical inputs**. Under one, an issued invoice
@@ -58,7 +58,7 @@ bound nothing. This record settles it.
 ## Decision Outcome
 
 Chosen option: "Record obligation and settlement as linked postings; derive basis at presentation",
-because `LED-14` forbids a basis change from rewriting history, and no posting-rule answer can honour
+because `LED-14` forbids a basis change from rewriting history, and no posting-rule answer can honor
 that.
 
 ### 1. The ledger is intrinsically accrual
@@ -75,7 +75,7 @@ when the basis changes — which is what `LED-14`'s "never rewrites history" req
 
 `LED-14`'s "a property of the entity rather than a per-report toggle" means the entity has exactly
 one declared basis, that every report defaults to it, and that `RPT-10` states it on the face. It
-does not mean the ledger posts differently, and `RPT-19`'s labelled alternate view is not in tension
+does not mean the ledger posts differently, and `RPT-19`'s labeled alternate view is not in tension
 with it.
 
 `AR-16` is a recognition rule about statements, not an instruction about postings.
@@ -89,7 +89,7 @@ representable.
 **This is the decision's whole substance, and it is what makes the derivation exact.** The
 alternative — inferring the relationship from account and transaction type at report time — is what
 the incumbents do, and it is observably unreliable: QuickBooks excludes invoices and credit memos
-from a cash-basis report but a journal entry, cheque, or payment touching receivables still appears,
+from a cash-basis report but a journal entry, check, or payment touching receivables still appears,
 so the standing practitioner advice is that selecting cash basis does not reliably produce a
 cash-basis presentation. That failure is structural, not a defect, and storing the link makes it
 impossible here.
@@ -100,10 +100,10 @@ impossible here.
 classes, chiefly fixed assets and long-term debt, treated accrually. Under this decision it is a
 refinement of a view rather than a new axis, which is why `LED-14` enumerates two values rather than
 three, and why deferring it costs nothing. Every small-business platform behaves this way already:
-capitalised assets and loans stay on the balance sheet under both views, so an entity that
-capitalises anything is on modified cash whether or not it says so.
+capitalized assets and loans stay on the balance sheet under both views, so an entity that
+capitalizes anything is on modified cash whether or not it says so.
 
-**Whether `RPT-10` must say so.** If an entity declares cash and holds capitalised assets with
+**Whether `RPT-10` must say so.** If an entity declares cash and holds capitalized assets with
 depreciation, the strictly correct label is *modified cash*. The condition is detectable from the
 chart of accounts. The incumbents say "Cash basis" and the market accepts it; CFOKit's positioning is
 output an accountant accepts as it stands, and a reader who sees a fixed-asset register under a
@@ -164,7 +164,7 @@ evidence available about how it behaves in production.
   maintain — and works retroactively over books that were never designed for it.
 * Good, because it is what every accountant already expects, so it surprises nobody.
 * Bad, because it is observably unreliable. Invoices and credit memos are excluded from a cash-basis
-  report; a journal entry, cheque, or payment touching receivables is not, so the conversion silently
+  report; a journal entry, check, or payment touching receivables is not, so the conversion silently
   understates or overstates. The standing advice is that cash basis is trustworthy only where the
   receivables and payables modules were used consistently, which is an instruction to the user rather
   than a property of the system.
@@ -209,7 +209,7 @@ The most literal reading of `AR-16`, and the one a reader would land on without 
 - Defined treatment in the cash view for partial payment, overpayment, write-off (`AR-18`), credit
   note (`AR-14`), and settlement in a later period.
 - A rule for a journal entry posting directly to receivables with no obligation to link to.
-- `RPT-10`'s labelling question, left open in § 4.
+- `RPT-10`'s labeling question, left open in § 4.
 - Accounts payable, when it arrives, is the symmetric case and inherits this decision rather than
   re-deciding it. ADR-0002 currently places it out of scope.
 
@@ -223,8 +223,8 @@ derivation is tested; `LED-17` for the storage obligation this builds on.
 
 ## Revisit when
 
-* An entity capitalises an asset or carries a loan, which is when modified cash stops being
-  hypothetical and `RPT-10`'s labelling question needs an answer.
+* An entity capitalizes an asset or carries a loan, which is when modified cash stops being
+  hypothetical and `RPT-10`'s labeling question needs an answer.
 * A jurisdiction requires a basis whose recognition cannot be derived from obligation and settlement
   events, which would be the first real challenge to the model rather than to the choice.
 * Accounts payable enters scope, which is the symmetric case and the first test of whether this

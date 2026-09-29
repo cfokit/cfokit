@@ -15,7 +15,7 @@ Assignment posts a candidate straight through when an approved rule resolves it.
 `BKP-09`: "an approved pattern is never asked about again". For a feed it is the whole point.
 
 An uploaded statement is different in a way the rule cannot see. Its payees, dates and amounts
-were read out of a document the organisation did not author (`BKP-20`), by a model, in the same
+were read out of a document the organization did not author (`BKP-20`), by a model, in the same
 session that is now asking to post them. `PLT-23` says that session "cannot post to the books
 without a person authorising it", and requires the constraint to be "enforced by what the agent
 is able to do, never by an instruction telling it what not to do".

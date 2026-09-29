@@ -5,7 +5,7 @@ date: 2026-08-17
 decision-makers: [Geoff]
 ---
 
-# ADR-0020: Repository directories are organised by artifact kind
+# ADR-0020: Repository directories are organized by artifact kind
 
 ## Context and Problem Statement
 
@@ -39,7 +39,7 @@ tree.
 
 ## Considered Options
 
-* Directories organised by artifact kind, with Python source under `src/`
+* Directories organized by artifact kind, with Python source under `src/`
 * One tree under `docs/`, with `docs/specs/`
 * Everything under `specs/`, including decision records
 * Keep skills inside the Python source tree
@@ -49,7 +49,7 @@ tree.
 
 ## Decision Outcome
 
-Chosen option: "Directories organised by artifact kind, with Python source under `src/`",
+Chosen option: "Directories organized by artifact kind, with Python source under `src/`",
 because artifact kind is what determines whether a thing is installable, immutable, or shipped — and
 those are the properties that break when a directory holds two kinds at once.
 
@@ -108,7 +108,7 @@ the one part of this layout that could drift silently (ADR-0001).
 
 ## Pros and Cons of the Options
 
-### Directories organised by artifact kind, with Python source under `src/`
+### Directories organized by artifact kind, with Python source under `src/`
 
 * Good, because it splits on the property that actually differs — installable, immutable, shipped.
 * Good, because the boundary that matters most — skills never importing ledger code — is enforced by
@@ -122,7 +122,7 @@ The simplest taxonomy and one place to look.
 
 * Good, because there is one place to look and nothing to learn.
 * Bad, because it houses an append-only immutable store inside the working area an agent edits
-  constantly. Immutability is a rule an agent can read and still violate while editing neighbouring
+  constantly. Immutability is a rule an agent can read and still violate while editing neighboring
   files.
 
 ### Everything under `specs/`, including decision records

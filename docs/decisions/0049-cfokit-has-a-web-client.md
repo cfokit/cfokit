@@ -172,8 +172,8 @@ The build is a stage of the one image; nothing is served from a Node process.
 | Server state | TanStack Query | Almost all state is the server's. Caching, retry and loading states without the client holding figures of its own |
 | API client | `openapi-typescript` + `openapi-fetch`, generated from `docs/contracts/openapi.json` | The contract gate 5 already guards becomes the client's types |
 | Client state | Component state and context; Zustand only if something is genuinely global | There is little that is not server state or the URL |
-| Components | Radix primitives | Accessible behaviour — focus, keyboard, ARIA — with no imposed look |
-| Styling | Tailwind, its theme generated from the design system's `tokens.json` | One source for colour, type and spacing, shared with the designs (§ 9) |
+| Components | Radix primitives | Accessible behavior — focus, keyboard, ARIA — with no imposed look |
+| Styling | Tailwind, its theme generated from the design system's `tokens.json` | One source for color, type and spacing, shared with the designs (§ 9) |
 | Tables | TanStack Table | Ledgers, trial balances and reconciliations: sorting, virtualised long lists |
 | Forms | React Hook Form + Zod | Validation declared once; schemas can come from the contract |
 | Sign-in screens | Keycloakify | The issuer's pages written as React components on the client's theme (§ 1) |
@@ -199,12 +199,12 @@ Redux solves a client-state problem this application does not have.
 
 ### 9. Layout is designed in Claude Design, against shared tokens
 
-What the pages look like is designed in Claude Design and implemented against the behaviour each
+What the pages look like is designed in Claude Design and implemented against the behavior each
 page's record states. A record names the states a page must handle; it does not draw them.
 
 Claude Design's artboards are HTML with inline styles and are a reference, not source: nothing is
 copied from them into the client. What the two share is a Design System artifact's `tokens.json`
-— colour, type, spacing, radii — which Claude Design applies to every artboard and from which the
+— color, type, spacing, radii — which Claude Design applies to every artboard and from which the
 client's Tailwind theme is generated. A change of look is a change of tokens, made once.
 
 ### Consequences
@@ -220,7 +220,7 @@ client's Tailwind theme is generated. A change of look is a change of tokens, ma
   close proxy for Safari rather than Safari itself.
 * Bad, because the repository gains a Node toolchain, an npm dependency tree shipped to browsers,
   and a build stage in the image — a second supply chain to pin, update and audit.
-* Bad, because the product now has a browser attack surface, and the CSP is its main defence.
+* Bad, because the product now has a browser attack surface, and the CSP is its main defense.
 * Bad, because every capability the web client grows is API surface first, which is slower than a
   page talking to its own endpoint — deliberately.
 * Neutral, because ADR-0012 keeps an admin console gated; this passes the gate for a web client only.
@@ -296,7 +296,7 @@ to a person), ADR-0051 (the first page).
 
 * A page is used often enough that signing in per visit is the complaint — the trigger for choosing
   between a persistently stored refresh token and a server-held session.
-* A browser changes storage or cookie behaviour in a way the CI engines do not show, found by a
+* A browser changes storage or cookie behavior in a way the CI engines do not show, found by a
   customer rather than a test.
 * React Server Components or a server-rendered framework become necessary for something this
   client needs, which would reopen the static, same-origin shape.

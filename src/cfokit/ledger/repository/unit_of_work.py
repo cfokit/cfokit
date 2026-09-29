@@ -549,7 +549,7 @@ class Database:
 
         There is no entity to scope to and no per-entity lock to take. That is not a gap: the
         one act this serves — creating an entity — cannot contend on an entity, and a lock
-        keyed on one that does not exist yet would be theatre.
+        keyed on one that does not exist yet would be theater.
         """
         with connect(self._dsn) as conn, conn.transaction():
             yield UnscopedWrite(conn)

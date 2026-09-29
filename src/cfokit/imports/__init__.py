@@ -25,7 +25,7 @@ summary; the transactions themselves go from the file to the database without an
 that has to hold them all. That is an engineering constraint before it is anything else — an
 export of this size does not fit usefully in a context, and a model asked to carry it is a
 lossy pipe that adds nothing. What a model is *for* here is reading the loaded books
-afterwards, where `PLT-02` puts the runtime in the organisation's own hands.
+afterwards, where `PLT-02` puts the runtime in the organization's own hands.
 """
 
 from __future__ import annotations

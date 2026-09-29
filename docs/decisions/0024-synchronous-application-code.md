@@ -214,7 +214,7 @@ Would confine async to another process entirely.
 
 **Reversal cost. Lower than it first appears, in both directions.** psycopg 3 is dual-mode, so going
 async later is `AsyncConnection` in place of `Connection` — the same library, the same SQL, the same
-pooling story. No driver migration, no re-verification of query behaviour. That is a genuine advantage
+pooling story. No driver migration, no re-verification of query behavior. That is a genuine advantage
 of the driver choice and it means this decision is cheap to defer rather than expensive to get wrong.
 Retracting async after service signatures have become `async` is the harder direction, which is why
 the gate exists before the code does.

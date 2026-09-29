@@ -3,7 +3,7 @@
 # stale: each month it proposes the updates, and CI tests them like any other change.
 #
 # Minor and patch updates are grouped into one pull request per ecosystem. Major updates arrive
-# one at a time, because a major version is where behaviour changes and each deserves its own
+# one at a time, because a major version is where behavior changes and each deserves its own
 # review.
 #
 # An update to an existing dependency is not the decision CLAUDE.md reserves. Adding a runtime

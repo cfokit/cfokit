@@ -51,7 +51,7 @@ CREATE INDEX account_statement_account_period_idx
 -- ---------------------------------------------------------------------------
 -- One line, as printed.
 --
--- **`BKP-20`: none of this was authored by the organisation.** The payee and description are a
+-- **`BKP-20`: none of this was authored by the organization.** The payee and description are a
 -- third party's text, and a model read them out of a document. They are stored as data and
 -- never interpreted as anything else; the table they sit in is the marking, and `source_kind`
 -- on the statement says how they arrived.

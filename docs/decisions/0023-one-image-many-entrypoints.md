@@ -35,7 +35,7 @@ the entire queue-and-worker category from consideration without further argument
 * Version skew between a component and the API is a correctness problem, not an efficiency one.
 * The portability gate should exercise the artifact users actually run, and preferably only one.
 * The workload is mostly idle by assumption (ADR-0003), so paying for idle compute is a real cost.
-* Scheduling belongs to infrastructure, not to application behaviour that requires a deploy to
+* Scheduling belongs to infrastructure, not to application behavior that requires a deploy to
   change.
 
 ## Considered Options
@@ -77,7 +77,7 @@ artifact rather than several.
 
 A **scheduled** component is a job with a trigger attached — Cloud Scheduler in the cloud, and nothing
 by default locally, because a laptop deployment has no reason to poll on a timer. Scheduling is
-infrastructure, not application behaviour; the component itself only knows how to run once.
+infrastructure, not application behavior; the component itself only knows how to run once.
 
 **There are no long-running workers.** That shape requires a queue, and an event bus is a binding
 non-goal (ADR-0012). If work genuinely needs queueing, that is a record against the non-goals list,
@@ -160,7 +160,7 @@ Simpler than jobs: one deployment shape, an internal timer, no scheduler to conf
 
 * Good, because it removes a runtime shape and needs no external scheduler.
 * Bad, because it pays for idle compute on a workload that is mostly idle by assumption (ADR-0003).
-* Bad, because an internal timer makes the run schedule application behaviour that cannot be changed
+* Bad, because an internal timer makes the run schedule application behavior that cannot be changed
   without a deploy.
 
 ## More Information

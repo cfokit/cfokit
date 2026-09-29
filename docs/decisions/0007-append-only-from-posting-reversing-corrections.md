@@ -44,11 +44,11 @@ to fix a typo. Fractional CFOs arrive with ERP expectations and want immutabilit
 
 **Two facts specific to this system push harder than either precedent.**
 
-1. **Ingestion produces uncategorised candidates.** Bank and card feeds deliver transactions
-   with no account assigned, and categorising them is the single most common operation in the
+1. **Ingestion produces uncategorized candidates.** Bank and card feeds deliver transactions
+   with no account assigned, and categorizing them is the single most common operation in the
    product (BKP-01, BKP-12). The account a posting hits is unambiguously a financial field, so
    a rule of "no `UPDATE` on financial fields" applied from arrival makes routine
-   categorisation a three-line reversing entry.
+   categorization a three-line reversing entry.
 2. **The bookkeeper is an agent, not a person.** Neither QuickBooks nor NetSuite was designed
    for a non-human making most of the entries. An agent that can edit what it already posted
    can quietly revise its own mistakes, and no audit-log retention window makes that
@@ -58,7 +58,7 @@ to fix a typo. Fractional CFOs arrive with ERP expectations and want immutabilit
 
 * The correctness claim must not be contingent on a user's configuration or on their having
   exported a log before it aged out.
-* Routine categorisation is the most frequent operation in the product and must not cost a
+* Routine categorization is the most frequent operation in the product and must not cost a
   reversing entry.
 * An agent making entries at machine volume must not be able to silently revise its own
   mistakes.
@@ -82,7 +82,7 @@ that leave both visible. `NFR-02` forbids silent alteration at any layer. Those 
 they are stated in `requirements.md`. This record decides three things they do not settle.
 
 **Enforcement is in the schema, not the service layer.** Posted rows reject `UPDATE` on financial
-fields and reject `DELETE` outright, at the database. A rule the application honours is only as
+fields and reject `DELETE` outright, at the database. A rule the application honors is only as
 good as every future write path — the bulk import, the backfill, the repair script written at 2am
 — and this is the guarantee the product is sold on. It does not get to depend on discipline.
 
@@ -132,7 +132,7 @@ outright. A `CLAUDE.md` rule alone is insufficient for a guarantee this load-bea
 
 * Good, because it matches the enterprise ledgers CFO users expect while leaving room for the
   SMB gesture of fixing something before it counts.
-* Good, because categorisation happens in draft, so the most frequent operation costs nothing.
+* Good, because categorization happens in draft, so the most frequent operation costs nothing.
 * Bad, because the boundary has to be placed correctly and enforced on every write path.
 
 ### Editable posted records with an audit log (the QuickBooks and Xero model)
@@ -140,7 +140,7 @@ outright. A `CLAUDE.md` rule alone is insufficient for a guarantee this load-bea
 The strongest alternative, and the one CFOKit's largest audience already expects.
 
 * Good, because a typo is one gesture rather than three lines.
-* Good, because categorisation needs no special state and no reversal entries clutter a register.
+* Good, because categorization needs no special state and no reversal entries clutter a register.
 * Good, because it is demonstrably sufficient for millions of businesses.
 * Bad, because **the guarantee expires.** With mutable records the audit log is the *only*
   evidence that nothing was silently changed, and QuickBooks' log is retention-limited with
@@ -164,10 +164,10 @@ The strongest alternative, and the one CFOKit's largest audience already expects
 
 * Good, because it is the simplest possible rule: one state, no boundary to place wrongly, no
   possibility of a write path checking the wrong side of it.
-* Bad, because categorising an incoming bank-feed transaction would require a reversing entry,
+* Bad, because categorizing an incoming bank-feed transaction would require a reversing entry,
   tripling the row count on the most frequent operation in the product and burying genuine
-  corrections in the noise of routine categorisation.
-* Bad, because there is no way to carve out categorisation as an exception — the account is a
+  corrections in the noise of routine categorization.
+* Bad, because there is no way to carve out categorization as an exception — the account is a
   financial field, so the exception would swallow the rule.
 
 ### Period close as the only boundary (Xero's lock date)
@@ -186,13 +186,13 @@ The strongest alternative, and the one CFOKit's largest audience already expects
   accounting.
 * Bad, because a tombstoned transaction has no reversing posting, so a trial balance taken
   between the deletion and any compensating entry does not tie.
-* Bad, because it is not a recognised accounting correction: an auditor sees an entry that
+* Bad, because it is not a recognized accounting correction: an auditor sees an entry that
   vanished rather than a documented reversal, which is the appearance the professional standard
   exists to avoid.
 
 ### Event sourcing with rebuilt projections
 
-* Good, because it maximises fidelity and would make historical report reproduction natural.
+* Good, because it maximizes fidelity and would make historical report reproduction natural.
 * Bad, because it is redundant. In a double-entry system the postings **are** the event log;
   layering a separate event stream over an already append-only ledger duplicates it.
 * Bad, because rebuilding projections pulls toward materialised balances, whereas balances are
@@ -204,7 +204,7 @@ Genuinely tempting, because it matches the audience split exactly.
 
 * Good, because each user gets the posture they expect.
 * Bad, because it makes the correctness story conditional. Every downstream guarantee —
-  reproducible statements, audit defence, "the agent cannot rewrite your books" — would have to
+  reproducible statements, audit defense, "the agent cannot rewrite your books" — would have to
   be qualified by which mode an entity is in, and support answers would begin with "it depends".
 * Bad, because the draft state already gives founders the latitude they actually need.
 

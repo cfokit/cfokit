@@ -95,7 +95,7 @@ def test_a_write_for_another_entity_is_refused(
     """`NFR-04` allows zero cross-entity writes, not merely zero cross-entity reads.
 
     The policies carry no explicit `WITH CHECK`, so Postgres uses `USING` for both. That is
-    the behaviour relied on here, asserted rather than assumed.
+    the behavior relied on here, asserted rather than assumed.
     """
     first, second = two_entities
     scoped(app_conn, first)

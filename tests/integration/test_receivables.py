@@ -4,7 +4,7 @@ Everything up to the point of no return. Issuing — which assigns a number, pos
 raises the obligation in one transaction — is a separate act and is not built yet.
 
 **The append-only trigger is tested directly as well as through the service.** ADR-0007 puts
-the guarantee in the database because a rule only the application honours is a rule the next
+the guarantee in the database because a rule only the application honors is a rule the next
 bulk-import script will not, so a test that only drove the service would prove the application
 polite rather than the books safe.
 """

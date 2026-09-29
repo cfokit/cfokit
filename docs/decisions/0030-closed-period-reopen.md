@@ -137,7 +137,7 @@ to surface rather than a state to tolerate, and it needs a check.
 ### Hard-locked close, with a recorded reopen as a human-only capability
 
 * Good, because the control is a capability an agent does not hold, which no amount of agent
-  behaviour can defeat.
+  behavior can defeat.
 * Good, because it matches what NetSuite and Intacct settled on, so it will not surprise an
   accountant or an examiner.
 * Bad, because it costs the operator a confirmation on every late entry into a closed period.
@@ -188,7 +188,7 @@ capability.
 - Reopening scope is settled in ADR-0027: a reopen touches one period, and a year-end close that a
   later posting makes stale is reversed and re-run.
 
-**Reversal cost. Low.** These are service-layer behaviour and a grant-model entry. Unlike the two-date
+**Reversal cost. Low.** These are service-layer behavior and a grant-model entry. Unlike the two-date
 model in ADR-0013, nothing here is baked into the schema's history.
 
 Related: [ADR-0013](0013-two-dates-bitemporality.md) makes the crossing visible; this record decides

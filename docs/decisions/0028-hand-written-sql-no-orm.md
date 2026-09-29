@@ -34,7 +34,7 @@ behalf.
   advisory locking (ADR-0011) both require.
 * Reporting is aggregation over postings across arbitrary date ranges, which is SQL regardless of
   what sits above it.
-* Whatever is chosen must not quietly become a second definition of behaviour.
+* Whatever is chosen must not quietly become a second definition of behavior.
 
 ## Considered Options
 

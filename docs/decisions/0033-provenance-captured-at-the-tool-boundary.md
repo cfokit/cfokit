@@ -63,7 +63,7 @@ This record decides the mechanism, which holds whatever the answer there is.
 
 Chosen option: "Capture at the tool boundary", because the API *is* the tool surface, so what the
 server observes needs no cooperation from the model — and everything the server cannot observe is
-labelled as an assertion rather than presented as fact.
+labeled as an assertion rather than presented as fact.
 
 ### 1. Three classes of provenance, distinguished in the schema
 
@@ -111,11 +111,11 @@ a model is.
 
 Collapsing `rule` into "non-human" discards the distinction that most reduces examination cost. A
 rule-assigned coding is deterministic and re-derivable — a conventional automated control an auditor
-tests cheaply and once. An agent judgement is neither. `SOC1-04` already splits on exactly this line
+tests cheaply and once. An agent judgment is neither. `SOC1-04` already splits on exactly this line
 when it permits an agent to complete a transaction assigned by an approved rule while requiring human
 authorisation for anything derived from untrusted content.
 
-The rule path is the one to maximise. Making it invisible in the data removes the incentive to.
+The rule path is the one to maximize. Making it invisible in the data removes the incentive to.
 
 ### 4. Versions are verified against a registry, never accepted as free text
 
@@ -173,15 +173,15 @@ One construct, three requirements.
   mid-session deploy.
 * Good, because the open-ended set of provenance dimensions costs nothing to extend: a new dimension
   is a field on the decision record, not a migration on `posting`.
-* Good, because `actor_class` distinguishes the cheap-to-audit rule path from agent judgement, so
+* Good, because `actor_class` distinguishes the cheap-to-audit rule path from agent judgment, so
   there is an incentive to widen it.
 * Good, because hash chaining serves `SOC1-08`, `SOC1-22` and the tamper-evidence expectation at once.
 * Bad, because per-run context and tool calls are meaningful storage and a real write-path burden,
-  realised at examination time rather than in daily use. `requirements.md` already names this cost.
+  realized at examination time rather than in daily use. `requirements.md` already names this cost.
 * Bad, because registering a bundle before it can be used makes deploying a prompt change a release
   operation, which is more ceremony than editing a file and will be felt on every iteration.
 * Bad, because the asserted class is irreducibly weaker evidence than the other two, and no mechanism
-  here improves it. Labelling is the whole of the remedy.
+  here improves it. Labeling is the whole of the remedy.
 * Bad, because the verified class is weaker than observed, and a compromised runtime can still name
   another registered version of its own skill. The record says so rather than rounding it up.
 * Neutral, because the ledger gains three attribution columns and a pointer. That is a boundary
@@ -207,7 +207,7 @@ The hash chain is verified by a periodic integrity job, persisted as a durable d
 than displayed and discarded (`SOC1-10`).
 
 **Not enforced:** nothing verifies that an asserted basis is truthful, and nothing can. That is the
-reason for the labelling rule rather than a gap in it.
+reason for the labeling rule rather than a gap in it.
 
 ## Pros and Cons of the Options
 

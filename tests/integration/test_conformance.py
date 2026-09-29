@@ -65,7 +65,7 @@ def test_the_books_agree_with_the_published_trial_balance(
     """**This is `NFR-01`'s evidence.**
 
     The entries are the ones the published solution drafted; the expected balances are the ones
-    it printed. Nobody here decided what the answer should be — a practising accountant did, in
+    it printed. Nobody here decided what the answer should be — a practicing accountant did, in
     1911, answering a state examination set in 1907.
     """
     report = reconcile(database, washington_1907)

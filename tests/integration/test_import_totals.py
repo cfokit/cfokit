@@ -222,7 +222,7 @@ def test_a_basis_difference_nets_to_zero() -> None:
     a credit to income — so the difference is composed of balanced transactions.
 
     The figures are the real ones from a QuickBooks export: 25,469.00 appearing as both the
-    receivable and the income not yet recognised against it.
+    receivable and the income not yet recognized against it.
     """
     assert nets_to_zero(
         [

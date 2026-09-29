@@ -77,7 +77,7 @@ cluster-scoped and a managed provider may not grant `CREATEROLE`. Create it befo
 migrations; `0002` fails loudly if it does not exist, which is the right outcome, because a
 deployment missing the role would otherwise run with isolation silently halved.
 
-`infra/postgres/init-app-role.sh` does this for the compose stack, on first initialisation of
+`infra/postgres/init-app-role.sh` does this for the compose stack, on first initialization of
 an empty data directory.
 
 Verified rather than assumed: `tests/integration/test_entity_isolation.py` asserts the
@@ -138,7 +138,7 @@ The default meets every line as it ships. One preference it does not meet, recor
 expected failure so the marker comes off when it closes: **no issuer implements RFC 8707**.
 Keycloak ignores the `resource` parameter and returns its own configured audience, Ory Hydra
 returns none, and Microsoft Entra ID rejects the parameter outright. RFC 6749 obliges a server
-to ignore parameters it does not recognise, so this is conformant behaviour rather than a
+to ignore parameters it does not recognize, so this is conformant behavior rather than a
 defect, and ADR-0019 § 2 makes the contract line audience binding rather than any one mechanism
 for it.
 

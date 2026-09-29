@@ -96,7 +96,7 @@ licence before adding a dependency and verify it currently rather than from memo
 
 The incumbent, arrived at by default, and genuinely the best licence for maximum frictionless reuse.
 
-* Good, because it is short enough to read, universally recognised, and imposes almost nothing.
+* Good, because it is short enough to read, universally recognized, and imposes almost nothing.
 * Good, because copying a skill and adapting it is as easy as it can be.
 * Bad, because it says nothing about patents. For a product doing financial computation, that
   silence is the exposure — a contributor can supply code and later assert a patent over it, and

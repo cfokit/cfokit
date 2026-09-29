@@ -135,7 +135,7 @@ def authorise(write: EntityWrite, capability: Capability, principal: Principal) 
 
 
 def authorise_own_act(write: EntityWrite, principal: Principal) -> None:
-    """Raise unless this principal may perform an act reserved to its own judgement.
+    """Raise unless this principal may perform an act reserved to its own judgment.
 
     **Two conditions, and neither implies the other** (ADR-0042).
 

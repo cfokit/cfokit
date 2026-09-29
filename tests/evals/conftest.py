@@ -16,7 +16,7 @@ What belongs here, from ADR-0036 § 4 and the claims `skills/bookkeeper/SKILL.md
 - Did it keep books anywhere but CFOKit?
 
 **Assert on records, never on prose**, and never on the trial balance — that is a derived
-aggregate, and two materially different behaviours produce an identical one. What a turn
+aggregate, and two materially different behaviors produce an identical one. What a turn
 leaves behind is the transaction and whether it is draft or posted, the postings under it and
 the accounts they hit, any reversal link, the audit row, and the decision record of ADR-0033.
 

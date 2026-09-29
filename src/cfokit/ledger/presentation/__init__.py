@@ -4,7 +4,7 @@
 Never to an intermediate, never stored back. A rounding call in `engine`, `repository`, or
 `service` means the boundary has been misplaced." So this is its own module rather than a
 helper inside one of those — the boundary is visible in the layout, and a rounding call
-appearing in the booking path is a diff rather than a judgement.
+appearing in the booking path is a diff rather than a judgment.
 
 **A total is computed from the unrounded values and then rounded**, never by summing figures
 already rounded. `RPT-12`'s acceptance follows from that and is deliberate: "A column of
@@ -520,7 +520,7 @@ def _exact(row: AccountBalance | None) -> Decimal:
 # Its acceptance is deliberately small: "The operator compares two figures per account and
 # either agrees the import or rejects it." So this reports two figures and a difference, and
 # says nothing about what a difference *means*. A comparison detects difference; it cannot say
-# which side is wrong (ADR-0010), and deciding that in the tool would take a judgement that
+# which side is wrong (ADR-0010), and deciding that in the tool would take a judgment that
 # belongs to a person.
 #
 # **It lives here, not in `service`, because it compares figures a reader sees.** Where a

@@ -12,8 +12,8 @@ decision-makers: [Geoff]
 ## Context and Problem Statement
 
 Writes arrive from agents over HTTP, across networks that fail in the ambiguous direction: the caller
-does not learn whether a request that timed out was applied. The correct client behaviour is to
-retry, and agents will retry — reliably and without judgement.
+does not learn whether a request that timed out was applied. The correct client behavior is to
+retry, and agents will retry — reliably and without judgment.
 
 In an append-only ledger a duplicated write cannot be deleted, only reversed (ADR-0007), so a
 double-book is a permanent scar on the audit trail rather than a cleanup task. `NFR-03` obliges a
@@ -26,7 +26,7 @@ retry arriving a minute later. Neither mechanism solves the other's problem.
 ## Decision Drivers
 
 * A duplicated write is permanent under append-only semantics (ADR-0007), so prevention must not
-  depend on caller judgement.
+  depend on caller judgment.
 * A legitimately repeated transaction must remain distinguishable from a retry.
 * Both protocol surfaces must be protected, including MCP, which never passes through HTTP
   (ADR-0009).
@@ -44,7 +44,7 @@ retry arriving a minute later. Neither mechanism solves the other's problem.
 
 Chosen option: "Mandatory idempotency keys, enforced in the service layer", because the write that
 omits a key is the write that double-books, and making the key mandatory moves the decision from
-runtime judgement to schema requirement.
+runtime judgment to schema requirement.
 
 > Every write carries an idempotency key. A write without one is rejected. A repeated key returns the
 > original result rather than applying the operation again.
@@ -89,7 +89,7 @@ the first production deployment rather than before the first release.
 * Good, because there is less friction, and most operations are not obviously dangerous to repeat.
 * Bad, because the one write that omits the key is the one that double-books, and the caller who omits
   it is the caller who did not think about failure. Making it mandatory moves the decision from
-  runtime judgement to schema requirement.
+  runtime judgment to schema requirement.
 
 ### Deduplicating by content hash instead of an explicit key
 

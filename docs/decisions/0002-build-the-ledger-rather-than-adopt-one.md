@@ -40,7 +40,7 @@ tension is real and has to be resolved rather than stepped around.
 **The resolution is that the service being sold is accountability, and accountability is a property
 of the ledger's design.** The ledger is not valuable as software; it is valuable as the substrate of
 the thing being sold. That is precisely what distinguishes it from an OAuth issuer: nobody buys
-CFOKit for its token validation, and an issuer's internal behaviour is invisible to the value
+CFOKit for its token validation, and an issuer's internal behavior is invisible to the value
 proposition. A ledger that can silently lose history is not a quality problem in a component — it is
 the product failing at the thing it charges for.
 
@@ -65,20 +65,20 @@ deferrals already recorded, the ledger is:
 | Audit log, idempotency keys, entity locking | Manufacturing, CRM, HR, projects |
 | Cash basis now, accrual representable (LED-14, LED-17) | Anything on the ADR-0012 non-goals list |
 | Trial balance, P&L, balance sheet, journal queries | Purchase orders, quotes, estimates |
-| Deterministic categorisation rules (BKP-06, BKP-08) | Accounts payable — until a requirement exists |
+| Deterministic categorization rules (BKP-06, BKP-08) | Accounts payable — until a requirement exists |
 | Advisory period close | |
 | **Invoicing and accounts receivable (AR-01–AR-19)** | |
 
 **Invoicing and AR are the largest single item here, and they shape the rest.** Invoicing brings
 customers as first-class records, invoices as documents with line items, receipt of payment,
-**application of a payment to one or more invoices**, and ageing. Payment application is the
+**application of a payment to one or more invoices**, and aging. Payment application is the
 genuinely fiddly part: partial payments, overpayments, and write-offs are each ordinary and each has
 to be right.
 
 It also **pulls accrual much closer than LED-14 anticipated**. An invoice raised is an obligation and
 a payment received is a settlement, so recording both — which invoicing requires regardless — is
 exactly the dual-event model that accrual reporting needs. A cash-basis entity still invoices and
-still wants to know who owes it money; it simply recognises revenue on settlement. So accrual stops
+still wants to know who owes it money; it simply recognizes revenue on settlement. So accrual stops
 being a future data-model risk and becomes close to a reporting choice over data already present.
 [ADR-0037](0037-accounting-basis-is-a-presentation-property.md) settles that observation as a
 decision; this passage is where the reasoning first appeared, as evidence for scope rather than as a
@@ -92,7 +92,7 @@ move. The scope is large; its *uncertainty* is not.
 
 "Don't build what you can adopt" assumes the thing you would build is the risky part. Here it is the
 opposite: the ledger is the **lowest**-risk component — well specified, oracle-testable, static
-requirements — while the genuinely uncertain work is whether an agent categorises reliably enough to
+requirements — while the genuinely uncertain work is whether an agent categorizes reliably enough to
 trust, what shape the tool contract should take, and whether buyers value accountability at all.
 
 Adopting removes effort from the component carrying least risk and leaves every uncertain component
@@ -227,9 +227,9 @@ Ship in weeks on an adopted backend, validate, let revenue fund a ledger later. 
 structurally, since skills reach the ledger over HTTP and never import its code.
 
 * Good, because it reaches a demonstrable product fastest.
-* Bad, because the validation it buys is available more cheaply. **Proving an agent can categorise
+* Bad, because the validation it buys is available more cheaply. **Proving an agent can categorize
   reliably does not require a production ledger** — it requires fixtures. The uncertain hypotheses are
-  about agent behaviour and contract shape, and none are gated on production-grade booking.
+  about agent behavior and contract shape, and none are gated on production-grade booking.
 * Bad, because adopting incurs non-refundable costs: a tool contract shaped by the adopted system's
   semantics, and an accountability claim that cannot be made while the backend can delete history.
 
@@ -242,7 +242,7 @@ variants.
 * Good, because the contract keeps CFOKit's semantics from the start.
 * Bad, because the contract's guarantees would be aspirational until the real ledger existed —
   offering `post` and promising immutability over a backend that deletes rows. That means either
-  documenting a gap between contract and behaviour, or selling a correctness property that is not
+  documenting a gap between contract and behavior, or selling a correctness property that is not
   enforced.
 * Bad, because for a product whose premise is accountable books this is not recoverable by fixing it
   later: the users who relied on it were already misled.
@@ -324,7 +324,7 @@ someone else's semantics and users who relied on unenforced guarantees.
 * **The scope table stops holding.** If real use demands inventory, payroll, depreciation and
   multi-currency revaluation, CFOKit is being asked to be an ERP, and adopting one becomes right rather
   than tempting.
-* **Agent validation fails.** If agents cannot categorise reliably enough to trust, the ledger was the
+* **Agent validation fails.** If agents cannot categorize reliably enough to trust, the ledger was the
   wrong thing to build and the premise needs revisiting, not the storage layer.
 
 Development effort alone is **not** a revisit trigger.

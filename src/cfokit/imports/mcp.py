@@ -90,7 +90,7 @@ def _accounts(chart: list[str]) -> tuple[SourceAccount, ...]:
     Ordered, because a posting names an account by its position here. Position rather than name
     is the whole economy of this surface, and it is also the one thing a caller can get wrong
     invisibly — so `_lines` refuses an index outside the chart rather than reaching for a
-    neighbour.
+    neighbor.
     """
     out: list[SourceAccount] = []
     for at, row in enumerate(chart):

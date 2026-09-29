@@ -148,7 +148,7 @@ def test_the_transaction_records_that_a_rule_coded_it(
     database: Database, entity: str, chart: dict[str, str], app_conn: psycopg.Connection[Any]
 ) -> None:
     """ADR-0042 § 4, which reserved this: `actor_class` describes why a posting was made,
-    and a rule-assigned coding is the class ADR-0033 § 3 wants maximised because "an auditor
+    and a rule-assigned coding is the class ADR-0033 § 3 wants maximized because "an auditor
     tests it cheaply and once"."""
     approve(
         database,
@@ -654,7 +654,7 @@ def test_a_coded_line_is_not_recoded_when_its_rule_changes(
 def test_an_uploaded_line_a_rule_resolves_is_a_complete_draft(
     database: Database, entity: str, chart: dict[str, str], app_conn: psycopg.Connection[Any]
 ) -> None:
-    """Its figures were read out of a document the organisation did not author, in the session
+    """Its figures were read out of a document the organization did not author, in the session
     now asking to post them. The rule decides where it belongs — both legs are there — and a
     person decides that it happened."""
     approve(

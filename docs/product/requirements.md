@@ -22,7 +22,7 @@ are recorded elsewhere. Identifiers are stable and are never reused.
 |---|---|---|
 | **The company** | Owns and administers its books, in every case | Books it can trust, and control over who else can reach them |
 | **Founder** | Operates; often holds the CFO seat | Correct books without spending time on them; straight answers about runway and affordability |
-| **Owner-operator** | Operates; holds the CFO seat | Categorisation as transactions arrive; answers about pay, tax, and whether a job or location makes money |
+| **Owner-operator** | Operates; holds the CFO seat | Categorization as transactions arrive; answers about pay, tax, and whether a job or location makes money |
 | **Fractional CFO** | Operates across four to eight clients; advocates | Each client arriving current, closed, and traceable, so the engagement is strategy rather than reconstruction |
 | **Controller / staff accountant** | Operates at scale | A close process and a review boundary that survive staffing changes |
 | **CPA** | Consumes output; recommends | A closed year, schedules, and supporting detail sufficient to prepare a return unaided |
@@ -88,7 +88,7 @@ Business conditions this document relies on.
 
 ## 5. Functional requirements
 
-Organised by module.
+Organized by module.
 
 ### 5.1 Ledger — `LED`
 
@@ -96,7 +96,7 @@ The double-entry record itself, and the entity settings that govern how it is ke
 
 | | Requirement | Priority | Status |
 |---|---|---|---|
-| **LED-01** | An entity defines its own chart of accounts, organised hierarchically, and can add to it over the life of the books. | Must | Approved |
+| **LED-01** | An entity defines its own chart of accounts, organized hierarchically, and can add to it over the life of the books. | Must | Approved |
 | **LED-02** | Every account has a type — asset, liability, equity, income, or expense — fixed when the account is created. The type determines which statement the account appears on and the sign convention applied to it. | Must | Approved |
 | **LED-03** | Every transaction balances. The system refuses to record one that does not, in any commodity it holds. | Must | Approved |
 | **LED-04** | Monetary amounts are recorded exactly. No representation error, no accumulated drift, no tolerance. A balance is the exact sum of its postings. | Must | Approved |
@@ -141,7 +141,7 @@ Getting an existing company's books in, from whatever the company runs today.
 |---|---|---|---|
 | **IMP-01** | Import an existing chart of accounts from the system a company already runs. | Should | Approved |
 | **IMP-02** | Import opening balances from the system a company already runs, and transaction history to the extent that system's export carries it. An import declares which of the two it delivered. | Should | Approved |
-| **IMP-03** | Import the customers and the categorisation rules the company already has, so an imported entity does not arrive with an empty receivables ledger and no rules. | Should | Approved |
+| **IMP-03** | Import the customers and the categorization rules the company already has, so an imported entity does not arrive with an empty receivables ledger and no rules. | Should | Approved |
 | **IMP-04** | Every imported record is identifiable as imported and names the system it came from. | Should | Approved |
 | **IMP-05** | An import is validated before anything is posted. The operator sees what will be created, and what will not, and can abandon it. | Should | Approved |
 | **IMP-06** | An import declares the accounting basis of the data it carries, and is refused where that conflicts with the entity's declared basis. | Should | Approved |
@@ -195,13 +195,13 @@ Getting transactions in, deciding where they belong, and agreeing that the books
 | **BKP-11** | Changing a rule affects future assignments only. Existing postings are untouched. | Must | Approved |
 | **BKP-12** | Where the rule set cannot resolve a transaction, the operator is asked. Nothing is guessed, and nothing is quietly parked in a holding account. | Must | Approved |
 | **BKP-13** | An incoming transaction can be matched to a record the books already hold — an expected payment, or a transaction entered by hand ahead of the feed — rather than creating a duplicate. | Must | Approved |
-| **BKP-14** | A movement between two of the entity's own accounts is recognised as one transfer rather than as unrelated income and expense, whether it arrives as two feed transactions or one. | Must | Approved |
+| **BKP-14** | A movement between two of the entity's own accounts is recognized as one transfer rather than as unrelated income and expense, whether it arrives as two feed transactions or one. | Must | Approved |
 | **BKP-15** | An account can be reconciled against a statement balance for a period, and the reconciliation is a durable record of the account having been agreed as of that date. A reconciliation later found to be wrong is superseded by a new one rather than edited, and both remain visible. | Must | Approved |
 | **BKP-16** | Feeds synchronise on a schedule the entity controls, with no person triggering them. | Must | Approved |
 | **BKP-17** | A document — a receipt, an invoice, a statement — can be attached to a transaction, an account, or a period, and is retained and exported with what it is attached to. | Could | Deferred — activates when an entity needs supporting documents held with its books. Not built before then |
 | **BKP-18** | A document supplies the content of a draft transaction, which is then assigned and posted like any other. | Could | Deferred — activates with BKP-17 |
 | **BKP-19** | Where a transaction was derived from something outside the books — a feed record, an uploaded statement, a document — it records what it came from, and that link survives for the life of the transaction. | Must | Approved |
-| **BKP-20** | Content the organisation did not author is marked as such when it enters the system, and the marking travels with it for as long as it is retained. It is a property of the stored record, never a judgement made when the content is read. | Must | Approved |
+| **BKP-20** | Content the organization did not author is marked as such when it enters the system, and the marking travels with it for as long as it is retained. It is a property of the stored record, never a judgment made when the content is read. | Must | Approved |
 | **BKP-21** | An item the system cannot process is retained along with the reason, and every ingest run records what it was expected to cover and what it actually delivered. Nothing that entered the system leaves it without a record of what became of it, and a source that silently delivers nothing is distinguishable from one that delivers an empty result. | Must | Approved |
 
 **Acceptance, BKP-21.** A feed that skips a period is detected against the coverage it was
@@ -237,7 +237,7 @@ Billing customers, collecting from them, and knowing who owes what.
 | **AR-13** | A deposit arriving in a transaction feed can be applied to the invoice it settles, without re-entering it by hand. | Must | Approved |
 | **AR-14** | An issued invoice is never edited. A correction is a credit note or a reversal, and both the original and the correction remain visible to the customer and in the books. | Must | Approved |
 | **AR-15** | Outstanding receivables are reportable by age, by customer, and in total. | Must | Approved |
-| **AR-16** | An entity on a cash basis still raises invoices and still tracks receivables. Its statements recognise the revenue on settlement rather than on issue. The invoice posts when it is issued either way — the basis governs what is reported, not what is recorded. | Must | Approved |
+| **AR-16** | An entity on a cash basis still raises invoices and still tracks receivables. Its statements recognize the revenue on settlement rather than on issue. The invoice posts when it is issued either way — the basis governs what is reported, not what is recorded. | Must | Approved |
 | **AR-17** | Payment reminders are sent automatically on a schedule the entity sets, and stop when the invoice is settled. A schedule can distinguish an invoice never opened from one opened and unpaid. | Should | Approved |
 | **AR-18** | An uncollectable balance can be written off, and the write-off is visible as a decision rather than as an absence. | Should | Approved |
 | **AR-19** | The system records what it actually knows about an invoice reaching its customer: that CFOKit sent it and when, where a channel is integrated; that a delivery failed, where that is detectable; and that the invoice was opened through its link, whoever delivered it. An invoice CFOKit did not send is never reported as sent. | Should | Approved |
@@ -275,7 +275,7 @@ Producing statements, and answering questions the books can support.
 | **RPT-16** | In addition to the standard reports, a user can ask a question of their own books that nobody anticipated, and get an answer drawn from what is posted. | Should | Approved |
 | **RPT-17** | A statement can be marked issued, fixing what was reported, to whom, and when. | Should | Approved |
 | **RPT-18** | Assemble the figures, schedules, and supporting detail a tax return requires, to a standard where a preparer can answer their own questions without contacting the client. CFOKit does not file. | Should | Approved |
-| **RPT-19** | Statements are produced on the accrual basis from the obligation and settlement events the ledger records, and an entity on either basis can be shown the alternate view, labelled as such. | Should | Deferred — activates when an entity must report on an accrual basis. Not built before then |
+| **RPT-19** | Statements are produced on the accrual basis from the obligation and settlement events the ledger records, and an entity on either basis can be shown the alternate view, labeled as such. | Should | Deferred — activates when an entity must report on an accrual basis. Not built before then |
 | **RPT-20** | Budgets are recorded per account and period, and any period report can be produced against budget with the variance. | Could | Deferred — activates when an entity budgets |
 | **RPT-21** | Statements are produced for a group of entities together, eliminating balances between them. | Could | Deferred — activates when one owner's entities must report as a group |
 
@@ -359,8 +359,8 @@ records about itself.
 
 | | Requirement | Priority | Status |
 |---|---|---|---|
-| **PLT-01** | The books are readable and writable by agent software the organisation chooses, rather than only by software CFOKit supplies. | Must | Approved |
-| **PLT-02** | CFOKit runs against an agent runtime the organisation operates and chooses, and needs no inference account or credential of CFOKit's own to do so. | Must | Approved |
+| **PLT-01** | The books are readable and writable by agent software the organization chooses, rather than only by software CFOKit supplies. | Must | Approved |
+| **PLT-02** | CFOKit runs against an agent runtime the organization operates and chooses, and needs no inference account or credential of CFOKit's own to do so. | Must | Approved |
 | **PLT-03** | A documented programmatic interface is available to third parties, carrying stated obligations about how and when it may change. | Should | Approved |
 | **PLT-04** | An operator managing several entities can work with each one in a dedicated conversational channel, with the product's reach limited to that channel's entity. | Should | Approved |
 | **PLT-05** | Presence in a channel confers no access. A request is permitted only where a linked CFOKit identity independently holds a role for the entity that channel is bound to. The binding is a stored decision and is never inferred from a channel's name, topic, or contents. | Should | Approved |
@@ -377,7 +377,7 @@ records about itself.
 | **PLT-10** | Suspending an entity halts: ingestion from all transaction feeds; every outbound message sent on the entity's behalf, including invoice delivery and payment reminders; every scheduled job, including period close, recurring invoices, and scheduled reporting; proactive alerting; and the configuration of any new integration. Work already in flight at the moment of suspension is cancelled rather than delivered. | Must | Approved |
 | **PLT-11** | Suspension halts no reading. Querying, reporting on demand, and export continue to work for every identity whose role permitted them before the suspension. | Must | Approved |
 | **PLT-12** | Suspension alters no data, revokes no role, and is fully reversible. On resume, transaction data covering the suspended period is backfilled, so the books carry no gap attributable to the suspension. Outbound work the suspension cancelled is not replayed: nobody receives a suspension's worth of invoices or reminders at once. | Must | Approved |
-| **PLT-13** | An explicit request to delete an entity is honoured. Deletion destroys that entity's data, is irreversible, and is confirmed to the requester once complete. Other entities are unaffected, including those the same identities can reach. | Must | Approved |
+| **PLT-13** | An explicit request to delete an entity is honored. Deletion destroys that entity's data, is irreversible, and is confirmed to the requester once complete. Other entities are unaffected, including those the same identities can reach. | Must | Approved |
 
 #### Operation, record, and evidence
 
@@ -392,7 +392,7 @@ records about itself.
 | **PLT-20** | The retention schedule is set per record class at deployment scope, applies to every entity the deployment holds, and starts from the defaults below. | Should | Approved |
 | **PLT-21** | A deployment can be moved to a later version of CFOKit in place, keeping its books, its history, and its configuration. An upgrade that cannot complete leaves the deployment on the version it started from rather than partway between two. | Must | Approved |
 | **PLT-22** | A person may ask an entity to erase what it holds about them. The request is answered per record rather than per person: a record carrying no retention obligation is erased on the request, and one carrying an obligation is retained, restricted to the purpose that compels it, and becomes a disposal candidate under PLT-19. Erasure destroys whole records and never edits one that survives — an issued invoice is immutable under AR-14 for the whole of its life, and is reached by disposal alone, never by redaction. Each retained record's period runs from the event that created the obligation, never from the request and never from the person's later activity. The requester is told what was erased, what was retained, on what ground, and until when. | Should | Approved |
-| **PLT-23** | An agent that has read content the organisation did not author (BKP-20) cannot post to the books in that session without a person authorising it. The constraint is enforced by what the agent is able to do, never by an instruction telling it what not to do. | Must | Approved |
+| **PLT-23** | An agent that has read content the organization did not author (BKP-20) cannot post to the books in that session without a person authorising it. The constraint is enforced by what the agent is able to do, never by an instruction telling it what not to do. | Must | Approved |
 
 | Record class | Default |
 |---|---|
@@ -451,17 +451,17 @@ stricter target than the global one.
 | **NFR-16** | Every figure the product states is drawn from what is posted. Where the books cannot support an answer, it says so and identifies what is missing, rather than estimating, recalling, or inferring. | Groundedness | Must | Zero stated figures without a posting behind them |
 | **NFR-17** | Every capability is present in every deployment. No build withholds one. | Parity | Must | Zero deployment-specific capabilities |
 | **NFR-18** | Controls are evidenced rather than asserted. For every control these requirements state, the system produces the record showing it operated throughout a stated period. A control that cannot be evidenced does not count as implemented. | Auditability | Must | Every stated control evidenced |
-| **NFR-19** | The product is operable by someone who runs a business rather than someone who keeps books. Where an accounting term is unavoidable it is explained in place, and no ordinary task requires knowing what a contra account is. | Usability | Should | A non-accountant completes onboarding, categorisation, and a month-end close unaided |
+| **NFR-19** | The product is operable by someone who runs a business rather than someone who keeps books. Where an accounting term is unavoidable it is explained in place, and no ordinary task requires knowing what a contra account is. | Usability | Should | A non-accountant completes onboarding, categorization, and a month-end close unaided |
 | **NFR-20** | Dates, numbers, and currency are presented in the conventions of the entity's locale, and the interface is available in languages other than English. Deferred; it activates when an entity operates outside the initial locale, and is not built before then. | Localisation | Could | Dates, numbers, and currency correct for the entity's declared locale |
 | **NFR-21** | A contributor can build the system, run its full test suite, and exercise it end to end from a clean checkout, with no credentials, no accounts, and no access anyone has to grant them. | Contributability | Must | Clean checkout to passing suite, unaided |
-| **NFR-22** | Correctness guarantees attach to what the ledger records and computes, never to a judgement an agent made. Where CFOKit does not operate the agent runtime, the model behind a coding decision is not identifiable to CFOKit and its effect on accuracy is not observable — a poor one degrades the books silently rather than visibly. The system states that limit rather than implying uniform assurance. | Correctness | Must | No assurance claimed for a component CFOKit cannot observe |
+| **NFR-22** | Correctness guarantees attach to what the ledger records and computes, never to a judgment an agent made. Where CFOKit does not operate the agent runtime, the model behind a coding decision is not identifiable to CFOKit and its effect on accuracy is not observable — a poor one degrades the books silently rather than visibly. The system states that limit rather than implying uniform assurance. | Correctness | Must | No assurance claimed for a component CFOKit cannot observe |
 | **NFR-23** | Alteration, removal, or absence of a financial record is detectable from the records themselves, rather than only by comparison against a backup or a log held elsewhere. | Integrity | Must | Any alteration, removal, or gap detectable from the records alone |
 
 **NFR-08 is not present.** Whether it was retired or lost is not recorded. The identifier is not
 reused either way, so the numbering carries a gap — the same treatment 8.11 gives its own.
 
 **Two kinds of guardrail, and only one of them is trustworthy.** NFR-16 constrains what the
-product is asked to do, and is therefore a behavioural standard an agent can fail to meet.
+product is asked to do, and is therefore a behavioral standard an agent can fail to meet.
 NFR-04 constrains what the system permits regardless of what any agent attempts, and holds
 even when the agent misbehaves or is deliberately manipulated. Anything that actually matters
 belongs in the second category. A guardrail stated only as NFR-16 is a preference, not a
@@ -558,7 +558,7 @@ from stored data alone, exactly what the approver was shown before deciding.
 conclusions are both individually explainable from what was persisted.
 
 > **Cost.** Persisting context, tool calls, and stated reasoning against every agent-touched
-> entry is meaningful storage and a real write-path burden, realised at examination time rather
+> entry is meaningful storage and a real write-path burden, realized at examination time rather
 > than in daily use.
 
 **On the word "materiality".** It is not used as a system threshold anywhere in this document, and
@@ -566,7 +566,7 @@ that is deliberate. Three separate ideas were previously sharing it. What decide
 needs a person is SOC1-04's configuration **per class of action**, not an amount. What decides
 whether a change is worth interrupting someone about is PLT-07's **alerting threshold**, which the
 entity sets. *Materiality* proper — the threshold below which a misstatement would not change a
-reader's decision — is an accountant's judgement about a set of statements, not a setting the system
+reader's decision — is an accountant's judgment about a set of statements, not a setting the system
 holds, and CFOKit does not offer to make it.
 
 ### 7.2 Ledger integrity
@@ -668,7 +668,7 @@ and is excluded in 7.11.
 
 | | Requirement | Priority | Status |
 |---|---|---|---|
-| **SOC1-34** | Skills, their prompts, and their tool definitions are versioned artifacts. Every entry an agent produces records the versions in force when it was produced. A prompt edit that changes how transactions are categorised is a change to a financial control and is treated as one. | Must | Proposed |
+| **SOC1-34** | Skills, their prompts, and their tool definitions are versioned artifacts. Every entry an agent produces records the versions in force when it was produced. A prompt edit that changes how transactions are categorized is a change to a financial control and is treated as one. | Must | Proposed |
 | **SOC1-35** | A change of model identifier or model version is recorded as a change to the control environment, with the date it took effect and the entries produced on either side of it distinguishable. | Must | Proposed |
 
 ### 7.9 Subservice organizations
@@ -682,7 +682,7 @@ Anticipated examination treatment.
 | Dependency | Effect on the accuracy of customer financial data | Anticipated treatment | Their report |
 |---|---|---|---|
 | Infrastructure and database hosting | Loss or corruption of the record itself | Carve-out — we do not operate it and cannot attest to it | Available from major providers |
-| Inference provider | Categorisation and reconciliation conclusions originate here | **Undecided.** Carve-out is conventional, but the output feeds the books directly, which is unlike ordinary infrastructure | Varies; not assured |
+| Inference provider | Categorization and reconciliation conclusions originate here | **Undecided.** Carve-out is conventional, but the output feeds the books directly, which is unlike ordinary infrastructure | Varies; not assured |
 | Transaction feed aggregator | Completeness and accuracy of what enters the books | Carve-out, with SOC1-11 control totals as our compensating control | Generally available |
 | Document capture and extraction | Accuracy of amounts read from source documents | Carve-out, with human or agent confirmation as the compensating control | Varies |
 | Email delivery | No ICFR effect — delivery is not a financial assertion | Out of SOC 1 scope entirely | n/a |
@@ -771,12 +771,12 @@ template, so we should be able to describe our controls before we are asked.
 
 | | Requirement | Priority | Status |
 |---|---|---|---|
-| **SOC2-01** | Every content source is classified as trusted or untrusted in the data model, and the classification travels with the content for as long as it is retained. It is a property of the record, not a runtime judgement. | Must | Proposed |
+| **SOC2-01** | Every content source is classified as trusted or untrusted in the data model, and the classification travels with the content for as long as it is retained. It is a property of the record, not a runtime judgment. | Must | Proposed |
 | **SOC2-02** | Untrusted content never enters an agent's instruction context undemarcated. The boundary between instruction and data is explicit and machine-checkable rather than a matter of formatting convention. | Must | Proposed |
 | **SOC2-03** | An agent turn that reads untrusted content operates with a reduced capability set, enforced at the interface. Reading an untrusted document and writing to the ledger are not simultaneously available within one turn. A prompt instructing the model to disregard embedded instructions is not a control and does not satisfy this. | Must | Proposed |
 | **SOC2-04** | Attempts to inject instructions through ingested content are detected and recorded as security events, retrievable alongside other security events. They are never silently handled. | Must | Proposed |
 | **SOC2-05** | On detection, the turn stops and the content is quarantined rather than processed further. The item becomes an exception under SOC1-28 for a person to disposition. Detection that only records is telemetry, not a control. | Must | Proposed |
-| **SOC2-06** | The maximum damage a fully successful injection can cause is stated, bounded by the human authorisation gates of SOC1-04, and demonstrable by test. The bound is a property of the capability model, never of model behaviour. | Must | Proposed |
+| **SOC2-06** | The maximum damage a fully successful injection can cause is stated, bounded by the human authorisation gates of SOC1-04, and demonstrable by test. The bound is a property of the capability model, never of model behavior. | Must | Proposed |
 | **SOC2-07** | Changing where a customer is told to send money, or the identity a customer is told they are paying, requires human authorisation in every case, at any amount, regardless of the agent's stated confidence. This covers the payment details an invoice carries and the customer record behind it. CFOKit moves no money, so this — not a payment instruction — is where revenue can be redirected, and it carries no autonomous path. | Must | Proposed |
 | **SOC2-08** | The detection approach for injection attempts is a stated, versioned artifact under SOC1-34, so that a change to it is a change to a security control. | Must | Proposed |
 
@@ -835,9 +835,9 @@ Carried by IAM-01 through IAM-21 and SOC1-24 through SOC1-27. Additional SOC 2 o
 | | Requirement | Priority | Status |
 |---|---|---|---|
 | **SOC2-24** | Security events under PLT-17 are retained for the full review period plus lookback, and alerting is defined per event class rather than left to inspection. | Must | Proposed |
-| **SOC2-27** | Agent behaviour is monitored as a security signal, not only an operational one: volume anomalies, unusual account or payee targets, repeated authorisation failures, and clustering of exceptions are detected and alertable. | Must | Proposed |
+| **SOC2-27** | Agent behavior is monitored as a security signal, not only an operational one: volume anomalies, unusual account or payee targets, repeated authorisation failures, and clustering of exceptions are detected and alertable. | Must | Proposed |
 | **SOC2-28** | The line between an agent error and a reportable security incident is defined in advance. An agent posting an incorrect but non-malicious entry is a processing exception under SOC1-28; an agent acting outside its capability set, or acting on injected instruction, is a security incident. | Must | Proposed |
-| **SOC2-29** | Behaviour under degradation is defined, including what happens when an inference or extraction provider is unavailable partway through a workflow. Partial completion never leaves the books in a state no one can account for. | Must | Proposed |
+| **SOC2-29** | Behavior under degradation is defined, including what happens when an inference or extraction provider is unavailable partway through a workflow. Partial completion never leaves the books in a state no one can account for. | Must | Proposed |
 | **SOC2-30** | An interrupted agent workflow resumes without duplicate posting, under the idempotency guarantee of SOC1-09 and NFR-03. | Must | Proposed |
 
 > Agents will post wrong entries; that is a known property, not an incident. Deciding which is
@@ -852,14 +852,14 @@ and is excluded in 8.11, on the same grounds 7.8 gives.
 ### 8.8 Availability
 
 Applies only if the Availability category is taken in 8.1. Durability, restore verification,
-degradation behaviour, and resumability are unconditional and sit in NFR-07, SOC2-29, and
+degradation behavior, and resumability are unconditional and sit in NFR-07, SOC2-29, and
 SOC2-30. What the category alone adds is a recovery commitment stated as numbers, which is an
 operating property of a deployment rather than of the software. It is excluded in 8.11.
 
 ### 8.9 Governance and control environment — CC1–CC5
 
 Satisfied outside this document. The policy set, security training, background checks, risk
-assessment process, and vendor due diligence are organisational deliverables, not properties of
+assessment process, and vendor due diligence are organizational deliverables, not properties of
 the system. The one part that *is* a system property — that security ownership is named and
 demonstrable rather than asserted — is IAM-18 and IAM-19.
 
@@ -926,7 +926,7 @@ Terms carrying a specific meaning in this document.
 | Term | Meaning |
 |---|---|
 | **Account** | A line in a chart of accounts. Always this sense, throughout. |
-| **Basis** | Whether an entity recognises revenue and expense when the obligation arises or when cash moves. A property of the entity, not a report option. |
+| **Basis** | Whether an entity recognizes revenue and expense when the obligation arises or when cash moves. A property of the entity, not a report option. |
 | **Close** | Marking a period as reviewed. A workflow milestone, distinct from the permanence a posting confers. |
 | **Commodity** | A unit an amount is denominated in. Money in a given currency today; potentially other holdings later. |
 | **Compensating control** | What stands in for segregation of duties where an entity has too few people to segregate — a reconciliation performed, an exception dispositioned, an agent-posted entry reviewed. |
@@ -937,7 +937,7 @@ Terms carrying a specific meaning in this document.
 | **Export** | Books leaving CFOKit, in one of two forms that are not interchangeable: an *interchange* export another accounting system can read, or a *complete* export carrying everything the entity holds, attribution and audit trail included. |
 | **Functional currency** | The single currency an entity's books are denominated in, declared when the entity is created. |
 | **Grant** | A role held by an identity in an entity, and the act of assigning one. A grant may lapse. |
-| **Identity** | A person, authenticated by the organisation's identity provider. |
+| **Identity** | A person, authenticated by the organization's identity provider. |
 | **Import** | Records entering CFOKit from the system a company ran before. Validated and reconciled against the source before anything posts, and identifiable as imported, with the system it came from, for the life of the record. |
 | **Invitation** | A role granted to someone who has no identity yet. It confers nothing until they authenticate, and binds to their identity when they do. |
 | **Obligation** | A commitment to receive or pay, recorded when it arises, separately from its settlement. |

@@ -5,7 +5,7 @@
 # not conformance evidence, it is a unit test that has been misfiled."
 #
 # NFR-01 wants "a source of truth CFOKit did not author". This is one: a state examination
-# question, solved by a practising accountant, published fourteen years before any of us.
+# question, solved by a practicing accountant, published fourteen years before any of us.
 
 name = "greendlinger-1911-q25"
 
@@ -64,7 +64,7 @@ method = "single-pass"
 # E. They are encoded as four accounts here because the published journal debits each
 # separately and publishes each amount; their sum is the source's single line.
 verified_against = "published column totals"
-# Account types follow 1907 practice — organisation expenses capitalised, treasury stock as a
+# Account types follow 1907 practice — organization expenses capitalized, treasury stock as a
 # debit balance — and modern practice differs on both. Neither affects this case: a trial
 # balance is grouped by sign, not by type, so the published answer is reproducible whatever
 # view a later standard would take. That is why a century-old source is usable at all, and it

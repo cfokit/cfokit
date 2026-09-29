@@ -56,7 +56,7 @@ method = "single-pass"
 # **Only `net_income` is asserted, deliberately.** The source describes interest as one
 # account "debited $480; Cr. $950" and prints both sides in the profit and loss account, so
 # its column totals of 10,730.00 are gross where a single ledger account nets to 470.00
-# income. Whether to hold one interest account or two is a modelling choice the source did
+# income. Whether to hold one interest account or two is a modeling choice the source did
 # not make, and asserting a gross total would be asserting ours rather than theirs. The net
 # profit is the same under either reading, which is why it is the figure that carries the
 # case.

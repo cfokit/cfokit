@@ -43,7 +43,7 @@ copyright. ADR-0044 holds that analysis. Its effect here is that a claim about r
 recognition could not be evidenced even if the boundary permitted one.
 
 There is no accountant on the team and no budget to engage one, so nothing in the answer may
-depend on professional judgement being available to write assertions.
+depend on professional judgment being available to write assertions.
 
 ## Decision Drivers
 
@@ -90,7 +90,7 @@ decision and does not audit it.
 Band 3 is a refusal the product already makes rather than a new one. `BKP-04` scopes accrual
 and depreciation entries to operator entry. `BKP-12` requires that an unresolvable assignment
 be asked about rather than guessed or parked. `requirements.md` disclaims materiality in terms
-— "an accountant's judgement about a set of statements, not a setting the system holds". The
+— "an accountant's judgment about a set of statements, not a setting the system holds". The
 bookkeeper skill says it outright: "You do not decide accounting policy." What this record adds
 is that the refusal is now a stated boundary with a document behind it, rather than a property
 of the implementation that could erode without anyone noticing.
@@ -123,7 +123,7 @@ that lists only strengths is an advertisement.
 requirements: every area marked `enforced` or `presented` carries at least one case, every case
 maps to at least one area, and every requirement id either cites resolves in
 `docs/product/requirements.md`. It is a static read of the fixtures, outside the integration
-tier, so it gates every commit rather than only the runs with a stack up. The behavioural half
+tier, so it gates every commit rather than only the runs with a stack up. The behavioral half
 — whether a case's figures agree with its published answer — is
 `tests/integration/test_conformance.py`.
 
@@ -135,7 +135,7 @@ unfixed conflict. The bookkeeper skill's "you do not decide accounting policy" a
 untrusted-content rule are both prose in a prompt, and hold only as far as a model follows
 them. Layer 4
 evals assert on the records a turn leaves behind — that it drafted rather than posted, asked
-rather than guessed — which is evidence about behaviour and not a guarantee of it. The vision
+rather than guessed — which is evidence about behavior and not a guarantee of it. The vision
 already grades these two kinds of guardrail against each other and says only one is
 trustworthy; this record does not upgrade the weaker one.
 
@@ -180,7 +180,7 @@ Attractive because it is the status quo, costs nothing, and cannot be wrong.
   accept and describes the product as doing controller work, so the claim is made and only the
   boundary is missing.
 * Bad, because the reader fills the gap with something larger. A buyer told nothing assumes an
-  accounting product handles accounting, including the judgement.
+  accounting product handles accounting, including the judgment.
 * Bad, because it wastes the corpus. Evidence that exists and is not published is evidence
   nobody can rely on, and the corpus is the cheapest trust asset the project has.
 
@@ -208,11 +208,11 @@ The narrowest defensible claim, and the one requiring least work.
   than a transaction. A proposal should therefore carry the draft entries the rule would
   produce, so the person approving sees what it books before it books it; approval is the act
   that posts them. That is a decision for the record that builds it, not this one, but a design
-  that lets the agent post a judgement directly contradicts this record.
-* The bookkeeper skill's description advertises categorisation, which `BKP-06` was to provide
+  that lets the agent post a judgment directly contradicts this record.
+* The bookkeeper skill's description advertises categorization, which `BKP-06` was to provide
   and which does not exist. The description is corrected alongside this record; the capability
   is not.
-* `RPT-09` names cash flows and receivables ageing as "defined, tested capabilities". Neither
+* `RPT-09` names cash flows and receivables aging as "defined, tested capabilities". Neither
   is built. The requirement is corrected rather than the map falsified to match it.
 
 **Reversal cost.** Low internally — the bands are a document and a table, and no code depends
