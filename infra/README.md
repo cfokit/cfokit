@@ -124,7 +124,7 @@ nothing answering. The issuer listens on the port it advertises, and publishes t
 **One identity, from every side.** Whatever an issuer calls itself is what it must be called by
 everyone — the application validates a token's `iss` against `AUTH_ISSUER_URL`, so an issuer
 advertising one hostname while services reach it at another rejects every token it issues. In
-the compose stack that name is `keycloak.localhost:8180`, chosen because `*.localhost` resolves to
+the compose stack that name is `keycloak.localhost:8443`, chosen because `*.localhost` resolves to
 loopback without a hosts entry (RFC 6761) and a network alias makes the same name reach the
 container from inside. A deployment reachable by more than one machine uses a public hostname.
 
@@ -150,9 +150,18 @@ visible error, which is why it ships rather than being a setup instruction.
 
 ### 4. HTTPS ingress
 
-Terminating TLS and forwarding to the container port. Same-machine access over
-`http://localhost` needs no TLS; cross-device access requires a tunnel and
-`PUBLIC_BASE_URL` set to the public hostname.
+Terminating TLS and forwarding to the container port. Cross-device access requires a tunnel
+and `PUBLIC_BASE_URL` set to the public hostname.
+
+**The issuer is always HTTPS, including on a laptop.** OAuth clients refuse to send credentials
+to a plain-HTTP token endpoint unless its host is literally `localhost`, `127.0.0.1` or `::1`.
+The services themselves may be reached over `http://localhost` on the same machine.
+
+On a deployment the ingress's certificate does this and nothing is configured. The compose stack
+has no ingress, so its `tls` step generates a local CA and the issuer's certificate into
+`.local/tls/` (git-ignored), and every process that talks to the issuer trusts that CA through
+`SSL_CERT_FILE` — a standard OpenSSL variable, not part of the configuration surface above, and
+set nowhere but `compose.yaml`.
 
 ### 5. Two runtime shapes
 

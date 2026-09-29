@@ -144,7 +144,10 @@ Easiest thing for a user to get working, and tempting for exactly that reason.
 * Data lives in a named volume. Document that `docker compose down -v` destroys it, and
   ship a backup command.
 * Cross-device access requires a tunnel and `PUBLIC_BASE_URL` set to the public hostname.
-  Same-machine access over `http://localhost` needs no TLS.
+  Same-machine access to the services over `http://localhost` needs no TLS. The issuer is the
+  exception: OAuth clients refuse a plain-HTTP token endpoint unless its host is literally
+  `localhost`, and the issuer's is `keycloak.localhost`, so the stack serves it over HTTPS
+  with a certificate from a local CA it generates (`infra/tls/`).
 
 **Reversal cost.** Low. Both files are configuration.
 
