@@ -56,7 +56,7 @@ These are decided. Each bounds what the product may promise.
 | Not in scope | Boundary |
 |---|---|
 | Acting as a CFO | CFOKit does the bookkeeper and controller work beneath the role. The role is always held by a person. |
-| A web application or admin console | CFOKit is agents and an interface, not a dashboard. Reversible only by deliberate decision, not by drift. |
+| An admin console, or a web client that duplicates the agent | The agent keeps and questions the books. The web client carries work a conversation does badly, beginning with onboarding and import (PLT-24, IMP-09), and each capability added to it is a deliberate decision, not drift. |
 | Moving money | CFOKit reads financial data and keeps books. It does not initiate payment. |
 | Filing returns | CFOKit produces the closed year and supporting detail. A preparer files. |
 | Being hosted-only | Self-hosting is a product promise, not a trial edition. |
@@ -147,6 +147,7 @@ Getting an existing company's books in, from whatever the company runs today.
 | **IMP-06** | An import declares the accounting basis of the data it carries, and is refused where that conflicts with the entity's declared basis. | Should | Approved |
 | **IMP-07** | An import carrying amounts in a currency other than the entity's functional currency is refused, on the same terms as any other foreign amount. | Should | Approved |
 | **IMP-08** | An import produces a reconciliation the operator can check against the source system — balances by account, and totals by period — so that agreement is demonstrated rather than assumed. | Should | Approved |
+| **IMP-09** | An operator can import a company's books from the web client, with no agent involved in the transfer and no figure retyped by a model or a person. | Should | Approved |
 
 **Acceptance, IMP-08.** The operator compares two figures per account and either agrees the
 import or rejects it, without exporting anything from the source system a second time.
@@ -309,7 +310,7 @@ Who may reach an entity, what they may do there, and how that is evidenced.
 | **IAM-07** | An identity that can grant roles can grant one to a person who has no identity yet. The grant is recorded as an invitation, confers nothing until they authenticate, and binds to their identity when they first do. | Must | Approved |
 | **IAM-08** | One identity holds independent roles in each entity it can reach, and holds none in the rest. An advisor working across many entities is the ordinary case, not an exception. | Must | Approved |
 | **IAM-09** | A role can be granted for a stated period, after which it lapses without anyone acting. An advisor's access ending with the engagement does not depend on someone remembering. | Should | Approved |
-| **IAM-10** | Identity is delegated to the identity provider the organisation already uses. CFOKit never issues credentials, stores passwords, or operates a login flow. | Must | Approved |
+| **IAM-10** | A person signs in themselves, in a browser, through the identity provider. Credentials never pass through an agent, a model, or CFOKit's own API. CFOKit issues no credentials and does not store or verify passwords: authentication is delegated to a proven identity provider, whose sign-in and sign-up screens a deployment may present as its own. | Must | Approved |
 | **IAM-11** | An agent skill acts on behalf of an identified person. Every action carries both the skill's own principal and that person's, and its effective authority is the intersection of the two. No shared credential, service account, or ambient authority stands in for either. | Must | Approved |
 | **IAM-12** | A person authorises a skill to act for them separately for each entity, and can revoke any one of those authorisations without affecting the others. Authorising a skill in one entity never reaches another. | Must | Approved |
 | **IAM-13** | Every grant, invitation, revocation, lapse, and role change is recorded, with who made it and when. | Must | Approved |
@@ -321,6 +322,11 @@ Who may reach an entity, what they may do there, and how that is evidenced.
 | **IAM-19** | Deployment-scoped administrative capabilities are enumerable and individually assignable — among them configuring a provider that receives customer data, setting the retention schedule, authorising a disposal batch, reviewing security events, and approving privileged access. The set grows as capabilities are added and the system can state it at any time. Each is held by a named identity at all times, and the system can say which. | Must | Approved |
 | **IAM-20** | The read paths that require no identity are enumerable, and the system can state them. Each reaches exactly one artifact and nothing else about the entity, uses a link that cannot be guessed or arrived at by enumeration, and can be revoked. A path that exposes more than one artifact, or that cannot be revoked, is not one of them. | Must | Approved |
 | **IAM-21** | An entity is held by one or more owners, and an owner holds every capability in the entity, administering included. Two are an owner's alone: granting or revoking ownership, and deleting the entity. An administrator cannot revoke an owner. Ownership cannot be granted for a stated period — it ends only when an owner revokes it, so an entity is never left unheld by the passage of time. | Must | Approved |
+| **IAM-22** | A person can create an account, sign in with a password, and reset a forgotten password, with no administrator involved. | Must | Approved |
+| **IAM-23** | A person can protect their sign-in with a second factor — an authenticator app or a security key. | Should | Approved |
+| **IAM-24** | A person can sign in with a passkey instead of a password. | Should | Approved |
+| **IAM-25** | A person can sign in with a Google account. | Should | Approved |
+| **IAM-26** | A person can sign in with a Microsoft account. | Could | Approved |
 
 **Acceptance, IAM-21.** An administrator's attempt to revoke an owner is refused, an owner may revoke another owner, and an attempt to revoke the last one is refused whichever of them makes it.
 
@@ -360,6 +366,7 @@ records about itself.
 | **PLT-05** | Presence in a channel confers no access. A request is permitted only where a linked CFOKit identity independently holds a role for the entity that channel is bound to. The binding is a stored decision and is never inferred from a channel's name, topic, or contents. | Should | Approved |
 | **PLT-06** | CFOKit sends email on an entity's behalf where the deployment supplies a mail service, and requires no particular provider. Where none is supplied, invoices and reminders remain available as documents and stable links for an operator to deliver by hand (AR-07), and CFOKit records that it did not send rather than reporting a delivery it cannot make (AR-19). | Should | Approved |
 | **PLT-07** | CFOKit reaches the people who operate an entity when something needs them — a transaction no rule resolves, a delivery that failed, a change in cash position beyond an alerting threshold the entity sets, a scheduled run that did not complete. Where they are reached is theirs to set, and any class of it can be turned off. | Must | Approved |
+| **PLT-24** | The operator can reach CFOKit through a web client, signed in as themselves through the identity provider (IAM-10). The web client and an agent act on the same books through the same published interface, with the same permissions. | Should | Approved |
 
 #### Entity settings and lifecycle
 
@@ -959,10 +966,10 @@ serving no objective does not belong here.
 | **OBJ-2** Current, and a close never waiting on us | BKP-16, LED-11, LED-12, PLT-07, PLT-14, NFR-15 |
 | **OBJ-3** Exact, and unchanged once posted | LED-03, LED-04, LED-05, LED-06, LED-07, LED-08, BKP-07, BKP-08, BKP-11, BKP-12, BKP-14, BKP-20, BKP-21, IMP-05, IMP-08, PLT-23, RPT-09, RPT-12, NFR-01, NFR-02, NFR-03, NFR-22, NFR-23 |
 | **OBJ-4** Every number explains itself | LED-08, LED-09, LED-20, BKP-10, BKP-19, IMP-04, IAM-13, PLT-16, PLT-20, RPT-08, RPT-11, NFR-02, NFR-23, SOC1-14, SOC1-15, SOC1-22, SOC1-23, SOC1-36 |
-| **OBJ-5** The recurring cost goes away | BKP-01–BKP-06, BKP-13–BKP-18, AR-01–AR-19, RPT-01–RPT-09, IMP-01–IMP-08, NFR-19, NFR-20 |
+| **OBJ-5** The recurring cost goes away | BKP-01–BKP-06, BKP-13–BKP-18, AR-01–AR-19, RPT-01–RPT-09, IMP-01–IMP-09, PLT-24, NFR-19, NFR-20 |
 | **OBJ-6** Output accepted as it stands | LED-01, LED-02, LED-14, LED-17, RPT-01–RPT-05, RPT-07, RPT-09, RPT-10, RPT-12, RPT-13, RPT-14, RPT-16, RPT-17, RPT-18, RPT-19, NFR-01, NFR-16, NFR-22 |
 | **OBJ-7** Never forced off by growing | LED-10, LED-13, LED-14, LED-15, LED-16, LED-17, LED-18, LED-19, RPT-19, RPT-20, RPT-21, IAM-08, IAM-09, PLT-04, PLT-08, NFR-09 |
-| **OBJ-8** Only authorised people reach the books | IAM-01–IAM-07, IAM-11, IAM-12, IAM-15, IAM-16, IAM-17, IAM-20, IAM-21, AR-08, PLT-05, PLT-23, NFR-04, NFR-05, NFR-06 |
+| **OBJ-8** Only authorised people reach the books | IAM-01–IAM-07, IAM-11, IAM-12, IAM-15, IAM-16, IAM-17, IAM-20, IAM-21, IAM-22–IAM-26, AR-08, PLT-05, PLT-23, NFR-04, NFR-05, NFR-06 |
 | **OBJ-9** Provable to an examiner | IAM-13, IAM-14, IAM-18, IAM-19, PLT-15–PLT-19, PLT-22, NFR-18, SOC1-01–SOC1-36, SOC2-01–SOC2-24, SOC2-27–SOC2-30 |
 | **OBJ-10** Leave with everything, at any time | EXP-01–EXP-04, PLT-09, PLT-10, PLT-11, PLT-12, PLT-13, PLT-21, NFR-07, NFR-17 |
 | **OBJ-11** Runs with no vendor relationship | BKP-03, IAM-10, PLT-01, PLT-02, PLT-03, PLT-06, NFR-10, NFR-11, NFR-14, NFR-17 |

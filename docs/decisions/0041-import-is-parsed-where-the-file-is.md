@@ -153,8 +153,7 @@ in an agent runtime is a credential sitting where a great deal can read it, in e
 convenience on an operation a company performs approximately once. A run that dies is resumed by
 signing in again, which is safe because ADR-0029's derived keys make the repeat a replay.
 
-CFOKit issues nothing. `IAM-10` says it "never issues credentials, stores passwords, or operates a
-login flow", so an endpoint minting a short-lived import token was considered and rejected outright
+CFOKit issues nothing. `IAM-10` says it "issues no credentials", so an endpoint minting a short-lived import token was considered and rejected outright
 rather than weighed.
 
 **Device flow is not universal, and that is a contract line rather than a surprise.** It joins the
@@ -163,6 +162,8 @@ RFC 8707 — which no issuer implements and which the suite records as a strict 
 PKCE (RFC 8252) is the documented fallback for an issuer without it.
 
 ### 6. A sandboxed runtime imports over MCP, and the model is the bridge
+
+**Superseded by [ADR-0051](0051-books-are-imported-through-the-web-client.md).** Sections 1–5 stand.
 
 Where the runtime cannot reach CFOKit, the same neutral shape arrives as MCP tool arguments. The
 sandbox parses the archive and hands the model a compact rendering; the model calls the tool.

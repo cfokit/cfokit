@@ -18,8 +18,10 @@ Descope — none of which can be self-hosted at all.
 
 Two requirements then decide what remains, and they are stronger than they look:
 
-- **`IAM-10`:** "Identity is delegated to the identity provider the organisation already uses.
-  CFOKit never issues credentials, stores passwords, or operates a login flow."
+- **`IAM-10`:** "A person signs in themselves, in a browser, through the identity provider.
+  Credentials never pass through an agent, a model, or CFOKit's own API. CFOKit issues no
+  credentials and does not store or verify passwords: authentication is delegated to a proven
+  identity provider, whose sign-in and sign-up screens a deployment may present as its own."
 - **`IAM-06`:** "A running deployment is usable as it stands, with nothing provisioned into it
   first."
 

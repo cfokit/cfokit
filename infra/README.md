@@ -91,8 +91,8 @@ stack is Keycloak (Apache 2.0); it is a default, not a coupling. No issuer-speci
 anywhere in the codebase. (ADR-0019)
 
 It is a *complete* identity provider — user store, login pages, admin console — because `IAM-10`
-forbids CFOKit from operating a login flow or storing a password, and `IAM-06` requires a
-running deployment to be usable as it stands. An issuer that issues tokens but holds no
+delegates authentication: CFOKit issues no credentials and does not store or verify passwords,
+and `IAM-06` requires a running deployment to be usable as it stands. An issuer that issues tokens but holds no
 identities leaves a self-hoster to supply exactly the half we may not write.
 
 Any conforming issuer must provide:
