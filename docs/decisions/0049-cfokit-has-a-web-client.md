@@ -5,7 +5,7 @@ date: 2026-09-29
 decision-makers: [Geoff]
 ---
 
-# ADR-0048: CFOKit has a web client, served by the API and signed in through the issuer
+# ADR-0049: CFOKit has a web client, served by the API and signed in through the issuer
 
 **Requirements served:** `PLT-24`, `IAM-06`, `IAM-10`, `IAM-22`, `IAM-23`, `IAM-24`, `IAM-25`,
 `IAM-26`, `NFR-19`.
@@ -16,7 +16,7 @@ The agent keeps and questions the books, and most of what an operator does happe
 conversation. Some work goes badly there, and onboarding is the clearest case. Creating an
 account, creating the company, and landing its history from the system it already runs are
 deterministic steps with one right answer each. A model adds nothing to them, and the last one it
-pays heavily for ([ADR-0049](0049-books-are-imported-through-the-web-client.md)). An operator
+pays heavily for ([ADR-0051](0051-books-are-imported-through-the-web-client.md)). An operator
 needs a place to do them signed in as themselves (`PLT-24`), before a conversation has anything
 to talk about.
 
@@ -124,7 +124,7 @@ storage or a server-held session, and that is decided when a page is used daily.
   The bundled issuer allows it, so a deployment on one machine onboards as a hosted one does.
 * **Create the entity** is the existing `create_entity` operation, which needs an authenticated
   identity and no prior role and makes the caller the owner (`IAM-05`, `IAM-06`).
-* **Import its books** is ADR-0049.
+* **Import its books** is ADR-0051.
 
 No model is involved. The conversation starts once there are books to talk about.
 
@@ -179,7 +179,7 @@ The build is a stage of the one image; nothing is served from a Node process.
 | Sign-in screens | Keycloakify | The issuer's pages written as React components on the client's theme (§ 1) |
 | Auth | `oidc-client-ts` + `react-oidc-context` | Maintained PKCE, refresh and redirect handling. Configured with an in-memory user store; only its sign-in state uses `sessionStorage`, as § 2 requires |
 | Money | `big.js` | Amounts arrive as decimal strings and are displayed without ever becoming a JavaScript `number` |
-| Parsing | A Web Worker, called through Comlink | A large export does not block the page (ADR-0049) |
+| Parsing | A Web Worker, called through Comlink | A large export does not block the page (ADR-0051) |
 | Tests | Vitest, Testing Library, MSW; Playwright end to end; axe for accessibility | Component, contract-mocked and cross-browser layers |
 | Tooling | pnpm with a pinned lockfile; ESLint with typescript-eslint; Prettier | Pinned and updated by Dependabot, like every other dependency |
 
@@ -290,7 +290,7 @@ does.
 **Reversal cost.** Low while the web client is one page; rising with every page added.
 
 Related: ADR-0012 (the gate), ADR-0019 (the issuer), ADR-0023 (one image), ADR-0042 (acts reserved
-to a person), ADR-0049 (the first page).
+to a person), ADR-0051 (the first page).
 
 ## Revisit when
 

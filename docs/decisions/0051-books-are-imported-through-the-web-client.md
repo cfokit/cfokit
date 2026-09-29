@@ -5,7 +5,7 @@ date: 2026-09-29
 decision-makers: [Geoff]
 ---
 
-# ADR-0049: Books are imported through the web client, which reads the export, not through a model
+# ADR-0051: Books are imported through the web client, which reads the export, not through a model
 
 **Requirements served:** `IMP-01`, `IMP-05`, `IMP-08`, `IMP-09`, `NFR-01`.
 
@@ -40,7 +40,7 @@ allows no tolerance for it to be carried.
 
 What § 6 rests on is that the sandbox was the only place the export could be opened before it
 reached CFOKit. A browser can open it too, and CFOKit has a web client
-([ADR-0048](0048-cfokit-has-a-web-client.md)).
+([ADR-0049](0049-cfokit-has-a-web-client.md)).
 
 **What should cross the network is the parsed books, not the archive.** The REST import endpoints
 already take the neutral `SourceBooks` shape (ADR-0041 § 1). Unzipping and parsing where the file
@@ -103,7 +103,7 @@ part of an import a model is for.
 tab, so after a reload the operator chooses the file again and the page sends every batch again.
 ADR-0029's keys are derived from the file and the row, so what already landed is a replay and only
 the remainder posts. How far an import has got is read from the server, never kept in browser
-storage (ADR-0048 § 2).
+storage (ADR-0049 § 2).
 
 The page must handle, whatever it looks like: signed out; choosing a file; a file the reader
 refuses, with the bound it crossed; the summary of what will be created and what will not
@@ -202,7 +202,7 @@ conversation. It would give this page's behaviour without the operator leaving t
 removed. Restoring § 6 means restoring two published tools and the skill's `--mcp` mode, which is
 a contract change but not a data change: books imported either way are identical.
 
-Related: ADR-0048 (the web client this is a page of), ADR-0040 (the principle this restores),
+Related: ADR-0049 (the web client this is a page of), ADR-0040 (the principle this restores),
 ADR-0041 (§ 6 superseded; §§ 1–5 unchanged), ADR-0015 (the contract change), ADR-0036 (the
 differential test).
 
