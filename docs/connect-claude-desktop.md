@@ -74,7 +74,7 @@ Keep the `client_id` and `client_secret` it returns. Then in
   "mcpServers": {
     "cfokit": {
       "command": "npx",
-      "args": ["-y", "mcp-remote", "http://localhost:8081/mcp", "44196",
+      "args": ["-y", "mcp-remote@0.14.3", "http://localhost:8081/mcp", "44196",
                "--static-oauth-client-info",
                "{\"client_id\":\"…\",\"client_secret\":\"…\"}"]
     }
@@ -83,6 +83,15 @@ Keep the `client_id` and `client_secret` it returns. Then in
 ```
 
 `44196` is the callback port the client above was registered with.
+
+`mcp-remote` is pinned. Without a version, `npx` fetches the newest release on every launch,
+and a release that changes behaviour changes your setup without anything in this repository
+changing.
+
+**Known issue: sign-in fails at the token exchange.** `mcp-remote` refuses to send credentials
+to a token endpoint that is not HTTPS, unless its host is literally `localhost`, `127.0.0.1` or
+`::1`. The issuer here is `http://keycloak.localhost:8180`, so the browser sign-in succeeds and
+the log then shows `InsecureTokenEndpointError`. The fix is serving the issuer over HTTPS.
 
 Quit Claude Desktop fully and reopen it — closing the window is not enough. On first use a
 browser window opens; sign in as the user from step 2.
