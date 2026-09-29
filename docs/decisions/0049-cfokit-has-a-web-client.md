@@ -146,8 +146,8 @@ get wrong, and the web client ships in the one image to wherever that image runs
 `Content-Security-Policy: default-src 'self'`, and no script, style or font from another origin:
 everything the client needs is built into its own bundle. Anything read from a user's file or
 from the books is rendered as text, never as markup — which React does by default, and
-`dangerouslySetInnerHTML` is forbidden by lint. Whatever ships to the browser carries no copyleft
-licence.
+`dangerouslySetInnerHTML` is forbidden by lint. Whatever code ships to the browser carries no
+copyleft license.
 
 ### 7. Every page works on desktop, tablet and phone, in current browsers
 
@@ -204,10 +204,14 @@ The build is a stage of the one image; nothing is served from a Node process.
 | Money | `big.js` | Amounts arrive as decimal strings and are displayed without ever becoming a JavaScript `number` |
 | Parsing | A Web Worker, called through Comlink | A large export does not block the page (ADR-0051) |
 | Tests | Vitest, Testing Library, MSW; Playwright end to end; axe for accessibility | Component, contract-mocked and cross-browser layers |
+| Fonts | Public Sans (interface and money) and Archivo Narrow (display), bundled from their upstream releases | The design system's faces, served from the client's own origin with their license texts beside them; the system interface font is every stack's fallback |
 | Tooling | pnpm with a pinned lockfile; ESLint with typescript-eslint; Prettier | Pinned and updated by Dependabot, like every other dependency |
 
-Licences, checked against each project's repository: everything that ships to the browser is MIT
-or Apache-2.0. axe-core is MPL-2.0 and is test tooling only; it must never enter the bundle.
+Licenses, checked against each project's repository: all code that ships to the browser is MIT
+or Apache-2.0. The two fonts are under the SIL Open Font License 1.1, the license open-source
+fonts are published under: free to bundle and redistribute with any software, on the condition
+that the license text travels with the font files. axe-core is MPL-2.0 and is test tooling only;
+it must never enter the bundle.
 
 **Money gets the rule the server already has.** A float never touches an amount (ADR-0005): the
 client never converts one to `number`, never sums one, and displays totals the API computed. A
@@ -265,8 +269,9 @@ client's Tailwind theme is generated. A change of look is a change of tokens, ma
   static file — the "no endpoints of its own" rule, observed at the surface.
 * The public client in `infra/keycloak/cfokit-realm.json` permits only the authorization code
   flow with PKCE (S256).
-* CI fails when a copyleft licence appears in the production bundle, the web client's or the
-  sign-in theme's.
+* CI fails when a copyleft license appears in the production bundle, the web client's or the
+  sign-in theme's. Font files under OFL-1.1 are the one allowance, and only with their license
+  texts beside them.
 * A lint rule forbids converting an amount to a JavaScript `number` and forbids
   `dangerouslySetInnerHTML`.
 * Not gated: that page code renders external text as text. That is review, backed by the CSP.
