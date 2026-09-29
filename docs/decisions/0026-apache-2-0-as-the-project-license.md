@@ -5,7 +5,7 @@ date: 2026-08-31
 decision-makers: [Geoff]
 ---
 
-# ADR-0026: Apache 2.0 is the project licence
+# ADR-0026: Apache 2.0 is the project license
 
 **Requirements served:** `NFR-14`, `NFR-12`.
 
@@ -13,7 +13,7 @@ decision-makers: [Geoff]
 
 `NFR-14` makes permissive licensing a `Must`: the software is permissively licensed, permanently,
 and no component imposes an obligation inconsistent with that on anyone who runs, modifies, or
-forks it. It does not name a licence, correctly — a requirement states what, not how.
+forks it. It does not name a license, correctly — a requirement states what, not how.
 
 No record ever chose one. `LICENSE` and `pyproject.toml` said MIT from the first commit, ADR-0002
 explicitly left the question open and called it not load-bearing, and ADR-0016 then relied on
@@ -29,7 +29,7 @@ what an accountable service is bought under.
 
 **Contributors are a stated goal, and there is no CLA.** ADR-0002 records that the project is
 actively recruiting them, `NFR-12` makes third-party extension a `Must`, and `CONTRIBUTING.md`
-has neither a CLA nor a DCO. So whatever the licence says about inbound contributions is what is
+has neither a CLA nor a DCO. So whatever the license says about inbound contributions is what is
 actually in force.
 
 ## Decision Drivers
@@ -49,7 +49,7 @@ actually in force.
 * MIT
 * BSD-3-Clause or ISC
 * MPL-2.0
-* A copyleft licence — GPL, AGPL, or a source-available licence such as BUSL
+* A copyleft license — GPL, AGPL, or a source-available license such as BUSL
 
 ## Decision Outcome
 
@@ -62,14 +62,14 @@ Chosen option: **Apache License 2.0.**
 
 ### Consequences
 
-* Good, because §3 grants a patent licence explicitly and terminates it for anyone who brings a
+* Good, because §3 grants a patent license explicitly and terminates it for anyone who brings a
   patent action over the software. MIT is silent on patents, and whether it carries an implied
   grant is contested and untested.
 * Good, because §5 makes contributions inbound-equals-outbound by default, so `NFR-12`'s
   contribution path needs no CLA.
 * Good, because §6 reserves the project's trade names explicitly, which matters precisely because
   the accountable service is the product.
-* Good, because it is on more enterprise pre-approved lists than any other permissive licence.
+* Good, because it is on more enterprise pre-approved lists than any other permissive license.
 * Bad, because it is 202 lines against MIT's 21, and nobody reads it.
 * Bad, because the `NOTICE` convention adds attribution ceremony to anything distributed — which
   includes skills, the one artifact genuinely shipped to a user's machine.
@@ -80,13 +80,13 @@ Chosen option: **Apache License 2.0.**
 
 `LICENSE` holds the unmodified Apache 2.0 text and `NOTICE` sits beside it. `pyproject.toml`
 declares `license = "Apache-2.0"`. The dependency rule in `CLAUDE.md` is unchanged: check a
-licence before adding a dependency and verify it currently rather than from memory.
+license before adding a dependency and verify it currently rather than from memory.
 
 ## Pros and Cons of the Options
 
 ### Apache License 2.0
 
-* Good, because it is the only permissive licence that addresses patents, contributions and
+* Good, because it is the only permissive license that addresses patents, contributions and
   trademarks explicitly rather than by silence.
 * Good, because the explicit terms cost nothing at the point of use — a consumer's obligations are
   attribution and NOTICE preservation.
@@ -94,13 +94,13 @@ licence before adding a dependency and verify it currently rather than from memo
 
 ### MIT
 
-The incumbent, arrived at by default, and genuinely the best licence for maximum frictionless reuse.
+The incumbent, arrived at by default, and genuinely the best license for maximum frictionless reuse.
 
 * Good, because it is short enough to read, universally recognized, and imposes almost nothing.
 * Good, because copying a skill and adapting it is as easy as it can be.
 * Bad, because it says nothing about patents. For a product doing financial computation, that
   silence is the exposure — a contributor can supply code and later assert a patent over it, and
-  nothing in the licence stops them.
+  nothing in the license stops them.
 * Bad, because inbound contribution terms are undefined without a CLA or DCO, neither of which
   exists here. `NFR-12` depends on that path being clear.
 * Bad, because it is silent on trade names. Trademark law still applies, so this is ambiguity
@@ -126,7 +126,7 @@ Weak copyleft, per-file, and compatible with proprietary combination.
   editable Markdown. Whether an edited `SKILL.md` triggers it is the sort of question this project
   should not force on a user.
 
-### A copyleft licence — GPL, AGPL, or BUSL
+### A copyleft license — GPL, AGPL, or BUSL
 
 Reaching for reciprocity to stop a hyperscaler hosting CFOKit in competition.
 
@@ -147,8 +147,8 @@ Reaching for reciprocity to stop a hyperscaler hosting CFOKit in competition.
 - `LICENSE` carries the unmodified Apache 2.0 text; `NOTICE` carries attribution and is preserved
   in anything distributed.
 - ADR-0016 is corrected: it asserted MIT as settled fact while rejecting Terraform. The conclusion
-  is unaffected — BUSL is not permissive under `NFR-14` whichever permissive licence we hold.
-- Source files carry no per-file licence header. Apache 2.0's appendix offers one and it is
+  is unaffected — BUSL is not permissive under `NFR-14` whichever permissive license we hold.
+- Source files carry no per-file license header. Apache 2.0's appendix offers one and it is
   declined: the repository is single-licensed and a header on every file is noise.
 - Beancount stays GPL-2.0 and CI-only (ADR-0010). Apache 2.0 is one-way incompatible with GPLv2 —
   Apache code cannot be folded into a GPLv2 work — and that direction never arises, because
@@ -164,7 +164,7 @@ relied on.
 ## Revisit when
 
 - A dependency or contribution arrives under terms Apache 2.0 cannot accept. That is a dependency
-  decision first, and only then a licence one.
+  decision first, and only then a license one.
 - Unpaid rehosting becomes a demonstrated commercial problem rather than an anticipated one. The
   answer would still not be copyleft, because `NFR-14` forbids it — it would be a requirements
   change, argued on its own terms.

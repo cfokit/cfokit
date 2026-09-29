@@ -34,7 +34,7 @@ from cfokit.ledger.errors import (
     TransactionIncomplete,
 )
 from cfokit.ledger.repository.unit_of_work import Database
-from cfokit.ledger.service.authorisation import Capability, authorise
+from cfokit.ledger.service.authorization import Capability, authorize
 from cfokit.ledger.service.principal import Principal
 
 __all__ = ["CarriedBalance", "OpenedBooks", "open_balances"]
@@ -76,7 +76,7 @@ def open_balances(
         raise TransactionIncomplete("opening the books needs at least one balance")
 
     with database.entity_write(entity_id) as write:
-        authorise(write, Capability.POST, principal)
+        authorize(write, Capability.POST, principal)
 
         equity_account = write.settings.opening_balance_account_id
         if equity_account is None:

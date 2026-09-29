@@ -4,7 +4,7 @@
 > returns the original result rather than applying the operation again."
 
 **The per-entity advisory lock is what makes this simple.** Two concurrent writes to one
-entity serialise (ADR-0011), so the interleaving that would otherwise need careful handling —
+entity serialize (ADR-0011), so the interleaving that would otherwise need careful handling —
 two callers claiming the same key at once — cannot happen. The `ON CONFLICT` below is a
 second line rather than the only one.
 """

@@ -19,7 +19,7 @@ In an append-only ledger a duplicated write cannot be deleted, only reversed (AD
 double-book is a permanent scar on the audit trail rather than a cleanup task. `NFR-03` obliges a
 retried operation to produce the same result and create no duplicate record.
 
-Serialisation is a separate problem with a separate mechanism, held in
+Serialization is a separate problem with a separate mechanism, held in
 [ADR-0011](0011-entity-advisory-lock.md). A lock orders concurrent writes; it does nothing about a
 retry arriving a minute later. Neither mechanism solves the other's problem.
 
@@ -122,7 +122,7 @@ the first production deployment rather than before the first release.
 **Reversal cost. Moderate.** Making idempotency optional after callers have relied on it being
 mandatory is a contract change on a published interface.
 
-Related: [ADR-0011](0011-entity-advisory-lock.md) solves serialisation, which this record deliberately
+Related: [ADR-0011](0011-entity-advisory-lock.md) solves serialization, which this record deliberately
 does not.
 
 ## Revisit when

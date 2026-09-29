@@ -83,7 +83,7 @@ for a structural reason that no contract, disclosure or user-entity control remo
 ### 1. The runtime is Apache 2.0, like everything else
 
 This is decided here rather than inherited. Shipping a runtime is what puts `NFR-17` in play, so the
-record that ships one has to say what its licence is.
+record that ships one has to say what its license is.
 
 **Apache 2.0** (ADR-0026). A self-hoster builds the same runtime, points it at their own deployment,
 supplies their own inference credential, and gets identical provenance capture. It is an
@@ -284,7 +284,7 @@ it distinguishable in the data.
   the only shape. It is now the default shape, and that paragraph needs revising to say so — a
   positioning change, not a record's to make.
 
-**On one decision per file.** The licence clause is kept here rather than split out because shipping a runtime is
+**On one decision per file.** The license clause is kept here rather than split out because shipping a runtime is
 what raises the question — there is nothing to license otherwise — and because flipping it would
 require amending `NFR-17` and `NFR-14`, which is a superseding record on this one either way.
 

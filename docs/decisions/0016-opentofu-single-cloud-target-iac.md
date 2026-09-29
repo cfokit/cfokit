@@ -19,12 +19,12 @@ auth issuer settings, and nothing else (ADR-0004). Given that contract, IaC for 
 particular cloud is thin glue, not a port.
 
 We also distribute IaC that users are expected to run themselves, under a permissive
-licence (`NFR-14`, settled as Apache 2.0 in ADR-0026), which makes the licence of the IaC
+license (`NFR-14`, settled as Apache 2.0 in ADR-0026), which makes the license of the IaC
 tool a product concern rather than an internal preference.
 
 ## Decision Drivers
 
-* The tool ships to users, so its licence must permit them to run it freely — the same
+* The tool ships to users, so its license must permit them to run it freely — the same
   anti-lock-in promise that motivates the self-host tier.
 * Portability lives in the configuration contract, not in the number of module sets, so
   the artifact that carries it should be the contract.
@@ -44,7 +44,7 @@ tool a product concern rather than an internal preference.
 
 Chosen option: "OpenTofu, one maintained target at a time, with a written deployment
 contract", because portability is carried by the configuration contract rather than by
-module coverage, and OpenTofu is the only option whose licence lets users run what we
+module coverage, and OpenTofu is the only option whose license lets users run what we
 ship.
 
 > We will use OpenTofu, maintain IaC for exactly one cloud target at a time plus
@@ -79,7 +79,7 @@ corrected without violating immutability. `infra/README.md` is the authoritative
   application.
 * Bad, because users on a cloud we do not target write their own IaC.
 * Neutral, because OpenTofu and Terraform configurations remain interchangeable, so the
-  licence choice costs nothing in portability of the configuration itself.
+  license choice costs nothing in portability of the configuration itself.
 
 ### Confirmation
 
@@ -97,7 +97,7 @@ plainly here rather than implied.
 ### OpenTofu, one maintained target at a time, with a written deployment contract
 
 * Good, because MPL-2.0 under the Linux Foundation, and in the CNCF — users can run what
-  we ship without a licence question.
+  we ship without a license question.
 * Good, because it ships state encryption, which Terraform gates behind its own tiering.
 * Good, because the contract degrades gracefully: an untargeted cloud has a specification
   to meet rather than nothing.
@@ -159,7 +159,7 @@ code rather than prose.
 a target is additive.
 
 Related: ADR-0004 (portability as a build gate), ADR-0017 (which target), ADR-0026
-(licence), ADR-0032 (component configuration, which extends the contract within its shape).
+(license), ADR-0032 (component configuration, which extends the contract within its shape).
 
 ## Revisit when
 
@@ -167,5 +167,5 @@ Related: ADR-0004 (portability as a build gate), ADR-0017 (which target), ADR-00
   maintain it. Add it then, not before.
 * OpenTofu diverges enough from the provider ecosystem that a needed provider is
   unavailable.
-* The BUSL grant on Terraform changes, which would remove the licence objection but not
+* The BUSL grant on Terraform changes, which would remove the license objection but not
   the single-target reasoning.

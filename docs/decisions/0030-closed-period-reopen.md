@@ -122,7 +122,7 @@ adapters.
 Period close and reopen are built: `0005-period-close.sql` holds the schema,
 `cfokit.ledger.service.periods` the write path, and `tests/integration/test_period_close.py`
 exercises both. A posting into a closed period is refused with `period_closed`, which is distinct
-from `not_authorised` so a caller is told to reopen rather than sent to ask for a capability that
+from `not_authorized` so a caller is told to reopen rather than sent to ask for a capability that
 would not help.
 
 A reopen writes an `audit_log` row carrying the actor, the period, and the stated reason; the matching
@@ -181,7 +181,7 @@ capability.
 - A reopen writes an `audit_log` row carrying the actor, the period, and the stated reason, and the
   matching re-close writes another.
 - A stable error `code` for a write refused because its period is closed (ADR-0015), distinguishing it
-  from an authorisation failure, so a skill can surface the right question.
+  from an authorization failure, so a skill can surface the right question.
 - The reopen capability is never granted to a skill principal, enforced in the grant model
   (`IAM-11`).
 - A reopen not followed by a re-close leaves the period open, which must be visible.

@@ -109,7 +109,7 @@ untouched.
 * **Ledger semantics must be enforceable in the schema** — append-only (ADR-0007), zero-sum
   (ADR-0006), `NUMERIC(28,10)` money (ADR-0005), Postgres-only (ADR-0003).
 * **Scope must stay bounded.** A general ledger, not an ERP (ADR-0012).
-* Licence is explicitly **not** a driver. See More Information.
+* License is explicitly **not** a driver. See More Information.
 
 ## Considered Options
 
@@ -126,7 +126,7 @@ untouched.
 Chosen option: **build the ledger.** It is first-party and it is the system of record. Scope is
 bounded by the table above: a general ledger, not an ERP.
 
-**Licence is deliberately left open.** See More Information — it is not a reason for this decision in
+**License is deliberately left open.** See More Information — it is not a reason for this decision in
 either direction.
 
 ### Consequences
@@ -166,7 +166,7 @@ rather than by convention: append-only (ADR-0007), the zero-sum deferred constra
 ### Adopt Bigcapital and build the agents on top
 
 The strongest version of the adopt strategy, and the one this record takes most seriously. Its
-tenancy model genuinely fits, it is not bloated, and **its licence is not an objection**.
+tenancy model genuinely fits, it is not bloated, and **its license is not an objection**.
 
 * Good, because it is genuinely headless, accounting-focused rather than an ERP, self-hostable, with
   Plaid and Stripe already integrated.
@@ -270,7 +270,7 @@ Three of these are material rather than stylistic.
 **Ledger rows are hard-deleted, and nothing reconstructs them.** `accounts_transactions` has
 `created_at` but no `updated_at`, the delete is a physical row removal, and the audit log is an
 *activity* log rather than a *change* log — it records that something happened to a subject, with
-before/after state only if a caller chose to serialise it into a nullable JSON column. It also
+before/after state only if a caller chose to serialize it into a nullable JSON column. It also
 arrived four months ago, so nothing older is covered at all. The property is stronger than "posted
 records are editable": history can be removed without trace.
 
@@ -283,16 +283,16 @@ a defect regardless of magnitude.
 no mechanism and would fall back to application-only checking — which ADR-0006 rejects explicitly.
 `GET_LOCK` has different semantics from `pg_advisory_xact_lock`, weakening ADR-0011.
 
-### On licence, which is not a reason here
+### On license, which is not a reason here
 
 Copyleft is not a factor in this decision, and this section exists so it is not raised as one.
 
-**CFOKit is hosted or self-hosted under a licence we choose, and its server-side dependencies are
+**CFOKit is hosted or self-hosted under a license we choose, and its server-side dependencies are
 resolved from an index rather than shipped by us.** GPL and LGPL trigger on distribution; only AGPL
 reaches a hosted service, by triggering on network interaction.
 
 So copyleft is a real constraint for skills and plugins, which are genuinely distributed, and not a
-constraint for the server. The licence question is left open and is not load-bearing here.
+constraint for the server. The license question is left open and is not load-bearing here.
 `CLAUDE.md` scopes the rule that way.
 
 ### Follow-on obligations
@@ -305,7 +305,7 @@ constraint for the server. The licence question is left open and is not load-bea
   the certain work.
 * The accountability properties must be enforced in the schema rather than by convention (ADR-0007),
   since they are the justification for building at all.
-* The licence decision is tracked separately and is not blocked by this record.
+* The license decision is tracked separately and is not blocked by this record.
 
 ### Reversal cost
 
@@ -320,7 +320,7 @@ someone else's semantics and users who relied on unenforced guarantees.
   before/after state, consistent money precision. That is a specific, checkable trigger, and it would
   remove the objections this record actually rests on.
 * **A permissively or copyleft-licensed, multi-tenant, headless double-entry ledger with append-only
-  semantics reaches maturity.** Licence is explicitly not the filter; ledger semantics are.
+  semantics reaches maturity.** License is explicitly not the filter; ledger semantics are.
 * **The scope table stops holding.** If real use demands inventory, payroll, depreciation and
   multi-currency revaluation, CFOKit is being asked to be an ERP, and adopting one becomes right rather
   than tempting.

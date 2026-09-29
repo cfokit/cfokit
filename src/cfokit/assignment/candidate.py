@@ -42,7 +42,7 @@ class Direction(StrEnum):
     CREDIT = "credit"
 
 
-def normalise(text: str) -> str:
+def normalize(text: str) -> str:
     """The form matching compares, and the only one it compares.
 
     NFC, case-folded, whitespace collapsed. Defined by the Unicode standard rather than by a
@@ -81,9 +81,9 @@ class Candidate:
         return Direction.DEBIT if self.amount > 0 else Direction.CREDIT
 
     @property
-    def normalised_payee(self) -> str:
-        return normalise(self.payee)
+    def normalized_payee(self) -> str:
+        return normalize(self.payee)
 
     @property
-    def normalised_description(self) -> str:
-        return normalise(self.description) if self.description else ""
+    def normalized_description(self) -> str:
+        return normalize(self.description) if self.description else ""

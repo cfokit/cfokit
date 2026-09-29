@@ -1,7 +1,7 @@
 """What a principal may do in an entity (`IAM-01`, `IAM-02`, `IAM-11`).
 
-Pure: privileges arrive as a set, so this layer needs no database and no catalogue. Which
-roles carry which privileges is data and is asserted against the catalogue in the integration
+Pure: privileges arrive as a set, so this layer needs no database and no catalog. Which
+roles carry which privileges is data and is asserted against the catalog in the integration
 suite (ADR-0036, layer 1 versus layer 3).
 """
 
@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import pytest
 
-from cfokit.ledger.errors import NotAuthorised
-from cfokit.ledger.service.authorisation import Capability, effective, require
+from cfokit.ledger.errors import NotAuthorized
+from cfokit.ledger.service.authorization import Capability, effective, require
 from cfokit.ledger.service.principal import ActorClass, Principal
 
 PERSON = Principal(id="user:ana", actor_class=ActorClass.PERSON)
@@ -57,15 +57,15 @@ def test_an_agent_acting_for_someone_with_no_roles_has_none() -> None:
 
 
 def test_require_raises_with_the_stable_code() -> None:
-    with pytest.raises(NotAuthorised) as caught:
+    with pytest.raises(NotAuthorized) as caught:
         require(Capability.POST, PERSON, READ_ONLY, frozenset())
 
-    assert caught.value.code == "not_authorised"
+    assert caught.value.code == "not_authorized"
 
 
 def test_require_names_the_capability_not_the_roles_held() -> None:
     """What a caller is missing is useful to them; the shape of someone else's access is not."""
-    with pytest.raises(NotAuthorised) as caught:
+    with pytest.raises(NotAuthorized) as caught:
         require(Capability.POST, PERSON, READ_ONLY, frozenset())
 
     assert "post" in str(caught.value)

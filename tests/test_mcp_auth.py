@@ -137,7 +137,7 @@ def test_a_client_can_discover_the_issuer_from_the_challenge(settings: Settings)
     with TestClient(_app(settings)) as client:
         metadata = client.get("/.well-known/oauth-protected-resource").json()
 
-    # Compared without a trailing slash on either side. The SDK normalises a bare origin to
+    # Compared without a trailing slash on either side. The SDK normalizes a bare origin to
     # end in one and leaves a path alone, so pinning the exact string would assert a quirk of
     # whichever issuer URL the test happened to use rather than the property a client needs.
     advertised = [server.rstrip("/") for server in metadata["authorization_servers"]]

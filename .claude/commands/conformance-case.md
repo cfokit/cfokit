@@ -18,7 +18,7 @@ transcribes it has the implementation in context.
    problem for it. Working the other way — finding a nice problem and deciding what it covers
    — produces a corpus that is thick where sources are easy and thin where risk is.
 
-2. **Vet the licence before transcribing anything.** ADR-0044: `public-domain` or `cc0`, and
+2. **Vet the license before transcribing anything.** ADR-0044: `public-domain` or `cc0`, and
    nothing else. Check the specific item, never the collection — the AICPA historical
    collection holds both public-domain and in-copyright items, and OpenStax's accounting
    titles are NC-SA where most OpenStax titles are CC BY. Record which basis applies:
@@ -29,7 +29,7 @@ transcribes it has the implementation in context.
    Good veins: pre-1931 US accountancy texts and state and AIA examination problems with
    published solutions, on archive.org and HathiTrust; US Government works, which carry no
    copyright at all. Prefer the raw OCR (`archive.org/download/<id>/<id>_djvu.txt`) over a
-   summarising fetch — a model that paraphrases a figure has destroyed the case.
+   summarizing fetch — a model that paraphrases a figure has destroyed the case.
 
 3. **Transcribe double-blind.** One pass reads the *problem statement only* and writes
    `accounts.csv` and `journal.csv`. A separate pass reads the *published solution only* and
@@ -39,7 +39,7 @@ transcribes it has the implementation in context.
 4. **Choose the answer shape honestly.** A source that prints a trial balance gives a
    `trial_balance` answer, compared account by account. A source that prints a *statement*
    gives `profit_and_loss` or `balance_sheet`, compared against the **totals it printed** —
-   because a published statement of this era summarises, and mapping its summary lines back
+   because a published statement of this era summarizes, and mapping its summary lines back
    onto account codes is a step the source never took. Assert only the figures the source
    actually states; if a total depends on how we chose to model an account, it is ours and
    not evidence.

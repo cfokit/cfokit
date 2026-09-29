@@ -78,5 +78,5 @@ accounting system, and *why is this correct?* is the substance of the review.
 
 ## Licensing
 
-CFOKit is [Apache 2.0](LICENSE). Contributions are accepted under the same licence, which
+CFOKit is [Apache 2.0](LICENSE). Contributions are accepted under the same license, which
 Apache 2.0 § 5 makes the default. There is no separate CLA to sign.

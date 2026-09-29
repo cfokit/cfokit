@@ -5,7 +5,7 @@ database transaction**, with two things established before any work:
 
 1. `cfokit.entity_id` is set for the transaction, so the row-level security policies from
    migration 0001 scope every subsequent statement (ADR-0003).
-2. `pg_advisory_xact_lock` is taken on the entity, so writes to it serialise (ADR-0011).
+2. `pg_advisory_xact_lock` is taken on the entity, so writes to it serialize (ADR-0011).
 
 Both release at commit or rollback because both are transaction-scoped. There is no unlock to
 forget and no failure path that leaks a lock.
@@ -153,7 +153,7 @@ class EntityWrite:
         )
 
     def role_definition(self, name: str) -> grants.RoleDefinition | None:
-        """The catalogue entry for a role, or None if this deployment defines no such role."""
+        """The catalog entry for a role, or None if this deployment defines no such role."""
         return grants.role_definition(self._conn, name)
 
     def role_of_grant(self, grant_id: str) -> str | None:
@@ -585,7 +585,7 @@ class Database:
         The lock is taken on `entity.lock_key` — an identity column — never on a hash of
         `entity.id`. ADR-0011 requires a "documented, collision-free scheme", and a 64-bit
         hash of a uuid is collision-*resistant* at best; a collision would not fail, it would
-        silently serialise two unrelated entities against each other.
+        silently serialize two unrelated entities against each other.
 
         Returns what the entity declared, which this query fetches anyway.
         """

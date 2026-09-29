@@ -226,7 +226,7 @@ Billing customers, collecting from them, and knowing who owes what.
 | **AR-02** | Invoices are raised against a customer, with line items. | Must | Approved |
 | **AR-03** | Every invoice line names the income account it credits, so an issued invoice is a posting rather than only a document. | Must | Approved |
 | **AR-04** | An invoice is freely editable while it is a draft and becomes permanent when it is issued. Issuing is the point of no return, as posting is for a transaction. | Must | Approved |
-| **AR-05** | Issued invoices carry numbers from a gapless sequence the entity controls. A cancelled invoice keeps its number and is visible as cancelled; a number is never reused or silently skipped. | Must | Approved |
+| **AR-05** | Issued invoices carry numbers from a gapless sequence the entity controls. A canceled invoice keeps its number and is visible as canceled; a number is never reused or silently skipped. | Must | Approved |
 | **AR-06** | An invoice carries payment terms and a due date derived from them. | Must | Approved |
 | **AR-07** | An issued invoice is available as a shareable artifact — a document and a stable link — that an operator can deliver by any means, including by hand into a messaging application CFOKit knows nothing about. | Must | Approved |
 | **AR-08** | Access to an invoice through its link is unauthenticated, deliberately: requiring a customer to hold an identity before they can see a bill is an obstacle to being paid. The link reaches that one invoice and nothing else about the entity, and is subject to IAM-20 like any other unauthenticated path. | Must | Approved |
@@ -243,7 +243,7 @@ Billing customers, collecting from them, and knowing who owes what.
 | **AR-19** | The system records what it actually knows about an invoice reaching its customer: that CFOKit sent it and when, where a channel is integrated; that a delivery failed, where that is detectable; and that the invoice was opened through its link, whoever delivered it. An invoice CFOKit did not send is never reported as sent. | Should | Approved |
 
 **Acceptance, AR-05.** The invoice series for a period has no gaps, and every number in it
-resolves to an invoice that is either live or cancelled.
+resolves to an invoice that is either live or canceled.
 
 **Acceptance, AR-17.** A reminder run that is retried, or that overlaps a previous run, does
 not send a customer the same reminder twice.
@@ -302,7 +302,7 @@ Who may reach an entity, what they may do there, and how that is evidenced.
 | | Requirement | Priority | Status |
 |---|---|---|---|
 | **IAM-01** | An identity's access to an entity is governed by the roles it holds there. A role carries a defined set of capabilities, an identity may hold more than one role in an entity and its capability is the union of them, and an identity holding no role for an entity can do nothing with it. | Must | Approved |
-| **IAM-02** | The privileges a role can carry distinguish at minimum between reading and reporting, recording and posting, administering the entity, and holding it. Which roles are defined from them is a catalogue the deployment holds, and a role is added when there is somebody to hold it. | Must | Approved |
+| **IAM-02** | The privileges a role can carry distinguish at minimum between reading and reporting, recording and posting, administering the entity, and holding it. Which roles are defined from them is a catalog the deployment holds, and a role is added when there is somebody to hold it. | Must | Approved |
 | **IAM-03** | Suspending an entity, granting or revoking another identity's access, and changing a role assignment are administrative capabilities and are available to no other role. Deleting an entity is not among them. | Must | Approved |
 | **IAM-04** | An entity always has at least one identity holding it. The last owner cannot be revoked or demoted, and because an owner holds every administrative capability, an entity always has someone able to administer it. | Must | Approved |
 | **IAM-05** | Creating an entity assigns its first owner in the same act. An entity never exists without one, and no separate step is required to make it usable. | Must | Approved |
@@ -312,14 +312,14 @@ Who may reach an entity, what they may do there, and how that is evidenced.
 | **IAM-09** | A role can be granted for a stated period, after which it lapses without anyone acting. An advisor's access ending with the engagement does not depend on someone remembering. | Should | Approved |
 | **IAM-10** | A person signs in themselves, in a browser, through the identity provider. Credentials never pass through an agent, a model, or CFOKit's own API. CFOKit issues no credentials and does not store or verify passwords: authentication is delegated to a proven identity provider, whose sign-in and sign-up screens a deployment may present as its own. | Must | Approved |
 | **IAM-11** | An agent skill acts on behalf of an identified person. Every action carries both the skill's own principal and that person's, and its effective authority is the intersection of the two. No shared credential, service account, or ambient authority stands in for either. | Must | Approved |
-| **IAM-12** | A person authorises a skill to act for them separately for each entity, and can revoke any one of those authorisations without affecting the others. Authorising a skill in one entity never reaches another. | Must | Approved |
+| **IAM-12** | A person authorizes a skill to act for them separately for each entity, and can revoke any one of those authorizations without affecting the others. Authorizing a skill in one entity never reaches another. | Must | Approved |
 | **IAM-13** | Every grant, invitation, revocation, lapse, and role change is recorded, with who made it and when. | Must | Approved |
 | **IAM-14** | The system can produce, for any date in the past, who held which role — in which entity, or at deployment scope — and who granted it. Current state is not sufficient. | Must | Approved |
 | **IAM-15** | Revoking or reducing an identity's access takes effect immediately, across every interface and every skill acting for that person, and is evidenced. | Must | Approved |
 | **IAM-16** | Where an entity has more than one identity able to post and has elected to segregate duties, the system enforces that the **person** who drafts a transaction is not the person who posts it. Two skills acting for the same person do not satisfy this: a skill's separate principal is a capability constraint, not a segregation of duties. | Should | Approved |
 | **IAM-17** | Where only one identity in an entity can post, segregation is impossible. The system determines this from the entity's own roster rather than asking, and neither offers the choice nor mentions it. What stands in segregation's place is what ordinary use already produces — reconciliations performed, exceptions dispositioned, agent-posted entries reviewed — and the system evidences those as the controls in force. The question arises only when a second identity able to post is added. | Should | Approved |
 | **IAM-18** | Roles exist at two scopes, entity and deployment, and the two are independent. Holding an administrative role in an entity confers nothing at deployment scope, and holding a deployment-scoped role confers no role in any entity. | Must | Approved |
-| **IAM-19** | Deployment-scoped administrative capabilities are enumerable and individually assignable — among them configuring a provider that receives customer data, setting the retention schedule, authorising a disposal batch, reviewing security events, and approving privileged access. The set grows as capabilities are added and the system can state it at any time. Each is held by a named identity at all times, and the system can say which. | Must | Approved |
+| **IAM-19** | Deployment-scoped administrative capabilities are enumerable and individually assignable — among them configuring a provider that receives customer data, setting the retention schedule, authorizing a disposal batch, reviewing security events, and approving privileged access. The set grows as capabilities are added and the system can state it at any time. Each is held by a named identity at all times, and the system can say which. | Must | Approved |
 | **IAM-20** | The read paths that require no identity are enumerable, and the system can state them. Each reaches exactly one artifact and nothing else about the entity, uses a link that cannot be guessed or arrived at by enumeration, and can be revoked. A path that exposes more than one artifact, or that cannot be revoked, is not one of them. | Must | Approved |
 | **IAM-21** | An entity is held by one or more owners, and an owner holds every capability in the entity, administering included. Two are an owner's alone: granting or revoking ownership, and deleting the entity. An administrator cannot revoke an owner. Ownership cannot be granted for a stated period — it ends only when an owner revokes it, so an entity is never left unheld by the passage of time. | Must | Approved |
 | **IAM-22** | A person can create an account, sign in with a password, and reset a forgotten password, with no administrator involved. | Must | Approved |
@@ -374,9 +374,9 @@ records about itself.
 |---|---|---|---|
 | **PLT-08** | An entity declares its time zone when it is created. Period boundaries, fiscal year ends, transaction dates, and due dates are determined in it, whatever time zone the deployment or the operator happens to be in. | Must | Approved |
 | **PLT-09** | An entity is in exactly one of three states — active, suspended, or deleted — and every transition between them is recorded like any other change of state. | Must | Approved |
-| **PLT-10** | Suspending an entity halts: ingestion from all transaction feeds; every outbound message sent on the entity's behalf, including invoice delivery and payment reminders; every scheduled job, including period close, recurring invoices, and scheduled reporting; proactive alerting; and the configuration of any new integration. Work already in flight at the moment of suspension is cancelled rather than delivered. | Must | Approved |
+| **PLT-10** | Suspending an entity halts: ingestion from all transaction feeds; every outbound message sent on the entity's behalf, including invoice delivery and payment reminders; every scheduled job, including period close, recurring invoices, and scheduled reporting; proactive alerting; and the configuration of any new integration. Work already in flight at the moment of suspension is canceled rather than delivered. | Must | Approved |
 | **PLT-11** | Suspension halts no reading. Querying, reporting on demand, and export continue to work for every identity whose role permitted them before the suspension. | Must | Approved |
-| **PLT-12** | Suspension alters no data, revokes no role, and is fully reversible. On resume, transaction data covering the suspended period is backfilled, so the books carry no gap attributable to the suspension. Outbound work the suspension cancelled is not replayed: nobody receives a suspension's worth of invoices or reminders at once. | Must | Approved |
+| **PLT-12** | Suspension alters no data, revokes no role, and is fully reversible. On resume, transaction data covering the suspended period is backfilled, so the books carry no gap attributable to the suspension. Outbound work the suspension canceled is not replayed: nobody receives a suspension's worth of invoices or reminders at once. | Must | Approved |
 | **PLT-13** | An explicit request to delete an entity is honored. Deletion destroys that entity's data, is irreversible, and is confirmed to the requester once complete. Other entities are unaffected, including those the same identities can reach. | Must | Approved |
 
 #### Operation, record, and evidence
@@ -386,13 +386,13 @@ records about itself.
 | **PLT-14** | Work that must happen on a schedule rather than in response to a request runs on a timer the entity controls. A missed window is recoverable rather than skipped in silence, and every run is attributable in the same way a person's action is. | Must | Approved |
 | **PLT-15** | Every change to configuration that affects what the system does — feeds, schedules, reminder cadences, thresholds, display scale, retention — is recorded with what changed, who changed it, and when, and the prior value remains retrievable. | Must | Approved |
 | **PLT-16** | An entity can retrieve a complete record of every change made to its books — what changed, who changed it, and when. | Must | Approved |
-| **PLT-17** | Security-relevant events — authentication, refused authorisation, role change, export, and deletion — are recorded and retrievable independently of the books they concern. | Must | Approved |
+| **PLT-17** | Security-relevant events — authentication, refused authorization, role change, export, and deletion — are recorded and retrievable independently of the books they concern. | Must | Approved |
 | **PLT-18** | For any past period, the system produces the evidence an external examiner requires: who held access, what changed and on whose authority, what the system did unattended, and what was refused. Evidence covers a period of operation rather than a moment. | Must | Approved |
-| **PLT-19** | Records are retained by class rather than under a single period, and disposal is never automatic: candidates are listed, legal hold is evaluated at the time of disposal and overrides the schedule, a named person authorises each batch, and a permanent record captures what was destroyed, when, by whom, and under what authority. | Should | Approved |
+| **PLT-19** | Records are retained by class rather than under a single period, and disposal is never automatic: candidates are listed, legal hold is evaluated at the time of disposal and overrides the schedule, a named person authorizes each batch, and a permanent record captures what was destroyed, when, by whom, and under what authority. | Should | Approved |
 | **PLT-20** | The retention schedule is set per record class at deployment scope, applies to every entity the deployment holds, and starts from the defaults below. | Should | Approved |
 | **PLT-21** | A deployment can be moved to a later version of CFOKit in place, keeping its books, its history, and its configuration. An upgrade that cannot complete leaves the deployment on the version it started from rather than partway between two. | Must | Approved |
 | **PLT-22** | A person may ask an entity to erase what it holds about them. The request is answered per record rather than per person: a record carrying no retention obligation is erased on the request, and one carrying an obligation is retained, restricted to the purpose that compels it, and becomes a disposal candidate under PLT-19. Erasure destroys whole records and never edits one that survives — an issued invoice is immutable under AR-14 for the whole of its life, and is reached by disposal alone, never by redaction. Each retained record's period runs from the event that created the obligation, never from the request and never from the person's later activity. The requester is told what was erased, what was retained, on what ground, and until when. | Should | Approved |
-| **PLT-23** | An agent that has read content the organization did not author (BKP-20) cannot post to the books in that session without a person authorising it. The constraint is enforced by what the agent is able to do, never by an instruction telling it what not to do. | Must | Approved |
+| **PLT-23** | An agent that has read content the organization did not author (BKP-20) cannot post to the books in that session without a person authorizing it. The constraint is enforced by what the agent is able to do, never by an instruction telling it what not to do. | Must | Approved |
 
 | Record class | Default |
 |---|---|
@@ -414,7 +414,7 @@ and a recurring invoice falling due during suspension is not sent.
 
 **Acceptance, PLT-12.** An entity suspended for thirty days and then resumed produces a trial
 balance identical to one never suspended over the same period, and sends nothing on resume
-that the suspension cancelled.
+that the suspension canceled.
 
 **Acceptance, PLT-18.** An examination covering a six-month period is satisfied from the
 system's own output, with no reconstruction and no manual evidence gathering.
@@ -543,8 +543,8 @@ segregate at all. What follows is what constrains the agent itself.
 | **SOC1-01** | Every agent action carries a distinct non-human principal identifying the skill that acted. It is never recorded as the supervising person's own action, and never as a shared service account. | Must | Proposed |
 | **SOC1-02** | Each skill has an explicit, enumerable set of permitted operations, enforced at the interface and at the data layer. A `bookkeeper` skill performing a `controller` approval is impossible, not discouraged, and no prompt or instruction participates in the enforcement. | Must | Proposed |
 | **SOC1-03** | An agent's effective authority is the intersection of its skill's permitted operations and the role of the person it acts for. Neither widens the other, and no combination of the two exceeds either. | Must | Proposed |
-| **SOC1-04** | Each class of action is configured as either autonomously completable by an agent or requiring human authorisation before it posts. The configuration is per entity, versioned, and carries a full change history. It ships split by provenance: an agent may complete a transaction assigned by an approved rule, and anything derived from untrusted content requires human authorisation before it posts. | Must | Proposed |
-| **SOC1-05** | Where a person authorises agent work, the record captures what was presented to them, what the agent proposed and on what stated basis, what alternatives were offered, who decided, when, and what they decided. An approval recording only the decision is not evidence and does not satisfy this. | Must | Proposed |
+| **SOC1-04** | Each class of action is configured as either autonomously completable by an agent or requiring human authorization before it posts. The configuration is per entity, versioned, and carries a full change history. It ships split by provenance: an agent may complete a transaction assigned by an approved rule, and anything derived from untrusted content requires human authorization before it posts. | Must | Proposed |
+| **SOC1-05** | Where a person authorizes agent work, the record captures what was presented to them, what the agent proposed and on what stated basis, what alternatives were offered, who decided, when, and what they decided. An approval recording only the decision is not evidence and does not satisfy this. | Must | Proposed |
 | **SOC1-06** | A posted entry can be explained after the fact without re-running a model. The system persists, against the entry: the model identifier and version, the skill version, the inputs and context supplied, the tool calls made, and the agent's stated basis for the conclusion. | Must | Proposed |
 
 **Acceptance, SOC1-02.** A `bookkeeper` skill issued a controller approval operation is
@@ -636,13 +636,13 @@ Carried already: IAM-01 through IAM-21.
 
 | | Requirement | Priority | Status |
 |---|---|---|---|
-| **SOC1-24** | Authorisation is enforced at the data layer. Interface-level concealment of an operation is never the mechanism by which it is denied. | Must | Proposed |
-| **SOC1-25** | The acting principal propagates unmodified from the entry point through to authorisation and to the audit record. Where one surface calls another on a principal's behalf, the principal's own credential flows through and authorisation is evaluated against it — never against a shared credential with the real actor passed as a parameter. | Must | Proposed |
-| **SOC1-26** | No access path authorises against a principal different from the one recorded in the audit trail for the same action. | Must | Proposed |
-| **SOC1-27** | Operator personnel hold no standing access to customer financial data. Such access exists only as break-glass: individually authorised, time-bounded, and logged identically to a customer's own, under the same evidence requirements. | Must | Proposed |
+| **SOC1-24** | Authorization is enforced at the data layer. Interface-level concealment of an operation is never the mechanism by which it is denied. | Must | Proposed |
+| **SOC1-25** | The acting principal propagates unmodified from the entry point through to authorization and to the audit record. Where one surface calls another on a principal's behalf, the principal's own credential flows through and authorization is evaluated against it — never against a shared credential with the real actor passed as a parameter. | Must | Proposed |
+| **SOC1-26** | No access path authorizes against a principal different from the one recorded in the audit trail for the same action. | Must | Proposed |
+| **SOC1-27** | Operator personnel hold no standing access to customer financial data. Such access exists only as break-glass: individually authorized, time-bounded, and logged identically to a customer's own, under the same evidence requirements. | Must | Proposed |
 
 > **The failure this prevents.** A surface that authenticates as itself and passes the real
-> actor as a parameter still performs authorisation — it just records the intermediary as the
+> actor as a parameter still performs authorization — it just records the intermediary as the
 > actor. The books then attribute
 > every agent action to a single system principal, which silently voids SOC1-01 through
 > SOC1-03 while every individual control appears to pass. **Constrains the interface contract
@@ -776,8 +776,8 @@ template, so we should be able to describe our controls before we are asked.
 | **SOC2-03** | An agent turn that reads untrusted content operates with a reduced capability set, enforced at the interface. Reading an untrusted document and writing to the ledger are not simultaneously available within one turn. A prompt instructing the model to disregard embedded instructions is not a control and does not satisfy this. | Must | Proposed |
 | **SOC2-04** | Attempts to inject instructions through ingested content are detected and recorded as security events, retrievable alongside other security events. They are never silently handled. | Must | Proposed |
 | **SOC2-05** | On detection, the turn stops and the content is quarantined rather than processed further. The item becomes an exception under SOC1-28 for a person to disposition. Detection that only records is telemetry, not a control. | Must | Proposed |
-| **SOC2-06** | The maximum damage a fully successful injection can cause is stated, bounded by the human authorisation gates of SOC1-04, and demonstrable by test. The bound is a property of the capability model, never of model behavior. | Must | Proposed |
-| **SOC2-07** | Changing where a customer is told to send money, or the identity a customer is told they are paying, requires human authorisation in every case, at any amount, regardless of the agent's stated confidence. This covers the payment details an invoice carries and the customer record behind it. CFOKit moves no money, so this — not a payment instruction — is where revenue can be redirected, and it carries no autonomous path. | Must | Proposed |
+| **SOC2-06** | The maximum damage a fully successful injection can cause is stated, bounded by the human authorization gates of SOC1-04, and demonstrable by test. The bound is a property of the capability model, never of model behavior. | Must | Proposed |
+| **SOC2-07** | Changing where a customer is told to send money, or the identity a customer is told they are paying, requires human authorization in every case, at any amount, regardless of the agent's stated confidence. This covers the payment details an invoice carries and the customer record behind it. CFOKit moves no money, so this — not a payment instruction — is where revenue can be redirected, and it carries no autonomous path. | Must | Proposed |
 | **SOC2-08** | The detection approach for injection attempts is a stated, versioned artifact under SOC1-34, so that a change to it is a change to a security control. | Must | Proposed |
 
 **Acceptance, SOC2-03.** An agent given a document containing an instruction to post an entry
@@ -787,7 +787,7 @@ model attempts to comply.
 **Acceptance, SOC2-06.** The stated blast radius is exercised by a test that assumes the model
 is fully compromised and cooperative with the attacker.
 
-> SOC1-04's authorisation gates and SOC2-03's capability split carry nearly all of the bound in SOC2-06.
+> SOC1-04's authorization gates and SOC2-03's capability split carry nearly all of the bound in SOC2-06.
 > Weakening either for usability moves it.
 
 ### 8.3 Inference providers and data flow
@@ -828,14 +828,14 @@ Carried by IAM-01 through IAM-21 and SOC1-24 through SOC1-27. Additional SOC 2 o
 | **SOC2-20** | Sessions have a bounded lifetime and can be revoked centrally, taking effect everywhere including for skills acting under IAM-11. | Must | Proposed |
 | **SOC2-21** | Programmatic credentials and tokens have a defined lifecycle — issuance, scope, expiry, rotation, and revocation — and a token's scope is never broader than the role of the identity it was issued to. | Must | Proposed |
 | **SOC2-22** | The access review of IAM-14 produces its evidence automatically, on a defined cadence, as a persisted artifact. A review that requires someone to assemble screenshots is sampled at every examination and costs money forever. | Must | Proposed |
-| **SOC2-23** | Where privileged operator access to customer data exists under SOC1-27, it is time-bounded, individually authorised, logged identically to customer access, and visible to the affected customer. | Must | Proposed |
+| **SOC2-23** | Where privileged operator access to customer data exists under SOC1-27, it is time-bounded, individually authorized, logged identically to customer access, and visible to the affected customer. | Must | Proposed |
 
 ### 8.6 System operations and monitoring — CC7
 
 | | Requirement | Priority | Status |
 |---|---|---|---|
 | **SOC2-24** | Security events under PLT-17 are retained for the full review period plus lookback, and alerting is defined per event class rather than left to inspection. | Must | Proposed |
-| **SOC2-27** | Agent behavior is monitored as a security signal, not only an operational one: volume anomalies, unusual account or payee targets, repeated authorisation failures, and clustering of exceptions are detected and alertable. | Must | Proposed |
+| **SOC2-27** | Agent behavior is monitored as a security signal, not only an operational one: volume anomalies, unusual account or payee targets, repeated authorization failures, and clustering of exceptions are detected and alertable. | Must | Proposed |
 | **SOC2-28** | The line between an agent error and a reportable security incident is defined in advance. An agent posting an incorrect but non-malicious entry is a processing exception under SOC1-28; an agent acting outside its capability set, or acting on injected instruction, is a security incident. | Must | Proposed |
 | **SOC2-29** | Behavior under degradation is defined, including what happens when an inference or extraction provider is unavailable partway through a workflow. Partial completion never leaves the books in a state no one can account for. | Must | Proposed |
 | **SOC2-30** | An interrupted agent workflow resumes without duplicate posting, under the idempotency guarantee of SOC1-09 and NFR-03. | Must | Proposed |
@@ -873,7 +873,7 @@ stated once, in the SOC 1 section, and referenced from SOC 2.
 | Audit trail, with prior and resulting values where a record can change | SOC1-21 | CC7 | Retention across the review period — SOC2-24 |
 | Immutable audit storage | SOC1-22 | CC7 | None |
 | Transaction lineage retrieval | SOC1-23 | CC7 | None |
-| Data-layer authorisation | SOC1-24 | CC6 | None |
+| Data-layer authorization | SOC1-24 | CC6 | None |
 | Principal propagation | SOC1-25 | CC6 | Session revocation reaches skills — SOC2-20 |
 | Privileged operator access | SOC1-27 | CC6 | Time bounds, customer visibility — SOC2-23 |
 | Exception queue and disposition | SOC1-28, SOC1-29 | CC7 | Error-versus-incident line — SOC2-28 |
@@ -890,7 +890,7 @@ stated once, in the SOC 1 section, and referenced from SOC 2.
 |---|---|
 | Dependency vulnerability monitoring, remediation targets by severity, supply-chain provenance | Engineering practice. The class 7.11 already excludes for SOC 1. |
 | Incident detection, classification, escalation, and notification to a customer | Operating process. It also presumes a commercial operator, which section 3 forbids the product to do. |
-| Security review before a change to authentication, authorisation, isolation, or data handling takes effect | Engineering practice, as 7.8 already says of its own section. |
+| Security review before a change to authentication, authorization, isolation, or data handling takes effect | Engineering practice, as 7.8 already says of its own section. |
 | Governing infrastructure and configuration changes identically to application code | Engineering practice. |
 | Recovery time and recovery point objectives | An operating commitment about a deployment rather than a property of the software. Whoever operates a deployment sets them; a self-hoster's obligations sit in 7.10. |
 
@@ -946,7 +946,7 @@ Terms carrying a specific meaning in this document.
 | **Principal** | Whatever an action is attributed to. A person is one; a skill is another. An agent action carries both, and its authority is the intersection. |
 | **Privilege** | One flag naming something a caller may do. Defined in code, because a flag means something only where something checks it. |
 | **Reversal** | A new entry that undoes a posted one, leaving both visible. The only form a correction takes. |
-| **Role** | A named set of privileges, held by an identity in one entity. A row in the deployment's catalogue rather than a fixed list. |
+| **Role** | A named set of privileges, held by an identity in one entity. A row in the deployment's catalog rather than a fixed list. |
 | **Rule** | Stored, operator-approved criteria that assign an incoming transaction to an account deterministically. |
 | **Settlement** | The movement of cash against an obligation. |
 | **The CFO seat** | Whoever is accountable for the company's finances — a fractional CFO where one is engaged, and otherwise the founder or owner-operator. Never vacant. |
@@ -969,7 +969,7 @@ serving no objective does not belong here.
 | **OBJ-5** The recurring cost goes away | BKP-01–BKP-06, BKP-13–BKP-18, AR-01–AR-19, RPT-01–RPT-09, IMP-01–IMP-09, PLT-24, NFR-19, NFR-20 |
 | **OBJ-6** Output accepted as it stands | LED-01, LED-02, LED-14, LED-17, RPT-01–RPT-05, RPT-07, RPT-09, RPT-10, RPT-12, RPT-13, RPT-14, RPT-16, RPT-17, RPT-18, RPT-19, NFR-01, NFR-16, NFR-22 |
 | **OBJ-7** Never forced off by growing | LED-10, LED-13, LED-14, LED-15, LED-16, LED-17, LED-18, LED-19, RPT-19, RPT-20, RPT-21, IAM-08, IAM-09, PLT-04, PLT-08, NFR-09 |
-| **OBJ-8** Only authorised people reach the books | IAM-01–IAM-07, IAM-11, IAM-12, IAM-15, IAM-16, IAM-17, IAM-20, IAM-21, IAM-22–IAM-26, AR-08, PLT-05, PLT-23, NFR-04, NFR-05, NFR-06 |
+| **OBJ-8** Only authorized people reach the books | IAM-01–IAM-07, IAM-11, IAM-12, IAM-15, IAM-16, IAM-17, IAM-20, IAM-21, IAM-22–IAM-26, AR-08, PLT-05, PLT-23, NFR-04, NFR-05, NFR-06 |
 | **OBJ-9** Provable to an examiner | IAM-13, IAM-14, IAM-18, IAM-19, PLT-15–PLT-19, PLT-22, NFR-18, SOC1-01–SOC1-36, SOC2-01–SOC2-24, SOC2-27–SOC2-30 |
 | **OBJ-10** Leave with everything, at any time | EXP-01–EXP-04, PLT-09, PLT-10, PLT-11, PLT-12, PLT-13, PLT-21, NFR-07, NFR-17 |
 | **OBJ-11** Runs with no vendor relationship | BKP-03, IAM-10, PLT-01, PLT-02, PLT-03, PLT-06, NFR-10, NFR-11, NFR-14, NFR-17 |

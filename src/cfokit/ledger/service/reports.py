@@ -25,7 +25,7 @@ from cfokit.ledger.errors import AccountNotFound
 from cfokit.ledger.repository import reports as store
 from cfokit.ledger.repository.reports import Account, AccountBalance, AccountEntry
 from cfokit.ledger.repository.unit_of_work import Database
-from cfokit.ledger.service.authorisation import Capability, authorise
+from cfokit.ledger.service.authorization import Capability, authorize
 from cfokit.ledger.service.principal import Principal
 
 __all__ = [
@@ -90,7 +90,7 @@ def journal_totals(
     every other report.
     """
     with database.entity_write(entity_id) as write:
-        authorise(write, Capability.READ, principal)
+        authorize(write, Capability.READ, principal)
         gross_debits, gross_credits = store.journal_totals(
             write.connection, entity_id=entity_id, as_of=as_of, since=since
         )
@@ -113,7 +113,7 @@ def trial_balance(
     from the postings that were in the books at that moment.
     """
     with database.entity_write(entity_id) as write:
-        authorise(write, Capability.READ, principal)
+        authorize(write, Capability.READ, principal)
         settings = write.settings
         rows = write.account_balances(as_of=as_of, watermark=watermark)
 
@@ -172,7 +172,7 @@ def profit_and_loss(
     stands at one.
     """
     with database.entity_write(entity_id) as write:
-        authorise(write, Capability.READ, principal)
+        authorize(write, Capability.READ, principal)
         settings = write.settings
         rows = write.account_balances(
             as_of=as_of, since=since, types=INCOME_STATEMENT_TYPES, watermark=watermark
@@ -201,7 +201,7 @@ def balance_sheet(
     Cumulative from the beginning of the books, because that is what a balance sheet is.
     """
     with database.entity_write(entity_id) as write:
-        authorise(write, Capability.READ, principal)
+        authorize(write, Capability.READ, principal)
         settings = write.settings
         rows = write.account_balances(
             as_of=as_of, types=BALANCE_SHEET_TYPES, watermark=watermark
@@ -262,7 +262,7 @@ def account_detail(
     chain, and belongs with rules rather than here.
     """
     with database.entity_write(entity_id) as write:
-        authorise(write, Capability.READ, principal)
+        authorize(write, Capability.READ, principal)
         settings = write.settings
         found = write.account(account_id)
         if found is None:

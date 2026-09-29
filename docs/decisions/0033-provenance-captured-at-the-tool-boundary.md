@@ -42,7 +42,7 @@ This record decides the mechanism, which holds whatever the answer there is.
 ## Decision Drivers
 
 * No prompt or instruction may participate in producing evidence, for the same reason `SOC1-02`
-  excludes them from producing authorisation.
+  excludes them from producing authorization.
 * Attribution must survive audit-log retention, because the entry does (`PLT-20`, ADR-0007).
 * The set of provenance dimensions is open-ended, and append-only forbids backfilling a column added
   later (ADR-0013's `recorded_at` lesson, inverted).
@@ -113,7 +113,7 @@ Collapsing `rule` into "non-human" discards the distinction that most reduces ex
 rule-assigned coding is deterministic and re-derivable — a conventional automated control an auditor
 tests cheaply and once. An agent judgment is neither. `SOC1-04` already splits on exactly this line
 when it permits an agent to complete a transaction assigned by an approved rule while requiring human
-authorisation for anything derived from untrusted content.
+authorization for anything derived from untrusted content.
 
 The rule path is the one to maximize. Making it invisible in the data removes the incentive to.
 
@@ -154,7 +154,7 @@ an examiner looks for. So it is a **module**, not a component, and the ledger ho
 identifier without importing it.
 
 One record per run rather than per entry, because versions and context are constant across a run and
-duplicating them onto every posting denormalises a per-run value onto the most-written table in the
+duplicating them onto every posting denormalizes a per-run value onto the most-written table in the
 system.
 
 ### 6. Decision records are hash-chained

@@ -23,7 +23,7 @@ from decimal import Decimal
 import pytest
 
 from cfokit.ledger.engine import Entry, Posting
-from cfokit.ledger.errors import NotAuthorised
+from cfokit.ledger.errors import NotAuthorized
 from cfokit.ledger.presentation import SourceBalance, present_reconciliation
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.administration import create_account, grant_role
@@ -297,7 +297,7 @@ def test_exporting_requires_the_read_privilege(
 ) -> None:
     entity_id, _, _, _ = stocked
 
-    with pytest.raises(NotAuthorised):
+    with pytest.raises(NotAuthorized):
         export_interchange(
             database,
             entity_id=entity_id,

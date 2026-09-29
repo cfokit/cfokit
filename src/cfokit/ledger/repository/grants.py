@@ -17,7 +17,7 @@ import psycopg
 __all__ = ["RoleDefinition", "privileges_in_force", "role_definition"]
 
 # One query rather than roles-then-privileges: `IAM-01` makes authority the union over every
-# role held, and the union is what the join produces. Resolving the catalogue here also means
+# role held, and the union is what the join produces. Resolving the catalog here also means
 # a privilege map changed by migration takes effect without a cache to invalidate.
 IN_FORCE = """
     SELECT DISTINCT rp.privilege
@@ -46,7 +46,7 @@ def privileges_in_force(
 
 @dataclass(frozen=True, slots=True)
 class RoleDefinition:
-    """A row of the catalogue: what a role carries, and whether it may be time-bounded."""
+    """A row of the catalog: what a role carries, and whether it may be time-bounded."""
 
     name: str
     privileges: frozenset[str]
@@ -54,7 +54,7 @@ class RoleDefinition:
 
 
 def role_definition(conn: psycopg.Connection[Any], name: str) -> RoleDefinition | None:
-    """The catalogue entry for a role, or None if this deployment defines no such role.
+    """The catalog entry for a role, or None if this deployment defines no such role.
 
     A role with no privileges is a legitimate answer and is not None: it confers nothing, which
     is different from not existing.

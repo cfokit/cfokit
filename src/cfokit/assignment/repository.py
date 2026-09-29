@@ -140,7 +140,7 @@ def precedence_taken(
     `BKP-08`'s order is stated by the operator, so two live rules sharing a precedence means
     the order does not in fact state which wins. The service refuses it. This is not a
     `UNIQUE` constraint because the condition is over the versions *in force*, which is a
-    projection no constraint can express — writes for an entity serialise on its advisory
+    projection no constraint can express — writes for an entity serialize on its advisory
     lock (ADR-0011), so checking here is race-free, and the engine's order is total anyway.
     """
     with conn.cursor() as cur:
@@ -264,7 +264,7 @@ def insert_decision(
                 len(ranked),
                 rule_set_digest,
                 evaluator_version,
-                candidate.normalised_payee,
+                candidate.normalized_payee,
                 candidate.payee,
                 candidate.description,
                 candidate.amount,

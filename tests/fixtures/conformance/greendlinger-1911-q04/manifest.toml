@@ -2,7 +2,7 @@
 #
 # The corpus's first statement-shaped answer. Where a trial-balance case compares account by
 # account, this compares what a published statement actually asserts — its totals. A balance
-# sheet of this period summarises ("Capital: investment 20,000, net profit 6, less withdrawals
+# sheet of this period summarizes ("Capital: investment 20,000, net profit 6, less withdrawals
 # 1,000") where the ledger holds three accounts, and mapping those summary lines back onto
 # account codes is a step the source never published (ADR-0043, ADR-0044).
 
@@ -16,7 +16,7 @@ year = 1911
 problem = "Question 4"
 origin = "New York Examination, June 1900"
 scan = "https://archive.org/details/accountancyprob00greegoog"
-licence = "public-domain"
+license = "public-domain"
 # Published 1911, so the 95-year term expired. No renewal question arises.
 pd_basis = "term-expired"
 

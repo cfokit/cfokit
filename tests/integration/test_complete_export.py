@@ -30,7 +30,7 @@ import pytest
 
 from cfokit.ledger.engine import Entry, Posting
 from cfokit.ledger.engine.periods import Period
-from cfokit.ledger.errors import NotAuthorised
+from cfokit.ledger.errors import NotAuthorized
 from cfokit.ledger.repository import archive
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.administration import grant_role
@@ -353,7 +353,7 @@ def test_a_stranger_is_refused(database: Database, owned_books: tuple[str, str, 
     entity_id, _, _ = owned_books
     stranger = Principal(id="user:nobody", actor_class=ActorClass.PERSON)
 
-    with pytest.raises(NotAuthorised):
+    with pytest.raises(NotAuthorized):
         export_complete(database, entity_id=entity_id, principal=stranger, request_id="req")
 
 

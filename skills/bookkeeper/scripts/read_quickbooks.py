@@ -949,7 +949,7 @@ def for_mcp(books: dict[str, Any]) -> str:
     )
 
 
-def summarise(books: dict[str, Any]) -> str:
+def summarize(books: dict[str, Any]) -> str:
     """What a person needs to see before they agree to post it (`IMP-05`).
 
     Counts and account names, never amounts. The figures are the operator's own revenue and
@@ -996,13 +996,13 @@ def main(argv: list[str]) -> int:
                 return 1
             # The summary first, and to stderr, so a person sees what is about to happen while
             # they are being asked to approve it (`IMP-05`).
-            print(summarise(books), file=sys.stderr)
+            print(summarize(books), file=sys.stderr)
             return post(books, base, entity_id, sign_in(base), out=sys.stderr)
 
         if "--mcp" in flags:
             print(for_mcp(books))
         elif "--summary" in flags:
-            print(summarise(books))
+            print(summarize(books))
         else:
             json.dump(books, sys.stdout, separators=(",", ":"))
     except Refused as refusal:

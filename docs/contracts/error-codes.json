@@ -76,8 +76,8 @@
     "error": "NotAuthenticated"
   },
   {
-    "code": "not_authorised",
-    "error": "NotAuthorised"
+    "code": "not_authorized",
+    "error": "NotAuthorized"
   },
   {
     "code": "nothing_to_close",

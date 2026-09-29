@@ -197,13 +197,13 @@ def _holds(candidate: Candidate, predicate: Predicate) -> bool:
 def _fact(candidate: Candidate, field: Field) -> str | Decimal:
     """The candidate's value for a field, in the form matching compares.
 
-    Text arrives normalised, which is the whole of why matching is here and not in SQL.
+    Text arrives normalized, which is the whole of why matching is here and not in SQL.
     """
     match field:
         case Field.PAYEE:
-            return candidate.normalised_payee
+            return candidate.normalized_payee
         case Field.DESCRIPTION:
-            return candidate.normalised_description
+            return candidate.normalized_description
         case Field.AMOUNT:
             return candidate.amount
         case Field.DIRECTION:

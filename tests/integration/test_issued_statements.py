@@ -19,7 +19,7 @@ from decimal import Decimal
 import pytest
 
 from cfokit.ledger.engine import Entry, Posting
-from cfokit.ledger.errors import IssuedStatementNotFound, NotAuthorised
+from cfokit.ledger.errors import IssuedStatementNotFound, NotAuthorized
 from cfokit.ledger.presentation import present_trial_balance
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.issuance import issue_statement, issued, supersession
@@ -213,7 +213,7 @@ def test_issuing_requires_the_read_privilege(
     that the act is recorded. Someone who cannot read them has nothing to issue."""
     entity_id, _, _ = owned_books
 
-    with pytest.raises(NotAuthorised):
+    with pytest.raises(NotAuthorized):
         issue_statement(
             database,
             entity_id=entity_id,

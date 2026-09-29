@@ -16,7 +16,7 @@ name = "prepaid-insurance-12-months"
 authority = "IRS Publication 538 (01/2022), Accounting Periods and Methods"
 locator = "Accrual Method — Expenses: the all-events test and economic performance"
 url = "https://www.irs.gov/publications/p538"
-licence = "public-domain"
+license = "public-domain"
 # US Government work. No term, no renewal, no determination needed.
 basis = "tax"
 

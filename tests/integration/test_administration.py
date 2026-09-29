@@ -1,7 +1,7 @@
 """The administrative path: creating entities, and provisioning access within them.
 
 Until this existed nothing in `src/` created an entity, an account or a grant — only test
-fixtures did, with owner-role SQL. So the system authenticated and authorised callers into a
+fixtures did, with owner-role SQL. So the system authenticated and authorized callers into a
 state no legitimate path could produce.
 
 Four requirements carry this file:
@@ -24,10 +24,10 @@ from typing import Any
 import psycopg
 import pytest
 
-from cfokit.ledger.errors import LastOwner, NotAuthorised, UnknownRole
+from cfokit.ledger.errors import LastOwner, NotAuthorized, UnknownRole
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.administration import create_entity, grant_role, revoke_grant
-from cfokit.ledger.service.authorisation import Capability
+from cfokit.ledger.service.authorization import Capability
 from cfokit.ledger.service.principal import ActorClass, Principal
 
 pytestmark = pytest.mark.integration
@@ -84,7 +84,7 @@ def test_creating_an_entity_confers_nothing_in_any_other_entity(database: Databa
     theirs = new_entity(database, person("user:incumbent"))
     new_entity(database, person("user:newcomer"))
 
-    with pytest.raises(NotAuthorised):
+    with pytest.raises(NotAuthorized):
         grant_role(
             database,
             entity_id=theirs,
@@ -153,7 +153,7 @@ def test_granting_requires_the_administrative_capability(database: Database) -> 
         role="poster",
     )
 
-    with pytest.raises(NotAuthorised):
+    with pytest.raises(NotAuthorized):
         grant_role(
             database,
             entity_id=entity_id,
@@ -191,7 +191,7 @@ def test_an_administrator_cannot_revoke_an_owner(database: Database) -> None:
         role="administrator",
     )
 
-    with pytest.raises(NotAuthorised):
+    with pytest.raises(NotAuthorized):
         revoke_grant(
             database,
             entity_id=created.entity_id,
@@ -213,7 +213,7 @@ def test_an_administrator_cannot_grant_ownership(database: Database) -> None:
         role="administrator",
     )
 
-    with pytest.raises(NotAuthorised):
+    with pytest.raises(NotAuthorized):
         grant_role(
             database,
             entity_id=entity_id,
@@ -229,7 +229,7 @@ def test_ownership_cannot_be_time_bounded(database: Database) -> None:
     entity. Refused with a reason rather than as a constraint violation."""
     entity_id = new_entity(database, person("user:root"))
 
-    with pytest.raises(NotAuthorised):
+    with pytest.raises(NotAuthorized):
         grant_role(
             database,
             entity_id=entity_id,
@@ -381,7 +381,7 @@ def test_revoking_a_non_owner_is_never_the_last_owner(
     )
 
 
-# --- The catalogue (IAM-01, IAM-02, ADR-0039) ---------------------------------------------
+# --- The catalog (IAM-01, IAM-02, ADR-0039) ---------------------------------------------
 
 
 def test_owner_is_the_only_role_this_deployment_ships(
@@ -434,10 +434,10 @@ def test_a_role_added_by_insert_confers_what_it_maps(database: Database) -> None
     assert held == frozenset({"read", "record"})
 
 
-def test_granting_a_role_the_catalogue_does_not_define_is_refused(
+def test_granting_a_role_the_catalog_does_not_define_is_refused(
     database: Database,
 ) -> None:
-    """A name the catalogue does not hold is a caller error, not a constraint violation."""
+    """A name the catalog does not hold is a caller error, not a constraint violation."""
     entity_id = new_entity(database, person("user:root"))
 
     with pytest.raises(UnknownRole) as caught:

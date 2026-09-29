@@ -22,7 +22,7 @@ carrying no RFC 8693 `act` claim, and a client credentials token carries none. S
 caller — the shape [ADR-0032](0032-component-authentication-and-configuration.md) added deliberately for
 separate components — is classified as a person and passes both gates.
 
-The exposure is bounded and worth stating accurately rather than dramatically. `authorise` still
+The exposure is bounded and worth stating accurately rather than dramatically. `authorize` still
 runs, reading entity grants server-side, so a service account holding no grant is refused before
 it reaches anything. What is real is narrower: **a service account an operator has granted
 capabilities in an entity can perform the two acts reserved to people**, and an operator who
@@ -49,7 +49,7 @@ Nothing assigns `RULE`. The derivation produces two of the three values and alwa
   closes: an issuer omitting `auth_time` would refuse every genuine import.
 * `IAM-02` already requires privileges to distinguish classes of act, and
   [ADR-0039](0039-roles-are-rows-privileges-are-code.md) makes roles rows — so a new distinction is data plus an enum value, not an architecture.
-* `SOC1-04` splits autonomous completion from human authorisation **by provenance**, which is
+* `SOC1-04` splits autonomous completion from human authorization **by provenance**, which is
   what `actor_class` is for. Overloading it with authority makes both jobs harder.
 
 ## Considered Options
@@ -99,7 +99,7 @@ So both conditions hold: the principal is not acting for another, **and** holds 
 ### 3. `actor_class` records why a posting was made, and is never an authority check
 
 It answers "what kind of judgment produced this", which is what `SOC1-04` splits on and what an
-examiner tests. It does not answer "may this caller do this", which is `authorise`'s question.
+examiner tests. It does not answer "may this caller do this", which is `authorize`'s question.
 The two were conflated because `NotAPerson` was the only mechanism to hand when `ADR-0030` needed
 one.
 
@@ -154,7 +154,7 @@ not define, and this is the same property from the other side.
 
 **Not gated:** nothing prevents new code reading `actor_class` as an authority check. It is a
 review rule, and a weak one — see [ADR-0036](0036-correctness-is-tested-in-four-layers.md) § 5 on
-what the ungated rules in a record are for. The gated control is that `authorise` is the only
+what the ungated rules in a record are for. The gated control is that `authorize` is the only
 thing `import-linter` lets the service layer reach for a permission question.
 
 ## Pros and Cons of the Options
@@ -166,7 +166,7 @@ thing `import-linter` lets the service layer reach for a permission question.
   (`IAM-09`).
 * Bad, because a machine can still be granted a person's act, which reads as a gap to anyone who
   expected the name to be enforced.
-* Bad, because the reservation is only as good as the role catalogue: a deployment that hands
+* Bad, because the reservation is only as good as the role catalog: a deployment that hands
   `owner` out freely has no reservation at all.
 
 ### Derive a fourth `actor_class` from claims that evidence end-user authentication

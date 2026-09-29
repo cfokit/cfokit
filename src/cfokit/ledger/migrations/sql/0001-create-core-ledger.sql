@@ -56,7 +56,7 @@ CREATE TABLE entity (
     -- ADR-0011 requires advisory lock keys derived from the entity by a "documented,
     -- collision-free scheme". pg_advisory_xact_lock takes a bigint and entity ids are uuids,
     -- so any hash-based scheme is collision-*resistant* at best — and a collision silently
-    -- serialises two unrelated entities against each other. An identity column is exactly
+    -- serializes two unrelated entities against each other. An identity column is exactly
     -- collision-free, and the advisory namespace is global, so this is the whole scheme:
     -- lock on entity.lock_key, never on a hash of entity.id.
     lock_key              bigint      NOT NULL GENERATED ALWAYS AS IDENTITY UNIQUE,

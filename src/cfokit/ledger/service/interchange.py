@@ -51,7 +51,7 @@ from uuid import UUID
 
 from cfokit.ledger.repository import archive
 from cfokit.ledger.repository.unit_of_work import Database
-from cfokit.ledger.service.authorisation import Capability, authorise
+from cfokit.ledger.service.authorization import Capability, authorize
 from cfokit.ledger.service.principal import Principal
 from cfokit.ledger.service.reports import trial_balance
 
@@ -116,7 +116,7 @@ def export_interchange(
     )
 
     with database.entity_write(entity_id) as write:
-        authorise(write, Capability.READ, principal)
+        authorize(write, Capability.READ, principal)
         accounts = write.chart()
         postings = write.exportable_postings(as_of=as_of, watermark=watermark)
 
@@ -219,7 +219,7 @@ def export_complete(
     taken_at = datetime.now(UTC)
 
     with database.entity_write(entity_id) as write:
-        authorise(write, Capability.READ, principal)
+        authorize(write, Capability.READ, principal)
         tables = {name: write.archived(name) for name, _ in archive.TABLES}
         schema_version = write.schema_version()
 

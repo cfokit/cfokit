@@ -32,7 +32,7 @@ from cfokit.ledger.errors import (
     LedgerError,
     NotAPerson,
     NotAuthenticated,
-    NotAuthorised,
+    NotAuthorized,
     NothingToClose,
     ObligationNotFound,
     OpeningBalanceAccountUnset,
@@ -51,7 +51,7 @@ __all__ = ["STATUS_FOR_CODE", "status_for"]
 
 STATUS_FOR_CODE: dict[str, int] = {
     NotAuthenticated.code: HTTPStatus.UNAUTHORIZED,
-    NotAuthorised.code: HTTPStatus.FORBIDDEN,
+    NotAuthorized.code: HTTPStatus.FORBIDDEN,
     # 409, not 403: the caller holds the capability, and this particular revocation would
     # leave the entity unheld (`IAM-04`).
     LastOwner.code: HTTPStatus.CONFLICT,
