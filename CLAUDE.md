@@ -151,7 +151,10 @@ otherwise get wrong, because absence isn't visible in a manifest:
   --no-emit-project --no-hashes | grep -c '^[a-z]'` — and the MCP SDK is most of it, accepted
   knowingly (ADR-0024). It was six: `openpyxl` was runtime while the server parsed accounting
   exports, and became a dev dependency when parsing moved to the agent's runtime (ADR-0041).
-- **Python 3.12+**, `ruff`, `mypy --strict`, `import-linter`.
+- **Python 3.14**, `ruff`, `mypy --strict`, `import-linter`, and the image and CI run it. The
+  exception is `skills/`: its scripts run on the agent's own interpreter, which is 3.11 in
+  Claude Desktop (ADR-0041). ruff holds that directory to 3.11, and the reader tests run the
+  script on 3.11.
 
 ## Money and correctness
 

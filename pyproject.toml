@@ -4,7 +4,7 @@ version = "0.0.0"
 description = "The open source CFO toolkit"
 readme = "README.md"
 license = "Apache-2.0"
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 
 # Runtime dependencies are load-bearing and few. Adding one is a decision, not a
 # convenience — ask before adding any (CLAUDE.md). Licences verified 2026-08-19.
@@ -105,7 +105,10 @@ dev = { cmd = "docker compose -f compose.yaml -f compose.dev.yaml up", help = "L
 # ---------------------------------------------------------------------------
 [tool.ruff]
 line-length = 96
-target-version = "py312"
+target-version = "py314"
+# Skill scripts run on the agent's own interpreter — Claude Desktop's sandbox, 3.11 (ADR-0041) —
+# and import nothing from the package, so they alone are held to it.
+per-file-target-version = { "skills/**" = "py311" }
 extend-exclude = []
 
 [tool.ruff.lint]
@@ -146,7 +149,7 @@ docstring-code-format = true
 # ---------------------------------------------------------------------------
 [tool.mypy]
 strict = true
-python_version = "3.12"
+python_version = "3.14"
 files = ["src", "scripts", "tests", "infra/tls"]
 # `tests/integration` is on the path for the same reason `scripts` is on pytest's:
 # `tests` is deliberately not a package, so a helper module beside a test file is

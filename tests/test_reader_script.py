@@ -16,8 +16,8 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import subprocess
-import sys
 import zipfile
 from decimal import Decimal
 from pathlib import Path
@@ -33,6 +33,31 @@ SCRIPT = (
     / "scripts"
     / "read_quickbooks.py"
 )
+
+# The script runs on Claude Desktop's code-execution sandbox, not on ours: Python 3.11.15 when
+# checked on 2026-09-29 (ADR-0041). It is undocumented and may differ by platform. Running the
+# script on the suite's own interpreter would pass code that fails where it actually runs.
+SKILL_PYTHON_VERSION = "3.11"
+
+
+def _skill_python() -> str:
+    found = subprocess.run(  # noqa: S603 - a fixed argv naming a version this file sets
+        ["uv", "python", "find", "--no-project", SKILL_PYTHON_VERSION],  # noqa: S607 - uv on PATH
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if found.returncode == 0:
+        return found.stdout.strip()
+    if os.environ.get("CI"):
+        raise RuntimeError(f"CI must install Python {SKILL_PYTHON_VERSION} for the skill tests")
+    pytest.skip(
+        f"needs Python {SKILL_PYTHON_VERSION}: uv python install {SKILL_PYTHON_VERSION}",
+        allow_module_level=True,
+    )
+
+
+SKILL_PYTHON = _skill_python()
 
 Rows = list[list[Any]]
 
@@ -175,7 +200,7 @@ def run(archive: bytes, *flags: str, tmp_path: Path) -> subprocess.CompletedProc
     source = tmp_path / "export.zip"
     source.write_bytes(archive)
     return subprocess.run(  # noqa: S603 - our own script, at a path this file computes
-        [sys.executable, str(SCRIPT), str(source), *flags],
+        [SKILL_PYTHON, str(SCRIPT), str(source), *flags],
         capture_output=True,
         text=True,
         check=False,
