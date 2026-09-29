@@ -61,7 +61,7 @@ jobs:
       prs: ${{ steps.select.outputs.prs }}
       any: ${{ steps.select.outputs.any }}
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - id: select
@@ -95,13 +95,13 @@ jobs:
       # The pull request goes at the workspace root, where the reviewer reads it. The policy
       # comes from main and is moved out of the workspace before any model runs.
       - name: The pull request, as data
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: refs/pull/${{ matrix.pr }}/head
           fetch-depth: 0
           persist-credentials: false
       - name: The policy, from main
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: main
           path: .trusted
