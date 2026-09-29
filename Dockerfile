@@ -15,12 +15,10 @@
 # Migrations never run at startup (ADR-0004). There is deliberately no entrypoint
 # script that applies them before starting the service.
 
-ARG PYTHON_VERSION=3.12
-
 # ---------------------------------------------------------------------------
-FROM python:${PYTHON_VERSION}-slim AS builder
+FROM python:3.12.14-slim@sha256:f77ac9e44ae96ef2c90b8053ea08c31f8be030f824196b0ae4db6d462c84e51f AS builder
 
-COPY --from=ghcr.io/astral-sh/uv:0.11 /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.11.33@sha256:77280f2f771df71f90786c314fe1bbc1e023feac652969bbf139c280babf2eb7 /uv /usr/local/bin/uv
 
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
@@ -58,7 +56,7 @@ COPY tests/ ./tests/
 CMD ["uv", "run", "--no-sync", "pytest", "tests/integration"]
 
 # ---------------------------------------------------------------------------
-FROM python:${PYTHON_VERSION}-slim AS runtime
+FROM python:3.12.14-slim@sha256:f77ac9e44ae96ef2c90b8053ea08c31f8be030f824196b0ae4db6d462c84e51f AS runtime
 
 RUN groupadd --system cfokit && useradd --system --gid cfokit --create-home cfokit
 

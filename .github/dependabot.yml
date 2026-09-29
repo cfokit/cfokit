@@ -1,0 +1,47 @@
+# Every dependency is pinned exactly — uv.lock, action commit SHAs, image tags with digests — so
+# nothing changes unless a pull request changes it. This file is what keeps the pins from going
+# stale: each week it proposes the updates, and CI tests them like any other change.
+#
+# Minor and patch updates are grouped into one pull request per ecosystem. Major updates arrive
+# one at a time, because a major version is where behaviour changes and each deserves its own
+# review.
+#
+# An update to an existing dependency is not the decision CLAUDE.md reserves. Adding a runtime
+# dependency is, and nothing here adds one.
+
+version: 2
+
+updates:
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      python:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        update-types: [minor, patch]
+
+  # The Dockerfile's Python and uv images. When uv moves, move UV_VERSION in ci.yml with it.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      images:
+        update-types: [minor, patch]
+
+  # Postgres and Keycloak in compose.yaml.
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      services:
+        update-types: [minor, patch]
