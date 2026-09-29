@@ -92,7 +92,7 @@ within that shape does not.
 
 CI gate 2 runs with no cloud credentials present, which is what rejects any mechanism depending on
 ambient cloud identity. A component started without credentials **fails immediately with a stable
-error code** (ADR-0015) rather than hanging or retrying — that behaviour is required precisely so the
+error code** (ADR-0015) rather than hanging or retrying — that behavior is required precisely so the
 gate cannot hang.
 
 The client credentials grant is part of the issuer conformance contract (ADR-0019), and the

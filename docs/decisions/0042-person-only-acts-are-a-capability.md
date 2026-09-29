@@ -36,7 +36,7 @@ and `acr` — a session artifact and vendor extensions.
 
 A second question arrives with the first. `ActorClass` has three values, `person`, `rule` and
 `agent`, and [ADR-0033](0033-provenance-captured-at-the-tool-boundary.md) § 3 argues the third one hard:
-"the rule path is the one to maximise. Making it invisible in the data removes the incentive to."
+"the rule path is the one to maximize. Making it invisible in the data removes the incentive to."
 Nothing assigns `RULE`. The derivation produces two of the three values and always has.
 
 ## Decision Drivers
@@ -98,7 +98,7 @@ So both conditions hold: the principal is not acting for another, **and** holds 
 
 ### 3. `actor_class` records why a posting was made, and is never an authority check
 
-It answers "what kind of judgement produced this", which is what `SOC1-04` splits on and what an
+It answers "what kind of judgment produced this", which is what `SOC1-04` splits on and what an
 examiner tests. It does not answer "may this caller do this", which is `authorise`'s question.
 The two were conflated because `NotAPerson` was the only mechanism to hand when `ADR-0030` needed
 one.
@@ -110,7 +110,7 @@ stored posting; the docstring says so instead, and no new code may read authorit
 ### 4. `rule` is assigned at the booking path, never derived from a token
 
 A token cannot tell you that a coding was rule-assigned, because the rule runs after
-authentication and the same credential can carry a rule-assigned posting and a judgement in the
+authentication and the same credential can carry a rule-assigned posting and a judgment in the
 same session. `SOC1-04` describes it exactly that way: an agent *completes a transaction assigned
 by an approved rule*, so the assignment is a property of the transaction.
 
@@ -208,6 +208,6 @@ The repair that looks right, and the one measurement rules out.
 * The rules engine lands, which is when `RULE` becomes assignable and § 4 stops being a statement
   about the future.
 * An issuer in use emits `auth_time` or `amr` dependably, which would make the rejected option
-  available — as a defence in depth over the capability, never as a replacement for it.
+  available — as a defense in depth over the capability, never as a replacement for it.
 * A second reserved act appears that is not a person's own act but a component's, which would
   test whether one capability is the right granularity or whether the reservation is per-act.

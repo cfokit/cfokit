@@ -7,7 +7,7 @@
 # and entity isolation rests on service-layer filtering alone. ADR-0003 asks for two layers
 # precisely because "RLS misconfiguration is silent".
 #
-# This runs only on first initialisation of an empty data directory, which is what
+# This runs only on first initialization of an empty data directory, which is what
 # `docker compose down -v` gives you. A managed deployment creates this role out of band;
 # infra/README.md is authoritative for the name and the privileges it needs.
 set -euo pipefail

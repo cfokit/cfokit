@@ -11,7 +11,7 @@ everything omitted, which is also what keeps the file working across Keycloak ve
 ## What it does, and why each part is here
 
 **`cfokit-audience`, a default client scope.** The ledger validates every token's audience
-against `AUTH_AUDIENCE` (`NFR-06`, ADR-0011), so a token has to carry it. No issuer honours the
+against `AUTH_AUDIENCE` (`NFR-06`, ADR-0011), so a token has to carry it. No issuer honors the
 RFC 8707 `resource` parameter, so the audience is bound here instead — ADR-0019 § 2 records why
 that is the mechanism rather than a workaround.
 
@@ -21,7 +21,7 @@ it afterwards. That is what lets an MCP client connect without a manual step.
 
 **A registered client can still end up with it as optional.** Keycloak's registration takes the
 `scope` field of an RFC 7591 request as the set a client may use, and assigns those as
-*optional* rather than honouring the realm's defaults — so a client that names its scopes gets
+*optional* rather than honoring the realm's defaults — so a client that names its scopes gets
 the audience only if it asked. The observed clients do ask, and the failure mode if one did not
 is closed rather than silent: a token with no audience is rejected by the ledger (`NFR-06`)
 rather than accepted with a missing claim. Worth checking on a client's first connection all the

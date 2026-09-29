@@ -5,7 +5,7 @@ SDK's own client against the ASGI app in process, so the JSON-RPC framing, the s
 session handshake and the bearer middleware all run — none of which `call_tool` exercises,
 because it starts after the point where all three could have failed.
 
-No database. Initialising a session and listing tools reaches nothing below the adapter, which
+No database. Initializing a session and listing tools reaches nothing below the adapter, which
 is what lets the transport be asserted in the unit suite; the tool bodies are exercised against
 a database in `tests/integration/`.
 

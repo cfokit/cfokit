@@ -64,13 +64,13 @@ unchanged", because three `Must` requirements in section 8.3 oblige the system t
 the provider relationship, and only the party holding that relationship can enforce them.
 
 > Where CFOKit operates the runtime, CFOKit holds the provider agreement and supplies the inference.
-> Everywhere else the skill installs into a runtime the organisation operates, that runtime supplies
+> Everywhere else the skill installs into a runtime the organization operates, that runtime supplies
 > its own inference, and CFOKit needs no inference account of its own (`PLT-02`).
 
 ### 1. The default path does not change
 
 `PLT-02` is untouched. The Apache 2.0 build, the self-hosted deployment, and any third-party MCP client
-continue to work exactly as before, with the organisation's own runtime and its own inference. Nothing
+continue to work exactly as before, with the organization's own runtime and its own inference. Nothing
 is withheld and no capability moves (`NFR-17`).
 
 What changes applies only to the attested tier, where CFOKit is operating the runtime anyway.
@@ -192,7 +192,7 @@ Running open-weight models on infrastructure CFOKit controls, rather than buying
 * The vision's *Cost structure* section states two cost models rather than one.
 * Changing provider or model version is a control-environment change (`SOC2-13`, `SOC1-35`) and is
   recorded in the change log ADR-0033 requires.
-* Behaviour when the provider is unavailable partway through a workflow (`SOC2-29`) — partial
+* Behavior when the provider is unavailable partway through a workflow (`SOC2-29`) — partial
   completion must not leave the books mid-state.
 
 **Reversal cost. Moderate.** Moving to customer-supplied credentials later is a configuration and

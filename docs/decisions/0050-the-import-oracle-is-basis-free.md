@@ -19,7 +19,7 @@ half is where the answer to a standing problem was sitting.
 companies use cash.** The journal is the raw record and is accrual whatever the reports say
 (ADR-0037). So the reconciliation compares our accrual balances against their cash-basis ones,
 and diverges on exactly the obligation accounts — on a real export, by 25,469.00 appearing as both
-the receivable and the income not yet recognised against it.
+the receivable and the income not yet recognized against it.
 
 That divergence is arithmetic rather than a defect, and it has been reported as a finding and
 explained by a person every time. `NFR-01` allows no disagreement to be carried, so "a human reads
@@ -111,7 +111,7 @@ correctly, and the only remaining difference is one the accounting basis fully e
 
 * Good, because the operator changes nothing about the system they are leaving.
 * Good, because the strongest single check is the one that needs no basis at all, so it holds for
-  a source that states no basis, states one we do not recognise, or mixes them across reports.
+  a source that states no basis, states one we do not recognize, or mixes them across reports.
 * Good, because `IMP-08`'s "totals" half stops being unimplemented.
 * Good, because a divergence that is *not* the basis now fails rather than joining a note a person
   has learned to skim.

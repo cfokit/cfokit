@@ -77,7 +77,7 @@ So the transport is not one question but two, and they have different answers:
   risk: a genuine QuickBooks export compresses at 1.08x, and 1,029x is four lines of Python.
 * `NFR-12` wants an extension point without a plugin system. If the contract is a foreign file
   format, CFOKit must ship a reader per source system. If it is a neutral shape, anyone writes one.
-* `PLT-02` puts the runtime in the organisation's hands. A file that never leaves the operator's
+* `PLT-02` puts the runtime in the organization's hands. A file that never leaves the operator's
   machine is the strongest form of that.
 * [ADR-0024](0024-synchronous-application-code.md) makes a runtime dependency a decision.
   Exactly one file imports `openpyxl`, and it is the reader.
@@ -201,7 +201,7 @@ What is kept and why, because each of these was measured and could have gone the
 **The transcription risk is real and is not silent.** A model that mistypes an amount produces
 books that disagree with the balances the source states for itself, and `IMP-08` reports that as a
 divergence. `NFR-01` then forbids carrying it. That is the reconciliation doing the job it was
-built for rather than a defence invented for this case — and it is why the comparison must stay
+built for rather than a defense invented for this case — and it is why the comparison must stay
 over the *journal*, not over figures the same file stated.
 
 **This is a second ingress path, and the previous section argued against having one.** The

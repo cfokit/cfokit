@@ -4,7 +4,7 @@
 > year opens with them at zero. The closing entries are ordinary postings and are identifiable
 > as such."
 
-ADR-0027's Confirmation is the centre of this file: a posting into a closed year makes the
+ADR-0027's Confirmation is the center of this file: a posting into a closed year makes the
 close stale, and `LED-12`'s outcome holds again only once it is re-run.
 """
 

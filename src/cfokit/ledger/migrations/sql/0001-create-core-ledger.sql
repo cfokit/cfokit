@@ -112,7 +112,7 @@ CREATE TABLE ledger_transaction (
     -- principal. No write path accepts them as parameters — same device as recorded_at.
     actor_principal_id      text NOT NULL,
     -- ADR-0033 § 3: three values, not two. A rule-assigned coding is deterministic and
-    -- re-derivable; an agent judgement is neither. Collapsing them into "non-human" discards
+    -- re-derivable; an agent judgment is neither. Collapsing them into "non-human" discards
     -- the distinction that most reduces examination cost.
     actor_class             text NOT NULL CHECK (actor_class IN ('person', 'rule', 'agent')),
     -- IAM-11, SOC1-15: the person an agent acted for. Null when the principal acted for
@@ -260,7 +260,7 @@ CREATE CONSTRAINT TRIGGER ledger_transaction_zero_sum
 
 -- ---------------------------------------------------------------------------
 -- Append-only from posting (ADR-0007). Enforced here rather than in the service
--- layer because the guarantee is the product; a rule only the application honours
+-- layer because the guarantee is the product; a rule only the application honors
 -- is a rule the next bulk-import script will not.
 -- ---------------------------------------------------------------------------
 CREATE FUNCTION ledger_transaction_append_only() RETURNS trigger

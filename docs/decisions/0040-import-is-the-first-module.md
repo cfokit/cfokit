@@ -23,7 +23,7 @@ first one.
 
 Three questions arrive together and cannot be answered separately, because each constrains the next:
 where the code lives, what it is called, and how the file reaches it. The third is not obvious. The
-intended operator surface is an agent — a skill in a runtime the organisation operates (`PLT-02`) —
+intended operator surface is an agent — a skill in a runtime the organization operates (`PLT-02`) —
 and the naive shape has the model read the export and hand its contents to a tool. That would put
 every posting line, payee and amount through a context window as a side effect of loading a file.
 
@@ -91,7 +91,7 @@ assuming confidentiality is worth nothing: it does. Eleven thousand posting line
 in a context, the model gains no insight from carrying them, and truncation mid-import would corrupt
 books silently.
 
-**It implies nothing about analysis.** `PLT-02` puts the runtime in the organisation's own hands, and
+**It implies nothing about analysis.** `PLT-02` puts the runtime in the organization's own hands, and
 ADR-0035 keeps it there on the default path: a model reading the loaded books is the user's own
 runtime reading the user's own data, which is the product rather than a risk. Bulk transfer and
 analysis are different operations, and the plumbing for one should not impose the costs of the other.

@@ -112,7 +112,7 @@ The strongest alternative, and genuinely common in payments systems.
 * Good, because it is exact, fast, compact, and immune to the whole class of floating-point error.
 * Bad, because **currencies do not share an exponent.** JPY has zero minor units, most have two,
   and some have three. "Cents" is not a universal scale, so the integer's meaning depends on the
-  currency of the row — an implicit coupling that every read and write must honour.
+  currency of the row — an implicit coupling that every read and write must honor.
 * Bad, because **not everything monetary is a currency amount.** FX rates and unit prices routinely
   need more precision than two decimal places, so they would need a different representation, and
   mixed representations are where conversion bugs live.
@@ -126,7 +126,7 @@ The strongest alternative, and genuinely common in payments systems.
 Postgres permits unconstrained `NUMERIC`, which stores whatever it is given.
 
 * Good, because it never truncates.
-* Bad, because it leaves rounding behaviour to whatever each write happens to supply, so two
+* Bad, because it leaves rounding behavior to whatever each write happens to supply, so two
   columns can disagree about how many decimal places they hold and comparisons quietly fail.
 
 ### `Decimal` in the application, `float` in the database

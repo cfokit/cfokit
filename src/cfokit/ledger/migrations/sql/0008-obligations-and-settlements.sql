@@ -7,12 +7,12 @@
 -- **The link is stored, never inferred.** ADR-0037 § 3 calls this the decision's whole
 -- substance: the alternative is deriving the relationship from account and transaction type at
 -- report time, which is what the incumbents do and is observably unreliable — a journal entry
--- or a cheque touching receivables still lands in a cash-basis report there. Storing the link
+-- or a check touching receivables still lands in a cash-basis report there. Storing the link
 -- makes that failure impossible rather than rare.
 --
 -- **An obligation is marked, not guessed.** Without a record saying so, an unsettled invoice
 -- and an ordinary cash sale look the same to a cash view: both credit income. Which of them is
--- recognised depends on a fact about the event, and a fact has to be recorded.
+-- recognized depends on a fact about the event, and a fact has to be recorded.
 
 CREATE TABLE obligation (
     id             uuid           PRIMARY KEY DEFAULT gen_random_uuid(),

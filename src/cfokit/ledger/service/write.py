@@ -176,14 +176,14 @@ def record_transaction(
     write path sets on a posting whose coding a rule determined, not as a branch in
     `principal_from_claims`", because a token cannot tell you a coding was rule-assigned —
     the rule runs after authentication, and one credential carries both a rule-assigned
-    posting and a judgement in the same session.
+    posting and a judgment in the same session.
 
     Per posting, because `BKP-05` splits a transaction across accounts and a feed's two legs
     are decided by different things: the bank leg is the account the feed belongs to and no
     rule chose it. `RPT-08` walks back from a posting, so that is where the answer lives.
 
     It also sets the transaction's `actor_class` to `rule`, which is the one thing here that
-    is not per posting. ADR-0033 § 3 wants that class maximised because "a rule-assigned
+    is not per posting. ADR-0033 § 3 wants that class maximized because "a rule-assigned
     coding is deterministic and re-derivable, and an auditor tests it cheaply and once"; it
     describes **why a posting was made** and is never an authority check (ADR-0042 § 3), so
     it does not widen what the caller may do. `actor_principal_id` still records who called.

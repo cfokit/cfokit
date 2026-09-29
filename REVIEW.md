@@ -55,7 +55,7 @@ For each dependency the update moves:
 
 - **Important**: a correctness, security or data-integrity defect, a rule broken, or
   verification weakened. Every Important finding cites `file:line` from the source you read.
-  A behaviour claim inferred from a name is not a finding.
+  A behavior claim inferred from a name is not a finding.
 - **Nit**: worth fixing, not worth blocking. At most five. Mention the rest as a count in
   the summary.
 - On a pull request that has already been through a fix round, report Important findings only.

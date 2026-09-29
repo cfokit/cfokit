@@ -1,4 +1,4 @@
-"""Acts reserved to a principal's own judgement (ADR-0042).
+"""Acts reserved to a principal's own judgment (ADR-0042).
 
 Two of them: reopening a closed period (ADR-0030) and importing a company's books (ADR-0041).
 Both take `ACT_AS_PRINCIPAL` **and** a principal that is not acting for another, and neither

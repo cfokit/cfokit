@@ -19,7 +19,7 @@ Portability is not a property you can hold by intention. It erodes one convenien
 cloud SDK imported for secrets, a metadata lookup for the project id, a URL derived from a request
 header because it was to hand. Each is individually reasonable and none announces that it has
 broken the self-hosted tier. The failure is discovered by a user, months later, when the container
-will not start without credentials nobody realised it needed.
+will not start without credentials nobody realized it needed.
 
 So the question is not what configuration mechanism to use. It is what makes portability
 **checkable**, because a promise that is only documented is a promise that decays.

@@ -126,7 +126,7 @@ def _parse(payload: bytes) -> ET.Element:
 
     Entity-expansion attacks — billion laughs, quadratic blowup — need a `DOCTYPE` carrying
     `ENTITY` declarations, and a spreadsheet part never has one. Refusing the declaration
-    outright is a complete defence against that class here and needs no third-party parser,
+    outright is a complete defense against that class here and needs no third-party parser,
     which is why this script depends on nothing.
     """
     head = payload[:4096].lstrip()
@@ -308,7 +308,7 @@ def _as_date(value: Any) -> str:
 def _basis(rows: list[tuple[Any, ...]]) -> str:
     """The accounting method a report was run on, from its footer.
 
-    QuickBooks prints it on the last labelled row — "… - Cash Basis" or "… - Accrual Basis".
+    QuickBooks prints it on the last labeled row — "… - Cash Basis" or "… - Accrual Basis".
     A report whose basis cannot be read is `unknown`, which callers must treat as unusable
     rather than assume.
     """
@@ -382,7 +382,7 @@ def _account_types(sheets: dict[str, list[tuple[Any, ...]]]) -> dict[str, str]:
     """Map each account to a type, using the source's own statement sections.
 
     An account under `ASSETS` on the balance sheet is an asset; one under `Income` on the profit
-    and loss is income. Guessing a type from an account's name would put our judgement into data
+    and loss is income. Guessing a type from an account's name would put our judgment into data
     whose whole value is that it is not ours.
     """
     types: dict[str, str] = {}
@@ -545,7 +545,7 @@ def _ledger_totals(
 
     Some are **subtotals over a parent and its children**, printed as "Total for X with
     sub-accounts" where the parent also takes postings of its own, and as a bare "Total for X"
-    where it does not. Both are recognised, and the bare case is decided against the export's
+    where it does not. Both are recognized, and the bare case is decided against the export's
     own
     data rather than its wording: a bare total is a rollup only when the journal posts beneath
     that parent and never to the parent itself.

@@ -30,9 +30,9 @@ badly:
 The two missing rows are the ones that matter. Practitioner accounts of what auditors ask first
 reduce to *"show me what the AI saw"* and *"is this the same AI that ran last quarter?"*
 
-**A runtime we do not operate makes accounting judgements whose failures are silent.**
+**A runtime we do not operate makes accounting judgments whose failures are silent.**
 This is the larger problem and it is not about evidence at all. `NFR-22` states the limit: correctness
-guarantees attach to what the ledger records and computes, never to a judgement an agent made. A
+guarantees attach to what the ledger records and computes, never to a judgment an agent made. A
 poorly chosen or poorly configured model does not fail visibly — it produces plausible wrong
 accounting. A transaction coded to a defensible-looking wrong account is indistinguishable, at a
 glance, from a correct one.
@@ -58,7 +58,7 @@ is that decision.
 * Carve-out is conventional for a subservice organization, but here the carved-out party's output *is*
   the coding decision (`ES-4`).
 * `PLT-01` and `NFR-17` are not negotiable: the books stay reachable by agent software the
-  organisation chooses, and no build withholds a capability.
+  organization chooses, and no build withholds a capability.
 
 ## Considered Options
 
@@ -67,7 +67,7 @@ is that decision.
 * The inference provider as an inclusive subservice organization
 * Carve out the runtime and disclose the gap
 * A proprietary first-party runtime, available only to the attested tier
-* Restrict the covered population to rule-assigned coding, excluding agent judgement
+* Restrict the covered population to rule-assigned coding, excluding agent judgment
 * No SOC 1 opinion covering agent-produced entries
 
 ## Decision Outcome
@@ -99,7 +99,7 @@ covered-class credential, because registration is controlled, not the code. So t
 exactly as strong either way — the one thing that might have argued for proprietary does not.
 
 **Readable capture logic is an asset with this buyer.** The customer asking for SOC 1 is asking
-because an agent is making accounting judgements. A black box making those judgements is a harder
+because an agent is making accounting judgments. A black box making those judgments is a harder
 conversation with their auditor than a runtime whose capture logic they can read.
 
 **A proprietary runtime would protect the plumbing and not the differentiator.** Skills, prompts and
@@ -216,7 +216,7 @@ report carries some of.
 
 ### The inference provider as an inclusive subservice organization
 
-* Good, because it would put model identity and behaviour inside the examined system, which is where
+* Good, because it would put model identity and behavior inside the examined system, which is where
   the problem actually lives.
 * Bad, because the inclusive method requires the provider to open its controls to our auditor and
   coordinate the engagement. No major inference provider will do that at this scale, so the option is
@@ -247,12 +247,12 @@ re-proposed the first time a competitor forks the repo.
   already enforces.
 * Bad, because it closes the plumbing while the prompts that actually determine coding quality stay
   public, so the moat it builds is around the wrong asset.
-* Bad, because an unreadable component making accounting judgements is a liability in precisely the
+* Bad, because an unreadable component making accounting judgments is a liability in precisely the
   sale this tier exists for.
 
 ### Restrict the covered population to rule-assigned coding
 
-Cover only entries a deterministic rule assigned, excluding agent judgement entirely. This is the
+Cover only entries a deterministic rule assigned, excluding agent judgment entirely. This is the
 option that dissolves the problem rather than solving it, and it deserves more credit than it will
 get: rule-assigned coding is re-derivable, cheap to test, and `SOC1-04` and ADR-0033 § 3 already make
 it distinguishable in the data.
@@ -260,7 +260,7 @@ it distinguishable in the data.
 * Good, because it needs no runtime, no new client, and no unobservable component inside the boundary.
 * Good, because it is genuinely the strongest evidence position available, and the rule path is one to
   widen regardless.
-* Bad, because agent-made judgements are the product. The segment demanding SOC 1 is demanding it
+* Bad, because agent-made judgments are the product. The segment demanding SOC 1 is demanding it
   precisely because an agent keeps the books, and a report covering everything except that answers a
   question nobody asked.
 
@@ -288,7 +288,7 @@ it distinguishable in the data.
 what raises the question — there is nothing to license otherwise — and because flipping it would
 require amending `NFR-17` and `NFR-14`, which is a superseding record on this one either way.
 
-**Reversal cost. High and asymmetric.** Withdrawing a runtime customers have standardised on is worse
+**Reversal cost. High and asymmetric.** Withdrawing a runtime customers have standardized on is worse
 than never shipping one, and withdrawing an attestation is a commercial event rather than an
 engineering one. Deciding *not* to do this stays cheap until the first covered customer.
 

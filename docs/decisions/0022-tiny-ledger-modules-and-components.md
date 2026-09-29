@@ -17,7 +17,7 @@ stratification, and it is settled.
 
 It says nothing about the **vertical** axis: what constitutes a distinct piece of the system. That gap
 became visible when invoicing and accounts receivable entered scope (`AR-01`–`AR-19`), which is a
-whole domain — customers, invoices, line items, payment application, ageing — with its own vocabulary.
+whole domain — customers, invoices, line items, payment application, aging — with its own vocabulary.
 Absorbing it into the ledger would roughly double what "the ledger" means.
 
 There is a reason specific to this project to resist that. The differential oracle
@@ -27,7 +27,7 @@ concepts are inside the booking engine, the oracle is comparing two different sy
 strongest correctness evidence available quietly degrades.
 
 More components are coming — email delivery, notifications, a Slack surface, reconciliation,
-categorisation rules — and each will arrive with an argument for where it belongs. What is needed is
+categorization rules — and each will arrive with an argument for where it belongs. What is needed is
 the **rule**, not a pre-emptive list.
 
 ## Decision Drivers
@@ -133,7 +133,7 @@ not yet made.
   the record does not go stale as domains arrive.
 * Bad, because ingestion has no package until one is built, so a contributor arriving early finds a
   criteria table rather than a place to put code.
-* Bad, because classifying each new capability is a judgement call, and § 3 will occasionally be
+* Bad, because classifying each new capability is a judgment call, and § 3 will occasionally be
   ambiguous.
 * Bad, because modules cannot depend on each other, so a genuine cross-module need forces either a
   ledger concept or coordination in the service layer. That friction is intended and will sometimes
@@ -157,7 +157,7 @@ customer is — that is review, and the signal is a ledger module acquiring a do
 
 * Good, because it keeps the oracle meaningful and atomicity available.
 * Good, because the criteria outlive any particular module list.
-* Bad, because every new capability needs a classification judgement.
+* Bad, because every new capability needs a classification judgment.
 * Bad, because it forbids module-to-module dependencies, which will occasionally be inconvenient.
 
 ### One ledger package containing everything
@@ -202,7 +202,7 @@ anywhere.
 
 Would settle the architecture in one pass and avoid re-opening it repeatedly.
 
-* Good, because it would give a stable target to design against and remove repeated judgement calls.
+* Good, because it would give a stable target to design against and remove repeated judgment calls.
 * Bad, because it is speculative abstraction, which ADR-0012 gates. Naming modules before the domains
   exist means designing boundaries around guesses.
 
@@ -211,7 +211,7 @@ Would settle the architecture in one pass and avoid re-opening it repeatedly.
 **Follow-on obligations.**
 
 * `import-linter` contracts encoding the module dependency rules, added as the first module lands.
-* Reports follow ownership: financial statements depend only on the ledger, while AR ageing belongs to
+* Reports follow ownership: financial statements depend only on the ledger, while AR aging belongs to
   invoicing. This keeps a reporting module from depending on invoicing.
 * A package is created when its capability is known and it has code; `connectors` was removed rather than renamed (ADR-0031).
 * `CLAUDE.md`'s repository map reflects the ledger/module/component distinction.

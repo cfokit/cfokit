@@ -10,7 +10,7 @@ Eight assertions, each one ADR-0001 makes:
 1.  **Frontmatter parses**, and carries `status`, `kind`, `date` and `decision-makers`.
 2.  **`status` is valid** — one of the six values the template names.
 3.  **`kind` is valid** — `requirement-driven` or `substrate`. This field is what makes
-    assertion 6 checkable; without it the rule is a judgement call, and a judgement call
+    assertion 6 checkable; without it the rule is a judgment call, and a judgment call
     is not a gate.
 4.  **`superseded by ADR-NNNN` resolves** to a file that exists. A dangling supersession
     is worse than none: the reader is sent somewhere and finds nothing.
@@ -28,7 +28,7 @@ Eight assertions, each one ADR-0001 makes:
     refutes at least as many options as Considered Options names. A record that names
     alternatives without refuting each one does not prevent re-litigation, which is the
     main thing a record is for.
-Exits non-zero listing every offence, so CI fails loudly.
+Exits non-zero listing every offense, so CI fails loudly.
 """
 
 from __future__ import annotations

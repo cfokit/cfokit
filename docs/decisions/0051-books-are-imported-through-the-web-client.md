@@ -21,7 +21,7 @@ model re-emits every transaction as MCP tool arguments, because the sandbox cann
 to CFOKit. That route has three properties the operator pays for on every onboarding.
 
 **It spends a model on deterministic work.** Parsing an export and posting its entries has one
-right answer and no judgement in it. [ADR-0040](0040-import-is-the-first-module.md) states the
+right answer and no judgment in it. [ADR-0040](0040-import-is-the-first-module.md) states the
 principle: a model carrying transactions "is a lossy pipe that adds nothing to the operation it is
 carrying". For a real export of 5,556 transactions and 11,580 posting lines, the model emits about
 74,000 tokens (measured, ADR-0041 § 6) and first reads the reader's output, which is the same
@@ -188,7 +188,7 @@ The conventional shape, and the simplest for the operator: a file input and a su
 ### An MCP App rendered inside the Claude chat
 
 An MCP server can declare an interactive UI that a supporting host renders inside the
-conversation. It would give this page's behaviour without the operator leaving the chat.
+conversation. It would give this page's behavior without the operator leaving the chat.
 
 * Good, because it removes the one consequence this decision is worst at: the round trip to a tab.
 * Bad, because it is unverified here whether Claude Desktop renders such a UI with the network

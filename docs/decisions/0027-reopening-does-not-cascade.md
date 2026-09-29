@@ -180,7 +180,7 @@ Store opening balances per period, making the full cascade necessary and therefo
 - The accounting period is a first-class record (`SOC1-16`), which is what makes "is this period
   closed" and "which close covers this posting" answerable without deriving date ranges per query.
 
-**Reversal cost. Low.** This is service-layer behaviour over a data model that does not change. Moving
+**Reversal cost. Low.** This is service-layer behavior over a data model that does not change. Moving
 to a full cascade later is a policy change; moving to a hard year-end seal is an additional capability
 rather than a replacement.
 

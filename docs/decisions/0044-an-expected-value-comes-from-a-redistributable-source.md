@@ -56,7 +56,7 @@ for copying while remaining perfectly citable.
 ## Decision Drivers
 
 * A fixture must impose nothing on a fork. `NFR-14` is a `Must` and says "permanently".
-* The licence question must be answerable per case by a check, not per case by a judgement.
+* The licence question must be answerable per case by a check, not per case by a judgment.
 * We are not qualified to make a copyright determination and must never be in the position of
   having made one.
 * Whatever the rule is, it must leave a usable path to the evidence band 3 needs (ADR-0043),
@@ -174,7 +174,7 @@ field, which is the difference between a rule and a hope.
 
 * Good, because it is the only option leaving the repository with zero downstream obligations,
   which is `NFR-14` read literally.
-* Good, because the check is mechanical and per case, and needs no judgement from anyone.
+* Good, because the check is mechanical and per case, and needs no judgment from anyone.
 * Good, because it loses nothing that was actually available: no accounting source checked is
   CC BY, so the narrowing removes a permission nobody could use.
 * Bad, because it forecloses the modern worked-example literature permanently, and the corpus
@@ -190,7 +190,7 @@ the obligation is only attribution — which Apache 2.0 imposes anyway.
   other open accounting text checked; the permission has been in the gate since it was written
   and has never been exercised.
 * Bad, because CC BY 4.0's attribution is more specific than Apache 2.0's — title, author, URI,
-  licence, and an indication of changes — so honouring it means a NOTICE regime and a
+  licence, and an indication of changes — so honoring it means a NOTICE regime and a
   per-case attribution string, built and maintained for a hypothetical.
 * Bad, because a permission nobody uses is a permission nobody checks, and it would be the
   obvious thing to stretch when a tempting NC-SA source turns up.

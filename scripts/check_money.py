@@ -14,7 +14,7 @@ everywhere; never `float`, including in tests and fixtures":
 Escape hatch for the genuinely non-monetary case (a timeout, a ratio): put `not-money` in a
 comment on the same line. Use it rarely and say why.
 
-Exits non-zero listing every offence, so CI fails loudly.
+Exits non-zero listing every offense, so CI fails loudly.
 """
 
 from __future__ import annotations
@@ -121,7 +121,7 @@ def main() -> int:
             failures += 1
 
     if failures:
-        print(f"\nCI gate 4 failed: {failures} float offence(s).")
+        print(f"\nCI gate 4 failed: {failures} float offense(s).")
         print("If a value is genuinely not money, add a 'not-money' comment on that line.")
         return 1
 

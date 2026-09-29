@@ -418,7 +418,7 @@ def test_an_export_with_no_journal_is_refused(tmp_path: Path) -> None:
 def test_a_document_type_declaration_is_refused(tmp_path: Path) -> None:
     """Entity expansion — billion laughs, quadratic blowup — needs a DOCTYPE carrying ENTITY
     declarations, and a spreadsheet part never has one. Refusing it outright is a complete
-    defence against that class and is why this script depends on nothing."""
+    defense against that class and is why this script depends on nothing."""
     hostile = io.BytesIO()
     with zipfile.ZipFile(hostile, "w") as inner:
         inner.writestr(

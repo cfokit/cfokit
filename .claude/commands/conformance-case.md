@@ -52,7 +52,7 @@ transcribes it has the implementation in context.
    figure that appears in two statements — and check that too. It is the cheapest evidence
    that a digit was read correctly.
 
-6. **Write the manifest**, modelled on an existing case. `[source]`, `[coverage]` naming
+6. **Write the manifest**, modeled on an existing case. `[source]`, `[coverage]` naming
    areas and live requirement ids, `[expected]`, and a `[transcription]` block recording every
    OCR repair, every choice the source left open, and every cross-check that confirmed a
    figure.
@@ -88,7 +88,7 @@ transcribes it has the implementation in context.
   misfiled. If the rule is published but the fact pattern is ours, it is a *recognition* case
   and belongs in `tests/fixtures/recognition/` under its own gate — weaker evidence, kept
   apart deliberately (ADR-0044).
-- **An expected value obtained by running CFOKit.** ADR-0036 § 5: that pins current behaviour
+- **An expected value obtained by running CFOKit.** ADR-0036 § 5: that pins current behavior
   including its defects, which is the blind spot layer 2 exists to close.
 - **A source consulted but not redistributable** — a sample company file, an illustration read
   under a standard setter's own terms, an NC-licensed exercise. Lawful to read, and it may

@@ -64,7 +64,7 @@ TOTAL_LINES = {
 }
 
 
-# Every case in the corpus. The behavioural tests parameterise over this rather than over
+# Every case in the corpus. The behavioral tests parameterise over this rather than over
 # named cases, so a case added later joins the gate by being added.
 CASE_NAMES = sorted(child.name for child in CASES.iterdir() if child.is_dir())
 RECOGNITION_NAMES = sorted(child.name for child in RECOGNITION.iterdir() if child.is_dir())

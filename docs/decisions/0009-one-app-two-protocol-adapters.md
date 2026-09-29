@@ -48,7 +48,7 @@ Chosen option: **one application, one service layer, two thin protocol adapters.
 - Both are siblings at the top layer (ADR-0008) and must not import each other.
 - **`mcp` calls the service layer in-process.** It does not issue HTTP requests to `api`.
 
-Adapters translate protocol to service call and back. Any behaviour in an adapter is a defect,
+Adapters translate protocol to service call and back. Any behavior in an adapter is a defect,
 because it then exists in one protocol and not the other.
 
 ### Consequences

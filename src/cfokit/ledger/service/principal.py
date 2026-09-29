@@ -23,8 +23,8 @@ class ActorClass(StrEnum):
 
     Collapsing `RULE` into "non-human" would discard the distinction that most reduces
     examination cost: a rule-assigned coding is deterministic and re-derivable, and an
-    auditor tests it cheaply and once. An agent judgement is neither. The rule path is the
-    one to maximise, and making it invisible in the data removes the incentive to.
+    auditor tests it cheaply and once. An agent judgment is neither. The rule path is the
+    one to maximize, and making it invisible in the data removes the incentive to.
 
     **This records why a posting was made. It is never an authority check** (ADR-0042). Whether
     a caller may do something is `authorise`'s question, read from entity grants server-side.
@@ -33,7 +33,7 @@ class ActorClass(StrEnum):
 
     `RULE` is set on the write path when a rule determined a coding, never derived from a token:
     the rule runs after authentication, and one credential carries both a rule-assigned posting
-    and a judgement in the same session. `SOC1-04` describes it that way — an agent completes a
+    and a judgment in the same session. `SOC1-04` describes it that way — an agent completes a
     transaction *assigned by an approved rule* — so the assignment belongs to the transaction.
     Nothing assigns it yet because no rules engine exists.
     """

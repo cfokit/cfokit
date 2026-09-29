@@ -107,7 +107,7 @@ class StatedStatement:
 
     Leaf accounts only. A statement's subtotals are computed cells rather than stated figures,
     so reading one would mean evaluating a spreadsheet — and a total derived from the leaves is
-    the same number without the pretence that the source stated it independently.
+    the same number without the pretense that the source stated it independently.
 
     `unmatched` names rows whose account could not be resolved to one the journal posts to.
     Reported rather than dropped: a line silently missing from a comparison is a difference

@@ -15,7 +15,7 @@ decision-makers: [Geoff]
 written by whoever wrote the logic encode that person's understanding, so they cannot detect that
 the understanding is wrong.** That is not a hypothetical. The eval literature reports the same
 failure for generated assertions — an assertion written against an implementation tends to encode
-its current behaviour, including its bugs, rather than the intended behaviour.
+its current behavior, including its bugs, rather than the intended behavior.
 
 ADR-0010 answered it with a differential oracle. That is *an* answer, and an expensive one, and it
 is the only testing decision the corpus contains. Three things are unaddressed:
@@ -29,8 +29,8 @@ are precisely the ones not being built yet. ADR-0010 now records this.
 **Nothing covers the protocol surfaces.** The MCP tool surface and the REST API are published
 interfaces with stability obligations (ADR-0015), and no record says how either is tested.
 
-**Nothing covers agent behaviour.** A skill is non-deterministic and reads untrusted content
-(`PLT-23`, `BKP-20`). Its behaviour cannot be asserted the way a function's can, and no record says
+**Nothing covers agent behavior.** A skill is non-deterministic and reads untrusted content
+(`PLT-23`, `BKP-20`). Its behavior cannot be asserted the way a function's can, and no record says
 what takes the place of that.
 
 ## Decision Drivers
@@ -39,9 +39,9 @@ what takes the place of that.
   author, or the blind spot ADR-0010 named remains open whatever else is built.
 * A gate that is slow, flaky, or costs tokens cannot run on every commit, and one that does will be
   disabled.
-* ADR-0009 makes both adapters thin over one service layer, so most behaviour is reachable without a
+* ADR-0009 makes both adapters thin over one service layer, so most behavior is reachable without a
   protocol or a model.
-* An agent's turn leaves records rather than prose, so its behaviour can be asserted against those
+* An agent's turn leaves records rather than prose, so its behavior can be asserted against those
   records rather than judged.
 * A contributor runs the full suite from a clean checkout with no credentials and no accounts
   (`NFR-21`).
@@ -52,7 +52,7 @@ what takes the place of that.
 * The differential oracle now, as the primary correctness evidence
 * Self-written tests only — API contract tests plus evals
 * A second differential oracle from the same family, such as Ledger or hledger
-* LLM-as-judge as the primary check on agent behaviour
+* LLM-as-judge as the primary check on agent behavior
 
 ## Decision Outcome
 
@@ -107,9 +107,9 @@ any reversal link, the audit row, and the decision record of ADR-0033. Every one
 assertable, and together they carry the trajectory as well as the result.
 
 **Not the trial balance.** That is a report (`RPT-09`), it is derived, and it is an aggregate — two
-materially different behaviours can produce an identical one, such as drafting then posting versus
+materially different behaviors can produce an identical one, such as drafting then posting versus
 posting directly, or a posting plus a reversal that nets out. Asserting on it would be weaker than
-asserting on the records, and would couple a behaviour eval to the reporting layer so that a
+asserting on the records, and would couple a behavior eval to the reporting layer so that a
 reporting defect failed an agent eval. Its place is layer 1, where "it ties" is an invariant, and
 `EXP-01`, where it verifies an export.
 
@@ -137,9 +137,9 @@ smell.
   writing it violates. Where the answer came from is checkable, which is why a layer 2 case carries
   a citation and a test refuses one without it.
 - **Recording what the code returned and asserting that is never a specification.** It pins current
-  behaviour including its defects, which reintroduces at the top of the pyramid exactly the blind
+  behavior including its defects, which reintroduces at the top of the pyramid exactly the blind
   spot layer 2 exists to close. It is legitimate only as a characterisation test taken deliberately
-  before a refactor and labelled as one, and it never stands in for a case at layer 2 or layer 4.
+  before a refactor and labeled as one, and it never stands in for a case at layer 2 or layer 4.
 - **Evals pin the model version** (ADR-0033, `SOC1-35`). An eval run against an unpinned model
   measures the model, not the change.
 - **Evals gate on a statistically significant regression in pass rate**, not on a fixed threshold.
@@ -247,7 +247,7 @@ The rule this section's provenance rule replaces, and the one that looks like th
   appears.
 * Bad, because it multiplies the translation-layer problem rather than removing it.
 
-### LLM-as-judge as the primary check on agent behaviour
+### LLM-as-judge as the primary check on agent behavior
 
 * Good, because it needs no state model and can score things no assertion can express.
 * Bad, because it is unnecessary here. An agent's turn leaves records rather than prose, so nearly

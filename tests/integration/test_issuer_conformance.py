@@ -315,10 +315,10 @@ def test_the_audience_is_bound_to_this_deployment(
     reason=(
         "No issuer implements RFC 8707. Keycloak 26 ignores `resource` and returns its own "
         "default audience; Ory Hydra returns none; Microsoft Entra ID rejects the parameter "
-        "outright. RFC 6749 obliges a server to ignore parameters it does not recognise, so "
-        "this is conformant behaviour rather than a defect, and ADR-0019 § 2 makes the "
+        "outright. RFC 6749 obliges a server to ignore parameters it does not recognize, so "
+        "this is conformant behavior rather than a defect, and ADR-0019 § 2 makes the "
         "contract line audience binding rather than the mechanism. Kept because the record "
-        "prefers `resource` where an issuer honours it — and strict, so the first issuer that "
+        "prefers `resource` where an issuer honors it — and strict, so the first issuer that "
         "does forces this marker off."
     ),
 )

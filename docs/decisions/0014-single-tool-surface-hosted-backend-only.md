@@ -77,7 +77,7 @@ removed, so the question is open with nothing pre-empting it.
 
 * Good, because there is one implementation of the booking obligations, exercised by every caller
   in every topology.
-* Good, because a self-hoster pointing a skill at their own deployment gets identical behaviour, so
+* Good, because a self-hoster pointing a skill at their own deployment gets identical behavior, so
   documentation and support answers need no "which deployment?" qualifier.
 * Good, because the boundary is structural rather than conventional: skills are not Python
   distributions at all (ADR-0020), so there is no import path to take.
@@ -126,18 +126,18 @@ deployment.
 
 * Good, because it would let a single-user local deployment skip limits that only exist for shared
   tenancy.
-* Bad, because the skill's behaviour would then depend on where it is pointed, which makes CFOKit
+* Bad, because the skill's behavior would then depend on where it is pointed, which makes CFOKit
   two products with one name. Every piece of documentation, every support answer, and every bug
   report acquires a "which deployment?" qualifier.
 
 ### The skill embeds a subset of booking logic for offline queuing
 
-Narrower: keep the ledger remote, but let the skill categorise and stage entries locally when the
+Narrower: keep the ledger remote, but let the skill categorize and stage entries locally when the
 network is unavailable, syncing later.
 
-* Good, because it would make a skill useful on a plane, and categorisation genuinely does not need
+* Good, because it would make a skill useful on a plane, and categorization genuinely does not need
   the ledger.
-* Bad, because categorisation is not the hard part — the hard part is that the skill would then hold
+* Bad, because categorization is not the hard part — the hard part is that the skill would then hold
   opinions about how a transaction books, and booking logic in two places is exactly the failure the
   boundary exists to prevent.
 * Bad, because the legitimate version of this need is already met differently: the draft state

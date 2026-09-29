@@ -9,7 +9,7 @@ stop and ask rather than working around it.
 
 ## Repository map
 
-Directories are organised by **artifact kind**, and packages are named for
+Directories are organized by **artifact kind**, and packages are named for
 **capabilities, not vendors**. (ADR-0020, ADR-0031)
 
 | Path | What it is | Boundary |
@@ -229,7 +229,7 @@ Four layers, and only the top one needs a model. (ADR-0036)
 Layers 1 to 3 gate every commit; layer 4 does not. **An assertion's expected value comes from
 outside the implementation** — a published worked example, a requirement's stated acceptance, a
 domain invariant, or a second enforcement point. Never write one by running the code and recording
-what it returned: that pins current behaviour including its defects, which is the blind spot layer 2
+what it returned: that pins current behavior including its defects, which is the blind spot layer 2
 exists to close. Authorship is not the control here and cannot be, because every commit is
 generated; provenance is, which is why a layer 2 case without a citation is refused.
 
@@ -286,7 +286,7 @@ websockets, SSE transport, or an event bus. (ADR-0012)
   you proceed.
 - If you make a decision future work should be bound by, propose an ADR rather than
   burying it in a code comment.
-- **Merge by labelling, not by `gh pr merge`.** Add the `merge` label and stop. That label
+- **Merge by labeling, not by `gh pr merge`.** Add the `merge` label and stop. That label
   runs the reviewer, which approves and auto-merges only what `scripts/review_policy.py`
   allows, and marks everything else `needs-human`. Paths in `.github/CODEOWNERS` always need
   a person. Use `--admin` only when the user tells you to merge a pull request the reviewer

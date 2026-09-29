@@ -250,7 +250,7 @@ Would avoid the Slack dependency and serve clients regardless of what chat platf
 * `infra/README.md` documents the Slack component's variables and its public-ingress requirement.
 
 **Reversal cost. Moderate.** The component is separable and the ledger knows nothing about Slack, so
-removing it costs the component and the bindings. But users who have organised their practice around
+removing it costs the component and the bindings. But users who have organized their practice around
 per-client channels would be badly disrupted, so the cost is to them rather than to the codebase.
 
 ## Revisit when
