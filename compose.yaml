@@ -52,7 +52,7 @@ services:
   # deployment to be usable as it stands — so the issuer has to bring its own user store and
   # login pages, or a self-hoster is left to supply the one thing we may not write.
   keycloak:
-    image: quay.io/keycloak/keycloak:26.0.8@sha256:09a381c715ab0b111835b70f2905955274843a219c6f27efb348e4d9f4086858
+    image: quay.io/keycloak/keycloak:26.7.4@sha256:82a77884f3af238beab1e7afd63b5f530e1b5c0590bd7aa60b40a40463e29b2c
     restart: unless-stopped
     # `start-dev` serves plain HTTP, which is why same-machine access over localhost needs no
     # TLS. Cross-device access requires a tunnel and KC_HOSTNAME set to the public hostname
