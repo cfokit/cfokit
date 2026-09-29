@@ -45,7 +45,8 @@ canvas from this file.
 ## Prompt 2 — onboarding
 
 > Using the CFOKit design system, design the onboarding flow for a new customer at three sizes:
-> phone (390 wide), tablet (834 wide) and desktop (1440 wide). CFOKit is a progressive web app, used
+> phone (390 wide), tablet in portrait (834 wide) and landscape (1194 wide), and desktop (1440
+> wide). A tablet in landscape gets the desktop layout; check that it holds at that width. CFOKit is a progressive web app, used
 > in a browser or installed to a home screen. The flow: create an account → create
 > the company → import its books from QuickBooks → see whether the books agree with QuickBooks →
 > return to Claude, where their assistant explains the results.
