@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import json
 import subprocess
-import sys
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
@@ -24,7 +23,7 @@ from urllib.parse import parse_qs, urlparse
 # file's own directory on `sys.path` under the default import mode. mypy does not resolve it
 # that way and adding `tests` to `mypy_path` shadows `tests/conftest.py`, so the ignore is
 # narrower than the alternative.
-from test_reader_script import SCRIPT, export  # type: ignore[import-not-found]
+from test_reader_script import SCRIPT, SKILL_PYTHON, export  # type: ignore[import-not-found]
 
 Recorded = list[tuple[str, str, Any]]
 
@@ -95,7 +94,7 @@ def run(server: Any, archive: bytes, tmp_path: Path) -> subprocess.CompletedProc
     source.write_bytes(archive)
     return subprocess.run(  # noqa: S603 - our own script, at a path this file computes
         [
-            sys.executable,
+            SKILL_PYTHON,
             str(SCRIPT),
             str(source),
             "--post",

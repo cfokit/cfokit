@@ -21,8 +21,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # The interpreter the image ships (Dockerfile), so every test runs on what production runs.
-  # Code still targets requires-python, 3.12: ruff and mypy check against that floor.
+  # Keep this in step with requires-python in pyproject.toml and the Dockerfile's image.
   PYTHON_VERSION: "3.14"
   # uv otherwise picks any interpreter satisfying requires-python, including the runner's own.
   UV_PYTHON: "3.14"
@@ -85,6 +84,8 @@ jobs:
           enable-cache: true
           version: ${{ env.UV_VERSION }}
       - run: uv python install ${{ env.PYTHON_VERSION }}
+      # The skill script's tests run it on the interpreter Claude Desktop's sandbox has (ADR-0041).
+      - run: uv python install 3.11
       - run: uv sync --locked
       - run: uv run task test
 
