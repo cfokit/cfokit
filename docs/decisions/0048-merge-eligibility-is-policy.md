@@ -92,8 +92,9 @@ The policy's parts:
   * On a person's pull request, Important findings start a fix round, at most two. Dependabot's
     are never fixed.
   * Everything else is labelled `needs-human`.
-* **Supply chain.** Dependabot proposes updates monthly, with a cooldown of 7 days (30 for a
-  major).
+* **Supply chain.** Dependabot proposes updates monthly, with a cooldown of 7 days, or 30 for a
+  major `uv` update. `uv` is the only ecosystem here whose cooldown Dependabot sizes by semver,
+  and the other ecosystems' majors go to a person anyway.
 * **Trust.** Both triggers run the workflow and the policy from `main`, and check out the pull
   request only as data. Forks are refused. The only credential that can write is minted after
   every model step has finished.
