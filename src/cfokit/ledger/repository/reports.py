@@ -55,6 +55,46 @@ BALANCES = """
 """
 
 
+JOURNAL_TOTALS = """
+    SELECT COALESCE(SUM(p.amount) FILTER (WHERE p.amount > 0), 0),
+           COALESCE(-SUM(p.amount) FILTER (WHERE p.amount < 0), 0)
+      FROM posting p
+      JOIN ledger_transaction t ON t.id = p.transaction_id
+     WHERE p.entity_id = %(entity_id)s
+       AND t.status = 'posted'
+       AND t.transaction_date <= %(as_of)s
+       AND (%(since)s::date IS NULL OR t.transaction_date >= %(since)s)
+"""
+
+
+def journal_totals(
+    conn: psycopg.Connection[Any],
+    *,
+    entity_id: str,
+    as_of: date,
+    since: date | None = None,
+) -> tuple[Decimal, Decimal]:
+    """Gross debits and gross credits over every posting, not netted by account.
+
+    **A different quantity from a trial balance**, and the distinction is the whole point. A
+    trial balance nets within each account, so an account paid into and out of a hundred times
+    contributes only what it is left holding. A journal total is the volume that moved through
+    it, which is what a source system's own journal states and therefore what an import can be
+    checked against (`IMP-08`, ADR-0050).
+
+    Posted only, like every other read: a draft is not in the books (`LED-07`).
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            JOURNAL_TOTALS,
+            {"entity_id": entity_id, "as_of": as_of, "since": since},
+        )
+        row = cur.fetchone()
+        if row is None:  # pragma: no cover - an aggregate always returns a row
+            return Decimal(0), Decimal(0)
+        return Decimal(row[0]), Decimal(row[1])
+
+
 def account_balances(
     conn: psycopg.Connection[Any],
     *,

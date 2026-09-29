@@ -22,6 +22,7 @@ from enum import StrEnum
 
 from cfokit.ledger.engine.periods import preceding_window, year_earlier_window
 from cfokit.ledger.errors import AccountNotFound
+from cfokit.ledger.repository import reports as store
 from cfokit.ledger.repository.reports import Account, AccountBalance, AccountEntry
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.authorisation import Capability, authorise
@@ -32,11 +33,13 @@ __all__ = [
     "BalanceSheet",
     "Comparative",
     "ComparativeProfitAndLoss",
+    "JournalTotals",
     "ProfitAndLoss",
     "TrialBalance",
     "account_detail",
     "balance_sheet",
     "comparative_profit_and_loss",
+    "journal_totals",
     "profit_and_loss",
     "trial_balance",
 ]
@@ -54,6 +57,44 @@ class TrialBalance:
     accounting_basis: str
     functional_currency: str
     rows: tuple[AccountBalance, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class JournalTotals:
+    """What moved through the books, gross rather than netted by account."""
+
+    since: date | None
+    as_of: date
+    debits: Decimal
+    credits: Decimal
+
+
+def journal_totals(
+    database: Database,
+    *,
+    entity_id: str,
+    principal: Principal,
+    as_of: date,
+    since: date | None = None,
+) -> JournalTotals:
+    """Gross posting volume, which is what a source system's journal states about itself.
+
+    **Not a trial balance.** A trial balance nets within each account, so an account paid into
+    and out of a hundred times contributes only what it is left holding; this is the volume
+    that passed through. On a real QuickBooks export the two are 2,616,030.82 and
+    8,480,703.91 — the same books, two different questions.
+
+    a journal total is the only one an export states (`IMP-08`, ADR-0050).
+    Requires `READ`, like every other report.
+    a journal total is the only one an export states (`IMP-08`, ADR-0050). Requires `READ`, like
+    every other report.
+    """
+    with database.entity_write(entity_id) as write:
+        authorise(write, Capability.READ, principal)
+        gross_debits, gross_credits = store.journal_totals(
+            write.connection, entity_id=entity_id, as_of=as_of, since=since
+        )
+    return JournalTotals(since=since, as_of=as_of, debits=gross_debits, credits=gross_credits)
 
 
 def trial_balance(

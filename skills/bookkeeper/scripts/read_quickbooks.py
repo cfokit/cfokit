@@ -831,7 +831,11 @@ def post(books: dict[str, Any], base: str, entity_id: str, token: str, *, out: A
 
     checked = _http(
         f"{base}/entities/{entity_id}/imports/{opened['import_id']}/reconciliation",
-        payload={"balances": books["balances"], "statements": books["statements"]},
+        payload={
+            "balances": books["balances"],
+            "statements": books["statements"],
+            "journal_total": books["journal_total"],
+        },
         token=token,
     )
     return _report(posted, replayed, refusals, checked, out=out)
@@ -927,6 +931,14 @@ def for_mcp(books: dict[str, Any]) -> str:
             },
             "import_entries": entries,
             "reconcile_import": {
+                # The journal's own TOTAL, which carries no accounting basis — the one figure
+                # that holds however the reports beside it were run (ADR-0050). Absent where the
+                # source printed none; never fabricated.
+                "journal_total": (
+                    f"{books['journal_total']['debits']}|{books['journal_total']['credits']}"
+                    if books["journal_total"]
+                    else None
+                ),
                 "balances": stated,
                 "profit_and_loss": printed.get("profit_and_loss", []),
                 "balance_sheet": printed.get("balance_sheet", []),

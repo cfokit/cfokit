@@ -29,6 +29,7 @@ from cfokit.imports.source import (
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.administration import create_entity
 from cfokit.ledger.service.principal import ActorClass, Principal
+from cfokit.ledger.service.reports import trial_balance
 
 pytestmark = pytest.mark.integration
 
@@ -147,6 +148,43 @@ def test_an_altered_amount_is_caught(database: Database, entity: str) -> None:
     assert total is not None
     assert not total.agrees
     assert total.difference == Decimal("-1.00")
+
+
+def test_the_total_is_gross_volume_and_not_a_trial_balance(
+    database: Database, entity: str
+) -> None:
+    """**The distinction this check turns on, and the bug it had.**
+
+    A trial balance nets within each account: money paid into Checking and straight back out
+    again leaves nothing behind, so the account does not appear at all. A journal total is the
+    volume that moved, which is what a source states about its own journal — on a
+    real export the two figures are 2,616,030.82 and 8,480,703.91 over the same books.
+    two figures are 2,616,030.82 and 8,480,703.91 over the same books.
+
+    Written against a case where they differ, because the first implementation summed the trial
+    balance and agreed with itself on every fixture where an account was touched once.
+    """
+    landed(
+        database,
+        entity,
+        entry("1", "Checking", "100.00"),
+        entry("2", "Income", "100.00", credit="Checking"),
+    )
+
+    total = check_total(
+        database,
+        entity_id=entity,
+        principal=PERSON,
+        books=shape(StatedTotal(debits=Decimal("200.00"), credits=Decimal("200.00"))),
+    )
+
+    assert total is not None
+    assert total.our_debits == Decimal("200.00")  # gross: both transactions moved 100
+    assert total.agrees
+
+    # And the trial balance, over the same books, nets Checking to nothing.
+    netted = trial_balance(database, entity_id=entity, principal=PERSON, as_of=date.max)
+    assert "Checking" not in {row.code for row in netted.rows}
 
 
 def test_a_transposition_is_not_caught_and_the_record_says_so(

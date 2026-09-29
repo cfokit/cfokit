@@ -50,7 +50,12 @@ from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.administration import create_account
 from cfokit.ledger.service.authorisation import authorise_own_act
 from cfokit.ledger.service.principal import Principal
-from cfokit.ledger.service.reports import balance_sheet, profit_and_loss, trial_balance
+from cfokit.ledger.service.reports import (
+    balance_sheet,
+    journal_totals,
+    profit_and_loss,
+    trial_balance,
+)
 from cfokit.ledger.service.write import WriteContext, record_transaction
 
 __all__ = [
@@ -444,18 +449,14 @@ def check_total(
     """
     if books.journal_total is None:
         return None
-    report = trial_balance(
-        database,
-        entity_id=entity_id,
-        principal=principal,
-        as_of=as_of or date.max,
+    ours = journal_totals(
+        database, entity_id=entity_id, principal=principal, as_of=as_of or date.max
     )
-    ours = [row.balance for row in report.rows]
     return TotalAgreement(
         stated_debits=books.journal_total.debits,
         stated_credits=books.journal_total.credits,
-        our_debits=sum((b for b in ours if b > 0), Decimal(0)),
-        our_credits=-sum((b for b in ours if b < 0), Decimal(0)),
+        our_debits=ours.debits,
+        our_credits=ours.credits,
     )
 
 
