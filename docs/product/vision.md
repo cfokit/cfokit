@@ -427,7 +427,8 @@ These are decided, and they bound what the positioning may promise:
   books, the guidance skill answers a bounded set of questions and states its limits.
 - **Not a dashboard you run the business from.** The agent is how the books are kept and
   questioned. A web client, signed in through the identity provider, carries the work a
-  conversation does badly — landing a company's books to begin with. Each thing it grows to do
+  conversation does badly — onboarding to begin with: the account, the company, and landing its
+  books. Each thing it grows to do
   is a deliberate decision, not a drift, and an admin console is not one of them. Rendered
   report output has not been decided either way.
 - **Not a bank.** It reads financial data and keeps books; it does not move money.

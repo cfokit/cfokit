@@ -11,9 +11,9 @@ decision-makers: [Geoff]
 
 ## Context and Problem Statement
 
-An operator onboards by landing their company's history from the system it already runs. The
-surface they work in is a Claude chat, and CFOKit is hosted: nothing runs on the operator's
-machine but a browser and the Claude app.
+An operator onboards by landing their company's history from the system it already runs. CFOKit
+is hosted, or self-hosted by someone running the same image, and in both cases the operator
+reaches it through a browser and a Claude chat.
 
 [ADR-0041](0041-import-is-parsed-where-the-file-is.md) § 6 makes the model the bridge for that
 case. The export is attached to the chat, the skill's reader parses it in the sandbox, and the
@@ -38,16 +38,21 @@ an estimate; the route has not been measured end to end against the ceiling.
 so transcription error is detected rather than silent — but it is still introduced, and `NFR-01`
 allows no tolerance for it to be carried.
 
-What § 6 rests on is that the sandbox is the only thing near the file that cannot reach CFOKit.
-A browser tab is also near the file, and can — and CFOKit has a web client
+What § 6 rests on is that the sandbox was the only place the export could be opened before it
+reached CFOKit. A browser can open it too, and CFOKit has a web client
 ([ADR-0048](0048-cfokit-has-a-web-client.md)).
+
+**What should cross the network is the parsed books, not the archive.** The REST import endpoints
+already take the neutral `SourceBooks` shape (ADR-0041 § 1). Unzipping and parsing where the file
+is opened means no archive is uploaded, no archive is stored, and no untrusted archive is
+decompressed in a process that serves every tenant — whichever deployment that process belongs to.
 
 ## Decision Drivers
 
 * No model in the path of a deterministic transfer (ADR-0040).
 * No ceiling that an ordinary small business's history can reach.
 * The untrusted archive stays out of the process that serves every tenant (`NFR-04`, ADR-0041 § 3).
-* Works against a hosted deployment with nothing installed on the operator's machine.
+* The archive is not shipped to the server when the API already takes its parsed contents.
 * Importing remains a person's own act (ADR-0040 § 7, ADR-0042).
 * Operable by someone who runs a business: no terminal, no path, no script.
 * Nothing copyleft shipped to the operator's machine (`CLAUDE.md`, Licensing).
@@ -79,6 +84,9 @@ page's reader is a JavaScript port of the skill's, carrying the same bounds — 
 300 MB expanded, 64 members, a document type declaration refused — because the archive is still
 somebody else's file, now opened in its owner's browser rather than our process.
 
+Parsing runs in a Web Worker, so a large export does not freeze the page, and progress can be
+shown while it runs.
+
 **Two readers is the cost**, and it is paid for with a test rather than accepted on trust: CI runs
 both against the synthetic export and requires identical `SourceBooks`. A divergence between them
 is a failed build, not a customer's wrong books.
@@ -86,10 +94,16 @@ is a failed build, not a customer's wrong books.
 ### 2. The reconciliation is recorded, and the model reads it back
 
 The page posts the source's stated balances with the reconciliation request, which is the shape
-the endpoint already takes. The result is stored with the import — the source's claims and the comparison, append-only,
-in the imports module — and a read-only MCP tool returns it. The operator goes back to the chat
-and the model explains what agreed and what did not, which is the part of an import a model is
-for.
+the endpoint already takes. The result is stored with the import — the source's claims and the
+comparison, append-only, in the imports module — and a read-only MCP tool returns it. The
+operator goes back to the chat and the model explains what agreed and what did not, which is the
+part of an import a model is for.
+
+**A reload or a dropped connection costs nothing but time.** The parsed books live only in the
+tab, so after a reload the operator chooses the file again and the page sends every batch again.
+ADR-0029's keys are derived from the file and the row, so what already landed is a replay and only
+the remainder posts. How far an import has got is read from the server, never kept in browser
+storage (ADR-0048 § 2).
 
 The page must handle, whatever it looks like: signed out; choosing a file; a file the reader
 refuses, with the bound it crossed; the summary of what will be created and what will not
