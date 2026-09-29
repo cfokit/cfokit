@@ -10,7 +10,8 @@
 # dependency is, and nothing here adds one.
 #
 # Monthly, with a cooldown, and reviewed by the Monday sweep in review.yml (ADR-0048). A release
-# is not proposed until it has been public for a week — a month for a major — because a
+# is not proposed until it has been public for a week — a month for a major Python package, the
+# only ecosystem here where Dependabot sizes the cooldown by semver — because a
 # compromised release is usually caught and yanked inside that window, before any advisory
 # exists to flag it. Security updates ignore both the schedule and the cooldown.
 
@@ -35,7 +36,6 @@ updates:
       interval: monthly
     cooldown:
       default-days: 7
-      semver-major-days: 30
     open-pull-requests-limit: 5
     groups:
       actions:
@@ -48,7 +48,6 @@ updates:
       interval: monthly
     cooldown:
       default-days: 7
-      semver-major-days: 30
     open-pull-requests-limit: 5
     groups:
       images:
@@ -61,7 +60,6 @@ updates:
       interval: monthly
     cooldown:
       default-days: 7
-      semver-major-days: 30
     open-pull-requests-limit: 5
     groups:
       services:
