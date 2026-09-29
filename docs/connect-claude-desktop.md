@@ -1,11 +1,8 @@
 # Connecting Claude Desktop to a local CFOKit
 
-Every command here was run against a local stack; the figures shown are real output. The one
-step that cannot be scripted — signing in through a browser — is marked as such.
+## How Claude Desktop reaches it
 
-## What connects to what, and why it is not obvious
-
-Claude Desktop reaches an MCP server two ways, and neither is "point it at localhost":
+Claude Desktop reaches an MCP server two ways:
 
 | | Custom connector | Local server |
 |---|---|---|
@@ -13,10 +10,8 @@ Claude Desktop reaches an MCP server two ways, and neither is "point it at local
 | Transport | streamable HTTP | **stdio** |
 | Can reach `localhost` | no | yes |
 
-CFOKit speaks streamable HTTP (ADR-0012, ADR-0017), so a custom connector would need the stack
-published on a public hostname. For a local stack the answer is a **local server** entry that
-runs `mcp-remote`, a stdio-to-HTTP proxy that also performs the OAuth flow. It runs on your
-machine, so it can reach `localhost:8081`.
+A custom connector can't reach a local stack, so the setup here is a **local server** entry
+that runs `mcp-remote`, a stdio-to-HTTP proxy that also performs the OAuth flow.
 
 ## 1. Start the stack
 
@@ -24,110 +19,40 @@ machine, so it can reach `localhost:8081`.
 docker compose up -d --wait
 ```
 
-The identity provider needs its own database, created by `infra/postgres/init-app-role.sh` on
-an empty data directory. An existing volume needs it once:
+## 2. Create a user to sign in as
 
-```
-docker compose exec postgres psql -U cfokit -d postgres -c \
-  "CREATE DATABASE keycloak OWNER cfokit"
-```
-
-## 2. Nothing to mount
-
-Earlier versions asked you to mount a directory of exports into the container and set
-`IMPORT_ROOT`. That is gone. The export is read **on your machine** by a script in the skill
-bundle, which posts the books to CFOKit over HTTP — so there is no directory to mount, no overlay
-file to remember, and the file never leaves your laptop (ADR-0041).
-
-The script is standard-library Python 3. It installs nothing.
-
-## 3. Nothing, and why there is a step here at all
-
-The issuer answers on one hostname and redirects everything else to it. That is deliberate:
-`KC_HOSTNAME` is authoritative and a token's `iss` is validated against it, so an issuer
-reachable under two names would issue tokens the application rejects.
-
-The name is **`keycloak.localhost`**, chosen so that both sides get it for free. `*.localhost`
-resolves to the loopback address without a hosts entry (RFC 6761), so a browser reaches the
-published port; inside the compose network the same name is an alias on the service. One name,
-both sides, nothing to configure.
-
-So `http://localhost:8180` is still not a way in — it answers with a redirect:
-
-```
-GET http://localhost:8180/  ->  302  Location: http://keycloak.localhost:8180/admin/
-```
-
-but that is now a redirect your browser can follow.
-
-**If `*.localhost` does not resolve on your platform** — Windows historically does not implement
-it — add the name to your hosts file instead:
+The realm ships with no users. On Windows, first add this line to your hosts file:
 
 ```
 127.0.0.1 keycloak.localhost
 ```
 
-A deployment reachable by more than this machine sets `KC_HOSTNAME` and `AUTH_ISSUER_URL` to a
-public hostname, which is the condition `PUBLIC_BASE_URL` already carries (ADR-0004, ADR-0018).
+**1. Open http://keycloak.localhost:8180** and sign in with `admin` / `admin`.
 
-## 4. Create a user to sign in as
-
-The realm ships with no users. That is deliberate — a realm carrying a known password would be
-a credential in the repository — so this is the one step with no way to skip it.
-
-**1. Open http://keycloak.localhost:8180** — the name from step 3, not `localhost` — and sign
-in with `admin` / `admin`.
-
-You will see a yellow banner: *"You are logged in as a temporary admin user."* That is
-Keycloak telling you to replace the bootstrap administrator before this is reachable by
-anything but your laptop. It does not block anything here.
+You will see a yellow banner: *"You are logged in as a temporary admin user."* It does not
+block anything here.
 
 **2. Switch realms.** Top left, under the Keycloak logo, is a box reading **master**. Click it
-and choose **CFOKit** (`cfokit`). Everything below happens in that realm — a user created in
-`master` administers Keycloak and cannot sign in to CFOKit.
+and choose **CFOKit** (`cfokit`). A user created in `master` cannot sign in to CFOKit.
 
-**3. Left menu → `Users` → `Create new user`.** Under **Manage**, not **Configure**. On a realm
-with no users yet the list is empty and offers the same button in the middle of the page.
+**3. Left menu → `Users` → `Create new user`.** Under **Manage**, not **Configure**.
 
-**4. Fill in `Username`, `Email`, `First name` and `Last name`, then click `Create`.**
+**4. Fill in `Username`, `Email`, `First name` and `Last name`, then click `Create`.** Only
+`Username` carries an asterisk, but all four are required; leave one out and Keycloak asks for
+it mid-sign-in.
 
-Only `Username` carries an asterisk, and the other three are required anyway. Keycloak's user
-profile marks email and both names required for anyone holding the `user` role, so a user
-created with a username alone is sent to an **Update Account Information** form at first
-sign-in — which happens mid-authorisation, in the browser window `mcp-remote` opened. Filling
-them here costs nothing and skips that.
+**5. Open the `Credentials` tab and click `Set password`.** The create form has no password
+field.
 
-**5. Open the `Credentials` tab and click `Set password`.** This is the step people miss: the
-create form has no password field, so a user created and left alone has no way to sign in. The
-tab sits beside **Details** on the user's page.
+**6. Enter the password twice and turn `Temporary` OFF.** It defaults to On, which makes
+Keycloak demand a new password at first sign-in. Any non-empty password is accepted.
 
-**6. In the dialog, enter the password twice and turn `Temporary` OFF.**
+**7. Click `Save`.**
 
-**It defaults to On**, and On means Keycloak demands a new password at first sign-in. That
-prompt appears inside the browser window `mcp-remote` opened mid-authorisation, which is an
-unwelcome place to meet it.
+## 3. Configure Claude Desktop
 
-There are no password rules. The realm sets no `passwordPolicy`, so anything non-empty is
-accepted — a single character is taken. That is Keycloak's default rather than a choice made
-here: a realm shipping opinions about password strength would be deciding for every deployment,
-and this one has not been decided.
-
-**7. Click `Save`.** The user's own `ID` on the **Details** tab is the `sub` a token will carry,
-if you ever need to match a principal to a person.
-
-Change the admin password before this is reachable by anything but your laptop. `Realm settings`
-in the same menu is where brute-force protection lives, and it is off.
-
-## 5. Configure Claude Desktop
-
-**Register one client first, and keep it.** Dynamic registration is what the conformance
-contract asks for and it works — but `mcp-remote` registers a *fresh* client on every launch,
-then compares the scopes that client was granted against the ones it had cached, finds them
-different, and signs in again. Every launch. That re-authentication is what makes several proxy
-instances race for one callback port, and the race is what makes the desktop client cancel the
-server before it ever asks for a tool list.
-
-A client that does not change breaks that loop at the start:
+**Register one client and reuse it.** Otherwise `mcp-remote` registers a fresh client and signs
+in again on every launch.
 
 ```bash
 curl -s -X POST \
@@ -157,37 +82,12 @@ Keep the `client_id` and `client_secret` it returns. Then in
 }
 ```
 
-The secret sits in that file in plaintext. On a laptop, against an issuer nothing else can
-reach, that is proportionate; anywhere else it is not, and the client should be one an operator
-provisions rather than one anybody can register.
+`44196` is the callback port the client above was registered with.
 
 Quit Claude Desktop fully and reopen it — closing the window is not enough. On first use a
-browser window opens for the sign-in from step 4. `mcp-remote` registers itself as a client
-through RFC 7591, with no credential for you to create.
+browser window opens; sign in as the user from step 2.
 
-The trailing `44196` pins the callback port. Without it each instance derives its own, and
-Claude Desktop starts several — they then race for the sign-in, and the losers report that
-"authentication was completed by another instance", find no tokens where they expect them, and
-give up unauthenticated. Pinning the port narrows that race; pinning the client above is what
-stops it starting.
-
-**Anonymous registration is still open** even though the client above is registered by hand,
-because the four Keycloak policies that would restrict it each refuse a standards-conforming
-client outright — `infra/keycloak/README.md` says which and why.
-On a laptop that costs nothing: whoever can reach the issuer can already reach the ledger. **A
-deployment reachable by anything else must close it** and register clients deliberately, which
-`mcp-remote --static-oauth-client-info` supports.
-
-`mcp-remote` itself is verified against this stack: it discovers the issuer, registers, and
-opens the browser at a valid authorization URL. What is not exercised is Claude Desktop
-launching it and a person completing the sign-in.
-
-## 6. Install the skill
-
-**Claude Desktop does not read `~/.claude/skills/`.** That is Claude Code's location, and a
-skill copied there is invisible to the desktop app — which then answers bookkeeping questions
-out of general knowledge, and what general knowledge suggests is a ledger file in some other
-format. A second set of books nobody reconciles is worse than no answer.
+## 4. Install the skill
 
 Package the folder and upload it:
 
@@ -197,10 +97,7 @@ cd skills && zip -r ~/Downloads/bookkeeper.zip bookkeeper
 
 Then in Claude Desktop: **Customize → Skills → `+` → Create skill**, and upload that zip.
 
-The skill's own first rule is what makes the failure above impossible: if the CFOKit tools are
-not reachable it says so and stops, rather than producing a chart of accounts somewhere else.
-
-## 7. Create your books
+## 5. Create your books
 
 In Claude Desktop:
 
@@ -217,9 +114,10 @@ and a default would be an undeclared state wearing a value (`LED-14`, `LED-15`, 
 
 Keep the `entity_id` it returns.
 
-## 8. Import, reconcile, compare
+## 6. Import, reconcile, compare
 
-Ask the skill in Claude Desktop, or run it yourself — the script is the same either way:
+Ask the skill in Claude Desktop, or run it yourself — the script is the same either way. It
+reads the export on your machine and needs only Python 3:
 
 ```
 python3 skills/bookkeeper/scripts/read_quickbooks.py \
@@ -286,10 +184,8 @@ curl -s http://localhost:8081/readyz | python3 -m json.tool
  "tools": {"count": 19, "digest": "3b1309c30f9a", "names": ["account_detail", …]}}
 ```
 
-Compare that list against `docs/contracts/mcp-tools.json`. **A container built before a tool
-was merged serves the surface it was built with**, and nothing in the repository can see that:
-CI diffs the generated contract against the committed one, and both are current while the
-running thing is not. The symptom is a client truthfully reporting that a tool does not exist.
+Compare that list against `docs/contracts/mcp-tools.json`. A container built before a tool was
+merged serves the tools it was built with.
 
 If they differ, rebuild:
 
