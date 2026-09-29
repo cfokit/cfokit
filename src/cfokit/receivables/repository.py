@@ -30,7 +30,7 @@ __all__ = [
     "insert_draft",
     "invoice",
     "invoices",
-    "mark_cancelled",
+    "mark_canceled",
     "mark_issued",
     "replace_lines",
     "update_customer",
@@ -236,13 +236,13 @@ def mark_issued(
             raise LookupError(invoice_id)
 
 
-def mark_cancelled(
+def mark_canceled(
     conn: psycopg.Connection[Any], *, entity_id: str, invoice_id: str, reason: str
 ) -> bool:
     """Cancel an issued invoice. It keeps its number and stays visible (`AR-05`)."""
     with conn.cursor() as cur:
         cur.execute(
-            "UPDATE invoice SET status = 'cancelled', cancelled_at = now(), cancel_reason = %s"
+            "UPDATE invoice SET status = 'canceled', canceled_at = now(), cancel_reason = %s"
             " WHERE id = %s AND entity_id = %s AND status = 'issued'",
             (reason, invoice_id, entity_id),
         )

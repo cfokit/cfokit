@@ -39,7 +39,7 @@ Draft a new decision record for: **$ARGUMENTS**
 
 - **`Considered Options` and `Pros and Cons of the Options` are mandatory here**, though MADR
   marks the second optional. Each option gets its own subsection: give the rejected ones their
-  strongest case first, then the specific reason they lost. Cite numbers, limits, licences, and
+  strongest case first, then the specific reason they lost. Cite numbers, limits, licenses, and
   version facts. "Didn't feel right" is not a rejection reason. A record that names alternatives
   without refuting each one does not prevent re-litigation, which is the main thing it is for.
 - **`Context and Problem Statement` states what forces the decision** — constraints, workload
@@ -66,7 +66,7 @@ Draft a new decision record for: **$ARGUMENTS**
 - Derivation runs vision → requirements → decision records → `CLAUDE.md` rules, and citation never
   runs against it. Requirements never cite a decision record.
 - Only decision records cite decision records by number.
-- Verify facts rather than recalling them — especially licences and version numbers, since
+- Verify facts rather than recalling them — especially licenses and version numbers, since
   existing records exist precisely because a dependency relicensed. Say so if you could not verify
   something.
 - Do not mark it `accepted` yourself. Leave it `proposed` and tell the user what to review.

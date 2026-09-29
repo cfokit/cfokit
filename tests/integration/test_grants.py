@@ -17,7 +17,7 @@ import psycopg
 import pytest
 
 from cfokit.ledger.engine import Entry, Posting
-from cfokit.ledger.errors import NotAuthorised
+from cfokit.ledger.errors import NotAuthorized
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.principal import ActorClass, Principal
 from cfokit.ledger.service.read import read_transaction
@@ -73,12 +73,12 @@ def test_a_principal_with_no_grant_cannot_write(
     """`IAM-01`: "an identity holding no role for an entity can do nothing with it"."""
     entity_id, cash, revenue = books
 
-    with pytest.raises(NotAuthorised) as caught:
+    with pytest.raises(NotAuthorized) as caught:
         record_transaction(
             database, context(entity_id, STRANGER), entry=entry(cash, revenue), post=True
         )
 
-    assert caught.value.code == "not_authorised"
+    assert caught.value.code == "not_authorized"
 
 
 def test_a_principal_with_no_grant_cannot_read(
@@ -86,7 +86,7 @@ def test_a_principal_with_no_grant_cannot_read(
 ) -> None:
     entity_id, _, _ = books
 
-    with pytest.raises(NotAuthorised):
+    with pytest.raises(NotAuthorized):
         read_transaction(
             database,
             entity_id=entity_id,
@@ -102,7 +102,7 @@ def test_a_reader_cannot_record(
     reader = Principal(id="user:reader", actor_class=ActorClass.PERSON)
     grant(owner_conn, entity_id, reader.id, "reader")
 
-    with pytest.raises(NotAuthorised, match="record"):
+    with pytest.raises(NotAuthorized, match="record"):
         record_transaction(
             database, context(entity_id, reader), entry=entry(cash, revenue), post=False
         )
@@ -121,7 +121,7 @@ def test_a_recorder_can_draft_but_not_post(
     )
     assert drafted.status == "draft"
 
-    with pytest.raises(NotAuthorised, match="post"):
+    with pytest.raises(NotAuthorized, match="post"):
         record_transaction(
             database, context(entity_id, recorder), entry=entry(cash, revenue), post=True
         )
@@ -142,7 +142,7 @@ def test_an_agents_authority_is_the_intersection(
         id="skill:limited", actor_class=ActorClass.AGENT, acting_for="user:onlyreads"
     )
 
-    with pytest.raises(NotAuthorised):
+    with pytest.raises(NotAuthorized):
         record_transaction(
             database, context(entity_id, agent), entry=entry(cash, revenue), post=False
         )
@@ -170,7 +170,7 @@ def test_revocation_takes_effect_immediately(
             (grant_id,),
         )
 
-    with pytest.raises(NotAuthorised):
+    with pytest.raises(NotAuthorized):
         record_transaction(
             database, context(entity_id, principal), entry=entry(cash, revenue), post=True
         )
@@ -192,7 +192,7 @@ def test_a_grant_lapses_without_anyone_acting(
         lapses_at=datetime.now(UTC) - timedelta(seconds=1),
     )
 
-    with pytest.raises(NotAuthorised):
+    with pytest.raises(NotAuthorized):
         record_transaction(
             database, context(entity_id, advisor), entry=entry(cash, revenue), post=True
         )
@@ -229,7 +229,7 @@ def test_grants_are_isolated_between_entities(
     _, cash, revenue = books
     other, _ = two_entities
 
-    with pytest.raises(NotAuthorised):
+    with pytest.raises(NotAuthorized):
         record_transaction(
             database,
             context(other, Principal(id="user:geoff", actor_class=ActorClass.PERSON)),

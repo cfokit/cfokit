@@ -146,7 +146,7 @@ CREATE TABLE assignment_predicate (
     CONSTRAINT source_kind_value_is_known CHECK (
         field <> 'source_kind' OR value_text IN ('feed', 'upload', 'manual')
     ),
-    -- Normalisation happens in the engine before the insert; this catches the part of it
+    -- Normalization happens in the engine before the insert; this catches the part of it
     -- expressible without a collation dependency. A value with stray whitespace matches
     -- nothing and reads as a broken rule rather than a typo.
     CONSTRAINT value_text_is_trimmed CHECK (
@@ -162,7 +162,7 @@ CREATE INDEX assignment_predicate_version_idx
 -- inspectability, `BKP-12`'s question and `RPT-08`'s trail.
 --
 -- **The candidate's facts are stored here, as columns.** Replay needs its inputs, and the
--- facts matched on are not the facts booked: a normalised payee and the source kind never
+-- facts matched on are not the facts booked: a normalized payee and the source kind never
 -- reach a posting. A replay reconstructing its inputs from its outputs would be asserting
 -- that the code agrees with itself. Columns rather than jsonb because the set is closed,
 -- and a jsonb blob would quietly reopen the thing the whole design rests on being closed.
@@ -177,7 +177,7 @@ CREATE TABLE assignment_decision (
     -- become a posting, which is `BKP-12` and `NFR-16` made structural rather than promised.
     transaction_id    uuid        NOT NULL REFERENCES ledger_transaction (id),
     -- The T the rule set was reconstructed at. Server-assigned, and `now()` is transaction
-    -- start time; writes for an entity serialise on its advisory lock (ADR-0011), so a rule
+    -- start time; writes for an entity serialize on its advisory lock (ADR-0011), so a rule
     -- version cannot become visible between this and the COMMIT that uses it.
     decided_at        timestamptz NOT NULL DEFAULT now(),
     -- Two outcomes, and nothing between them. There is no `ambiguous`: `BKP-08` makes
@@ -204,7 +204,7 @@ CREATE TABLE assignment_decision (
     -- and the acceptance criterion is unfalsifiable.
     rule_set_digest   text        NOT NULL CHECK (rule_set_digest ~ '^[0-9a-f]{64}$'),
     -- Determinism has three inputs, not two: the rule set, the facts, and what the operators
-    -- mean. This is the third. A change to normalisation or operator semantics makes older
+    -- mean. This is the third. A change to normalization or operator semantics makes older
     -- decisions non-comparable, and a replay ignoring that would report a semantic change as
     -- a determinism failure — or silently paper over one. Bumping it needs an ADR.
     evaluator_version smallint    NOT NULL CHECK (evaluator_version > 0),
@@ -214,10 +214,10 @@ CREATE TABLE assignment_decision (
     supersedes_decision_id uuid   REFERENCES assignment_decision (id),
 
     -- The candidate's facts, exactly the closed set the predicates range over.
-    -- Normalised (NFC, case-folded, whitespace collapsed) — the form matching used.
+    -- Normalized (NFC, case-folded, whitespace collapsed) — the form matching used.
     candidate_payee             text           NOT NULL,
-    -- As it arrived. Kept beside the normalised form because an operator reviewing an
-    -- assignment needs to see what the bank sent, not what the normaliser made of it.
+    -- As it arrived. Kept beside the normalized form because an operator reviewing an
+    -- assignment needs to see what the bank sent, not what the normalizer made of it.
     candidate_payee_raw         text           NOT NULL,
     candidate_description       text,
     -- Signed as a posting is signed: positive is a debit. `direction` is derived from this
@@ -228,7 +228,7 @@ CREATE TABLE assignment_decision (
     candidate_transaction_date  date           NOT NULL,
     candidate_source_kind       text           NOT NULL
                                 CHECK (candidate_source_kind IN ('feed', 'upload', 'manual')),
-    -- sha256 over the normalised facts. `BKP-13` is "match an incoming transaction to a
+    -- sha256 over the normalized facts. `BKP-13` is "match an incoming transaction to a
     -- record the books already hold", and the cheapest form of that question — the identical
     -- line arriving twice — is this column compared with itself. Written now because the
     -- facts to hash are here now; nothing reads it until `BKP-13` lands.

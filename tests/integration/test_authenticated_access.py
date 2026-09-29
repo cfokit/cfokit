@@ -151,7 +151,7 @@ def grant(conn: psycopg.Connection[Any], entity_id: str, principal_id: str) -> N
     """Make the caller an owner of this entity, arranged rather than exercised.
 
     Through the owner connection, because what is under test is authentication reaching
-    authorisation — not the grant path, which `test_grants.py` covers.
+    authorization — not the grant path, which `test_grants.py` covers.
     """
     with conn.cursor() as cur:
         cur.execute(
@@ -164,7 +164,7 @@ def grant(conn: psycopg.Connection[Any], entity_id: str, principal_id: str) -> N
 # --- the join ------------------------------------------------------------------------------
 
 
-def test_a_real_token_authenticates_and_is_then_authorised(
+def test_a_real_token_authenticates_and_is_then_authorized(
     client: TestClient,
     owner_conn: psycopg.Connection[Any],
     books: tuple[str, str, str],
@@ -207,7 +207,7 @@ def test_a_real_token_without_a_grant_is_authenticated_and_then_refused(
     )
 
     assert response.status_code == 403
-    assert response.json()["code"] == "not_authorised"
+    assert response.json()["code"] == "not_authorized"
 
 
 def test_the_grant_is_matched_against_the_tokens_own_subject(
@@ -233,7 +233,7 @@ def test_the_grant_is_matched_against_the_tokens_own_subject(
     )
 
     assert response.status_code == 403
-    assert response.json()["code"] == "not_authorised"
+    assert response.json()["code"] == "not_authorized"
 
 
 # --- what must be refused -------------------------------------------------------------------

@@ -15,7 +15,7 @@ year = 1911
 problem = "Question 1"
 origin = "New York Examination, December 1898"
 scan = "https://archive.org/details/accountancyprob00greegoog"
-licence = "public-domain"
+license = "public-domain"
 pd_basis = "term-expired"
 
 [coverage]

@@ -46,7 +46,7 @@ For each dependency the update moves:
 
 1. Read the release notes and changelog **between the old and new versions**, not only the
    newest entry. Flag breaking changes, deprecations the code uses, changed defaults and a
-   changed licence.
+   changed license.
 2. Grep for where the dependency is used. An update to a test-only tool isn't an update to
    the driver on the write path, and the review should show that difference.
 3. Say what CI's green result does and doesn't prove for this particular update.

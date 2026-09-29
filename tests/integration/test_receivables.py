@@ -18,7 +18,7 @@ from typing import Any
 import psycopg
 import pytest
 
-from cfokit.ledger.errors import NotAuthorised
+from cfokit.ledger.errors import NotAuthorized
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.principal import ActorClass, Principal
 from cfokit.receivables import LineInput, total_of
@@ -356,7 +356,7 @@ def test_a_total_is_never_rounded(database: Database, customer: tuple[str, str, 
     assert stored.total != Decimal("33.33")
 
 
-# --- authorisation is the ledger's ------------------------------------------------------------
+# --- authorization is the ledger's ------------------------------------------------------------
 
 
 def test_a_stranger_reads_nothing(database: Database, customer: tuple[str, str, str]) -> None:
@@ -365,5 +365,5 @@ def test_a_stranger_reads_nothing(database: Database, customer: tuple[str, str, 
     entity_id, _, _ = customer
     stranger = Principal(id="user:nobody", actor_class=ActorClass.PERSON)
 
-    with pytest.raises(NotAuthorised):
+    with pytest.raises(NotAuthorized):
         list_customers(database, entity_id=entity_id, principal=stranger)

@@ -29,7 +29,7 @@ from datetime import UTC, date, datetime
 from cfokit.ledger.errors import IssuedStatementNotFound
 from cfokit.ledger.repository.issuance import IssuedStatement
 from cfokit.ledger.repository.unit_of_work import Database, EntityWrite
-from cfokit.ledger.service.authorisation import Capability, authorise
+from cfokit.ledger.service.authorization import Capability, authorize
 from cfokit.ledger.service.principal import Principal
 
 __all__ = ["Issued", "issue_statement", "issued", "supersession"]
@@ -69,7 +69,7 @@ def issue_statement(
     """
     watermark = datetime.now(UTC)
     with database.entity_write(entity_id) as write:
-        authorise(write, Capability.READ, principal)
+        authorize(write, Capability.READ, principal)
         issuance_id = write.record_issuance(
             report=report,
             since=since,
@@ -94,7 +94,7 @@ def issue_statement(
 def issued(database: Database, *, entity_id: str, principal: Principal) -> tuple[Issued, ...]:
     """Every statement issued from these books, newest first, each with its standing."""
     with database.entity_write(entity_id) as write:
-        authorise(write, Capability.READ, principal)
+        authorize(write, Capability.READ, principal)
         return tuple(
             _with_standing(write, statement) for statement in write.issued_statements()
         )
@@ -105,7 +105,7 @@ def supersession(
 ) -> Issued:
     """One issued statement, and whether a later posting changed what it said (`SOC1-20`)."""
     with database.entity_write(entity_id) as write:
-        authorise(write, Capability.READ, principal)
+        authorize(write, Capability.READ, principal)
         found = write.issued_statements(issuance_id)
         if not found:
             raise IssuedStatementNotFound(f"no issued statement {issuance_id} in this entity")

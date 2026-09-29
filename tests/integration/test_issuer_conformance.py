@@ -186,7 +186,7 @@ def test_the_client_credentials_grant_is_offered(metadata: dict[str, Any]) -> No
 
 
 def test_the_authorization_code_grant_is_offered(metadata: dict[str, Any]) -> None:
-    """How a person authorises a client — the flow every MCP client uses."""
+    """How a person authorizes a client — the flow every MCP client uses."""
     assert "authorization_code" in metadata["grant_types_supported"]
 
 

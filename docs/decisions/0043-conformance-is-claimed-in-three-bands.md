@@ -129,7 +129,7 @@ tier, so it gates every commit rather than only the runs with a stack up. The be
 
 Band 3's refusal is gated only where a capability enforces it, and mostly it is not.
 `PLT-23` describes a capability boundary that would hold whatever a skill is told, but no
-such boundary exists: nothing in `src/` tracks what an agent has read, `authorise` takes no
+such boundary exists: nothing in `src/` tracks what an agent has read, `authorize` takes no
 parameter through which it could learn, and the decision index already lists this as an
 unfixed conflict. The bookkeeper skill's "you do not decide accounting policy" and its
 untrusted-content rule are both prose in a prompt, and hold only as far as a model follows

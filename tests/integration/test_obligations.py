@@ -20,7 +20,7 @@ import pytest
 
 from cfokit.ledger.engine import Entry, Posting
 from cfokit.ledger.errors import (
-    NotAuthorised,
+    NotAuthorized,
     ObligationNotFound,
     TransactionIncomplete,
 )
@@ -318,7 +318,7 @@ def test_reading_obligations_requires_the_read_privilege(
 ) -> None:
     entity_id, _, _, _ = chart
 
-    with pytest.raises(NotAuthorised):
+    with pytest.raises(NotAuthorized):
         outstanding_obligations(
             database,
             entity_id=entity_id,

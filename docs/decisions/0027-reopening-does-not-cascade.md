@@ -162,7 +162,7 @@ Store opening balances per period, making the full cascade necessary and therefo
 
 * Good, because it would make period reports cheaper on large ledgers.
 * Bad, because ADR-0003 and ADR-0006 both rejected materialised balances, the second on the grounds
-  that a stored value can disagree with the postings it summarises. Introducing them to justify a
+  that a stored value can disagree with the postings it summarizes. Introducing them to justify a
   cascade would be adopting a constraint in order to obey it.
 * Bad, because materialisation belongs behind profiler evidence, and there is none.
 

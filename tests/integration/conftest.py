@@ -61,7 +61,7 @@ def _connect(dsn: str) -> psycopg.Connection[Any]:
 
 
 # What a deployment adds when it has somebody to hold it (ADR-0039). Only `owner` ships, so
-# these are defined the way a real deployment would define them — by inserting catalogue rows —
+# these are defined the way a real deployment would define them — by inserting catalog rows —
 # which is also the only test that the mechanism works. Session-scoped and never removed:
 # `entity_grant.role` references `role.name`, so a role a test has granted cannot be deleted.
 DELEGATED_ROLES: dict[str, frozenset[str]] = {
@@ -222,7 +222,7 @@ def books(owner_conn: psycopg.Connection[Any]) -> Iterator[tuple[str, str, str]]
             assert account_row is not None
             account_ids.append(account_row[0])
 
-        # Writes are authorised now (`IAM-01`), so the fixture grants what the tests use.
+        # Writes are authorized now (`IAM-01`), so the fixture grants what the tests use.
         # `poster` rather than `administrator`: a test should hold the least that lets it
         # work, or it stops being able to notice a capability check that is missing.
         for principal_id in ("user:geoff", "skill:bookkeeper"):

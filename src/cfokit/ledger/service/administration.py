@@ -25,9 +25,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from cfokit.ledger.errors import LastOwner, NotAuthorised, UnknownRole
+from cfokit.ledger.errors import LastOwner, NotAuthorized, UnknownRole
 from cfokit.ledger.repository.unit_of_work import Database
-from cfokit.ledger.service.authorisation import Capability, authorise
+from cfokit.ledger.service.authorization import Capability, authorize
 from cfokit.ledger.service.principal import Principal
 
 __all__ = [
@@ -133,10 +133,10 @@ def create_account(
     that arrived from a system CFOKit never saw.
     """
     with database.entity_write(entity_id) as write:
-        authorise(write, Capability.GRANT, principal)
+        authorize(write, Capability.GRANT, principal)
 
         if (retained_earnings or opening_balance) and account_type != "equity":
-            raise NotAuthorised("a named equity role must be an equity account")
+            raise NotAuthorized("a named equity role must be an equity account")
 
         account_id = write.create_account(
             code=code, name=name, account_type=account_type, parent_id=parent_id
@@ -184,10 +184,10 @@ def grant_role(
         # Granting a role that carries `own` is itself an owner's act: handing the entity away
         # is not part of staffing it (`IAM-21`).
         confers_ownership = Capability.OWN in definition.privileges
-        authorise(write, Capability.OWN if confers_ownership else Capability.GRANT, principal)
+        authorize(write, Capability.OWN if confers_ownership else Capability.GRANT, principal)
         if definition.never_lapses and lapses_at is not None:
             # IAM-09's lapse happens without anyone acting, and must never unhold an entity.
-            raise NotAuthorised(f"the {role!r} role cannot be granted for a stated period")
+            raise NotAuthorized(f"the {role!r} role cannot be granted for a stated period")
         grant_id = write.grant_role(
             principal_id=to_principal, role=role, granted_by=principal.id, lapses_at=lapses_at
         )
@@ -228,13 +228,13 @@ def revoke_grant(
         # Revoking a role that holds the entity takes `own`; revoking anyone else takes
         # `grant`. An administrative role cannot remove the people whose entity it is.
         confers_ownership = held is not None and Capability.OWN in held.privileges
-        authorise(write, Capability.OWN if confers_ownership else Capability.GRANT, principal)
+        authorize(write, Capability.OWN if confers_ownership else Capability.GRANT, principal)
 
         if write.would_remove_last_owner(grant_id, now):
             raise LastOwner("an entity always has at least one owner; grant another first")
 
         if not write.revoke_grant(grant_id, revoked_by=principal.id):
-            raise NotAuthorised("no such grant in this entity, or it is already revoked")
+            raise NotAuthorized("no such grant in this entity, or it is already revoked")
 
         write.record_audit(
             request_id=request_id,

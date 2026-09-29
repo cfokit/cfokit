@@ -37,7 +37,7 @@ CREATE TABLE invoice (
     entity_id   uuid        NOT NULL REFERENCES entity (id),
     customer_id uuid        NOT NULL REFERENCES customer (id),
     status      text        NOT NULL DEFAULT 'draft'
-                            CHECK (status IN ('draft', 'issued', 'cancelled')),
+                            CHECK (status IN ('draft', 'issued', 'canceled')),
     -- Assigned at issue and never before, from a gapless series (`AR-05`). A draft has none,
     -- because a draft that never issues would otherwise consume a number and leave the gap
     -- the requirement forbids.
@@ -56,10 +56,10 @@ CREATE TABLE invoice (
     -- The postings an issue produced. Null while draft: an unissued invoice is not in the
     -- books (`AR-04`), exactly as a draft transaction is not (`LED-07`).
     transaction_id uuid     REFERENCES ledger_transaction (id),
-    cancelled_at   timestamptz,
+    canceled_at   timestamptz,
     cancel_reason  text,
 
-    -- The number series has no gaps, so a number is unique within its entity and a cancelled
+    -- The number series has no gaps, so a number is unique within its entity and a canceled
     -- invoice keeps the one it had (`AR-05`).
     UNIQUE (entity_id, number),
     -- Issued means: numbered, dated, and in the books. Anything less is a partial issue, and
@@ -70,9 +70,9 @@ CREATE TABLE invoice (
         AND (status = 'draft') = (transaction_id IS NULL)
         AND (status = 'draft') = (issue_date IS NULL)
     ),
-    CONSTRAINT cancelled_has_a_reason CHECK (
-        (status = 'cancelled') = (cancelled_at IS NOT NULL)
-        AND (cancelled_at IS NULL OR length(trim(cancel_reason)) > 0)
+    CONSTRAINT canceled_has_a_reason CHECK (
+        (status = 'canceled') = (canceled_at IS NOT NULL)
+        AND (canceled_at IS NULL OR length(trim(cancel_reason)) > 0)
     )
 );
 
@@ -104,7 +104,7 @@ CREATE INDEX invoice_line_invoice_idx ON invoice_line (invoice_id);
 -- A Postgres sequence is not gapless: it advances outside the transaction so a rollback
 -- leaves a hole, which is the property that makes sequences fast and the one this cannot
 -- have. A counter row updated inside the transaction gives up that concurrency, and the write
--- path already serialises per entity on an advisory lock (ADR-0006, ADR-0029), so there is no
+-- path already serializes per entity on an advisory lock (ADR-0006, ADR-0029), so there is no
 -- concurrency here to give up.
 -- ---------------------------------------------------------------------------
 CREATE TABLE invoice_series (
@@ -132,10 +132,10 @@ BEGIN
         RETURN NEW;  -- freely editable until issued (`AR-04`)
     END IF;
 
-    -- Issued or cancelled. The only permitted move is issued -> cancelled, and the invoice
-    -- itself is otherwise fixed: a cancelled invoice keeps its number and stays visible as
-    -- cancelled (`AR-05`).
-    IF NEW.status <> OLD.status AND NOT (OLD.status = 'issued' AND NEW.status = 'cancelled') THEN
+    -- Issued or canceled. The only permitted move is issued -> canceled, and the invoice
+    -- itself is otherwise fixed: a canceled invoice keeps its number and stays visible as
+    -- canceled (`AR-05`).
+    IF NEW.status <> OLD.status AND NOT (OLD.status = 'issued' AND NEW.status = 'canceled') THEN
         RAISE EXCEPTION
             'append_only_violated: invoice % is %; correct it with a credit note', OLD.id, OLD.status
             USING ERRCODE = 'restrict_violation';
@@ -215,7 +215,7 @@ GRANT SELECT, INSERT, UPDATE ON customer, invoice, invoice_line, invoice_series 
 -- invoice leaves draft, so this is the same two layers as everywhere else — the grant makes
 -- the operation possible and the trigger decides when it is allowed (ADR-0003, ADR-0007).
 --
--- Not on `invoice` or `customer`. Neither is ever deleted: an invoice is cancelled and keeps
+-- Not on `invoice` or `customer`. Neither is ever deleted: an invoice is canceled and keeps
 -- its number (`AR-05`), and a customer is archived because an invoice names it for as long as
 -- the invoice exists.
 GRANT DELETE ON invoice_line TO cfokit_app;

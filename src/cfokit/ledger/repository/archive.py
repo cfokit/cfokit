@@ -139,7 +139,7 @@ TABLES: tuple[tuple[str, str], ...] = (
     (
         "invoice",
         "SELECT id, customer_id, status, number, issue_date, due_date, terms, commodity,"
-        " note, created_at, issued_at, transaction_id, cancelled_at, cancel_reason"
+        " note, created_at, issued_at, transaction_id, canceled_at, cancel_reason"
         " FROM invoice WHERE entity_id = %(entity_id)s ORDER BY created_at, id",
     ),
     (

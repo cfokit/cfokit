@@ -35,7 +35,7 @@ INSERT INTO role_privilege (role_name, privilege) VALUES
     ('owner', 'grant'),
     ('owner', 'own');
 
--- The catalogue replaces the enumeration that was baked into the column.
+-- The catalog replaces the enumeration that was baked into the column.
 ALTER TABLE entity_grant DROP CONSTRAINT entity_grant_role_check;
 
 -- Entities created before this migration were given `administrator`, a role that no longer
@@ -53,6 +53,6 @@ END $$;
 ALTER TABLE entity_grant
     ADD CONSTRAINT entity_grant_role_fkey FOREIGN KEY (role) REFERENCES role (name);
 
--- Both tables are catalogue rather than entity data, so they are not entity-scoped and carry
+-- Both tables are catalog rather than entity data, so they are not entity-scoped and carry
 -- no row-level security policy. Every session may read them; only a migration writes them.
 GRANT SELECT ON role, role_privilege TO cfokit_app;

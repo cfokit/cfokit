@@ -17,7 +17,7 @@ Assignment posts a candidate straight through when an approved rule resolves it.
 An uploaded statement is different in a way the rule cannot see. Its payees, dates and amounts
 were read out of a document the organization did not author (`BKP-20`), by a model, in the same
 session that is now asking to post them. `PLT-23` says that session "cannot post to the books
-without a person authorising it", and requires the constraint to be "enforced by what the agent
+without a person authorizing it", and requires the constraint to be "enforced by what the agent
 is able to do, never by an instruction telling it what not to do".
 
 A rule answers *where* a transaction belongs. It does not answer *whether it happened as
@@ -33,7 +33,7 @@ posting, book itself.
 ## Considered Options
 
 * An uploaded candidate is drafted whatever resolves it
-* Post what a rule resolves; the rule's approval is the person's authorisation
+* Post what a rule resolves; the rule's approval is the person's authorization
 * A per-call `post` flag the caller sets
 
 ## Decision Outcome
@@ -73,7 +73,7 @@ Not gated: the caller's choice of `source_kind`, as above.
 * Good, because the server decides, from the kind of source, not from a flag the caller sets.
 * Bad, because it weakens straight-through booking for the one path with no feed.
 
-### Post what a rule resolves; the rule's approval is the person's authorisation
+### Post what a rule resolves; the rule's approval is the person's authorization
 
 * Good, because it is what assignment already did, and the balance proof
   ([ADR-0046](0046-a-statement-proves-itself.md)) limits a doctored statement to one that is at

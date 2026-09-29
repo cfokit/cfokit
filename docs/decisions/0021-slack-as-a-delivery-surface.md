@@ -102,7 +102,7 @@ can influence.
 
 **This is the load-bearing rule.** Being in a Slack channel grants nothing.
 
-A request is authorised only if **both** hold:
+A request is authorized only if **both** hold:
 
 1. The Slack user is **linked** to a CFOKit identity, and that identity holds a grant for the
    channel's entity.

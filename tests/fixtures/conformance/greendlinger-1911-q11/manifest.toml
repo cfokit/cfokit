@@ -13,7 +13,7 @@ year = 1911
 problem = "Question 11"
 origin = "State of Washington Examination, April 1906"
 scan = "https://archive.org/details/accountancyprob00greegoog"
-licence = "public-domain"
+license = "public-domain"
 pd_basis = "term-expired"
 
 [coverage]

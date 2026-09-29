@@ -41,7 +41,7 @@ ANSWER_FILES = {
 }
 
 # A trial balance is published account by account, and a case compares it that way. A
-# statement is not: a published balance sheet summarises, printing "Capital: investment
+# statement is not: a published balance sheet summarizes, printing "Capital: investment
 # 20,000, net profit 6, less withdrawals 1,000" where the ledger holds three accounts. Mapping
 # those summary lines back onto account codes is a step the source never published, and a
 # transcription that performs it has quietly become a derivation — which is the one thing
@@ -54,7 +54,7 @@ ANSWER_FILES = {
 #   an account code — where the source prints a figure against a single account
 #
 # Most published statements do both. The 1900 balance sheet in `greendlinger-1911-q04`
-# summarises its equity into three narrative lines, but prints cash, bank stock, notes and
+# summarizes its equity into three narrative lines, but prints cash, bank stock, notes and
 # accounts receivable, inventory and real estate individually — so those are assertable
 # exactly as printed, and only the equity side is not. Asserting the totals alone would let a
 # misclassification *within* one side of the statement pass unnoticed.

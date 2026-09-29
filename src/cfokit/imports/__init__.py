@@ -48,7 +48,7 @@ from cfokit.ledger.errors import LedgerError
 from cfokit.ledger.presentation import SourceBalance, present_reconciliation
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.administration import create_account
-from cfokit.ledger.service.authorisation import authorise_own_act
+from cfokit.ledger.service.authorization import authorize_own_act
 from cfokit.ledger.service.principal import Principal
 from cfokit.ledger.service.reports import (
     balance_sheet,
@@ -175,7 +175,7 @@ def open_books(
     of that act rather than a preliminary to it.
     """
     with database.entity_write(entity_id) as write:
-        authorise_own_act(write, principal)
+        authorize_own_act(write, principal)
 
     blocked = _blocking_shape(database, entity_id=entity_id, principal=principal, books=books)
     if blocked is not None:
@@ -218,7 +218,7 @@ def post_entries(
     """
     import_id = _import_id(fingerprint)
     with database.entity_write(entity_id) as write:
-        authorise_own_act(write, principal)
+        authorize_own_act(write, principal)
         accounts = {account.code: account.account_id for account in write.chart()}
 
     posted = replayed = 0

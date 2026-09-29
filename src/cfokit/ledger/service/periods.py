@@ -24,10 +24,10 @@ from __future__ import annotations
 from cfokit.ledger.engine.periods import Period
 from cfokit.ledger.errors import PeriodClosed, PeriodNotClosed
 from cfokit.ledger.repository.unit_of_work import Database
-from cfokit.ledger.service.authorisation import (
+from cfokit.ledger.service.authorization import (
     Capability,
-    authorise,
-    authorise_own_act,
+    authorize,
+    authorize_own_act,
 )
 from cfokit.ledger.service.principal import Principal
 
@@ -49,7 +49,7 @@ def close_period(
     because that is the act which lets a write into a period someone has already reported on.
     """
     with database.entity_write(entity_id) as write:
-        authorise(write, Capability.CLOSE, principal)
+        authorize(write, Capability.CLOSE, principal)
 
         if write.close_in_force(period) is not None:
             raise PeriodClosed(f"period {period} is already closed")
@@ -91,8 +91,8 @@ def reopen_period(
         raise PeriodNotClosed("a reopen must state a reason")
 
     with database.entity_write(entity_id) as write:
-        authorise(write, Capability.CLOSE, principal)
-        authorise_own_act(write, principal)
+        authorize(write, Capability.CLOSE, principal)
+        authorize_own_act(write, principal)
 
         close_id = write.close_in_force(period)
         if close_id is None:

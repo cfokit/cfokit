@@ -61,7 +61,7 @@ from cfokit.assignment.repository import (
 )
 from cfokit.ledger.engine import Entry, Posting
 from cfokit.ledger.repository.unit_of_work import Database
-from cfokit.ledger.service.authorisation import authorise_own_act
+from cfokit.ledger.service.authorization import authorize_own_act
 from cfokit.ledger.service.principal import Principal
 from cfokit.ledger.service.write import Assigned, WriteContext, record_transaction
 
@@ -172,7 +172,7 @@ def approve(
     enforce it.
     """
     with database.entity_write(entity_id) as write:
-        authorise_own_act(write, principal)
+        authorize_own_act(write, principal)
         conn = write.connection
 
         if rule_id is None:
@@ -389,7 +389,7 @@ def _book(
 
 
 def fingerprint(candidate: Candidate) -> str:
-    """A digest of the normalised facts.
+    """A digest of the normalized facts.
 
     `BKP-13` is "match an incoming transaction to a record the books already hold", and the
     cheapest form of that question — the identical line arriving twice — is this compared
@@ -397,7 +397,7 @@ def fingerprint(candidate: Candidate) -> str:
     `BKP-13` lands.
     """
     parts = (
-        candidate.normalised_payee,
+        candidate.normalized_payee,
         str(candidate.amount),
         candidate.commodity,
         candidate.source_account_id,

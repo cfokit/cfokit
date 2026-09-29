@@ -5,7 +5,7 @@ books and the same stable code for the same refusal (ADR-0009), which cannot be 
 either side alone.
 
 **REST** goes through FastAPI's `TestClient`, so request validation, dependency resolution,
-the exception handler and JSON serialisation all run.
+the exception handler and JSON serialization all run.
 
 **MCP** goes two ways. Most cases go through `MCPServer.call_tool`, the SDK's own dispatch:
 argument validation against the generated schema, and the error wrapping that turns an
@@ -207,7 +207,7 @@ def test_rest_refuses_a_complete_export_in_an_entity_the_caller_holds_nothing_in
     refused = client.get(f"/entities/{other_entity}/complete-export")
 
     assert refused.status_code == 403
-    assert refused.json()["code"] == "not_authorised"
+    assert refused.json()["code"] == "not_authorized"
 
 
 def test_rest_replays_an_idempotency_key_without_booking_again(
@@ -284,7 +284,7 @@ def test_rest_refuses_an_entity_the_caller_holds_nothing_in(
     """`IAM-01`: holding no role in an entity means being able to do nothing with it.
 
     403 rather than 404, which does reveal that the entity exists. That is the deliberate
-    trade `NotAuthorised` documents: a caller who names an entity and holds nothing in it is
+    trade `NotAuthorized` documents: a caller who names an entity and holds nothing in it is
     far more often someone whose access lapsed or was revoked than someone probing for ids,
     and "not found" would send them to support instead of to an administrator.
     """
@@ -299,7 +299,7 @@ def test_rest_refuses_an_entity_the_caller_holds_nothing_in(
     )
 
     assert response.status_code == 403
-    assert response.json()["code"] == "not_authorised"
+    assert response.json()["code"] == "not_authorized"
 
 
 def test_rest_hides_another_entitys_transaction_from_someone_who_may_read_here(
@@ -310,7 +310,7 @@ def test_rest_hides_another_entitys_transaction_from_someone_who_may_read_here(
 ) -> None:
     """`NFR-04`, now that a grant is what gets you through the door.
 
-    The caller holds a role in the *other* entity, so authorisation passes and the question
+    The caller holds a role in the *other* entity, so authorization passes and the question
     becomes what row-level security lets them see. It shows them nothing, and the answer is
     "not found" rather than "forbidden" — absent and invisible are the same answer, or the
     answer leaks which ids exist elsewhere.

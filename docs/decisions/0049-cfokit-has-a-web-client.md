@@ -42,7 +42,7 @@ provider rather than written here.
 * Credentials reach the identity provider and nothing else — no agent, no model, not CFOKit's API
   (`IAM-10`).
 * Sign-in and sign-up look and behave like the rest of the product.
-* One authorisation path. The web client may do nothing an agent holding the same person's grants
+* One authorization path. The web client may do nothing an agent holding the same person's grants
   could not, or permissions exist in two places and diverge.
 * One image and one deployable (ADR-0023); portable to any target and to a laptop (ADR-0004).
 * No stateful sessions against a scale-to-zero service (ADR-0017).
@@ -64,7 +64,7 @@ provider rather than written here.
 
 Chosen option: "A single-page application built to static files, served by the REST service,
 signing in with PKCE", because it is the only option that adds no session state, no second
-deployable and no second authorisation path.
+deployable and no second authorization path.
 
 > The web client is a React single-page application in TypeScript, built to static files and
 > served by the REST service under its own `PUBLIC_BASE_URL`. It signs the person in through the
@@ -145,7 +145,7 @@ get wrong, and the web client ships in the one image to wherever that image runs
 everything the client needs is built into its own bundle. Anything read from a user's file or
 from the books is rendered as text, never as markup — which React does by default, and
 `dangerouslySetInnerHTML` is forbidden by lint. Whatever ships to the browser carries no copyleft
-licence.
+license.
 
 ### 7. Browser support is the current releases, and needs nothing unusual
 
@@ -183,7 +183,7 @@ The build is a stage of the one image; nothing is served from a Node process.
 | Tests | Vitest, Testing Library, MSW; Playwright end to end; axe for accessibility | Component, contract-mocked and cross-browser layers |
 | Tooling | pnpm with a pinned lockfile; ESLint with typescript-eslint; Prettier | Pinned and updated by Dependabot, like every other dependency |
 
-Licences, checked against each project's repository: everything that ships to the browser is MIT
+Licenses, checked against each project's repository: everything that ships to the browser is MIT
 or Apache-2.0. axe-core is MPL-2.0 and is test tooling only; it must never enter the bundle.
 
 **Money gets the rule the server already has.** A float never touches an amount (ADR-0005): the
@@ -237,7 +237,7 @@ client's Tailwind theme is generated. A change of look is a change of tokens, ma
   static file — the "no endpoints of its own" rule, observed at the surface.
 * The public client in `infra/keycloak/cfokit-realm.json` permits only the authorization code
   flow with PKCE (S256).
-* CI fails when a copyleft licence appears in the production bundle, the web client's or the
+* CI fails when a copyleft license appears in the production bundle, the web client's or the
   sign-in theme's.
 * A lint rule forbids converting an amount to a JavaScript `number` and forbids
   `dangerouslySetInnerHTML`.
@@ -258,7 +258,7 @@ The conventional shape for a modern web client.
 * Good, because the client releases independently of the server.
 * Bad, because it is a second deployable with its own hosting on every target, including a laptop,
   against ADR-0023 and ADR-0004.
-* Bad, because a second origin means CORS, and a misconfigured CORS policy is an authorisation bug.
+* Bad, because a second origin means CORS, and a misconfigured CORS policy is an authorization bug.
 
 ### Static pages with no framework and no build step
 

@@ -29,7 +29,7 @@ from cfokit.activity.repository import (
 )
 from cfokit.ledger.errors import AccountNotFound
 from cfokit.ledger.repository.unit_of_work import Database, EntityWrite
-from cfokit.ledger.service.authorisation import Capability, authorise
+from cfokit.ledger.service.authorization import Capability, authorize
 from cfokit.ledger.service.principal import Principal
 from cfokit.ledger.service.reports import account_detail
 
@@ -89,7 +89,7 @@ def record_statement(
     digest = content_digest(statement)
 
     with database.entity_write(entity_id) as write:
-        authorise(write, Capability.RECORD, principal)
+        authorize(write, Capability.RECORD, principal)
         if write.account(statement.account_id) is None:
             raise AccountNotFound(f"no account {statement.account_id} in this entity")
         conn = write.connection
@@ -170,14 +170,14 @@ def statement_agreement(
     """Whether the books' posted balances for the account match what the statement states.
 
     A read. The ledger's own account detail supplies the books' side, under its own
-    authorisation, so this module adds no second way of computing a balance.
+    authorization, so this module adds no second way of computing a balance.
 
     The books' balance is the account's across every commodity it holds, which is what
     `account_detail` reports; for an account held in one commodity, which a bank account is,
     that is the figure the statement prints.
     """
     with database.entity_write(entity_id) as write:
-        authorise(write, Capability.READ, principal)
+        authorize(write, Capability.READ, principal)
         stored = load_statement(
             write.connection, entity_id=entity_id, statement_id=statement_id
         )

@@ -32,7 +32,7 @@ from cfokit.ledger.engine import Posting
 from cfokit.ledger.engine.periods import FiscalYear, fiscal_year_of
 from cfokit.ledger.errors import NothingToClose, RetainedEarningsUnset, YearAlreadyClosed
 from cfokit.ledger.repository.unit_of_work import Database, EntityWrite
-from cfokit.ledger.service.authorisation import Capability, authorise
+from cfokit.ledger.service.authorization import Capability, authorize
 from cfokit.ledger.service.principal import Principal
 
 __all__ = ["YearClosed", "close_fiscal_year", "is_close_stale"]
@@ -69,7 +69,7 @@ def close_fiscal_year(
     could state the fiscal year end could choose which year a close applied to.
     """
     with database.entity_write(entity_id) as write:
-        authorise(write, Capability.CLOSE, principal)
+        authorize(write, Capability.CLOSE, principal)
 
         settings = write.settings
         year = fiscal_year_of(

@@ -44,7 +44,7 @@ from cfokit.ledger.errors import (
     TransactionNotFound,
 )
 from cfokit.ledger.repository.unit_of_work import Database, EntityWrite
-from cfokit.ledger.service.authorisation import Capability, authorise
+from cfokit.ledger.service.authorization import Capability, authorize
 from cfokit.ledger.service.principal import ActorClass, Principal
 
 __all__ = [
@@ -114,7 +114,7 @@ def _request_hash(*parts: Any) -> str:
     that: two five-dollar coffees on the same day are two transactions, and conflating them
     would lose one.
 
-    `Decimal` is serialised through `str`, so `10.00` and `10.0` hash differently — which is
+    `Decimal` is serialized through `str`, so `10.00` and `10.0` hash differently — which is
     correct, because they are different requests even though they are equal amounts.
     """
     canonical = json.dumps(parts, sort_keys=True, default=str, separators=(",", ":"))
@@ -219,7 +219,7 @@ def record_transaction(
                 replayed=True,
             )
 
-        authorise(write, Capability.POST if post else Capability.RECORD, context.principal)
+        authorize(write, Capability.POST if post else Capability.RECORD, context.principal)
 
         if (raises_obligation is not None or settles) and not post:
             raise TransactionIncomplete(
@@ -314,7 +314,7 @@ def post_transaction(
                 replayed=True,
             )
 
-        authorise(write, Capability.POST, context.principal)
+        authorize(write, Capability.POST, context.principal)
 
         stored = write.load_transaction(transaction_id)
         if stored is None:
@@ -386,7 +386,7 @@ def reverse_transaction(
 
         # A reversal posts immediately, so it needs the capability to post rather than only
         # to record (`LED-08`, ADR-0007).
-        authorise(write, Capability.POST, context.principal)
+        authorize(write, Capability.POST, context.principal)
 
         stored = write.load_transaction(transaction_id)
         if stored is None:

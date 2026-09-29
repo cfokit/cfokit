@@ -15,12 +15,12 @@ decision-makers: [Geoff]
 capabilities". That is conventional role-based access control, and this part of the system has
 no reason to be anything else.
 
-Two questions it leaves open. **Where does the role catalogue live** — compiled into the
+Two questions it leaves open. **Where does the role catalog live** — compiled into the
 application, or stored alongside the grants that reference it? And **which roles ship now**,
 given the requirements name only administering and holding, and every early user is a sole
 proprietor or solo founder who is the only person with access to their own books.
 
-The catalogue was a dictionary in `service/authorisation.py` holding five roles, of which the
+The catalog was a dictionary in `service/authorization.py` holding five roles, of which the
 requirements named one. The other four were invented at the point of implementation and,
 published in the OpenAPI document, became a contract with nothing behind it.
 
@@ -46,7 +46,7 @@ published in the OpenAPI document, became a contract with nothing behind it.
 Chosen option: "roles in the database, privileges in code".
 
 > `Capability` enumerates the privileges, because something has to check them. `role` and
-> `role_privilege` hold the catalogue. Adding a role is inserting rows and mapping its flags.
+> `role_privilege` hold the catalog. Adding a role is inserting rows and mapping its flags.
 > Only `owner` is defined; the rest arrive when there is somebody to hold them.
 
 The privilege set already distinguishes what `IAM-02` requires — reading, recording, posting,
@@ -56,7 +56,7 @@ a bookkeeper who drafts but does not post adds a row and maps `read` and `record
 A privilege named in a row that the code does not define confers nothing. Failing closed is the
 only safe direction: a typo in a migration must not widen anyone's authority.
 
-The API takes a role name as a string rather than an enumeration, because a catalogue that is
+The API takes a role name as a string rather than an enumeration, because a catalog that is
 data cannot be enumerated at build time. An unknown name is refused with `unknown_role` rather
 than a constraint violation.
 
@@ -68,8 +68,8 @@ than a constraint violation.
   command as every other schema change (ADR-0004).
 * Good, because the privilege map is resolved in the same query that reads the grants, so a
   change takes effect with no cache to invalidate.
-* Bad, because the role catalogue is no longer visible in the code that enforces it. Reading
-  `authorisation.py` no longer tells you what `owner` can do; the migration does.
+* Bad, because the role catalog is no longer visible in the code that enforces it. Reading
+  `authorization.py` no longer tells you what `owner` can do; the migration does.
 * Bad, because the OpenAPI document can no longer enumerate valid roles, so a client cannot
   discover them from the contract. `IAM-19` asks for enumerable capabilities at deployment
   scope, and the same question one scope down would answer this.
@@ -78,12 +78,12 @@ than a constraint violation.
 
 ### Confirmation
 
-An integration test asserts the catalogue as shipped: `owner` exists, carries every privilege
+An integration test asserts the catalog as shipped: `owner` exists, carries every privilege
 the code defines, and is the only role. A second asserts that a grant naming an undefined role
 is refused with `unknown_role`, and a third that a privilege row the enum does not define
 confers nothing.
 
-The unit tests over `effective` and `require` take privilege sets directly, so authorisation
+The unit tests over `effective` and `require` take privilege sets directly, so authorization
 stays testable without a database (ADR-0036, layer 1).
 
 ## Pros and Cons of the Options
@@ -94,12 +94,12 @@ stays testable without a database (ADR-0036, layer 1).
   configured is data.
 * Good, because it is what most role-based systems do, and this is not a part of the product
   that benefits from being novel.
-* Bad, because the catalogue and the checks are in two places, and reading one does not tell
+* Bad, because the catalog and the checks are in two places, and reading one does not tell
   you the other.
 
 ### Both in code
 
-* Good, because everything an authorisation decision depends on is in one file and reviewed
+* Good, because everything an authorization decision depends on is in one file and reviewed
   together.
 * Bad, because adding a role for one customer means a release, which makes the answer to "can
   we add a bookkeeper role" a deployment rather than an insert.
@@ -116,10 +116,10 @@ stays testable without a database (ADR-0036, layer 1).
 ## More Information
 
 **Scope.** `IAM-07` describes an identity that can grant, which any role carrying `grant`
-satisfies; it names no particular one. Whether the catalogue should be enumerable through the
+satisfies; it names no particular one. Whether the catalog should be enumerable through the
 API is `IAM-19`'s question one scope down, and this record does not answer it.
 
-**Reversal cost. Low.** The catalogue is two small tables and a seed. Compiling it back into
+**Reversal cost. Low.** The catalog is two small tables and a seed. Compiling it back into
 code is a migration and a dictionary.
 
 ## Revisit when

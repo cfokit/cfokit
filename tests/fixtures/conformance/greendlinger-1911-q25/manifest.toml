@@ -20,7 +20,7 @@ scan = "https://archive.org/details/accountancyprob00greegoog"
 # Archive.org metadata records this item as NOT_IN_COPYRIGHT, and the scan's own front matter
 # states the copyright has expired and the book has entered the public domain. Published 1911,
 # so it is public domain in the United States on the pre-1931 rule.
-licence = "public-domain"
+license = "public-domain"
 # How it reached the public domain, not merely that it did (ADR-0044). Published 1911, so the
 # 95-year term expired; no renewal question arises and no determination is needed.
 pd_basis = "term-expired"

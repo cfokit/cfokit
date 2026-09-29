@@ -25,7 +25,7 @@ import pytest
 from cfokit.imports import open_books, post_entries
 from cfokit.imports.source import SourceAccount, SourceBooks, SourceEntry, SourceLine
 from cfokit.ledger.engine.periods import Period
-from cfokit.ledger.errors import NotAPerson, NotAuthorised
+from cfokit.ledger.errors import NotAPerson, NotAuthorized
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.administration import create_entity
 from cfokit.ledger.service.periods import close_period, reopen_period
@@ -138,7 +138,7 @@ def test_a_component_with_close_may_not_reopen(
     grant(owner_conn, entity, COMPONENT.id, "month-end")
     close_period(database, entity_id=entity, principal=OWNER, request_id="r", period=PERIOD)
 
-    with pytest.raises(NotAuthorised):
+    with pytest.raises(NotAuthorized):
         reopen_period(
             database,
             entity_id=entity,
@@ -154,7 +154,7 @@ def test_a_component_with_every_other_capability_may_not_import(
 ) -> None:
     grant(owner_conn, entity, COMPONENT.id, "everything-else")
 
-    with pytest.raises(NotAuthorised):
+    with pytest.raises(NotAuthorized):
         open_books(
             database, entity_id=entity, principal=COMPONENT, request_id="r", books=shape()
         )
@@ -229,7 +229,7 @@ def test_a_skill_may_not_post_entries_either(
         )
 
 
-# --- the catalogue cannot widen it by accident ------------------------------------------------
+# --- the catalog cannot widen it by accident ------------------------------------------------
 
 
 def test_owner_is_the_only_seeded_role_carrying_it(
@@ -311,7 +311,7 @@ def test_the_lapse_of_a_grant_removes_the_capability(
             ),
         )
 
-    with pytest.raises(NotAuthorised):
+    with pytest.raises(NotAuthorized):
         open_books(
             database, entity_id=entity, principal=COMPONENT, request_id="r", books=shape()
         )

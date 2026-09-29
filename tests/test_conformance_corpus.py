@@ -230,18 +230,18 @@ def test_a_case_names_a_source_a_reader_can_find(case: str) -> None:
 @pytest.mark.parametrize("case", CASE_NAMES, ids=str)
 def test_a_case_is_redistributable(case: str) -> None:
     """`NFR-14`: no component imposes an obligation inconsistent with permissive licensing on
-    anyone who runs, modifies, or forks it. ADR-0044 narrows this to the two licences that
+    anyone who runs, modifies, or forks it. ADR-0044 narrows this to the two licenses that
     impose nothing at all, and requires the *basis* for a public-domain claim rather than the
     claim alone — "public domain" is a conclusion, and this checks the premise.
     """
     source = _manifest(CASES, case)["source"]
-    licence = source["licence"]
+    stated = source["license"]
 
-    assert licence in REDISTRIBUTABLE, (
-        f"{case}: licence {licence!r} is not one of {sorted(REDISTRIBUTABLE)}. A "
+    assert stated in REDISTRIBUTABLE, (
+        f"{case}: license {stated!r} is not one of {sorted(REDISTRIBUTABLE)}. A "
         "share-alike or non-commercial source cannot ship here at all (ADR-0044)."
     )
-    if licence != "public-domain":
+    if stated != "public-domain":
         return
 
     basis = source.get("pd_basis")
@@ -312,11 +312,11 @@ def test_a_recognition_case_cites_a_rule(case: str) -> None:
     manifest = _manifest(RECOGNITION, case)
     rule = manifest["rule"]
 
-    for field in ("authority", "locator", "url", "licence", "basis"):
+    for field in ("authority", "locator", "url", "license", "basis"):
         assert rule.get(field), f"{case}: [rule] states no {field}"
     assert str(rule["url"]).startswith("http")
-    assert rule["licence"] in REDISTRIBUTABLE, (
-        f"{case}: [rule].licence {rule['licence']!r} is not redistributable. A rule may "
+    assert rule["license"] in REDISTRIBUTABLE, (
+        f"{case}: [rule].license {rule['license']!r} is not redistributable. A rule may "
         "be cited from anywhere, but a case quoting one must be shippable (ADR-0044)."
     )
     assert rule["basis"] in {"tax", "gaap"}, (
@@ -401,7 +401,7 @@ BAND_STATUS = {"1": "enforced", "2": "presented", "3": "recordable"}
 def test_the_summary_counts_what_the_tables_hold() -> None:
     """The "Where this stands" table is the first thing a reader sees and the easiest thing to
     leave behind. Recomputing it here means the headline number cannot drift from the rows it
-    summarises — which matters more than usual, because the honest reading of this document is
+    summarizes — which matters more than usual, because the honest reading of this document is
     that there is less evidence than apparatus, and a stale table would hide exactly that.
     """
     text = COVERAGE.read_text(encoding="utf-8")

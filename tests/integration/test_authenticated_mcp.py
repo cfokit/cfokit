@@ -295,7 +295,7 @@ async def test_a_token_without_a_grant_is_authenticated_and_then_refused(
 
     body = payload(result)
     assert body["ok"] is False
-    assert body["code"] == "not_authorised"
+    assert body["code"] == "not_authorized"
 
 
 async def post_to_mcp(settings: Settings, *, token: str | None) -> int:

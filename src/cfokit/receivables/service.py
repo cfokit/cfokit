@@ -5,7 +5,7 @@ books (`AR-04`), so every call in this module writes rows the ledger never sees.
 assigns a number, posts the entry and raises the obligation in one transaction — is a separate
 act and is not built here.
 
-**Authorisation is the ledger's** (ADR-0039). Privileges are a code enum and roles are rows; a
+**Authorization is the ledger's** (ADR-0039). Privileges are a code enum and roles are rows; a
 module inventing a privilege of its own would put a second authority beside that one. `RECORD`
 is what a caller needs to draft an invoice, because drafting an invoice is drafting the entry
 it will become; `GRANT` is what changing the customer list needs, on the same reasoning that
@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from cfokit.ledger.errors import LedgerError
 from cfokit.ledger.repository.unit_of_work import Database, EntityWrite
-from cfokit.ledger.service.authorisation import Capability, authorise
+from cfokit.ledger.service.authorization import Capability, authorize
 from cfokit.ledger.service.principal import Principal
 from cfokit.receivables import Invoice, LineInput
 from cfokit.receivables import repository as store
@@ -88,7 +88,7 @@ def create_customer(
 ) -> str:
     """Add a customer to the entity (`AR-01`)."""
     with database.entity_write(entity_id) as write:
-        authorise(write, Capability.GRANT, principal)
+        authorize(write, Capability.GRANT, principal)
         customer_id = store.create_customer(
             write.connection, entity_id=entity_id, name=name, email=email
         )
@@ -123,7 +123,7 @@ def update_customer(
     customer by id and carries its own frozen figures (`AR-14`).
     """
     with database.entity_write(entity_id) as write:
-        authorise(write, Capability.GRANT, principal)
+        authorize(write, Capability.GRANT, principal)
         found = store.update_customer(
             write.connection,
             entity_id=entity_id,
@@ -152,7 +152,7 @@ def list_customers(
     include_archived: bool = False,
 ) -> list[store.Customer]:
     with database.entity_write(entity_id) as write:
-        authorise(write, Capability.READ, principal)
+        authorize(write, Capability.READ, principal)
         return store.customers(
             write.connection, entity_id=entity_id, include_archived=include_archived
         )
@@ -179,7 +179,7 @@ def draft_invoice(
     foreign amount, which is why the ledger reads it the same way.
     """
     with database.entity_write(entity_id) as write:
-        authorise(write, Capability.RECORD, principal)
+        authorize(write, Capability.RECORD, principal)
         _require_customer(write, entity_id, customer_id)
         _require_income(write, lines)
 
@@ -217,7 +217,7 @@ def replace_lines(
 ) -> None:
     """Rewrite a draft's lines. Refused once the invoice is issued (`AR-04`, `AR-14`)."""
     with database.entity_write(entity_id) as write:
-        authorise(write, Capability.RECORD, principal)
+        authorize(write, Capability.RECORD, principal)
         found = store.invoice(write.connection, entity_id=entity_id, invoice_id=invoice_id)
         if found is None:
             raise InvoiceNotFound(invoice_id)
@@ -242,7 +242,7 @@ def invoice(
     database: Database, *, entity_id: str, principal: Principal, invoice_id: str
 ) -> Invoice:
     with database.entity_write(entity_id) as write:
-        authorise(write, Capability.READ, principal)
+        authorize(write, Capability.READ, principal)
         found = store.invoice(write.connection, entity_id=entity_id, invoice_id=invoice_id)
     if found is None:
         raise InvoiceNotFound(invoice_id)
@@ -253,7 +253,7 @@ def invoices(
     database: Database, *, entity_id: str, principal: Principal, status: str | None = None
 ) -> list[Invoice]:
     with database.entity_write(entity_id) as write:
-        authorise(write, Capability.READ, principal)
+        authorize(write, Capability.READ, principal)
         return store.invoices(write.connection, entity_id=entity_id, status=status)
 
 

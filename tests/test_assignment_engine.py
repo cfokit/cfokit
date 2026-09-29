@@ -27,7 +27,7 @@ from cfokit.assignment import (
     RuleVersion,
     Status,
 )
-from cfokit.assignment.candidate import Candidate, SourceKind, normalise
+from cfokit.assignment.candidate import Candidate, SourceKind, normalize
 from cfokit.assignment.engine import (
     digest,
     evaluate,
@@ -70,7 +70,7 @@ def rules(draw: st.DrawFn, *, index: int = 0) -> RuleVersion:
         st.lists(
             st.one_of(
                 st.builds(
-                    lambda word, op: Predicate(1, Field.PAYEE, op, normalise(word)),
+                    lambda word, op: Predicate(1, Field.PAYEE, op, normalize(word)),
                     WORDS,
                     st.sampled_from([Operator.CONTAINS, Operator.EQUALS, Operator.STARTS_WITH]),
                 ),
