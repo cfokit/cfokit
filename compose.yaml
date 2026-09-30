@@ -57,6 +57,7 @@ services:
     build:
       context: .
       target: runtime
+      secrets: [build_ca]
     # Writes into a bind mount, which on Linux is owned by whoever created it.
     user: root
     command: ["python", "/opt/tls/generate.py", "/tls"]
@@ -161,6 +162,7 @@ services:
     build:
       context: .
       target: runtime
+      secrets: [build_ca]
     restart: unless-stopped
     depends_on:
       postgres:
@@ -205,6 +207,7 @@ services:
     build:
       context: .
       target: runtime
+      secrets: [build_ca]
     command: ["python", "-m", "cfokit.ledger.migrations"]
     depends_on:
       postgres:
@@ -219,6 +222,7 @@ services:
     build:
       context: .
       target: runtime
+      secrets: [build_ca]
     command: ["python", "-m", "cfokit.server", "mcp"]
     restart: unless-stopped
     depends_on:
@@ -265,6 +269,7 @@ services:
     build:
       context: .
       target: test
+      secrets: [build_ca]
     depends_on:
       postgres:
         condition: service_healthy
@@ -295,3 +300,10 @@ services:
 
 volumes:
   ledger-data:
+
+# An extra certificate authority for image builds whose network re-terminates TLS. Empty unless
+# BUILD_CA_FILE names one; the Dockerfile ignores it when empty. Set only by the Claude Code
+# cloud session hook (.claude/hooks/session-start.sh).
+secrets:
+  build_ca:
+    file: ${BUILD_CA_FILE:-/dev/null}

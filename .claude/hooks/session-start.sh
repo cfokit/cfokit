@@ -31,6 +31,11 @@ uv sync --locked --quiet
 
 if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
   echo 'export UV_PYTHON=3.14' >> "$CLAUDE_ENV_FILE"
+  # Container traffic here is TLS-intercepted by the session's proxy, so image builds need its
+  # CA to reach PyPI. compose.yaml passes it to the build as the optional `build_ca` secret.
+  if [ -f /root/.ccr/ca-bundle.crt ]; then
+    echo 'export BUILD_CA_FILE=/root/.ccr/ca-bundle.crt' >> "$CLAUDE_ENV_FILE"
+  fi
 fi
 
 if ! docker info >/dev/null 2>&1; then
