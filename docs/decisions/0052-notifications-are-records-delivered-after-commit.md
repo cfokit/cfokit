@@ -7,7 +7,8 @@ decision-makers: [Geoff]
 
 # ADR-0052: Notifications are records, delivered after their commit through CFOKit's own channels
 
-**Requirements served:** `PLT-06`, `PLT-07`, `PLT-22`, `IAM-22`, `NFR-04`, `NFR-10`, `SOC2-17`.
+**Requirements served:** `PLT-06`, `PLT-07`, `PLT-22`, `IAM-22`, `NFR-04`, `NFR-06`, `NFR-10`,
+`SOC2-17`.
 
 ## Context and Problem Statement
 
@@ -144,10 +145,18 @@ are accepted only with a valid signature — SendGrid signs each one with an ECD
 timestamp and raw payload — so an unauthenticated endpoint cannot be used to forge a delivery
 record.
 
+The webhook is an inbound HTTP endpoint, not part of CFOKit's REST interface. Its request is
+SendGrid's format, which CFOKit conforms to and no third party builds against, so it is not a
+published interface in ADR-0015's sense and is left out of the OpenAPI document. It carries no
+token from the issuer, so neither audience validation nor entity grants apply to it: the signature,
+verified with the key this deployment configures, is its whole authentication, and is what shows
+the request is meant for this deployment (`NFR-06`). It acts for no person and writes nothing but
+delivery events. Each accepted request writes one audit row naming the relay as its actor.
+
 The event names a notification, not an entity, so the webhook resolves a notification's entity
 before recording anything, and then records within that entity's scope. That resolution is the one
 place this record reads across entities, and it reads nothing but the entity a notification
-belongs to. The webhook is a new route on the published REST interface (ADR-0015).
+belongs to.
 
 Open and click tracking are off in the relay's account settings and switched on per message, by
 CFOKit, in the `X-SMTPAPI` header of its own mail. The issuer's mail is therefore never tracked:
@@ -209,8 +218,9 @@ The development overlay adds Mailpit (MIT), a local SMTP server with a web inbox
 * Bad, because a response waits for delivery, bounded by the channel's timeout.
 * Bad, because a failed delivery is retried only when CFOKit next delivers something for that
   entity, which for a quiet entity can be a while; the notification is visible in-app meanwhile.
-* Bad, because the webhook is a public endpoint whose safety rests on verifying SendGrid's
-  signature, and it resolves a notification's entity across entities.
+* Bad, because the webhook is a public endpoint authenticated by SendGrid's signature rather than
+  by the issuer, so its safety rests on that verification, and it resolves a notification's entity
+  across entities.
 * Bad, because digests, scheduled sending and templates across channels are CFOKit's to build
   when a requirement asks for them.
 * Bad, because Jinja2 is a runtime dependency.
@@ -229,7 +239,9 @@ The development overlay adds Mailpit (MIT), a local SMTP server with a web inbox
 * A test asserts that a hand-off delivers only its own entity's undelivered notifications, and that
   no transaction or entity lock is held while a channel sends.
 * A test asserts that a webhook request with a missing or invalid signature records nothing, and
-  that a valid event is recorded against the notification its identifier names.
+  that a valid event is recorded against the notification its identifier names, with one audit
+  row naming the relay.
+* A test asserts that the webhook route is absent from the generated OpenAPI document.
 * A test asserts that without the SendGrid option configured, the channel adds no `X-SMTPAPI`
   header and the webhook route is not served, and that with it, CFOKit's messages carry their
   notification's identifier and switch tracking on.
@@ -285,6 +297,11 @@ digests, subscriber preferences and an in-app inbox.
 
 **Reversal cost.** Low. The notification record is the durable part and stays whatever delivers
 it; a channel is replaced by another implementation of the same interface.
+
+**Follow-on obligation.** `CLAUDE.md` states that audience validation is mandatory on every
+request. That rule becomes: mandatory on every request carrying a token from the issuer, and a
+request is authenticated otherwise only at the relay's webhook (§ 5) and an invoice's link
+(ADR-0053). The same wording applies to the ledger's `CLAUDE.md`.
 
 Related: ADR-0003 (one store), ADR-0004 (portability), ADR-0012 (the event bus gate), ADR-0016
 (secrets), ADR-0017 (scale to zero), ADR-0022 (modules and components), ADR-0049 (the web client

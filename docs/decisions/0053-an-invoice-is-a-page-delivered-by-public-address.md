@@ -7,7 +7,7 @@ decision-makers: [Geoff]
 
 # ADR-0053: An issued invoice is a page, and what is delivered depends on the deployment's public address
 
-**Requirements served:** `AR-07`, `AR-08`, `AR-09`, `AR-14`, `AR-17`, `AR-19`.
+**Requirements served:** `AR-07`, `AR-08`, `AR-09`, `AR-14`, `AR-17`, `AR-19`, `NFR-06`.
 
 ## Context and Problem Statement
 
@@ -73,7 +73,18 @@ The customer holds no role in the entity, so an invoice email is not authorised 
 notification is. It is authorised by the invoice: it is sent only to the contact on the customer the
 invoice was issued to, by a person or rule allowed to issue it.
 
-### 4. What CFOKit records
+### 4. The link is how the page is reached
+
+The page and its PDF are reached by the invoice's link, not by a token from the issuer, so neither
+audience validation nor entity grants apply to them. The link carries a random token that cannot be
+guessed. It reaches one invoice, reads it and nothing else, and stops working when revoked.
+Because the token exists only in this deployment's records, a link that resolves is one meant for
+this deployment (`NFR-06`). A view acts for no person: it writes one audit row naming the link, by
+its identifier and never its token, as the actor. These routes are not part of the published REST
+interface (ADR-0015): what a customer holds is a link, and it keeps working because the invoice's
+link is stable (`AR-08`).
+
+### 5. What CFOKit records
 
 CFOKit records what it knows (`AR-19`): that it sent the link, and every event the relay reports on
 that email, where it sent it; that the PDF was downloaded or the link copied, where the operator
@@ -107,6 +118,8 @@ invoice and nothing else, and it can be revoked.
   invoice's customer.
 * A test asserts that a view of an invoice's page is recorded against the invoice, and that the PDF
   and the page render the same figures.
+* A test asserts that an unknown or revoked link serves nothing, that a link serves only its own
+  invoice, and that a view writes one audit row carrying the link's identifier and not its token.
 
 ## Pros and Cons of the Options
 
@@ -138,6 +151,9 @@ The most common practice among small businesses.
 
 **Reversal cost.** Low. The page, the PDF and the delivery rules are presentation and routing over
 an invoice that is already a posting (`AR-03`).
+
+**Follow-on obligation.** The invoice's link is one of the two ways a request is authenticated other
+than by the issuer; ADR-0052 states the change to `CLAUDE.md`'s rule on audience validation.
 
 Related: ADR-0049 (the web client that serves the page), ADR-0052 (the channels and relay).
 
