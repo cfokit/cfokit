@@ -228,7 +228,7 @@ Billing customers, collecting from them, and knowing who owes what.
 | **AR-04** | An invoice is freely editable while it is a draft and becomes permanent when it is issued. Issuing is the point of no return, as posting is for a transaction. | Must | Approved |
 | **AR-05** | Issued invoices carry numbers from a gapless sequence the entity controls. A canceled invoice keeps its number and is visible as canceled; a number is never reused or silently skipped. | Must | Approved |
 | **AR-06** | An invoice carries payment terms and a due date derived from them. | Must | Approved |
-| **AR-07** | An issued invoice is available as a shareable artifact — a document and a stable link — that an operator can deliver by any means, including by hand into a messaging application CFOKit knows nothing about. | Must | Approved |
+| **AR-07** | An issued invoice is available as a shareable artifact that an operator can deliver by any means, including by hand into a messaging application CFOKit knows nothing about: a document always, and a stable link wherever the deployment can be reached by the invoice's customer. | Must | Approved |
 | **AR-08** | Access to an invoice through its link is unauthenticated, deliberately: requiring a customer to hold an identity before they can see a bill is an obstacle to being paid. The link reaches that one invoice and nothing else about the entity, and is subject to IAM-20 like any other unauthenticated path. | Must | Approved |
 | **AR-09** | Where a delivery channel is integrated, CFOKit delivers the invoice on the entity's behalf. Email is the first such channel. | Should | Approved |
 | **AR-10** | Invoices can be raised on a recurring schedule the entity sets, without a person triggering each one. | Should | Approved |

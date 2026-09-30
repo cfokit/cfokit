@@ -7,8 +7,8 @@ decision-makers: [Geoff]
 
 # ADR-0052: Notifications are records, delivered after their commit through CFOKit's own channels
 
-**Requirements served:** `PLT-06`, `PLT-07`, `PLT-22`, `AR-07`, `AR-09`, `AR-19`, `IAM-22`, `NFR-04`,
-`NFR-10`.
+**Requirements served:** `PLT-06`, `PLT-07`, `PLT-22`, `AR-07`, `AR-08`, `AR-09`, `AR-17`, `AR-19`,
+`IAM-22`, `NFR-04`, `NFR-10`, `SOC2-17`.
 
 ## Context and Problem Statement
 
@@ -136,13 +136,23 @@ event webhook returns with every event. Any other relay works without those extr
 CFOKit receives SendGrid's event webhook and records each event against the notification it names:
 delivered, deferred, bounced, dropped, marked as spam, unsubscribed, opened and clicked. Requests are
 accepted only with a valid signature — SendGrid signs each one with an ECDSA key, over its timestamp
-and raw payload — so an unauthenticated endpoint cannot be used to forge a delivery record. Opens
-are recorded as SendGrid reports them and read as a hint: mail clients that fetch images on the
-reader's behalf report opens that did not happen. For an invoice, the page being viewed (§ 6) is
-the reliable signal.
+and raw payload — so an unauthenticated endpoint cannot be used to forge a delivery record.
 
-A relay receives questions and links, never the books, so it receives no customer financial data
-and is not a provider `SOC2-09` enumerates.
+Open and click tracking are on for every email, notifications and invoices alike, and tracked links
+use a link domain branded as the deployment's own. Opens are recorded as SendGrid reports them and
+read as a hint: mail clients that fetch images on the reader's behalf report opens that did not
+happen. Click tracking routes each link through SendGrid, including an invoice's, which opens the
+invoice without sign-in (§ 6). That is accepted: SendGrid is already trusted with the recipient's
+name and address, the link reaches one invoice and nothing else, and it can be revoked.
+
+A relay receives no customer financial data, and it does receive personal information:
+recipients' names and email addresses, the questions sent, and the delivery, open and click events
+it reports. It is a vendor within the Security criteria's vendor management, and what it holds is
+handled as personal information under `SOC2-17`'s classification. An erasure request (`PLT-22`)
+removes the person's address from the relay where its interface allows, and the record of the
+request says where it could not. Whether recipients' contact details and their open and click
+events bring the Privacy category into scope is a scope decision for the requirements (§ 8.1),
+not this record's.
 
 Templates are CFOKit's: kept in the repository, reviewed and tested like code, and rendered with
 Jinja2, whose autoescaping keeps text from outside the books from becoming markup. They are never
@@ -159,12 +169,23 @@ question, or their conversational interface where it can be opened at the questi
 read on a lock screen or forwarded reveals nothing.
 
 An issued invoice is a page, reached by its stable link, which needs no sign-in so that a customer
-can see what they owe (`AR-07`, `AR-08`). Its PDF is that page rendered, for download, so the two
-never differ. Where a relay is configured, CFOKit emails the customer the link, not the invoice
-(`AR-09`). Without one, the operator delivers the PDF or the link by any means — by hand, or through
-their own agent drafting the email from their own mailbox. CFOKit records what it knows (`AR-19`):
-that it sent the link and what the relay reported, where it did; that the PDF was downloaded or the
-link copied, where it did not; and that the page was viewed, in either case.
+can see what they owe (`AR-08`). Its PDF is that page rendered, for download, so the two never
+differ. A link only works where the customer can reach the deployment, so what is delivered depends
+on whether the deployment has a public address — a `PUBLIC_BASE_URL` its customers can reach, which
+a deployment on one machine does not:
+
+* **A public address and a relay:** CFOKit emails the customer the link, never the invoice
+  (`AR-09`), and SendGrid reports on it.
+* **A public address and no relay:** the operator delivers the link or the PDF by any means — by
+  hand, or through their own agent drafting the email from their own mailbox (`AR-07`).
+* **No public address:** the PDF is the artifact, and the operator delivers it the same way. CFOKit
+  sends no invoice email, even where a relay is configured, because the link would reach no one and
+  the invoice itself never goes through a relay.
+
+CFOKit records what it knows (`AR-19`): that it sent the link and what the relay reported, where it
+did; that the PDF was downloaded or the link copied, where it did not; and every view of the page,
+by whatever route its link travelled. A view of the page is what tells an invoice opened from one
+never opened (`AR-17`).
 
 ### 7. A notification is the entity's data
 
@@ -214,6 +235,8 @@ Mailpit (MIT), a local SMTP server with a web inbox, for work on email.
   no transaction or entity lock is held while a channel sends.
 * A test asserts that a webhook request with a missing or invalid signature records nothing, and
   that a valid event is recorded against the notification its identifier names.
+* A test asserts that a deployment without a public address sends no invoice email, whatever relay is
+  configured, and that a view of an invoice's page is recorded against the invoice.
 * Not gated: that a notification's content carries no figures. That is review.
 
 ## Pros and Cons of the Options
