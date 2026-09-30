@@ -7,7 +7,8 @@ decision-makers: [Geoff]
 
 # ADR-0052: Notifications are records, delivered after their commit through CFOKit's own channels
 
-**Requirements served:** `PLT-06`, `PLT-07`, `PLT-22`, `AR-09`, `IAM-22`, `NFR-04`, `NFR-10`.
+**Requirements served:** `PLT-06`, `PLT-07`, `PLT-22`, `AR-07`, `AR-09`, `AR-19`, `IAM-22`, `NFR-04`,
+`NFR-10`.
 
 ## Context and Problem Statement
 
@@ -70,13 +71,14 @@ work as the act that raises it, in the same commit — the way every state-chang
 writes its `audit_log` row. Any module raises one without depending on another module, and the
 ledger learns no domain meaning: the columns are generic, as the audit log's are.
 
-Rows are append-only. Delivery is recorded as rows of its own — channel, outcome, time, and the
-provider's message identifier — never as an update to the notification.
+Rows are append-only. What happens to a notification afterwards is recorded as rows of its own,
+never as an update to it: the hand-off to a channel, whose outcome means the relay accepted the
+message or refused it, and the events a provider reports later (§ 5).
 
 Before a notification is written, its recipient is checked to hold a role in the entity it
-names, under the same grant check as any other act (`NFR-04`). An invoice is the exception in
-kind: it is delivered to the entity's customer, who holds no role, and is authorised by being
-addressed to that customer's contact on the invoice.
+names, under the same grant check as any other act (`NFR-04`). An invoice sent to the entity's
+customer, who holds no role, is authorised instead by being addressed to that customer's contact
+on the invoice (§ 6).
 
 ### 2. Every deployment shows notifications; channels add reaching people who are not looking
 
@@ -92,13 +94,17 @@ CFOKit, as is where they answer — the web client or their conversational inter
 
 A notification is only ever written inside a request or a scheduled run, so the process that
 commits it is awake. After the commit succeeds, and before the response returns, it hands the
-notification to each channel the recipient has enabled, with a short timeout. A change that rolls
-back delivers nothing, because its notification never existed.
+notification to each channel the recipient has enabled, with a short timeout. No transaction and no
+entity lock is held while it does (ADR-0011): a slow relay delays one response, never the next
+write to that entity. A change that rolls back delivers nothing, because its notification never
+existed.
 
-A delivery that fails is recorded as failed and left undelivered; the notification is still shown
-in-app. Each later hand-off first delivers any undelivered notifications, so a failure is retried
-the next time CFOKit delivers anything, with no sweep and no process of its own. A notification
-that exhausts its attempts is marked as such and stays visible, never silently dropped.
+A hand-off that fails is recorded as failed and left undelivered; the notification is still shown
+in-app. Each later hand-off for the same entity first delivers that entity's undelivered
+notifications, so a failure is retried the next time CFOKit delivers anything for that entity —
+within the entity's own scope, never another's — with no sweep and no process of its own. A
+notification that exhausts its attempts is marked as such and stays visible, never silently
+dropped.
 
 Delivery happens before the response, not in a task after it, because a platform that scales to
 zero may withdraw CPU once a response has returned.
@@ -125,7 +131,18 @@ set, there is no email channel. On the maintained cloud target the relay is Send
 provider features are used through that relay rather than a second integration: the sending domain
 is authenticated there, its suppression lists stop mail to addresses that bounced or complained,
 and each message carries its notification's identifier in SendGrid's `X-SMTPAPI` header, which its
-event webhook returns with every delivery event. Any other relay works without those extras.
+event webhook returns with every event. Any other relay works without those extras.
+
+CFOKit receives SendGrid's event webhook and records each event against the notification it names:
+delivered, deferred, bounced, dropped, marked as spam, unsubscribed, opened and clicked. Requests are
+accepted only with a valid signature — SendGrid signs each one with an ECDSA key, over its timestamp
+and raw payload — so an unauthenticated endpoint cannot be used to forge a delivery record. Opens
+are recorded as SendGrid reports them and read as a hint: mail clients that fetch images on the
+reader's behalf report opens that did not happen. For an invoice, the page being viewed (§ 6) is
+the reliable signal.
+
+A relay receives questions and links, never the books, so it receives no customer financial data
+and is not a provider `SOC2-09` enumerates.
 
 Templates are CFOKit's: kept in the repository, reviewed and tested like code, and rendered with
 Jinja2, whose autoescaping keeps text from outside the books from becoming markup. They are never
@@ -141,8 +158,13 @@ CFOKit, and after sign-in takes the person to where they answer: the web client'
 question, or their conversational interface where it can be opened at the question. A message
 read on a lock screen or forwarded reveals nothing.
 
-An invoice is delivered as a link to the invoice — a read path that cannot be guessed and can be
-revoked (`IAM-20`) — not as the invoice itself.
+An issued invoice is a page, reached by its stable link, which needs no sign-in so that a customer
+can see what they owe (`AR-07`, `AR-08`). Its PDF is that page rendered, for download, so the two
+never differ. Where a relay is configured, CFOKit emails the customer the link, not the invoice
+(`AR-09`). Without one, the operator delivers the PDF or the link by any means — by hand, or through
+their own agent drafting the email from their own mailbox. CFOKit records what it knows (`AR-19`):
+that it sent the link and what the relay reported, where it did; that the PDF was downloaded or the
+link copied, where it did not; and that the page was viewed, in either case.
 
 ### 7. A notification is the entity's data
 
@@ -152,9 +174,9 @@ included in the entity's complete export (`EXP-02`).
 
 ### 8. Without a mail relay
 
-A deployment with no relay configured has no email channel: notifications are in-app only, the
-issuer does not verify email, and a forgotten password is reset by the operator in the issuer's
-console. `IAM-22`'s reset without an administrator holds wherever a relay is configured, which
+A deployment with no relay configured has no email channel: notifications are in-app only,
+invoices are delivered by the operator (§ 6), the issuer does not verify email, and a forgotten
+password is reset by the operator in the issuer's console. `IAM-22`'s reset without an administrator holds wherever a relay is configured, which
 every deployment serving people who do not administer it has. The development overlay adds
 Mailpit (MIT), a local SMTP server with a web inbox, for work on email.
 
@@ -169,8 +191,10 @@ Mailpit (MIT), a local SMTP server with a web inbox, for work on email.
 * Good, because one relay and one template set serve every deployment, with the provider's
   deliverability features where it offers them.
 * Bad, because a response waits for delivery, bounded by the channel's timeout.
-* Bad, because a failed delivery is retried only when CFOKit next delivers something, which on a
-  quiet deployment can be a while; the notification is visible in-app meanwhile.
+* Bad, because a failed delivery is retried only when CFOKit next delivers something for that
+  entity, which for a quiet entity can be a while; the notification is visible in-app meanwhile.
+* Bad, because the webhook is a public endpoint whose safety rests on verifying SendGrid's
+  signature.
 * Bad, because digests, scheduled sending and templates across channels are CFOKit's to build
   when a requirement asks for them.
 * Bad, because Jinja2 is a runtime dependency.
@@ -186,6 +210,10 @@ Mailpit (MIT), a local SMTP server with a web inbox, for work on email.
   recorded; with the relay stopped, it is recorded as failed, stays listed, and is delivered by the
   next hand-off.
 * A test asserts that a notification to a recipient with no role in its entity is refused.
+* A test asserts that a hand-off delivers only its own entity's undelivered notifications, and that
+  no transaction or entity lock is held while a channel sends.
+* A test asserts that a webhook request with a missing or invalid signature records nothing, and
+  that a valid event is recorded against the notification its identifier names.
 * Not gated: that a notification's content carries no figures. That is review.
 
 ## Pros and Cons of the Options
