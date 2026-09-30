@@ -259,8 +259,12 @@ Scope the question by **what triggers the obligation**, not by the license name.
 - The issuer is a swappable dependency. **No issuer-specific code anywhere.** The app
   reads `AUTH_ISSUER_URL` and `AUTH_AUDIENCE` and nothing else. (ADR-0019)
 - Do not write an OAuth server, a token minter, or a login flow. Delegate to the issuer.
-- Audience validation is mandatory on every request. Entity grants are validated
-  server-side regardless of token contents. (ADR-0011, ADR-0019)
+- Audience validation is mandatory on every request carrying an issuer token. Entity grants are
+  validated server-side regardless of token contents. (ADR-0011, ADR-0019)
+- **Two requests are authenticated otherwise, and no others:** the relay's event webhook, by its
+  signature (ADR-0052), and an issued invoice's page, by its link (ADR-0053). Neither appears in
+  the OpenAPI document, and each writes an audit row naming what it was authenticated as. A new
+  route authenticated without the issuer needs its own record.
 - Changes here need human review before you proceed.
 
 ## Infrastructure

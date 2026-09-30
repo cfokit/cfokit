@@ -79,8 +79,10 @@ Each of these is a bug if missed, not a nice-to-have:
   immediately" true, since there is no cache to invalidate. An agent's authority is the
   **intersection** of its own grants and those of the person it acts for (`IAM-11`).
   (ADR-0011, ADR-0019)
-- Audience validated against `AUTH_AUDIENCE` on every request — tokens from a shared issuer
-  are otherwise replayable across resource servers. (ADR-0019)
+- Audience validated against `AUTH_AUDIENCE` on every request carrying an issuer token — tokens
+  from a shared issuer are otherwise replayable across resource servers. (ADR-0019) The relay's
+  webhook and an invoice's link are the only requests authenticated otherwise (ADR-0052,
+  ADR-0053).
 - One request id per inbound call, propagated into `audit_log`.
 
 ## Errors

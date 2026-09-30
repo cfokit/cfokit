@@ -298,10 +298,9 @@ digests, subscriber preferences and an in-app inbox.
 **Reversal cost.** Low. The notification record is the durable part and stays whatever delivers
 it; a channel is replaced by another implementation of the same interface.
 
-**Follow-on obligation.** `CLAUDE.md` states that audience validation is mandatory on every
-request. That rule becomes: mandatory on every request carrying a token from the issuer, and a
-request is authenticated otherwise only at the relay's webhook (§ 5) and an invoice's link
-(ADR-0053). The same wording applies to the ledger's `CLAUDE.md`.
+**Follow-on obligation.** `CLAUDE.md` and the ledger's `CLAUDE.md` make audience validation
+mandatory on every request carrying a token from the issuer, and name the relay's webhook (§ 5) and
+an invoice's link (ADR-0053) as the only requests authenticated otherwise.
 
 Related: ADR-0003 (one store), ADR-0004 (portability), ADR-0012 (the event bus gate), ADR-0016
 (secrets), ADR-0017 (scale to zero), ADR-0022 (modules and components), ADR-0049 (the web client

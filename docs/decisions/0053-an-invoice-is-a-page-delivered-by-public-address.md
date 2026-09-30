@@ -153,7 +153,7 @@ The most common practice among small businesses.
 an invoice that is already a posting (`AR-03`).
 
 **Follow-on obligation.** The invoice's link is one of the two ways a request is authenticated other
-than by the issuer; ADR-0052 states the change to `CLAUDE.md`'s rule on audience validation.
+than by the issuer, and `CLAUDE.md` names it as such (ADR-0052).
 
 Related: ADR-0049 (the web client that serves the page), ADR-0052 (the channels and relay).
 
