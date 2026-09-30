@@ -167,8 +167,9 @@ Applies to any package that touches financial values.
   All decimal columns are `NUMERIC(28,10)`. (ADR-0005)
 - Financial records are append-only. No `UPDATE` on financial fields, no `DELETE`.
   Corrections are reversing entries. (ADR-0007)
-- Postgres is the only storage backend. Do not add SQLite, DynamoDB, or any second
-  store, including "just for local dev". (ADR-0003)
+- Postgres is the only storage backend for CFOKit's own data. Do not add SQLite, DynamoDB, or
+  any second store, including "just for local dev". A separate component keeps its own internal
+  stores behind its own interface, and none of the books. (ADR-0003, ADR-0052)
 - **Rounding happens once, at presentation.** Never to an intermediate, never stored back. A
   rounding call in `engine`, `repository`, or `service` means the boundary has been misplaced.
   Allocation lives in the pure engine and is property-tested. (ADR-0025)
