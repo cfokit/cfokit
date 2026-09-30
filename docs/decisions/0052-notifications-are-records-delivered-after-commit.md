@@ -7,15 +7,16 @@ decision-makers: [Geoff]
 
 # ADR-0052: Notifications are records, delivered after their commit through CFOKit's own channels
 
-**Requirements served:** `PLT-06`, `PLT-07`, `PLT-22`, `AR-07`, `AR-08`, `AR-09`, `AR-17`, `AR-19`,
-`IAM-22`, `NFR-04`, `NFR-10`, `SOC2-17`.
+**Requirements served:** `PLT-06`, `PLT-07`, `PLT-22`, `IAM-22`, `NFR-04`, `NFR-10`, `SOC2-17`.
 
 ## Context and Problem Statement
 
 CFOKit has to reach people. `PLT-07` requires it to reach the people who operate an entity when
 something needs them — a transaction no rule resolves, a delivery that failed, a change in cash
 beyond a threshold they set — on channels they choose, with any class turned off at will.
-`AR-09` delivers invoices by email. `IAM-22` has a person reset a forgotten password with no
+Invoices reach customers by the same channels, as
+[ADR-0053](0053-an-invoice-is-a-page-delivered-by-public-address.md) sets out. `IAM-22` has a
+person reset a forgotten password with no
 administrator involved, and email is the recovery channel every account has. `PLT-06` requires
 that no particular mail provider is required.
 
@@ -76,9 +77,8 @@ never as an update to it: the hand-off to a channel, whose outcome means the rel
 message or refused it, and the events a provider reports later (§ 5).
 
 Before a notification is written, its recipient is checked to hold a role in the entity it
-names, under the same grant check as any other act (`NFR-04`). An invoice sent to the entity's
-customer, who holds no role, is authorised instead by being addressed to that customer's contact
-on the invoice (§ 6).
+names, under the same grant check as any other act (`NFR-04`). An invoice emailed to the entity's
+customer, who holds no role, is authorised as ADR-0053 sets out.
 
 ### 2. Every deployment shows notifications; channels add reaching people who are not looking
 
@@ -127,23 +127,34 @@ an always-on process to protect a send-only credential.
 
 Email is SMTP and nothing else. A deployment names one relay by host, port, username, password
 and sending address, and CFOKit and the issuer are configured with the same five values; with none
-set, there is no email channel. On the maintained cloud target the relay is SendGrid's, and its
-provider features are used through that relay rather than a second integration: the sending domain
-is authenticated there, its suppression lists stop mail to addresses that bounced or complained,
-and each message carries its notification's identifier in SendGrid's `X-SMTPAPI` header, which its
-event webhook returns with every event. Any other relay works without those extras.
+set, there is no email channel. Any relay that speaks SMTP works.
+
+On the maintained cloud target the relay is SendGrid's, and its features are used through that
+relay rather than a second integration: the sending domain is authenticated there, and its
+suppression lists stop mail to addresses that bounced or complained. What is specific to SendGrid —
+the `X-SMTPAPI` header CFOKit adds to its own messages, and the event webhook — is an option of the
+email channel, off unless a deployment configures it. Without it, the channel sends plain SMTP and
+CFOKit serves no webhook, so no deployment depends on SendGrid (`PLT-06`, ADR-0004). With it, each
+message carries its notification's identifier in the `X-SMTPAPI` header, which the event webhook
+returns with every event.
 
 CFOKit receives SendGrid's event webhook and records each event against the notification it names:
-delivered, deferred, bounced, dropped, marked as spam, unsubscribed, opened and clicked. Requests are
-accepted only with a valid signature — SendGrid signs each one with an ECDSA key, over its timestamp
-and raw payload — so an unauthenticated endpoint cannot be used to forge a delivery record.
+delivered, deferred, bounced, dropped, marked as spam, unsubscribed, opened and clicked. Requests
+are accepted only with a valid signature — SendGrid signs each one with an ECDSA key, over its
+timestamp and raw payload — so an unauthenticated endpoint cannot be used to forge a delivery
+record.
 
-Open and click tracking are on for every email, notifications and invoices alike, and tracked links
-use a link domain branded as the deployment's own. Opens are recorded as SendGrid reports them and
-read as a hint: mail clients that fetch images on the reader's behalf report opens that did not
-happen. Click tracking routes each link through SendGrid, including an invoice's, which opens the
-invoice without sign-in (§ 6). That is accepted: SendGrid is already trusted with the recipient's
-name and address, the link reaches one invoice and nothing else, and it can be revoked.
+The event names a notification, not an entity, so the webhook resolves a notification's entity
+before recording anything, and then records within that entity's scope. That resolution is the one
+place this record reads across entities, and it reads nothing but the entity a notification
+belongs to. The webhook is a new route on the published REST interface (ADR-0015).
+
+Open and click tracking are off in the relay's account settings and switched on per message, by
+CFOKit, in the `X-SMTPAPI` header of its own mail. The issuer's mail is therefore never tracked:
+its verification and password-reset links carry one-time credentials, and click tracking would pass
+them through SendGrid. CFOKit's tracked links use a link domain branded as the deployment's own.
+Opens are recorded as SendGrid reports them and read as a hint: mail clients that fetch images on
+the reader's behalf report opens that did not happen.
 
 A relay receives no customer financial data, and it does receive personal information:
 recipients' names and email addresses, the questions sent, and the delivery, open and click events
@@ -168,24 +179,8 @@ CFOKit, and after sign-in takes the person to where they answer: the web client'
 question, or their conversational interface where it can be opened at the question. A message
 read on a lock screen or forwarded reveals nothing.
 
-An issued invoice is a page, reached by its stable link, which needs no sign-in so that a customer
-can see what they owe (`AR-08`). Its PDF is that page rendered, for download, so the two never
-differ. A link only works where the customer can reach the deployment, so what is delivered depends
-on whether the deployment has a public address — a `PUBLIC_BASE_URL` its customers can reach, which
-a deployment on one machine does not:
-
-* **A public address and a relay:** CFOKit emails the customer the link, never the invoice
-  (`AR-09`), and SendGrid reports on it.
-* **A public address and no relay:** the operator delivers the link or the PDF by any means — by
-  hand, or through their own agent drafting the email from their own mailbox (`AR-07`).
-* **No public address:** the PDF is the artifact, and the operator delivers it the same way. CFOKit
-  sends no invoice email, even where a relay is configured, because the link would reach no one and
-  the invoice itself never goes through a relay.
-
-CFOKit records what it knows (`AR-19`): that it sent the link and what the relay reported, where it
-did; that the PDF was downloaded or the link copied, where it did not; and every view of the page,
-by whatever route its link travelled. A view of the page is what tells an invoice opened from one
-never opened (`AR-17`).
+What an invoice is delivered as, and to whom, is
+[ADR-0053](0053-an-invoice-is-a-page-delivered-by-public-address.md).
 
 ### 7. A notification is the entity's data
 
@@ -195,11 +190,11 @@ included in the entity's complete export (`EXP-02`).
 
 ### 8. Without a mail relay
 
-A deployment with no relay configured has no email channel: notifications are in-app only,
-invoices are delivered by the operator (§ 6), the issuer does not verify email, and a forgotten
-password is reset by the operator in the issuer's console. `IAM-22`'s reset without an administrator holds wherever a relay is configured, which
-every deployment serving people who do not administer it has. The development overlay adds
-Mailpit (MIT), a local SMTP server with a web inbox, for work on email.
+A deployment with no relay configured has no email channel: notifications are in-app only, invoices
+are delivered by the operator (ADR-0053), the issuer does not verify email, and a forgotten password
+is reset by the operator in the issuer's console. `IAM-22`'s reset without an administrator holds
+wherever a relay is configured, which every deployment serving people who do not administer it has.
+The development overlay adds Mailpit (MIT), a local SMTP server with a web inbox, for work on email.
 
 ### Consequences
 
@@ -215,7 +210,7 @@ Mailpit (MIT), a local SMTP server with a web inbox, for work on email.
 * Bad, because a failed delivery is retried only when CFOKit next delivers something for that
   entity, which for a quiet entity can be a while; the notification is visible in-app meanwhile.
 * Bad, because the webhook is a public endpoint whose safety rests on verifying SendGrid's
-  signature.
+  signature, and it resolves a notification's entity across entities.
 * Bad, because digests, scheduled sending and templates across channels are CFOKit's to build
   when a requirement asks for them.
 * Bad, because Jinja2 is a runtime dependency.
@@ -235,8 +230,9 @@ Mailpit (MIT), a local SMTP server with a web inbox, for work on email.
   no transaction or entity lock is held while a channel sends.
 * A test asserts that a webhook request with a missing or invalid signature records nothing, and
   that a valid event is recorded against the notification its identifier names.
-* A test asserts that a deployment without a public address sends no invoice email, whatever relay is
-  configured, and that a view of an invoice's page is recorded against the invoice.
+* A test asserts that without the SendGrid option configured, the channel adds no `X-SMTPAPI`
+  header and the webhook route is not served, and that with it, CFOKit's messages carry their
+  notification's identifier and switch tracking on.
 * Not gated: that a notification's content carries no figures. That is review.
 
 ## Pros and Cons of the Options

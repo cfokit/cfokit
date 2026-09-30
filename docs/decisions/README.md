@@ -96,6 +96,7 @@ nothing cites these but this repository. They are added when something breaks wi
 | [0050](0050-the-import-oracle-is-basis-free.md) | An import is checked against the journal's own total, and a basis difference must net to zero | Proposed |
 | [0051](0051-books-are-imported-through-the-web-client.md) | Books are imported through the web client, which reads the export, not through a model | Proposed |
 | [0052](0052-notifications-are-records-delivered-after-commit.md) | Notifications are records, delivered after their commit through CFOKit's own channels | Proposed |
+| [0053](0053-an-invoice-is-a-page-delivered-by-public-address.md) | An issued invoice is a page, and what is delivered depends on the deployment's public address | Proposed |
 
 ## Deferred — decided in principle, waiting on a need
 
