@@ -40,7 +40,11 @@ uv sync              # install everything
 uv run task --list   # every command, and what it does
 ```
 
-In a Claude Code cloud session, `.claude/hooks/session-start.sh` does this provisioning.
+**Nothing to install locally?** Open the repository in a Claude Code cloud session.
+`.claude/hooks/session-start.sh` provisions `uv`, Python 3.14 and 3.11, the locked dependencies
+and a Docker daemon, so lint, the full suite and the compose stack all run there. The stack
+lives inside the session's container, so it can be exercised from the session but not reached
+from your own machine.
 
 ### Running the stack
 
