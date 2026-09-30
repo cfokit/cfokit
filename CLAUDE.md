@@ -112,6 +112,9 @@ docker compose --profile test build <service>  # after any source change, or the
 it, so `test` runs the previous copy after an edit and `migrate` reports "no migrations to apply"
 for a migration that is on disk. Both have cost real debugging time.
 
+**Cloud sessions are provisioned by `.claude/hooks/session-start.sh`** — CI's uv, Python 3.14 and
+3.11, `uv sync --locked`, and a running Docker daemon. The commands above are unchanged there.
+
 **`uv run task test` is not the whole suite.** Every test of row-level security, the entity lock
 and the write path needs a database and an issuer, and skips without them — which is most of the
 tests. Row-level security is only in force for a non-superuser that does not own the tables, so
