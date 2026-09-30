@@ -19,6 +19,12 @@ that runs `mcp-remote`, a stdio-to-HTTP proxy that also performs the OAuth flow.
 docker compose up -d --wait
 ```
 
+Then create the schema. Migrations never run on startup, so a fresh stack has none:
+
+```
+docker compose --profile migrate run --rm migrate
+```
+
 The first run generates a local certificate authority into `.local/tls/`, and the identity
 provider serves HTTPS with a certificate it signs. OAuth clients refuse to send credentials to
 a plain-HTTP token endpoint, so the sign-in does not work without it.
