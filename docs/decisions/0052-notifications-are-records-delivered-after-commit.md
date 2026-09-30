@@ -105,11 +105,9 @@ zero may withdraw CPU once a response has returned.
 
 ### 4. Channels are CFOKit's own, behind one small interface
 
-A channel takes a notification and a recipient's address and returns a delivery outcome. Email is
-SMTP, through the standard library, to whatever relay a deployment names — on the maintained
-cloud target, SendGrid's SMTP service on port 587, since outbound port 25 is blocked there. The
-issuer's own mail settings point at the same relay, so account email and product email share one
-sending domain.
+A channel takes a notification and a recipient's address and returns a delivery outcome. The first
+is email, sent over SMTP with Python's standard library to the deployment's relay (§ 5); on the
+maintained cloud target that is port 587, since outbound port 25 is blocked there.
 
 The implementations sit in a package of their own that depends on the ledger and that no module
 depends on; the composition point supplies the configured channels to the write path. A new
@@ -119,7 +117,23 @@ The relay's credential is held by CFOKit's process. It can only send mail, it is
 environment variable like any other secret (ADR-0016), and isolating it in a component would cost
 an always-on process to protect a send-only credential.
 
-### 5. A notification asks; its link answers
+### 5. One mail relay, configured the same way for CFOKit and the issuer
+
+Email is SMTP and nothing else. A deployment names one relay by host, port, username, password
+and sending address, and CFOKit and the issuer are configured with the same five values; with none
+set, there is no email channel. On the maintained cloud target the relay is SendGrid's, and its
+provider features are used through that relay rather than a second integration: the sending domain
+is authenticated there, its suppression lists stop mail to addresses that bounced or complained,
+and each message carries its notification's identifier in SendGrid's `X-SMTPAPI` header, which its
+event webhook returns with every delivery event. Any other relay works without those extras.
+
+Templates are CFOKit's: kept in the repository, reviewed and tested like code, and rendered with
+Jinja2, whose autoescaping keeps text from outside the books from becoming markup. They are never
+kept in a provider, so every deployment and every relay sends the same message. The issuer's own
+account email — verification, password reset — comes from its own email theme, styled from the same
+design system, so a reader sees one sender. Marketing to contact lists is not part of the product.
+
+### 6. A notification asks; its link answers
 
 A notification is the agent asking, in its own voice. Its content carries identifiers, counts, the
 company's name and one link — no amount, payee, account number or invoice line. The link opens
@@ -130,13 +144,13 @@ read on a lock screen or forwarded reveals nothing.
 An invoice is delivered as a link to the invoice — a read path that cannot be guessed and can be
 revoked (`IAM-20`) — not as the invoice itself.
 
-### 6. A notification is the entity's data
+### 7. A notification is the entity's data
 
 Notifications and their deliveries are records the entity holds. They carry none of the retention
 obligations `PLT-20` lists, so a person's erasure request (`PLT-22`) erases theirs, and they are
 included in the entity's complete export (`EXP-02`).
 
-### 7. Without a mail relay
+### 8. Without a mail relay
 
 A deployment with no relay configured has no email channel: notifications are in-app only, the
 issuer does not verify email, and a forgotten password is reset by the operator in the issuer's
@@ -152,11 +166,14 @@ Mailpit (MIT), a local SMTP server with a web inbox, for work on email.
   visibly rather than disappearing.
 * Good, because CFOKit keeps scaling to zero.
 * Good, because a channel is a small implementation, and the choice of relay is configuration.
+* Good, because one relay and one template set serve every deployment, with the provider's
+  deliverability features where it offers them.
 * Bad, because a response waits for delivery, bounded by the channel's timeout.
 * Bad, because a failed delivery is retried only when CFOKit next delivers something, which on a
   quiet deployment can be a while; the notification is visible in-app meanwhile.
-* Bad, because digests, scheduled sending, bounce handling and templates across channels are
-  CFOKit's to build when a requirement asks for them.
+* Bad, because digests, scheduled sending and templates across channels are CFOKit's to build
+  when a requirement asks for them.
+* Bad, because Jinja2 is a runtime dependency.
 * Bad, because the password reset `IAM-22` requires is unavailable where no relay is set.
 
 ### Confirmation
