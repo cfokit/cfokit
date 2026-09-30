@@ -95,7 +95,7 @@ nothing cites these but this repository. They are added when something breaks wi
 | [0049](0049-cfokit-has-a-web-client.md) | CFOKit has a web client, served by the API and signed in through the issuer | Proposed |
 | [0050](0050-the-import-oracle-is-basis-free.md) | An import is checked against the journal's own total, and a basis difference must net to zero | Proposed |
 | [0051](0051-books-are-imported-through-the-web-client.md) | Books are imported through the web client, which reads the export, not through a model | Proposed |
-| [0052](0052-messaging-is-a-separate-component-on-novu.md) | Messaging is an optional separate component, built on Novu Community | Proposed |
+| [0052](0052-notifications-are-records-delivered-after-commit.md) | Notifications are records, delivered after their commit through CFOKit's own channels | Proposed |
 
 ## Deferred — decided in principle, waiting on a need
 

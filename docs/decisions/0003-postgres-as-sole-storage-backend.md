@@ -51,11 +51,6 @@ Self-hosting is a product promise, not a convenience (ADR-0004).
 Chosen option: **PostgreSQL as the sole storage backend.** No second store will be added,
 including for local development.
 
-The scope is CFOKit's own data: the books, and everything the ledger and its modules keep. A
-separate component with its own runtime (ADR-0022) keeps its own internal stores behind its own
-interface — the messaging component's MongoDB and Redis ([ADR-0052](0052-messaging-is-a-separate-component-on-novu.md))
-are its own, and hold none of the books.
-
 ### Consequences
 
 * Good, because the zero-sum invariant can be enforced by a deferred constraint trigger
