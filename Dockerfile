@@ -30,12 +30,19 @@ WORKDIR /app
 # README.md comes too: [project] readme names it, so the build backend needs it present.
 COPY pyproject.toml uv.lock README.md ./
 
+# Every `uv sync` below mounts `build_ca`, an optional extra certificate authority for a build
+# whose network re-terminates TLS, such as a Claude Code cloud session. Empty everywhere else
+# (compose.yaml sources it from /dev/null), and a secret mount never reaches an image layer.
 RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=secret,id=build_ca,required=false \
+    if [ -s /run/secrets/build_ca ]; then export SSL_CERT_FILE=/run/secrets/build_ca; fi; \
     uv sync --locked --no-dev --no-install-project
 
 COPY src/ ./src/
 
 RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=secret,id=build_ca,required=false \
+    if [ -s /run/secrets/build_ca ]; then export SSL_CERT_FILE=/run/secrets/build_ca; fi; \
     uv sync --locked --no-dev
 
 # ---------------------------------------------------------------------------
@@ -45,6 +52,8 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 FROM builder AS test
 
 RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=secret,id=build_ca,required=false \
+    if [ -s /run/secrets/build_ca ]; then export SSL_CERT_FILE=/run/secrets/build_ca; fi; \
     uv sync --locked
 
 COPY tests/ ./tests/
