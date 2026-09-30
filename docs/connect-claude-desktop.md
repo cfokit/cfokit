@@ -1,5 +1,8 @@
 # Connecting Claude Desktop to a local CFOKit
 
+> **Tested on macOS only.** The certificate-trust command and the config path below are macOS's.
+> Windows and Linux are untested, so expect to adapt those steps.
+
 ## How Claude Desktop reaches it
 
 Claude Desktop reaches an MCP server two ways:

@@ -29,7 +29,7 @@ The REST API listens on `:8080` and the MCP endpoint on `:8081`. This is the rea
 demo: data lives in a named volume, and `docker compose down -v` destroys it.
 
 To connect Claude Desktop, create a user and install the bookkeeper skill, continue with
-[`docs/connect-claude-desktop.md`](docs/connect-claude-desktop.md). Working on the code instead?
+[`docs/connect-claude-desktop.md`](docs/connect-claude-desktop.md) (tested on macOS only). Working on the code instead?
 See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Start here
