@@ -32,14 +32,71 @@ code comment. [`docs/decisions/README.md`](docs/decisions/README.md) explains th
 
 ## Setting up
 
-[`uv`](https://docs.astral.sh/uv/) only — not pip, not poetry.
+You need [`uv`](https://docs.astral.sh/uv/) (not pip, not poetry) and Docker. The code targets
+Python 3.14, which `uv` installs for you. Only the scripts under `skills/` run on 3.11.
 
 ```bash
 uv sync              # install everything
 uv run task --list   # every command, and what it does
 ```
 
-`docker compose up` brings up the full stack locally. It needs no cloud account.
+**Using Claude Code?** Any Claude Code environment with outbound network access works, cloud or
+local, and the agent can run everything below for you. A cloud session is provisioned
+automatically by `.claude/hooks/session-start.sh` (`uv`, Python 3.14 and 3.11, the locked
+dependencies and a Docker daemon). That hook does nothing locally, so a local session needs `uv`
+and Docker installed first. A stack in a cloud session lives inside its container, so you can
+exercise it from the session but not from your own machine.
+
+**Hosts it needs to reach** (from the `Dockerfile`, `compose.yaml` and the session hook):
+
+| For | Host |
+|---|---|
+| `uv` binary and the Python 3.14 and 3.11 downloads | `github.com` and its release-asset hosts (`*.githubusercontent.com`) |
+| Python packages (`uv sync`, image builds) | `pypi.org`, `files.pythonhosted.org` |
+| `python` and `postgres` images | Docker Hub: `registry-1.docker.io`, `auth.docker.io`, `production.cloudflare.docker.com` |
+| the `uv` image used in builds | `ghcr.io` |
+| the Keycloak image | `quay.io` and its CDN hosts (`*.quay.io`) |
+| `mcp-remote` in the Claude Desktop guide (`npx`) | `registry.npmjs.org` |
+
+To paste into a cloud environment's allowed domains, one per line:
+
+```
+github.com
+*.githubusercontent.com
+pypi.org
+files.pythonhosted.org
+registry-1.docker.io
+auth.docker.io
+production.cloudflare.docker.com
+ghcr.io
+quay.io
+*.quay.io
+registry.npmjs.org
+```
+
+Registries redirect image layers to CDN hosts, so allow-list by domain rather than by the
+names above alone. If a pull or build fails, the blocked host is in the error.
+
+### Running the stack
+
+```bash
+uv run task dev                                    # compose.yaml plus compose.dev.yaml
+docker compose --profile migrate run --rm migrate  # create the schema
+```
+
+`uv run task dev` applies the development overlay: Postgres is published on `:5432` and logs
+every statement. Plain `docker compose up` runs the same stack without it, which is what a
+user gets and what CI proves. Migrations are an explicit command and never run on startup.
+
+**Every service copies the source into its image rather than mounting it.** After editing code,
+rebuild before you run, or you are running the previous copy:
+
+```bash
+docker compose build <service>
+docker compose --profile test build test   # before running the test suite
+```
+
+`docker compose down -v` destroys the database volume.
 
 ## Running the checks
 

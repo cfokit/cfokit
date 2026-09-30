@@ -1,5 +1,8 @@
 # Connecting Claude Desktop to a local CFOKit
 
+> **Tested on macOS only.** The certificate-trust command and the config path below are macOS's.
+> Windows and Linux are untested, so expect to adapt those steps.
+
 ## How Claude Desktop reaches it
 
 Claude Desktop reaches an MCP server two ways:
@@ -17,6 +20,12 @@ that runs `mcp-remote`, a stdio-to-HTTP proxy that also performs the OAuth flow.
 
 ```
 docker compose up -d --wait
+```
+
+Then create the schema. Migrations never run on startup, so a fresh stack has none:
+
+```
+docker compose --profile migrate run --rm migrate
 ```
 
 The first run generates a local certificate authority into `.local/tls/`, and the identity
