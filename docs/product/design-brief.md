@@ -51,8 +51,8 @@ canvas from this file.
 > account → create the company → import its books from QuickBooks → see whether the books agree
 > with QuickBooks → return to Claude, where their assistant explains the results.
 >
-> **Sign-in screens.** These are rendered by the identity provider, so they sit in a simple frame of
-> their own, without the app's header.
+> **Sign-in screens.** Before sign-in there is no company or person to show, so these screens have
+> no app header: the CFOKit logo above a single card on the page background.
 >
 > 1. Sign in — email and password, "Continue with Google", "Continue with Microsoft", "Sign in with
 >    a passkey", links to sign up and to reset a password.
