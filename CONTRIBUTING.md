@@ -58,6 +58,22 @@ exercise it from the session but not from your own machine.
 | the Keycloak image | `quay.io` and its CDN hosts (`*.quay.io`) |
 | `mcp-remote` in the Claude Desktop guide (`npx`) | `registry.npmjs.org` |
 
+To paste into a cloud environment's allowed domains, one per line:
+
+```
+github.com
+*.githubusercontent.com
+pypi.org
+files.pythonhosted.org
+registry-1.docker.io
+auth.docker.io
+production.cloudflare.docker.com
+ghcr.io
+quay.io
+*.quay.io
+registry.npmjs.org
+```
+
 Registries redirect image layers to CDN hosts, so allow-list by domain rather than by the
 names above alone. If a pull or build fails, the blocked host is in the error.
 
