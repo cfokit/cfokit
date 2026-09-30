@@ -47,6 +47,20 @@ dependencies and a Docker daemon). That hook does nothing locally, so a local se
 and Docker installed first. A stack in a cloud session lives inside its container, so you can
 exercise it from the session but not from your own machine.
 
+**Hosts it needs to reach** (from the `Dockerfile`, `compose.yaml` and the session hook):
+
+| For | Host |
+|---|---|
+| `uv` binary and the Python 3.14 and 3.11 downloads | `github.com` and its release-asset hosts (`*.githubusercontent.com`) |
+| Python packages (`uv sync`, image builds) | `pypi.org`, `files.pythonhosted.org` |
+| `python` and `postgres` images | Docker Hub: `registry-1.docker.io`, `auth.docker.io`, `production.cloudflare.docker.com` |
+| the `uv` image used in builds | `ghcr.io` |
+| the Keycloak image | `quay.io` and its CDN hosts (`*.quay.io`) |
+| `mcp-remote` in the Claude Desktop guide (`npx`) | `registry.npmjs.org` |
+
+Registries redirect image layers to CDN hosts, so allow-list by domain rather than by the
+names above alone. If a pull or build fails, the blocked host is in the error.
+
 ### Running the stack
 
 ```bash
