@@ -99,6 +99,7 @@ nothing cites these but this repository. They are added when something breaks wi
 | [0053](0053-an-invoice-is-a-page-delivered-by-public-address.md) | An issued invoice is a page, and what is delivered depends on the deployment's public address | Proposed |
 | [0054](0054-the-web-client-lives-in-web.md) | The web client lives in a top-level `web/` directory, with its toolchain | Proposed |
 | [0055](0055-on-gcp-the-web-client-is-served-from-a-cdn.md) | On GCP the web client is served from a bucket behind Cloud CDN, on the API's origin | Proposed |
+| [0056](0056-a-notification-is-open-until-answered-or-dismissed.md) | A notification is open until its question is answered or its recipient dismisses it, and open notifications are read through the published interface | Proposed |
 
 ## Deferred — decided in principle, waiting on a need
 
