@@ -123,7 +123,9 @@ storage or a server-held session, and that is decided when a page is used daily.
 * **Create an account** is the issuer's registration page in CFOKit's theme (§ 1), reached from the
   sign-in redirect, or a Google or Microsoft account (`IAM-22`, `IAM-25`, `IAM-26`). Whether a
   deployment allows open registration, and what it verifies, is that deployment's configuration.
-  The bundled issuer allows it, so a deployment on one machine onboards as a hosted one does.
+  The bundled issuer allows it. Where a deployment has no mail relay, the address is not
+  verified and a forgotten password is reset by the operator
+  ([ADR-0052](0052-notifications-are-records-delivered-after-commit.md)).
 * **Create the entity** is the existing `create_entity` operation, which needs an authenticated
   identity and no prior role and makes the caller the owner (`IAM-05`, `IAM-06`).
 * **Import its books** is ADR-0051.

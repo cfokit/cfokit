@@ -259,8 +259,13 @@ Scope the question by **what triggers the obligation**, not by the license name.
 - The issuer is a swappable dependency. **No issuer-specific code anywhere.** The app
   reads `AUTH_ISSUER_URL` and `AUTH_AUDIENCE` and nothing else. (ADR-0019)
 - Do not write an OAuth server, a token minter, or a login flow. Delegate to the issuer.
-- Audience validation is mandatory on every request. Entity grants are validated
-  server-side regardless of token contents. (ADR-0011, ADR-0019)
+- Audience validation is mandatory on every request carrying an issuer token. Entity grants are
+  validated server-side regardless of token contents. (ADR-0011, ADR-0019)
+- **Without an issuer token, an entity's data is reached in two ways only:** a link of the kind
+  `IAM-20` defines — one artifact, unguessable, revocable — such as an issued invoice's (ADR-0053),
+  and the relay's signed event webhook, which writes delivery events and reads nothing across
+  entities (ADR-0052). Every other route without the issuer serves no entity data, as `/healthz`,
+  `/readyz` and the protected-resource metadata do. A new way in needs its own record.
 - Changes here need human review before you proceed.
 
 ## Infrastructure
