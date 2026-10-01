@@ -192,7 +192,9 @@ as renames.
 
 Related: [ADR-0001](0001-documentation-structure.md) is authoritative for the documentation tree and
 supersedes anything this record would otherwise imply about it;
-[ADR-0031](0031-packages-named-for-capabilities.md) holds the naming rule.
+[ADR-0031](0031-packages-named-for-capabilities.md) holds the naming rule;
+[ADR-0054](0054-the-web-client-lives-in-web.md) places the web client, the first artifact kind none
+of the directories above fits.
 
 ## Revisit when
 

@@ -88,9 +88,10 @@ and Tailwind theme, with Keycloakify (MIT). They are CFOKit's screens to the per
 the password, the second factor and the passkey go to the issuer and nowhere else (`IAM-10`).
 
 Password, second-factor, passkey and Google and Microsoft sign-in are the issuer's features,
-enabled in its configuration, not application code. The theme belongs to the bundled issuer, beside
-its realm in `infra/keycloak/`; a deployment that uses another issuer brands that one, and the
-application is unchanged (ADR-0019).
+enabled in its configuration, not application code. The theme is built with the web client, from
+its source in `web/` ([ADR-0054](0054-the-web-client-lives-in-web.md)), and loaded by the bundled
+issuer, whose realm in `infra/keycloak/` selects it; a deployment that uses another issuer brands
+that one, and the application is unchanged (ADR-0019).
 
 ### 2. State lives on the server; the browser keeps almost nothing
 
