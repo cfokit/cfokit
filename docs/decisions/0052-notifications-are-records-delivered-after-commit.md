@@ -103,7 +103,8 @@ in-app. Each later hand-off for the same entity first delivers that entity's und
 notifications, so a failure is retried the next time CFOKit delivers anything for that entity —
 within the entity's own scope, never another's — with no sweep and no process of its own. A
 notification that exhausts its attempts is marked as such and stays visible, never silently
-dropped.
+dropped. A notification closed before its retry — answered or dismissed — is not delivered
+([ADR-0056](0056-a-notification-is-open-until-answered-or-dismissed.md)).
 
 Delivery happens before the response, not in a task after it, because a platform that scales to
 zero may withdraw CPU once a response has returned.
