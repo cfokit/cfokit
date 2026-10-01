@@ -98,6 +98,7 @@ nothing cites these but this repository. They are added when something breaks wi
 | [0052](0052-notifications-are-records-delivered-after-commit.md) | Notifications are records, delivered after their commit through CFOKit's own channels | Proposed |
 | [0053](0053-an-invoice-is-a-page-delivered-by-public-address.md) | An issued invoice is a page, and what is delivered depends on the deployment's public address | Proposed |
 | [0054](0054-the-web-client-lives-in-web.md) | The web client lives in a top-level `web/` directory, and nothing else holds Node tooling | Proposed |
+| [0055](0055-on-gcp-the-web-client-is-served-from-a-cdn.md) | On GCP the web client is served from a bucket behind Cloud CDN, on the API's origin | Proposed |
 
 ## Deferred — decided in principle, waiting on a need
 
@@ -132,6 +133,7 @@ this shape, and they cite no requirement (ADR-0001).
 | 0031 | Packages named for capabilities |
 | 0048 | Merge eligibility is decided by policy, not by a reviewer |
 | 0054 | The web client lives in `web/` |
+| 0055 | On GCP the web client is served from a CDN |
 
 Every other record is `kind: requirement-driven` and must cite at least one requirement id.
 

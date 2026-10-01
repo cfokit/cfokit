@@ -68,7 +68,7 @@ signing in with PKCE", because it is the only option that adds no session state,
 deployable and no second authorization path.
 
 > The web client is a React single-page application in TypeScript, built to static files and
-> served by the REST service under its own `PUBLIC_BASE_URL`. It signs the person in through the
+> served at `/app/` on the REST API's origin, under its `PUBLIC_BASE_URL`. It signs the person in through the
 > issuer with the authorization code flow and PKCE, keeps its tokens in page memory, keeps what it
 > knows about progress on the server, and calls the same REST API an agent calls. It has no
 > endpoints of its own. Its first job is onboarding, end to end: create an account, create the
@@ -141,8 +141,11 @@ and the API lacks is a change to the API, reviewed as a contract change (ADR-001
 
 ### 5. Same origin, one image
 
-Served by the REST service, the pages and the API share an origin, so there is no CORS policy to
-get wrong, and the web client ships in the one image to wherever that image runs.
+The pages live at `/app/` on the API's origin, so there is no CORS policy to get wrong, and the
+web client ships in the one image to wherever that image runs. The REST service serves `/app/`
+from the build inside the image, and redirects `/` to it. A target may serve the same files from
+a CDN at the same path and origin instead; on GCP it does
+([ADR-0055](0055-on-gcp-the-web-client-is-served-from-a-cdn.md)).
 
 ### 6. A small browser surface
 

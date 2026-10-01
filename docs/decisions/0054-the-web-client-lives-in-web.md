@@ -103,8 +103,10 @@ a module's internal files are.
 * **In: `docs/contracts/openapi.json` only.** The generated API client is built from it. `web/`
   imports nothing from `src/`, `skills/` or `infra/`, and nothing outside `web/` imports from it.
 * **Out to the image: the static build.** A Node stage of the Dockerfile builds `web/` and copies
-  the output into the image, where the REST service serves it (ADR-0049 § 5). The Python stages do
-  not need Node, and the final image carries no Node runtime.
+  the output into the image, where the REST service serves it at `/app/` (ADR-0049 § 5). The
+  Python stages do not need Node, and the final image carries no Node runtime. On GCP the same
+  files are copied out of that image into a bucket behind a CDN
+  ([ADR-0055](0055-on-gcp-the-web-client-is-served-from-a-cdn.md)); they are never built twice.
 * **Out to the issuer: the theme JAR.** The bundled issuer receives the built theme through the
   compose build. `infra/keycloak/` keeps the realm and the configuration that selects the theme by
   name, not its source.
@@ -221,8 +223,8 @@ Common when a front end has its own team and release cadence.
 
 **Follow-on obligations.**
 
-* The repository map in `CLAUDE.md` carries a `web/` row from when the directory exists, with its
-  boundary: reads only the published contract; never imported from.
+* The repository map in `CLAUDE.md` has a `web/` row, with its boundary: reads only the published
+  contract; never imported from.
 * Dependabot gains an npm ecosystem for `/web`, on the same monthly schedule and cooldown as the
   others.
 * `.dockerignore` excludes `web/node_modules/` and build output from the build context.
