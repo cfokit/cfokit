@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import logging
 import sys
+from pathlib import Path
 
 import uvicorn
 
@@ -21,6 +22,10 @@ from cfokit.ledger.errors import LedgerError
 from cfokit.server import mcp_server, rest_app
 
 USAGE = "usage: python -m cfokit.server {rest|mcp}"
+
+# Where the image build puts the web client's static build (Dockerfile, ADR-0054). Absent in a
+# source checkout, where the REST service then serves the API alone.
+WEB_ROOT = Path("/app/web")
 
 
 class _JsonFormatter(logging.Formatter):
@@ -61,7 +66,10 @@ def main(argv: list[str] | None = None) -> int:
     # Binding all interfaces is correct inside a container; the platform controls ingress.
     if args[0] == "rest":
         uvicorn.run(
-            rest_app(settings),
+            rest_app(
+                settings,
+                web_root=WEB_ROOT if (WEB_ROOT / "index.html").is_file() else None,
+            ),
             host="0.0.0.0",  # noqa: S104
             port=settings.port,
             log_level=settings.log_level,
