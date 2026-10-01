@@ -41,6 +41,20 @@ updates:
       actions:
         update-types: [minor, patch]
 
+  # The web client's npm dependencies (ADR-0054). pnpm also refuses any release younger than a
+  # week, in web/pnpm-workspace.yaml, so a hand-made change gets the same cooldown.
+  - package-ecosystem: npm
+    directory: /web
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 7
+      semver-major-days: 30
+    open-pull-requests-limit: 5
+    groups:
+      web:
+        update-types: [minor, patch]
+
   # The Dockerfile's Python and uv images. When uv moves, move UV_VERSION in ci.yml with it.
   - package-ecosystem: docker
     directory: /

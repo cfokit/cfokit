@@ -1,4 +1,7 @@
 .git
+web/node_modules
+web/dist
+web/dist_keycloak
 .venv
 .mypy_cache
 .pytest_cache

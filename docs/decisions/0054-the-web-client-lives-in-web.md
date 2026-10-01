@@ -5,7 +5,7 @@ date: 2026-10-01
 decision-makers: [Geoff]
 ---
 
-# ADR-0054: The web client lives in a top-level `web/` directory, and nothing else holds Node tooling
+# ADR-0054: The web client lives in a top-level `web/` directory, with its toolchain
 
 ## Context and Problem Statement
 
@@ -74,8 +74,9 @@ its tests", because it is the only option that keeps each existing tree to one a
 without separating the client from the contract it is typed against.
 
 > The web client lives in `web/`, with one `package.json` and one pnpm lockfile. Everything that
-> runs in a browser or builds what does is there, and Node tooling is nowhere else in the
-> repository. `web/` reads one file from outside itself, `docs/contracts/openapi.json`, and its
+> runs in a browser or builds what does is there, and the product's Node tooling is nowhere
+> else. A skill is not part of that rule: its bundle is its own artifact kind and carries
+> whatever code the agent's runtime runs, TypeScript included (ADR-0020). `web/` reads one file from outside itself, `docs/contracts/openapi.json`, and its
 > build output reaches the image and the issuer through the image build, never through a commit.
 
 ### 1. What lives in `web/`
@@ -135,7 +136,7 @@ a module's internal files are.
 
 * CI's client job runs from `web/` and fails on a lockfile out of date with `package.json`.
 * A test asserts that no `package.json`, `pnpm-lock.yaml` or `node_modules/` exists outside `web/`,
-  and no `.ts` or `.tsx` file outside it.
+  and no `.ts` or `.tsx` file outside it, except within `skills/`.
 * `.gitignore` excludes the static build and `dist_keycloak/`; a test asserts neither is tracked.
 * Not gated: that `web/` reads nothing from outside itself except the contract. That is review.
 

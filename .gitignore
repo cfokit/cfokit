@@ -6,6 +6,10 @@ build/
 dist/
 .eggs/
 
+# The web client (ADR-0054). `dist/` above already covers its static build.
+node_modules/
+dist_keycloak/
+
 # uv / virtualenvs
 .venv/
 venv/

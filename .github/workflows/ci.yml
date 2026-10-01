@@ -89,6 +89,25 @@ jobs:
       - run: uv sync --locked
       - run: uv run task test
 
+  # The web client: lint, typecheck, test and build, from web/ only (ADR-0054). No Python here,
+  # and no Node in any other job.
+  web:
+    name: web client
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: web/.nvmrc
+      # The pnpm version is the one package.json pins in `packageManager`.
+      - run: corepack pnpm install --frozen-lockfile
+      - run: corepack pnpm lint
+      - run: corepack pnpm test
+      - run: corepack pnpm build
+
   # Gate 2 — the full suite against the stack users actually run, with NO cloud
   # credentials. This job must never be given any (ADR-0004).
   portability:
@@ -193,7 +212,7 @@ jobs:
   gates:
     name: All gates
     if: always()
-    needs: [lint, money, decisions, test, portability, contracts]
+    needs: [lint, money, decisions, test, web, portability, contracts]
     runs-on: ubuntu-latest
     steps:
       - name: Fail if any gate failed

@@ -1,0 +1,6 @@
+# Not a workspace: web/ is one package (ADR-0054). pnpm reads its settings from this file.
+#
+# A release is not installed until it has been public for a week, the same cooldown Dependabot
+# applies to every other ecosystem here, because a compromised release is usually caught and
+# yanked inside that window.
+minimumReleaseAge: 10080
