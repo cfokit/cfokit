@@ -50,6 +50,7 @@
   --breakpoint-*: initial;
   --container-*: initial;
   --spacing: initial;
+  --spacing-0: 0px;
   --color-paper: #f4f6f1;
   --color-surface: #ffffff;
   --color-sunken: #e8ede3;

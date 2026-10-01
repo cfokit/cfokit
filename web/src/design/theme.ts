@@ -125,6 +125,8 @@ export function themeCss(tokens: Tokens): string {
       block("@theme", [
         ...RESETS.map((r) => `--${r}-*: initial;`),
         "--spacing: initial;",
+        // Zero is not a step of the scale but where it starts: inset-0, m-0, min-w-0.
+        "--spacing-0: 0px;",
         ...theme,
       ]),
       block(":root", plain),
