@@ -1,0 +1,39 @@
+<!-- @dsCard group="Data" height=320 -->
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>MoneyTable — preview</title>
+  </head>
+  <body>
+    <div id="root" style="padding: 24px"></div>
+    <script>
+      var C = window.CFOKit,
+        h = React.createElement;
+      ReactDOM.createRoot(document.getElementById("root")).render(
+        h(C.MoneyTable, {
+          caption: "Balances compared with QuickBooks",
+          currency: "USD",
+          columns: [
+            { key: "account", header: "Account", kind: "text" },
+            { key: "ours", header: "CFOKit", kind: "money" },
+            { key: "theirs", header: "QuickBooks", kind: "money" },
+          ],
+          rows: [
+            {
+              id: "a",
+              cells: { account: "Business Checking", ours: "12000.00", theirs: "12000.00" },
+            },
+            {
+              id: "b",
+              cells: { account: "Undeposited Funds", ours: "-1250.00", theirs: "-1000.00" },
+              flagged: true,
+            },
+            { id: "c", cells: { account: "Ask My Accountant", ours: "412.50", theirs: "412.50" } },
+          ],
+          totals: { ours: "11162.50", theirs: "11412.50" },
+        }),
+      );
+    </script>
+  </body>
+</html>

@@ -4,7 +4,7 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist", "dist_keycloak"] },
+  { ignores: ["dist", "dist_keycloak", "dist-design-system"] },
   js.configs.recommended,
   tseslint.configs.strict,
   reactHooks.configs.flat["recommended-latest"],
@@ -21,5 +21,10 @@ export default tseslint.config(
         },
       ],
     },
+  },
+  // The design system's producer runs in Node, and its previews in the design system's frame.
+  {
+    files: ["design/publish/*.mjs"],
+    languageOptions: { globals: globals.node },
   },
 );

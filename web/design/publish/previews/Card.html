@@ -1,0 +1,26 @@
+<!-- @dsCard group="Layout" height=160 -->
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Card — preview</title>
+  </head>
+  <body>
+    <div id="root" style="padding: 24px"></div>
+    <script>
+      var C = window.CFOKit,
+        h = React.createElement;
+      ReactDOM.createRoot(document.getElementById("root")).render(
+        h(
+          C.Card,
+          { title: "Your company" },
+          h(
+            "p",
+            { className: "text-body text-ink" },
+            "An object that stands apart from the page: a form panel, the sign-in card.",
+          ),
+        ),
+      );
+    </script>
+  </body>
+</html>

@@ -230,15 +230,26 @@ maps onto a Tailwind theme directly and onto CSS Modules only by convention. Rea
 stronger accessibility library; Radix has the larger ecosystem of styled components built on it.
 Redux solves a client-state problem this application does not have.
 
-### 10. Layout is designed in Claude Design, against shared tokens
+### 10. Layout is designed in Claude Design, against a design system the repository holds
 
 What the pages look like is designed in Claude Design and implemented against the behavior each
 page's record states. A record names the states a page must handle; it does not draw them.
 
 Claude Design's artboards are HTML with inline styles and are a reference, not source: nothing is
-copied from them into the client. What the two share is a Design System artifact's `tokens.json`
-— color, type, spacing, radii — which Claude Design applies to every artboard and from which the
-client's Tailwind theme is generated. A change of look is a change of tokens, made once.
+copied from them into the client. What the two share is the CFOKit design system, and the
+repository is its source, split by kind:
+
+* **Prose in `docs/design/`**: the brand book, the notes on the marks, and a guide per component.
+* **Everything the client builds from in `web/design/`**: `tokens.json` — color, type, spacing,
+  radii — from which the client's Tailwind theme is generated, the font files and the marks.
+* **The components in `web/src/components/`.**
+
+`pnpm design-system` builds a Design System artifact's files from those three places: the brand
+book, the tokens, fonts and marks, and the components as a bundle with a guide and a live preview
+each. That artifact is what Claude Design installs on a canvas, so artboards use the components
+the client ships. It is a published copy, changed by changing the repository and publishing again;
+an edit made in its page is overwritten by the next publish. A change of look is a change of
+tokens, made once, in a pull request.
 
 ### Consequences
 

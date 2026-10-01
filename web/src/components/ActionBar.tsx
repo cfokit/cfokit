@@ -1,5 +1,10 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
+interface ActionBarProps {
+  /** The screen's buttons, the primary one first. */
+  children: ReactNode;
+}
+
 /**
  * A screen's actions. Below `bp-tablet` they sit in a bar pinned to the bottom of the screen, in
  * thumb reach, above the home indicator; give the primary button `fullWidth` there. From
@@ -8,7 +13,7 @@ import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
  * The pinned bar is as tall as its buttons and the device's inset make it, so the space it keeps
  * clear at the end of the page is measured from the bar rather than assumed.
  */
-export function ActionBar({ children }: { children: ReactNode }) {
+export function ActionBar({ children }: ActionBarProps) {
   const bar = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState(0);
 

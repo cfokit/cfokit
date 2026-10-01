@@ -27,7 +27,9 @@ corepack pnpm dev                         # Vite dev server with live reload
 corepack pnpm lint                        # eslint + prettier --check
 corepack pnpm test                        # vitest
 corepack pnpm build                       # tsc, then the static build into dist/
-corepack pnpm theme                       # regenerate src/design/theme.css from tokens.json
+corepack pnpm theme                       # regenerate design/theme*.css from design/tokens.json
+corepack pnpm design-system               # build the Design System artifact's files, then
+                                          # mount every preview on React 18, as the canvas does
 ```
 
 `pnpm dev` also serves the component gallery at `/app/gallery.html`: every component in its
@@ -47,20 +49,26 @@ Run `lint`, `test` and `build` before reporting work complete, as the `web clien
 - **A file the build serves is named by its content hash** unless its name must stay fixed, as
   `index.html`'s and the license texts' do. A hashed file is cached for a year by a browser or
   any CDN and needs no purge on deploy; a fixed name is revalidated on every request. Import
-  fonts, images and icons from `src/`; `public/` holds only fixed names. (ADR-0055 § 2)
+  fonts, images and icons by path from `design/` or `src/`; `public/` holds only fixed names. (ADR-0055 § 2)
 - **Nothing about the books or the session in browser storage.** Tokens live in page memory. The
   one exception is the PKCE verifier and `state`, in `sessionStorage` for the sign-in round trip
   only. The service worker caches the static build, never an API response. (ADR-0049 § 2, § 8)
 - **Where the operator is lives in the URL or on the server**, never in client state that a
   reload loses. (ADR-0049 § 2)
-- **The look comes from the design system's tokens, and nowhere else.** `src/design/tokens.json`
-  is the CFOKit Design System artifact's file, copied verbatim; `theme.css` is generated from it
-  and a test fails when they disagree. Change the look in the design system, copy the file, run
-  `pnpm theme`. The theme clears Tailwind's defaults, so a color, size or breakpoint outside the
-  system has no utility; do not add one in CSS or with an arbitrary value. (ADR-0049 § 10)
-- **Pages are built from `src/components/`**, the components the design system's README
-  describes; a page that needs one that is missing adds it there, with a test and a place in the
-  gallery. A `text-*` style sets size, line height and weight but not the family: `display` and
+- **The repository is the design system's source, split by kind** (ADR-0049 § 10). Prose — the
+  brand book, the marks' notes, each component's guide — is in `docs/design/`. What the client
+  builds from — `tokens.json`, the fonts, the marks, the theme generator and the publishing
+  build — is in `design/`. The components are in `src/components/`. The Design System artifact in
+  Claude Design is published from these by `pnpm design-system` and never edited in its page.
+- **The look comes from `design/tokens.json`, and nowhere else.** `design/theme.css` and
+  `design/theme.design-system.css` are generated from it, and a test fails when they disagree:
+  change the tokens, run `pnpm theme`. The theme clears Tailwind's defaults, so a color, size or
+  breakpoint outside the system has no utility; do not add one in CSS or with an arbitrary
+  value.
+- **Pages are built from `src/components/`**, the components `docs/design/README.md`
+  describes; a page that needs one that is missing adds it there, with a test, a place in the
+  gallery, a guide in `docs/design/components/` and a preview in `design/publish/previews/`;
+  `pnpm design-system` fails until both exist. A `text-*` style sets size, line height and weight but not the family: `display` and
   `heading` styles also take `font-display`.
 - **Amounts are shown through `Money` or `MoneyTable`**, which round half-up to the display scale
   once and show negatives in parentheses (ADR-0025, RPT-12). Never format an amount by hand.

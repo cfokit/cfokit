@@ -1,7 +1,7 @@
-// The client's Tailwind theme, generated from the design system's tokens.json (ADR-0049 § 10).
+// The client's Tailwind theme, generated from tokens.json beside it (ADR-0049 § 10).
 //
-// tokens.json is the Design System artifact's file, copied verbatim; theme.css is this function's
-// output, and theme.test.ts fails when the two disagree. A change of look is a change to
+// tokens.json is the design system's tokens; theme.css and theme.design-system.css are this
+// function's output, and theme.test.ts fails when they disagree. A change of look is a change to
 // tokens.json, then `pnpm theme`. A family this does not know fails the generation rather than
 // dropping out of the theme unnoticed.
 
@@ -43,7 +43,12 @@ const PLAIN = new Set(["stroke"]);
 // Every default the design system replaces is cleared, so a utility outside it does not exist.
 const RESETS = ["color", "font", "text", "spacing", "radius", "shadow", "breakpoint", "container"];
 
-export function themeCss(tokens: Tokens): string {
+// Where the theme is used. The client follows the device's light or dark setting and serves its
+// own fonts. The design system's copy of the components follows the theme its page or canvas sets
+// with `data-theme`, and takes its fonts from the system's own tokens.css.
+export type Target = "client" | "design-system";
+
+export function themeCss(tokens: Tokens, target: Target = "client"): string {
   const themes = tokens.color.themes.map((t) => t.id);
   const [first, ...others] = themes;
   if (first === undefined) throw new Error("tokens.json declares no color theme");
@@ -95,7 +100,7 @@ export function themeCss(tokens: Tokens): string {
     }
   }
 
-  const fontFaces = tokens.type.fonts.map((f) =>
+  const fontFaces = (target === "client" ? tokens.type.fonts : []).map((f) =>
     [
       "@font-face {",
       `  font-family: "${f.family}";`,
@@ -109,18 +114,26 @@ export function themeCss(tokens: Tokens): string {
 
   const block = (selector: string, lines: string[]) =>
     [`${selector} {`, ...lines.map((l) => `  ${l}`), "}"].join("\n");
-  const media = (id: string, lines: string[]) =>
-    [
-      `@media (prefers-color-scheme: ${id}) {`,
-      ...block(":root", lines)
-        .split("\n")
-        .map((l) => `  ${l}`),
-      "}",
-    ].join("\n");
+  const override = (id: string, lines: string[]) =>
+    target === "client"
+      ? [
+          `@media (prefers-color-scheme: ${id}) {`,
+          ...block(":root", lines)
+            .split("\n")
+            .map((l) => `  ${l}`),
+          "}",
+        ].join("\n")
+      : block(`[data-theme="${id}"]`, lines);
+  // Tailwind's `dark:` follows the same switch as the colors.
+  const variant =
+    target === "client"
+      ? []
+      : [`@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));`];
 
   return (
     [
       `/* Generated from tokens.json by theme.ts. Do not edit: change tokens.json, then \`pnpm theme\`. */`,
+      ...variant,
       ...fontFaces,
       block("@theme", [
         ...RESETS.map((r) => `--${r}-*: initial;`),
@@ -130,7 +143,7 @@ export function themeCss(tokens: Tokens): string {
         ...theme,
       ]),
       block(":root", plain),
-      ...[...overrides].filter(([, lines]) => lines.length > 0).map(([id, l]) => media(id, l)),
+      ...[...overrides].filter(([, lines]) => lines.length > 0).map(([id, l]) => override(id, l)),
     ].join("\n\n") + "\n"
   );
 }

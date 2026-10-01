@@ -76,7 +76,7 @@ without separating the client from the contract it is typed against.
 > The web client lives in `web/`, with one `package.json` and one pnpm lockfile. Everything that
 > runs in a browser or builds what does is there, and the product's Node tooling is nowhere
 > else. A skill is not part of that rule: its bundle is its own artifact kind and carries
-> whatever code the agent's runtime runs, TypeScript included (ADR-0020). `web/` reads one file from outside itself, `docs/contracts/openapi.json`, and its
+> whatever code the agent's runtime runs, TypeScript included (ADR-0020). `web/` reads from outside itself only `docs/contracts/openapi.json`, and `docs/design/` when it publishes the design system, and its
 > build output reaches the image and the issuer through the image build, never through a commit.
 
 ### 1. What lives in `web/`
@@ -101,8 +101,11 @@ a module's internal files are.
 
 ### 2. What crosses the boundary
 
-* **In: `docs/contracts/openapi.json` only.** The generated API client is built from it. `web/`
-  imports nothing from `src/`, `skills/` or `infra/`, and nothing outside `web/` imports from it.
+* **In: `docs/contracts/openapi.json`, and `docs/design/` for publishing.** The generated API
+  client is built from the contract. `pnpm design-system` reads the design system's prose from
+  `docs/design/` to publish it beside the components (ADR-0049 § 10); nothing the client serves
+  is built from it. `web/` imports nothing from `src/`, `skills/` or `infra/`, and nothing outside
+  `web/` imports from it.
 * **Out to the image: the static build.** A Node stage of the Dockerfile builds `web/` and copies
   the output into the image, where the REST service serves it at `/app/` (ADR-0049 § 5). The
   Python stages do not need Node, and the final image carries no Node runtime. On GCP the same
@@ -138,7 +141,8 @@ a module's internal files are.
 * A test asserts that no `package.json`, `pnpm-lock.yaml` or `node_modules/` exists outside `web/`,
   and no `.ts` or `.tsx` file outside it, except within `skills/`.
 * `.gitignore` excludes the static build and `dist_keycloak/`; a test asserts neither is tracked.
-* Not gated: that `web/` reads nothing from outside itself except the contract. That is review.
+* Not gated: that `web/` reads nothing from outside itself except the contract and, to publish,
+  `docs/design/`. That is review.
 
 ## Pros and Cons of the Options
 
@@ -225,7 +229,8 @@ Common when a front end has its own team and release cadence.
 **Follow-on obligations.**
 
 * The repository map in `CLAUDE.md` carries a `web/` row from when the directory exists, with its
-  boundary: reads only the published contract; never imported from.
+  boundary: reads only the published contract, and the design system's prose to publish it; never
+  imported from.
 * Dependabot gains an npm ecosystem for `/web`, on the same monthly schedule and cooldown as the
   others.
 * `.dockerignore` excludes `web/node_modules/` and build output from the build context.

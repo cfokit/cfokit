@@ -107,6 +107,9 @@ jobs:
       - run: corepack pnpm lint
       - run: corepack pnpm test
       - run: corepack pnpm build
+      # The design system's copy of the components, built and mounted on the React 18 that Claude
+      # Design's canvas supplies (ADR-0049 § 10).
+      - run: corepack pnpm design-system
 
   # Gate 2 — the full suite against the stack users actually run, with NO cloud
   # credentials. This job must never be given any (ADR-0004).

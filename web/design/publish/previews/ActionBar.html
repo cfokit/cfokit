@@ -1,0 +1,36 @@
+<!-- @dsCard group="Actions" height=200 -->
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>ActionBar — preview</title>
+  </head>
+  <body>
+    <div id="root" style="padding: 24px"></div>
+    <script>
+      var C = window.CFOKit,
+        h = React.createElement;
+      ReactDOM.createRoot(document.getElementById("root")).render(
+        h(
+          "div",
+          { style: { minHeight: 140 } },
+          h(
+            "p",
+            { className: "text-body text-ink" },
+            "On a phone the actions sit in a bar pinned to the bottom of the screen.",
+          ),
+          h(
+            C.ActionBar,
+            null,
+            h(
+              C.Button,
+              { variant: "primary", fullWidth: true, className: "tablet:w-auto" },
+              "Import",
+            ),
+            h(C.Button, { fullWidth: true, className: "tablet:w-auto" }, "Cancel"),
+          ),
+        ),
+      );
+    </script>
+  </body>
+</html>

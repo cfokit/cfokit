@@ -1,0 +1,37 @@
+<!-- @dsCard group="Forms" height=300 -->
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>TextField — preview</title>
+  </head>
+  <body>
+    <div id="root" style="padding: 24px"></div>
+    <script>
+      var C = window.CFOKit,
+        h = React.createElement;
+      ReactDOM.createRoot(document.getElementById("root")).render(
+        h(
+          "div",
+          { className: "flex max-w-reading-max flex-col gap-6" },
+          h(C.TextField, {
+            label: "Company name",
+            autoComplete: "organization",
+            defaultValue: "Hollis Varga Consulting LLC",
+          }),
+          h(C.TextField, {
+            label: "Accounting basis",
+            help: "Accrual: income counts when you invoice, not when you're paid.",
+            defaultValue: "Accrual",
+          }),
+          h(C.TextField, {
+            label: "Opening balance",
+            inputMode: "decimal",
+            defaultValue: "12,50.00",
+            error: "This isn't an amount. Enter it as 1250.00.",
+          }),
+        ),
+      );
+    </script>
+  </body>
+</html>
