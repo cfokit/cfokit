@@ -9,11 +9,33 @@
 #   docker run … python -m cfokit.server rest         REST service (default)
 #   docker run … python -m cfokit.server mcp          MCP service, streamable HTTP
 #
+# The REST service also serves the web client's static build at /app/ (ADR-0049 § 5). It is
+# built from web/ in a Node stage below; the final image carries the files and no Node.
+#
 # Both surfaces validate bearer tokens against the same issuer and the same audience
 # (ADR-0019). They listen on PORT, so a deployment runs one per service.
 #
 # Migrations never run at startup (ADR-0004). There is deliberately no entrypoint
 # script that applies them before starting the service.
+
+# ---------------------------------------------------------------------------
+# The web client (ADR-0054). Node and pnpm at the versions web/.nvmrc and web/package.json pin;
+# keep the tag in step with web/.nvmrc. Only web/ is copied in, which is the whole of what the
+# client may read, apart from the contract it is typed against.
+FROM node:24.21.0-slim@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6 AS web
+
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+WORKDIR /web
+
+COPY web/package.json web/pnpm-lock.yaml web/pnpm-workspace.yaml ./
+# The optional build CA, as for the Python stages: Node reads it from NODE_EXTRA_CA_CERTS.
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+    --mount=type=secret,id=build_ca,required=false \
+    if [ -s /run/secrets/build_ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/build_ca; fi; \
+    corepack pnpm install --frozen-lockfile
+
+COPY web/ ./
+RUN corepack pnpm build
 
 # ---------------------------------------------------------------------------
 FROM python:3.14.7-slim@sha256:51dafde81dbdb6ebde285137a295cf18a47ca95234fe388a343719cb97305b3d AS builder
@@ -71,6 +93,8 @@ RUN groupadd --system cfokit && useradd --system --gid cfokit --create-home cfok
 
 WORKDIR /app
 COPY --from=builder --chown=cfokit:cfokit /app /app
+# Where cfokit.server looks for it (WEB_ROOT); read-only to the service.
+COPY --from=web /web/dist /app/web
 
 ENV PATH="/app/.venv/bin:${PATH}" \
     PYTHONUNBUFFERED=1 \

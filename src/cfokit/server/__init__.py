@@ -14,6 +14,8 @@ something about accounting has been put in the wrong place.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi import FastAPI
 from mcp.server import MCPServer
 
@@ -28,6 +30,7 @@ from cfokit.ledger.config import Settings
 from cfokit.ledger.mcp import acting, create_server
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.authentication import Authenticator
+from cfokit.server.web import mount_web_client
 
 __all__ = ["mcp_server", "rest_app"]
 
@@ -53,16 +56,25 @@ def mcp_server(settings: Settings, authenticator: Authenticator | None = None) -
     return server
 
 
-def rest_app(settings: Settings, authenticator: Authenticator | None = None) -> FastAPI:
+def rest_app(
+    settings: Settings,
+    authenticator: Authenticator | None = None,
+    web_root: Path | None = None,
+) -> FastAPI:
     """The REST surface: the ledger's routes, plus each module's.
 
     Import contributes its own router rather than being mounted by the ledger's adapter, which
     would be the dependency ADR-0022's contract forbids. It is included unconditionally: the
     routes take a body, not a path, so unlike the MCP tools they are not a file-read primitive
     and there is nothing to withhold until a deployment asks for it (ADR-0041).
+
+    `web_root` is the web client's static build, served at `/app/` when given (ADR-0049 § 5).
+    The image always carries one; a test or a source checkout without a build passes none.
     """
     app = create_app(settings, authenticator=authenticator)
     app.include_router(imports_api.router)
     app.include_router(assignment_api.router)
     app.include_router(activity_api.router)
+    if web_root is not None:
+        mount_web_client(app, web_root)
     return app
