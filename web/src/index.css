@@ -23,12 +23,28 @@
   }
 }
 
-/* The device's safe-area insets, added to the app frame's header and the bottom action bar so
-   nothing sits under a notch or the home indicator (index.html sets viewport-fit=cover). */
+/* The device's safe-area insets, added to a step of the scale wherever content meets an edge of
+   the screen, so nothing sits under a notch, a rounded corner or the home indicator: the app
+   frame's header and gutters, the bottom action bar and the dialog's sheet. index.html sets
+   viewport-fit=cover, which hands those edges to the page. A phone in landscape is past
+   bp-tablet, so the tablet and desktop gutters need the side insets too. */
 @utility pt-safe {
   padding-top: env(safe-area-inset-top);
 }
 
-@utility pb-safe {
-  padding-bottom: calc(var(--spacing-3) + env(safe-area-inset-bottom));
+@utility pb-safe-* {
+  padding-bottom: calc(--value(--spacing-*) + env(safe-area-inset-bottom));
+}
+
+@utility px-safe-* {
+  padding-left: calc(--value(--spacing-*) + env(safe-area-inset-left));
+  padding-right: calc(--value(--spacing-*) + env(safe-area-inset-right));
+}
+
+@utility pl-safe-* {
+  padding-left: calc(--value(--spacing-*) + env(safe-area-inset-left));
+}
+
+@utility pr-safe-* {
+  padding-right: calc(--value(--spacing-*) + env(safe-area-inset-right));
 }

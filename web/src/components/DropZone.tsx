@@ -7,8 +7,28 @@ interface DropZoneProps {
   prompt: string;
   /** The file types the picker offers, as `<input accept>` takes them: ".zip". */
   accept?: string;
-  /** Called with the file chosen or dropped. */
+  /** Called with the file chosen or dropped, when it is of a type `accept` allows. */
   onFile: (file: File) => void;
+  /**
+   * Called instead of `onFile` with a file `accept` does not allow. Only the picker filters by
+   * `accept`, and only as a hint: a dropped file, or one chosen with "All files", is anything.
+   */
+  onReject: (file: File) => void;
+}
+
+/** Whether `file` is one of the types an `<input accept>` list names: ".zip", "application/zip", "image/*". */
+export function accepts(accept: string | undefined, file: File): boolean {
+  if (accept === undefined || accept.trim() === "") return true;
+  const name = file.name.toLowerCase();
+  const type = file.type.toLowerCase();
+  return accept
+    .split(",")
+    .map((entry) => entry.trim().toLowerCase())
+    .some((entry) => {
+      if (entry.startsWith(".")) return name.endsWith(entry);
+      if (entry.endsWith("/*")) return type.startsWith(entry.slice(0, -1));
+      return entry !== "" && type === entry;
+    });
 }
 
 /**
@@ -16,10 +36,11 @@ interface DropZoneProps {
  * of it on a touch device, where there is nothing to drop. With a pointer, dropping a file is a
  * shortcut beside the button, and the border turns `accent` while a file is over the zone.
  */
-export function DropZone({ prompt, accept, onFile }: DropZoneProps) {
+export function DropZone({ prompt, accept, onFile, onReject }: DropZoneProps) {
   const input = useRef<HTMLInputElement>(null);
   const promptId = useId();
   const [over, setOver] = useState(false);
+  const take = (file: File) => (accepts(accept, file) ? onFile(file) : onReject(file));
 
   const onDragOver = (event: DragEvent) => {
     event.preventDefault();
@@ -29,7 +50,7 @@ export function DropZone({ prompt, accept, onFile }: DropZoneProps) {
     event.preventDefault();
     setOver(false);
     const file = event.dataTransfer.files[0];
-    if (file !== undefined) onFile(file);
+    if (file !== undefined) take(file);
   };
 
   return (
@@ -57,7 +78,7 @@ export function DropZone({ prompt, accept, onFile }: DropZoneProps) {
         hidden
         onChange={(event) => {
           const file = event.target.files?.[0];
-          if (file !== undefined) onFile(file);
+          if (file !== undefined) take(file);
           event.target.value = "";
         }}
       />

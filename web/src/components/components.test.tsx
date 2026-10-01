@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { useState } from "react";
 import {
   ActionBar,
@@ -14,6 +14,7 @@ import {
   StepIndicator,
   TextField,
 } from ".";
+import { accepts } from "./DropZone";
 
 // Each expectation is a behavior the design system's README or ADR-0049 states for the
 // component; the README sentence is quoted where it is the source.
@@ -89,9 +90,30 @@ describe("Notice", () => {
         This file isn&apos;t a QuickBooks export.
       </Notice>,
     );
-    const notice = screen.getByRole("status");
-    expect(within(notice).getByText("Refused").className).toContain("text-danger");
-    expect(notice.className).toContain("border-danger");
+    const label = screen.getByText("Refused");
+    expect(label.className).toContain("text-danger");
+    expect(label.parentElement?.className).toContain("border-danger");
+  });
+
+  test("a notice that is part of the page is read in place, not announced", () => {
+    render(
+      <Notice tone="neutral" label="Safe to leave">
+        You can close this page.
+      </Notice>,
+    );
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  test("an announced notice is a live region on the page before its text arrives", async () => {
+    // Screen readers announce changes inside a live region, not a region arriving with its text.
+    render(
+      <Notice tone="danger" label="Refused" announce>
+        This file isn&apos;t a QuickBooks export.
+      </Notice>,
+    );
+    const region = screen.getByRole("status");
+    expect(region.textContent).toBe("");
+    await waitFor(() => expect(region.textContent).toContain("Refused"));
   });
 });
 
@@ -130,30 +152,57 @@ describe("StepIndicator", () => {
 });
 
 describe("DropZone", () => {
-  test('"Choose file" opens the picker, and a chosen file is handed over', () => {
+  const zip = new File(["zip"], "export.zip", { type: "application/zip" });
+  const pdf = new File(["pdf"], "statement.pdf", { type: "application/pdf" });
+
+  function setup() {
     const onFile = vi.fn();
-    const { container } = render(<DropZone prompt="Drop the export here." onFile={onFile} />);
+    const onReject = vi.fn();
+    const { container } = render(
+      <DropZone prompt="Drop the export here." accept=".zip" onFile={onFile} onReject={onReject} />,
+    );
     const input = container.querySelector<HTMLInputElement>('input[type="file"]');
     if (input === null) throw new Error("no file input");
+    return { onFile, onReject, input, zone: container.firstElementChild as HTMLElement };
+  }
+
+  test('"Choose file" opens the picker, and a chosen file is handed over', () => {
+    const { onFile, input } = setup();
     const click = vi.spyOn(input, "click");
     fireEvent.click(screen.getByRole("button", { name: "Choose file" }));
     expect(click).toHaveBeenCalled();
-
-    const file = new File(["zip"], "export.zip");
-    fireEvent.change(input, { target: { files: [file] } });
-    expect(onFile).toHaveBeenCalledWith(file);
+    fireEvent.change(input, { target: { files: [zip] } });
+    expect(onFile).toHaveBeenCalledWith(zip);
   });
 
   test("dropping a file is a shortcut beside the button", () => {
-    const onFile = vi.fn();
-    const { container } = render(<DropZone prompt="Drop the export here." onFile={onFile} />);
-    const zone = container.firstElementChild as HTMLElement;
-    const file = new File(["zip"], "export.zip");
-    fireEvent.dragOver(zone, { dataTransfer: { files: [file] } });
+    const { onFile, zone } = setup();
+    fireEvent.dragOver(zone, { dataTransfer: { files: [zip] } });
     expect(zone.className).toContain("border-accent");
-    fireEvent.drop(zone, { dataTransfer: { files: [file] } });
-    expect(onFile).toHaveBeenCalledWith(file);
+    fireEvent.drop(zone, { dataTransfer: { files: [zip] } });
+    expect(onFile).toHaveBeenCalledWith(zip);
     expect(zone.className).not.toContain("border-accent");
+  });
+
+  test("a file accept does not allow is refused, dropped or chosen", () => {
+    const { onFile, onReject, input, zone } = setup();
+    fireEvent.drop(zone, { dataTransfer: { files: [pdf] } });
+    fireEvent.change(input, { target: { files: [pdf] } });
+    expect(onReject).toHaveBeenCalledTimes(2);
+    expect(onFile).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    [".zip", "export.zip", "application/zip", true],
+    [".zip", "EXPORT.ZIP", "", true],
+    [".zip", "export.zip.pdf", "application/pdf", false],
+    ["application/zip", "export", "application/zip", true],
+    ["image/*", "logo.png", "image/png", true],
+    ["image/*", "notes.txt", "text/plain", false],
+    [".csv, .zip", "export.zip", "", true],
+    [undefined, "anything.bin", "", true],
+  ])("accept %s takes %s (%s): %s", (accept, name, type, expected) => {
+    expect(accepts(accept, new File([""], name, { type }))).toBe(expected);
   });
 });
 
@@ -292,5 +341,19 @@ describe("ActionBar", () => {
     const bar = screen.getByRole("button", { name: "Import" }).parentElement;
     expect(bar?.className).toContain("fixed");
     expect(bar?.className).toContain("tablet:static");
+  });
+
+  test("keeps clear as much of the page's end as the bar is tall", () => {
+    // jsdom does no layout; the bar reports the height two stacked buttons give it on a phone.
+    const height = vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(124);
+    render(
+      <ActionBar>
+        <Button fullWidth>Import</Button>
+        <Button fullWidth>Cancel</Button>
+      </ActionBar>,
+    );
+    const bar = screen.getByRole("button", { name: "Import" }).parentElement;
+    expect((bar?.nextElementSibling as HTMLElement).style.height).toBe("124px");
+    height.mockRestore();
   });
 });

@@ -15,8 +15,8 @@ interface AppFrameProps {
 /**
  * The frame every signed-in page sits in: a `bar-height` header on `surface` with the mark and
  * the company's name at the left and the person with "Sign out" at the right; below `bp-tablet`
- * those two move into a menu. The header adds the device's safe-area inset, so nothing sits under
- * a notch. Content is centered and stops widening at `content-max`. Sign-in screens have no frame.
+ * those two move into a menu. The header and the gutters add the device's safe-area insets, so
+ * nothing sits under a notch, in either orientation. Content is centered and stops widening at `content-max`. Sign-in screens have no frame.
  */
 export function AppFrame({ company, person, onSignOut, children }: AppFrameProps) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -34,7 +34,7 @@ export function AppFrame({ company, person, onSignOut, children }: AppFrameProps
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="sticky top-0 z-10 border-b border-rule bg-surface pt-safe">
-        <div className="mx-auto flex h-bar-height max-w-content-max items-center justify-between gap-4 pr-2 pl-gutter-phone tablet:px-gutter-tablet desktop:px-gutter-desktop">
+        <div className="mx-auto flex h-bar-height max-w-content-max items-center justify-between gap-4 pr-safe-2 pl-safe-gutter-phone tablet:px-safe-gutter-tablet desktop:px-safe-gutter-desktop">
           <div className="flex min-w-0 items-center gap-3">
             <picture className="shrink-0">
               <source srcSet={markDark} media="(prefers-color-scheme: dark)" />
@@ -62,7 +62,7 @@ export function AppFrame({ company, person, onSignOut, children }: AppFrameProps
         {menuOpen && (
           <div
             id={menuId}
-            className="flex items-center justify-between gap-4 border-t border-rule px-gutter-phone py-2 tablet:hidden"
+            className="flex items-center justify-between gap-4 border-t border-rule px-safe-gutter-phone py-2 tablet:hidden"
           >
             <span className="truncate text-body text-ink">{person}</span>
             <Button variant="link" onClick={onSignOut}>
@@ -71,7 +71,7 @@ export function AppFrame({ company, person, onSignOut, children }: AppFrameProps
           </div>
         )}
       </header>
-      <main className="mx-auto w-full max-w-content-max flex-1 px-gutter-phone py-6 tablet:px-gutter-tablet tablet:py-10 desktop:px-gutter-desktop">
+      <main className="mx-auto w-full max-w-content-max flex-1 px-safe-gutter-phone py-6 tablet:px-safe-gutter-tablet tablet:py-10 desktop:px-safe-gutter-desktop">
         {children}
       </main>
     </div>

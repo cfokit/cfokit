@@ -37,6 +37,7 @@ const steps = [
 export function Gallery() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [file, setFile] = useState<string>();
+  const [refused, setRefused] = useState<string>();
 
   return (
     <AppFrame company="[COMPANY NAME]" person="[PERSON NAME]" onSignOut={() => undefined}>
@@ -88,9 +89,21 @@ export function Gallery() {
           <DropZone
             prompt="Drop the QuickBooks export here, or choose it from your computer."
             accept=".zip"
-            onFile={(f) => setFile(f.name)}
+            onFile={(f) => {
+              setRefused(undefined);
+              setFile(f.name);
+            }}
+            onReject={(f) => {
+              setFile(undefined);
+              setRefused(f.name);
+            }}
           />
           {file !== undefined && <p className="text-body text-ink">Chosen: {file}</p>}
+          {refused !== undefined && (
+            <Notice key={refused} tone="danger" label="Refused" announce>
+              {refused} isn&apos;t a QuickBooks export. Choose the .zip QuickBooks gave you.
+            </Notice>
+          )}
         </Section>
 
         <Section title="Progress">

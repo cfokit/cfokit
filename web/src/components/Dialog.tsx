@@ -12,7 +12,8 @@ interface DialogProps {
 
 /**
  * A modal question. A `surface` panel with `radius-lg` and `shadow-overlay`, centered; below
- * `bp-tablet`, a sheet rising from the bottom edge, full width, with its actions in thumb reach.
+ * `bp-tablet`, a sheet rising from the bottom edge, full width, with its actions in thumb reach
+ * and clear of the home indicator.
  *
  * The browser's own `<dialog>` gives focus containment, Escape and the inert page behind it.
  * Radix's dialog would too, but locks scrolling by injecting a `<style>` element, which the
@@ -35,9 +36,10 @@ export function Dialog({ open, onClose, title, children, actions }: DialogProps)
       aria-labelledby={titleId}
       onClose={onClose}
       className={[
-        "mx-0 mt-auto mb-0 w-full max-w-none rounded-t-lg bg-surface p-6 text-ink shadow-overlay",
-        "tablet:m-auto tablet:max-w-reading-max tablet:rounded-lg",
-        "backdrop:bg-ink/40",
+        "mx-0 mt-auto mb-0 w-full max-w-none rounded-t-lg bg-surface px-6 pt-6 pb-safe-6 text-ink shadow-overlay",
+        "tablet:m-auto tablet:max-w-reading-max tablet:rounded-lg tablet:pb-6",
+        // The scrim dims the page in both themes: ink is the dark color in light, paper in dark.
+        "backdrop:bg-ink/40 dark:backdrop:bg-paper/70",
       ].join(" ")}
     >
       <div className="flex flex-col gap-6">
