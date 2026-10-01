@@ -223,8 +223,8 @@ Common when a front end has its own team and release cadence.
 
 **Follow-on obligations.**
 
-* The repository map in `CLAUDE.md` has a `web/` row, with its boundary: reads only the published
-  contract; never imported from.
+* The repository map in `CLAUDE.md` carries a `web/` row from when the directory exists, with its
+  boundary: reads only the published contract; never imported from.
 * Dependabot gains an npm ecosystem for `/web`, on the same monthly schedule and cooldown as the
   others.
 * `.dockerignore` excludes `web/node_modules/` and build output from the build context.

@@ -283,10 +283,9 @@ Scope the question by **what triggers the obligation**, not by the license name.
 
 ## Scope discipline
 
-Do not build, and do not propose without an ADR: an admin console, a plugin system, a custom
-query language, a caching or rollup layer, read replicas, GraphQL, websockets, SSE transport, or
-an event bus. (ADR-0012) The web client has passed this gate (ADR-0049); it is not a license for
-an admin console.
+Do not build, and do not propose without an ADR: an admin console, a plugin system, a custom query language, a caching or rollup layer, read replicas, GraphQL,
+websockets, SSE transport, or an event bus. (ADR-0012) The web client has passed this gate
+(ADR-0049); it is not a license for an admin console.
 
 ## Working style
 
