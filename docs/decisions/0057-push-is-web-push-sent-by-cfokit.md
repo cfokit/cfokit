@@ -47,7 +47,7 @@ once it has been added to the home screen, from iOS and iPadOS 16.4.
 * No provider SDK, no provider account, and nothing a self-hosted deployment cannot run.
 * A push service sees nothing of the books: not the question, not the company's name.
 * Only the person turns push on for their own device; an agent cannot.
-* No new runtime dependency unless the alternative is worse.
+* No new package in the runtime unless the alternative is worse.
 * A device that is gone stops being sent to.
 
 ## Considered Options
@@ -63,7 +63,7 @@ once it has been added to the home screen, from iOS and iPadOS 16.4.
 
 Chosen option: "Web Push, sent by CFOKit's process, built on `cryptography` and PyJWT", because it
 is the only option that reaches every browser's push service with no provider in the shipped
-artifact and no new runtime dependency.
+artifact and no new package in the runtime.
 
 > Push is a channel in ADR-0052's sense. The web client subscribes a device through its service
 > worker and registers the subscription with CFOKit; CFOKit stores it as the person's own record.
@@ -105,7 +105,8 @@ For each of the recipient's live subscriptions, CFOKit:
 * builds the message — the notification's class as a title, its text, and its link — within
   ADR-0052 § 6's limits;
 * encrypts it to the subscription's keys with `aes128gcm` as RFC 8291 specifies: an ephemeral P-256
-  key, ECDH, HKDF and AES-GCM, all from `cryptography`, which is already installed beneath PyJWT;
+  key, ECDH, HKDF and AES-GCM, all from `cryptography`, already installed as PyJWT's crypto extra and declared directly because
+  this calls into it;
 * signs a VAPID token with ES256 using PyJWT, with the push service's origin as audience and the
   deployment's contact as subject;
 * posts it to the endpoint with the standard library's HTTP client, with a `TTL` of one day, `normal`
@@ -160,7 +161,8 @@ Push needs a secure context, which a deployment has over HTTPS and a laptop has 
 * Good, because no provider SDK or account is involved, and a self-hosted deployment offers push by
   setting one key.
 * Good, because the push service carries only ciphertext.
-* Good, because no runtime dependency is added.
+* Good, because no package is added to the runtime. `cryptography` becomes a declared dependency
+  rather than a transitive one, which changes what is promised, not what is installed.
 * Bad, because CFOKit owns about forty lines of message encryption. Every primitive is
   `cryptography`'s, and RFC 8291's worked example checks the composition byte for byte, but the
   code is ours to keep correct.

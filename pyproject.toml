@@ -33,6 +33,10 @@ dependencies = [
     # through mcp — a transitive dependency we call into is one that can vanish in a
     # patch release. MIT; the crypto extra is cryptography, Apache-2.0 OR BSD-3-Clause.
     "pyjwt[crypto]>=2.10",
+    # Web Push message encryption (RFC 8291: ECDH, HKDF, AES-GCM) for the push channel
+    # (ADR-0057). Already installed as PyJWT's crypto extra; declared directly because we
+    # call into it, for the same reason as PyJWT above. Apache-2.0 OR BSD-3-Clause.
+    "cryptography>=50",
 ]
 
 [build-system]
