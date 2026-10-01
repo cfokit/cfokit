@@ -76,7 +76,9 @@ artifact and no new runtime dependency.
 A subscription — the endpoint URL and the two keys the browser generated for it — belongs to a
 person, not to an entity: one device receives the person's notifications from every entity they
 hold a role in. It is stored as a record of that person, with the device label the client supplies
-and the time it was registered.
+and the time it was registered. It is outside every entity's scope, so it is protected by row-level
+security keyed on the person, as entity data is keyed on the entity: a session reads and writes only
+the subscriptions of the person it acts as, and no query reaches another's (`SOC2-15`).
 
 * `POST /push-subscriptions` registers one. It is refused to a principal acting for another (the
   `act` check of [ADR-0042](0042-person-only-acts-are-a-capability.md) § 2, applied alone), so an
@@ -90,8 +92,11 @@ Each state-changing call carries an idempotency key and writes one `audit_log` r
 routes are published REST and go through gate 5 (ADR-0015); none is an MCP tool.
 
 Removal is a row recording that the subscription ended, not a deletion, like every other change of
-state. A person's erasure request (`PLT-22`) erases their subscriptions outright: an endpoint URL
-identifies a device and is personal information (`SOC2-17`), and no retention obligation applies.
+state. Erasure is the one exception, as it is for notifications (ADR-0052 § 7): a person's erasure
+request (`PLT-22`) destroys their subscriptions and the rows that ended them, because an endpoint
+URL identifies a device and is personal information (`SOC2-17`) with no retention obligation. The
+same request erases the push messages addressed to those endpoints, which ADR-0052 § 7 already
+covers as the person's deliveries.
 
 ### 2. Sending is RFC 8030, 8291 and 8292, on what CFOKit already has
 
@@ -104,10 +109,15 @@ For each of the recipient's live subscriptions, CFOKit:
 * signs a VAPID token with ES256 using PyJWT, with the push service's origin as audience and the
   deployment's contact as subject;
 * posts it to the endpoint with the standard library's HTTP client, with a `TTL` of one day, `normal`
-  urgency, and the notification's identifier as `Topic`, so a retry replaces a message still waiting
-  at the push service instead of adding a second.
+  urgency, and a `Topic` derived from the notification's identifier, so a retry replaces a message
+  still waiting at the push service instead of adding a second. RFC 8030 § 5.4 limits a topic to 32
+  characters of the URL-safe base64 alphabet, and an identifier is a UUID of 36, so the topic is
+  the base64url encoding of its 16 bytes without padding: 22 characters, one per notification.
 
-The outcome is recorded against the notification as a message, as email's is (ADR-0052 § 4). A
+The outcome is recorded against the notification as a message, as email's is (ADR-0052 § 4): in
+the notification's entity, since a notification belongs to one, with the subscription's endpoint as
+the message's address. A retry at the entity's next hand-off sends to the recipient's subscriptions
+live at that moment, so a device added since receives it and one ended since does not. A
 `201` is accepted. A `404` or `410` means the subscription no longer exists: it is ended, and not
 sent to again. Anything else is a failed hand-off, retried at the entity's next hand-off like any
 other. A notification closed before then is not sent
@@ -169,9 +179,10 @@ Push needs a secure context, which a deployment has over HTTPS and a laptop has 
 * A test verifies the VAPID token against RFC 8292: ES256, the endpoint's origin as `aud`, an `exp`
   within a day, and the configured contact as `sub`.
 * A test against a stand-in push service asserts that a delivery posts the encrypted message with
-  the `TTL`, `Urgency`, `Topic` and `Authorization` headers; that a `410` ends the subscription and
-  it is not sent to again; that a `500` is recorded as failed and retried at the next hand-off; and
-  that a closed notification is not sent.
+  the `TTL`, `Urgency`, `Topic` and `Authorization` headers, the topic 22 characters of the
+  base64url alphabet; that a `410` ends the subscription and it is not sent to again; that a `500`
+  is recorded as failed and retried at the next hand-off; and that a closed notification is not
+  sent.
 * A test asserts that registering or removing a subscription with an `act` claim is refused, that a
   person cannot remove another's, and that with no VAPID key the routes are not served.
 * An end-to-end test in Chromium registers a subscription through the service worker against the
