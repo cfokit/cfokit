@@ -7,7 +7,8 @@ decision-makers: [Geoff]
 
 # ADR-0053: An issued invoice is a page, and what is delivered depends on the deployment's public address
 
-**Requirements served:** `AR-07`, `AR-08`, `AR-09`, `AR-14`, `AR-17`, `AR-19`, `NFR-06`.
+**Requirements served:** `AR-07`, `AR-08`, `AR-09`, `AR-14`, `AR-17`, `AR-19`, `IAM-20`, `NFR-06`,
+`SOC2-15`.
 
 ## Context and Problem Statement
 
@@ -69,15 +70,19 @@ relay configured: the link would reach no one, and the invoice itself never goes
 
 ### 3. Who may be sent an invoice
 
-The customer holds no role in the entity, so an invoice email is not authorised the way a
-notification is. It is authorised by the invoice: it is sent only to the contact on the customer the
-invoice was issued to, by a person or rule allowed to issue it.
+An invoice email is not a notification. It is a message whose subject is the invoice, sent through
+ADR-0052's channels by the module that owns invoices, and recorded with its relay events as
+ADR-0052 § 4 sets out. The customer holds no role in the entity, so it is authorized by the invoice:
+it is sent only to the contact on the customer the invoice was issued to, by a person or rule
+allowed to issue it.
 
 ### 4. The link is how the page is reached
 
 The page and its PDF are reached by the invoice's link, not by a token from the issuer, so neither
-audience validation nor entity grants apply to them. The link carries a random token that cannot be
-guessed. It reaches one invoice, reads it and nothing else, and stops working when revoked.
+audience validation nor entity grants apply to them. The link is a read path of the kind `IAM-20`
+defines, and so one of the exceptions `SOC2-15` allows to entity isolation: it carries a random
+token that cannot be guessed, reaches one invoice, reads it and nothing else, and stops working when
+revoked.
 Because the token exists only in this deployment's records, a link that resolves is one meant for
 this deployment (`NFR-06`). A view acts for no person: it writes one audit row naming the link, by
 its identifier and never its token, as the actor. These routes are not part of the published REST
@@ -152,8 +157,8 @@ The most common practice among small businesses.
 **Reversal cost.** Low. The page, the PDF and the delivery rules are presentation and routing over
 an invoice that is already a posting (`AR-03`).
 
-**Follow-on obligation.** The invoice's link is one of the two ways a request is authenticated other
-than by the issuer, and `CLAUDE.md` names it as such (ADR-0052).
+**Follow-on obligation.** `CLAUDE.md` names a link of `IAM-20`'s kind, such as the invoice's, as
+one of the two ways an entity's data is reached without a token from the issuer (ADR-0052).
 
 Related: ADR-0049 (the web client that serves the page), ADR-0052 (the channels and relay).
 

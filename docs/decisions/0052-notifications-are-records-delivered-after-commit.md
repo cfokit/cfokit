@@ -8,14 +8,14 @@ decision-makers: [Geoff]
 # ADR-0052: Notifications are records, delivered after their commit through CFOKit's own channels
 
 **Requirements served:** `PLT-06`, `PLT-07`, `PLT-22`, `IAM-22`, `NFR-04`, `NFR-06`, `NFR-10`,
-`SOC2-17`.
+`SOC2-15`, `SOC2-17`.
 
 ## Context and Problem Statement
 
 CFOKit has to reach people. `PLT-07` requires it to reach the people who operate an entity when
 something needs them — a transaction no rule resolves, a delivery that failed, a change in cash
 beyond a threshold they set — on channels they choose, with any class turned off at will.
-Invoices reach customers by the same channels, as
+Invoices reach customers through the same channels without being notifications, as
 [ADR-0053](0053-an-invoice-is-a-page-delivered-by-public-address.md) sets out. `IAM-22` has a
 person reset a forgotten password with no
 administrator involved, and email is the recovery channel every account has. `PLT-06` requires
@@ -74,12 +74,10 @@ writes its `audit_log` row. Any module raises one without depending on another m
 ledger learns no domain meaning: the columns are generic, as the audit log's are.
 
 Rows are append-only. What happens to a notification afterwards is recorded as rows of its own,
-never as an update to it: the hand-off to a channel, whose outcome means the relay accepted the
-message or refused it, and the events a provider reports later (§ 5).
+never as an update to it: the messages sent for it (§ 4).
 
 Before a notification is written, its recipient is checked to hold a role in the entity it
-names, under the same grant check as any other act (`NFR-04`). An invoice emailed to the entity's
-customer, who holds no role, is authorised as ADR-0053 sets out.
+names, under the same grant check as any other act (`NFR-04`).
 
 ### 2. Every deployment shows notifications; channels add reaching people who are not looking
 
@@ -120,6 +118,16 @@ The implementations sit in a package of their own that depends on the ledger and
 depends on; the composition point supplies the configured channels to the write path. A new
 channel is a new implementation of the same interface.
 
+A channel sends messages, and a notification is one thing that sends them. Each message is a
+record beside the notification record, with generic columns as the audit log has: its entity, its
+recipient's address, its channel and an opaque reference to what it is about. The hand-off's
+outcome — the relay accepted the message or refused it — and every event the relay reports later
+(§ 5) are rows recorded against the message. A notification's deliveries are its messages. An
+issued invoice's email is a message whose subject is the invoice, sent by the module that owns
+invoices; it is not a notification, and is authorized as ADR-0053 sets out. A module reaches the
+channels through the composition point, never by depending on the channel package, and reads its
+messages' events through the ledger, which holds them.
+
 The relay's credential is held by CFOKit's process. It can only send mail, it is supplied as an
 environment variable like any other secret (ADR-0016), and isolating it in a component would cost
 an always-on process to protect a send-only credential.
@@ -136,10 +144,10 @@ suppression lists stop mail to addresses that bounced or complained. What is spe
 the `X-SMTPAPI` header CFOKit adds to its own messages, and the event webhook — is an option of the
 email channel, off unless a deployment configures it. Without it, the channel sends plain SMTP and
 CFOKit serves no webhook, so no deployment depends on SendGrid (`PLT-06`, ADR-0004). With it, each
-message carries its notification's identifier in the `X-SMTPAPI` header, which the event webhook
-returns with every event.
+message carries its own identifier and its entity's in the `X-SMTPAPI` header, which the event
+webhook returns with every event.
 
-CFOKit receives SendGrid's event webhook and records each event against the notification it names:
+CFOKit receives SendGrid's event webhook and records each event against the message it names:
 delivered, deferred, bounced, dropped, marked as spam, unsubscribed, opened and clicked. Requests
 are accepted only with a valid signature — SendGrid signs each one with an ECDSA key, over its
 timestamp and raw payload — so an unauthenticated endpoint cannot be used to forge a delivery
@@ -151,12 +159,16 @@ published interface in ADR-0015's sense and is left out of the OpenAPI document.
 token from the issuer, so neither audience validation nor entity grants apply to it: the signature,
 verified with the key this deployment configures, is its whole authentication, and is what shows
 the request is meant for this deployment (`NFR-06`). It acts for no person and writes nothing but
-delivery events. Each accepted request writes one audit row naming the relay as its actor.
+delivery events.
 
-The event names a notification, not an entity, so the webhook resolves a notification's entity
-before recording anything, and then records within that entity's scope. That resolution is the one
-place this record reads across entities, and it reads nothing but the entity a notification
-belongs to.
+The webhook reads nothing across entities (`SOC2-15`). An event names its entity, so the webhook
+records it in that entity's scope, where the message it names is found under row-level security;
+an event whose message is not in the entity it names is discarded. One request carries a batch of
+events that can name several entities, and each entity's events are recorded in its own scope with
+one audit row naming the relay as the actor. SendGrid retries a request that is not acknowledged,
+so an event is recorded once, by SendGrid's identifier for it, and a repeat is acknowledged without
+a second row (ADR-0029). A request whose signed timestamp is more than a few minutes old is refused,
+so a captured request cannot be replayed later.
 
 Open and click tracking are off in the relay's account settings and switched on per message, by
 CFOKit, in the `X-SMTPAPI` header of its own mail. The issuer's mail is therefore never tracked:
@@ -219,11 +231,11 @@ The development overlay adds Mailpit (MIT), a local SMTP server with a web inbox
 * Bad, because a failed delivery is retried only when CFOKit next delivers something for that
   entity, which for a quiet entity can be a while; the notification is visible in-app meanwhile.
 * Bad, because the webhook is a public endpoint authenticated by SendGrid's signature rather than
-  by the issuer, so its safety rests on that verification, and it resolves a notification's entity
-  across entities.
+  by the issuer, so its safety rests on that verification.
 * Bad, because digests, scheduled sending and templates across channels are CFOKit's to build
   when a requirement asks for them.
-* Bad, because Jinja2 is a runtime dependency.
+* Bad, because Jinja2 is a sixth runtime dependency, with MarkupSafe beneath it; both are
+  BSD-3-Clause.
 * Bad, because the password reset `IAM-22` requires is unavailable where no relay is set.
 
 ### Confirmation
@@ -238,13 +250,16 @@ The development overlay adds Mailpit (MIT), a local SMTP server with a web inbox
 * A test asserts that a notification to a recipient with no role in its entity is refused.
 * A test asserts that a hand-off delivers only its own entity's undelivered notifications, and that
   no transaction or entity lock is held while a channel sends.
-* A test asserts that a webhook request with a missing or invalid signature records nothing, and
-  that a valid event is recorded against the notification its identifier names, with one audit
-  row naming the relay.
+* A test asserts that a webhook request with a missing or invalid signature, or a stale timestamp,
+  records nothing, and that a valid event is recorded against the message it names, in the scope
+  of the entity it names.
+* A test asserts that an event repeated by a retry is recorded once, that an event naming a message
+  outside the entity it names is discarded, and that a batch naming two entities writes one audit
+  row in each, naming the relay.
 * A test asserts that the webhook route is absent from the generated OpenAPI document.
 * A test asserts that without the SendGrid option configured, the channel adds no `X-SMTPAPI`
-  header and the webhook route is not served, and that with it, CFOKit's messages carry their
-  notification's identifier and switch tracking on.
+  header and the webhook route is not served, and that with it, CFOKit's messages carry their own
+  identifier and their entity's and switch tracking on.
 * Not gated: that a notification's content carries no figures. That is review.
 
 ## Pros and Cons of the Options
@@ -298,9 +313,11 @@ digests, subscriber preferences and an in-app inbox.
 **Reversal cost.** Low. The notification record is the durable part and stays whatever delivers
 it; a channel is replaced by another implementation of the same interface.
 
-**Follow-on obligation.** `CLAUDE.md` and the ledger's `CLAUDE.md` make audience validation
-mandatory on every request carrying a token from the issuer, and name the relay's webhook (§ 5) and
-an invoice's link (ADR-0053) as the only requests authenticated otherwise.
+**Follow-on obligations.** `CLAUDE.md` and the ledger's `CLAUDE.md` make audience validation
+mandatory on every request carrying a token from the issuer, and name the two ways an entity's data
+is reached without one: a link of the kind `IAM-20` defines, such as an invoice's (ADR-0053), and
+the relay's webhook (§ 5). Adding Jinja2 adds it to the root `pyproject.toml` with its reason and
+license, and changes the dependency count `CLAUDE.md` states.
 
 Related: ADR-0003 (one store), ADR-0004 (portability), ADR-0012 (the event bus gate), ADR-0016
 (secrets), ADR-0017 (scale to zero), ADR-0022 (modules and components), ADR-0049 (the web client
