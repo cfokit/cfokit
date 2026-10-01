@@ -44,23 +44,28 @@ canvas from this file.
 
 ## Prompt 2 — onboarding
 
-> Using the CFOKit design system, design the onboarding flow for a new customer at three sizes:
-> phone (390 wide), tablet (834 wide) and desktop (1440 wide). CFOKit is a progressive web app, used
-> in a browser or installed to a home screen. The flow: create an account → create
-> the company → import its books from QuickBooks → see whether the books agree with QuickBooks →
-> return to Claude, where their assistant explains the results.
+> Using the CFOKit design system, design the onboarding flow for a new customer at these sizes:
+> phone (390 wide), tablet in portrait (834 wide) and landscape (1194 wide), and desktop (1440
+> wide). A tablet in landscape gets the desktop layout; check that it holds at that width. CFOKit
+> is a progressive web app, used in a browser or installed to a home screen. The flow: create an
+> account → create the company → import its books from QuickBooks → see whether the books agree
+> with QuickBooks → return to Claude, where their assistant explains the results.
 >
-> **Sign-in screens.** These are rendered by the identity provider, so they sit in a simple frame of
-> their own, without the app's header.
+> **Sign-in screens.** Before sign-in there is no company or person to show, so these screens have
+> no app header: the CFOKit logo above a single card on the page background.
 >
-> 1. Sign in — email and password, "Continue with Google", "Continue with Microsoft", "Sign in with
->    a passkey", links to sign up and to reset a password.
+> 1. Sign in — email and password; "Continue with Google" and "Continue with Microsoft" as the
+>    other ways to sign in; links to sign up and to reset a password. A passkey is not a provider:
+>    the browser offers a saved passkey when the person taps the email field, and a small "Sign in
+>    with a passkey" text link sits under the form. Never draw it as a button beside Google and
+>    Microsoft.
 > 2. Sign up — name, email, password, and the same Google and Microsoft options.
 > 3. Verify your email — check your inbox, resend.
 > 4. Reset password — request a link, then set a new password.
 > 5. Two-step verification — set up an authenticator app (a QR code and a code to confirm), and the
 >    prompt for a code at sign-in.
-> 6. Add a passkey — a short explanation and one action.
+> 6. Add a passkey — offered after sign-in: a short explanation that a passkey signs you in with
+>    your face, fingerprint or device PIN instead of a password, and one action.
 >
 > **In the app**, inside the app frame:
 >
