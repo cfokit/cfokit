@@ -210,7 +210,7 @@ The build is a stage of the one image; nothing is served from a Node process.
 | Money | `big.js` | Amounts arrive as decimal strings and are displayed without ever becoming a JavaScript `number` |
 | Parsing | A Web Worker, called through Comlink | A large export does not block the page (ADR-0051) |
 | Tests | Vitest, Testing Library, MSW; Playwright end to end; axe for accessibility | Component, contract-mocked and cross-browser layers |
-| Fonts | Public Sans (interface and money) and Archivo Narrow (display), bundled from their upstream releases | The design system's faces, served from the client's own origin with their license texts beside them; the system interface font is every stack's fallback |
+| Fonts | Public Sans (interface and money) and Archivo Narrow (display), bundled from their upstream releases | The design system's faces, served from the client's own origin, content-hashed like the rest of the build, with their license texts in the same build; the system interface font is every stack's fallback |
 | Tooling | pnpm with a pinned lockfile; ESLint with typescript-eslint; Prettier | Pinned and updated by Dependabot, like every other dependency |
 
 Licenses, checked against each project's repository: all code that ships to the browser is MIT
@@ -277,7 +277,7 @@ client's Tailwind theme is generated. A change of look is a change of tokens, ma
   flow with PKCE (S256).
 * CI fails when a copyleft license appears in the production bundle, the web client's or the
   sign-in theme's. Font files under OFL-1.1 are the one allowance, and only with their license
-  texts beside them.
+  texts in the same build.
 * A lint rule forbids converting an amount to a JavaScript `number` and forbids
   `dangerouslySetInnerHTML`.
 * Not gated: that page code renders external text as text. That is review, backed by the CSP.

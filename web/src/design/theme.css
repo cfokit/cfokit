@@ -1,0 +1,157 @@
+/* Generated from tokens.json by theme.ts. Do not edit: change tokens.json, then `pnpm theme`. */
+
+@font-face {
+  font-family: "Public Sans";
+  src: url("./fonts/PublicSans-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Public Sans";
+  src: url("./fonts/PublicSans-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Public Sans";
+  src: url("./fonts/PublicSans-SemiBold.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Archivo Narrow";
+  src: url("./fonts/ArchivoNarrow-SemiBold.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Archivo Narrow";
+  src: url("./fonts/ArchivoNarrow-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@theme {
+  --color-*: initial;
+  --font-*: initial;
+  --text-*: initial;
+  --spacing-*: initial;
+  --radius-*: initial;
+  --shadow-*: initial;
+  --breakpoint-*: initial;
+  --container-*: initial;
+  --spacing: initial;
+  --color-paper: #f4f6f1;
+  --color-surface: #ffffff;
+  --color-sunken: #e8ede3;
+  --color-rule: #c9d3c1;
+  --color-control-border: #76816f;
+  --color-ink: #1b2330;
+  --color-ink-muted: #525d6a;
+  --color-accent: #2e4a8c;
+  --color-accent-hover: #233a70;
+  --color-on-accent: #ffffff;
+  --color-ochre: #c98a1b;
+  --color-success: #0b6a86;
+  --color-warning: #8a5a00;
+  --color-danger: #b23f00;
+  --color-focus-ring: var(--color-accent);
+  --font-display: "Archivo Narrow", "Arial Narrow", system-ui, sans-serif;
+  --font-sans: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --text-display: 44px;
+  --text-display--line-height: 46px;
+  --text-display--font-weight: 700;
+  --text-display--letter-spacing: -0.01em;
+  --text-heading: 26px;
+  --text-heading--line-height: 30px;
+  --text-heading--font-weight: 600;
+  --text-display-compact: 32px;
+  --text-display-compact--line-height: 36px;
+  --text-display-compact--font-weight: 700;
+  --text-display-compact--letter-spacing: -0.01em;
+  --text-heading-compact: 22px;
+  --text-heading-compact--line-height: 28px;
+  --text-heading-compact--font-weight: 600;
+  --text-title: 18px;
+  --text-title--line-height: 24px;
+  --text-title--font-weight: 600;
+  --text-body: 15px;
+  --text-body--line-height: 23px;
+  --text-body--font-weight: 400;
+  --text-input: 16px;
+  --text-input--line-height: 24px;
+  --text-input--font-weight: 400;
+  --text-label: 13px;
+  --text-label--line-height: 18px;
+  --text-label--font-weight: 600;
+  --text-label--letter-spacing: 0.02em;
+  --text-caption: 12.5px;
+  --text-caption--line-height: 18px;
+  --text-caption--font-weight: 400;
+  --text-money: 15px;
+  --text-money--line-height: 23px;
+  --text-money--font-weight: 500;
+  --text-money-total: 28px;
+  --text-money-total--line-height: 32px;
+  --text-money-total--font-weight: 600;
+  --text-money-total-compact: 24px;
+  --text-money-total-compact--line-height: 28px;
+  --text-money-total-compact--font-weight: 600;
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-6: 24px;
+  --spacing-10: 40px;
+  --radius-sm: 3px;
+  --radius-md: 5px;
+  --radius-lg: 8px;
+  --shadow-overlay: 0 8px 24px rgba(27,35,48,0.14);
+  --breakpoint-tablet: 640px;
+  --breakpoint-desktop: 1024px;
+  --breakpoint-wide: 1440px;
+  --spacing-gutter-phone: 16px;
+  --spacing-gutter-tablet: 24px;
+  --spacing-gutter-desktop: 40px;
+  --container-content-max: 1200px;
+  --container-reading-max: 65ch;
+  --spacing-target-min: 44px;
+  --spacing-bar-height: 56px;
+}
+
+:root {
+  --stroke-hairline: 1px;
+  --stroke-focus: 2px;
+  --columns-phone: 4;
+  --columns-tablet: 8;
+  --columns-desktop: 12;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-paper: #12161c;
+    --color-surface: #1a2029;
+    --color-sunken: #0d1116;
+    --color-rule: #313b48;
+    --color-control-border: #6f7b8a;
+    --color-ink: #e8ecf1;
+    --color-ink-muted: #a2acb8;
+    --color-accent: #9db5ef;
+    --color-accent-hover: #b9cbf5;
+    --color-on-accent: #0f1a33;
+    --color-ochre: #e1b152;
+    --color-success: #5ec3de;
+    --color-warning: #f0c35a;
+    --color-danger: #ff9d66;
+    --shadow-overlay: 0 8px 24px rgba(0,0,0,0.45);
+  }
+}
