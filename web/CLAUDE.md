@@ -30,6 +30,9 @@ corepack pnpm build                       # tsc, then the static build into dist
 corepack pnpm theme                       # regenerate src/design/theme.css from tokens.json
 ```
 
+`pnpm dev` also serves the component gallery at `/app/gallery.html`: every component in its
+states, for checking a change at phone, tablet and desktop widths. It is not part of the build.
+
 Run `lint`, `test` and `build` before reporting work complete, as the `web client` CI job does.
 
 ## Rules
@@ -55,6 +58,12 @@ Run `lint`, `test` and `build` before reporting work complete, as the `web clien
   and a test fails when they disagree. Change the look in the design system, copy the file, run
   `pnpm theme`. The theme clears Tailwind's defaults, so a color, size or breakpoint outside the
   system has no utility; do not add one in CSS or with an arbitrary value. (ADR-0049 § 10)
+- **Pages are built from `src/components/`**, the components the design system's README
+  describes; a page that needs one that is missing adds it there, with a test and a place in the
+  gallery. A `text-*` style sets size, line height and weight but not the family: `display` and
+  `heading` styles also take `font-display`.
+- **Amounts are shown through `Money` or `MoneyTable`**, which round half-up to the display scale
+  once and show negatives in parentheses (ADR-0025, RPT-12). Never format an amount by hand.
 - **No copyleft in what ships to the browser.** Check the license before adding a runtime
   dependency; fonts under OFL-1.1 ship with their license texts in the same build. (ADR-0049 § 9)
 - **Adding a dependency is a decision**, made against the stack in ADR-0049 § 9. pnpm refuses
