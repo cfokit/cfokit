@@ -28,7 +28,8 @@ corepack pnpm lint                        # eslint + prettier --check
 corepack pnpm test                        # vitest
 corepack pnpm build                       # tsc, then the static build into dist/
 corepack pnpm theme                       # regenerate design/theme*.css from design/tokens.json
-corepack pnpm design-system               # build the Design System artifact's files
+corepack pnpm design-system               # build the Design System artifact's files, then
+                                          # mount every preview on React 18, as the canvas does
 ```
 
 `pnpm dev` also serves the component gallery at `/app/gallery.html`: every component in its
