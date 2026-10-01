@@ -32,22 +32,35 @@ code comment. [`docs/decisions/README.md`](docs/decisions/README.md) explains th
 
 ## Getting started
 
-1. **Fork the repository.** Fork [`cfokit/cfokit`](https://github.com/cfokit/cfokit) on GitHub, then
-   clone your fork and add the original as `upstream`:
+1. **Fork** [`cfokit/cfokit`](https://github.com/cfokit/cfokit) on GitHub.
+2. **Run [Claude Code](https://claude.com/claude-code)** in an empty directory, cloud or local.
+3. **Paste this prompt** (replace `<you>` with your GitHub username):
 
-   ```bash
-   git clone https://github.com/<you>/cfokit.git
-   cd cfokit
-   git remote add upstream https://github.com/cfokit/cfokit.git
-   ```
+````text
+I forked cfokit/cfokit to github.com/<you>/cfokit. Set me up to contribute:
 
-2. **Get a Claude Code environment with the local dependencies installed** — `uv` and Docker
-   at minimum. [Setting up](#setting-up) says what that means, cloud or local.
-3. **Ask Claude Code to build and run the stack**, or follow [Running the stack](#running-the-stack)
-   yourself. Then work on a branch of your fork and open the pull request against `cfokit/cfokit`
-   ([Opening a pull request](#opening-a-pull-request)).
+1. Clone my fork, add cfokit/cfokit as the `upstream` remote, and cd into it.
+2. Read CLAUDE.md and CONTRIBUTING.md.
+3. Check that the prerequisites are installed (git, uv, Docker with a running daemon),
+   install any that are missing or tell me exactly how to, and run `uv sync --locked`.
+4. Build and run the stack as CONTRIBUTING.md describes: build the images, run the
+   migrations, bring the stack up, and confirm /healthz and /readyz respond.
+5. Run `uv run task lint` and `uv run task test`.
+6. Report each step's result, and anything you could not do, with the error output.
+
+Do not commit or push anything.
+````
+
+Claude Code then does the rest. After that, ask it to make your change on a branch of your fork,
+and to open the pull request against `cfokit/cfokit` when you are ready
+([Opening a pull request](#opening-a-pull-request)). A local session needs `git` and, for the
+fork-aware steps, the [`gh`](https://cli.github.com/) CLI or a GitHub connector; a cloud session
+is provisioned for you (see [Setting up](#setting-up)).
 
 ## Setting up
+
+The prompt above does this for you. This is the reference for what it installs and why, and for
+doing it by hand.
 
 You need [`uv`](https://docs.astral.sh/uv/) (not pip, not poetry) and Docker. The code targets
 Python 3.14, which `uv` installs for you. Only the scripts under `skills/` run on 3.11.
