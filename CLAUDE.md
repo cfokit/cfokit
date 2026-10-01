@@ -150,12 +150,13 @@ otherwise get wrong, because absence isn't visible in a manifest:
   forbidden because it makes an `await` inside a transaction expressible, and the workload has
   almost no concurrency to reclaim in exchange. (ADR-0024)
 - **Runtime dependencies are load-bearing and few.** Adding one is a decision, not a
-  convenience. Ask before adding any. Currently **five**, in the root `pyproject.toml`, each
+  convenience. Ask before adding any. Currently **six**, in the root `pyproject.toml`, each
   with its reason and verified license in a comment there: `psycopg[binary]` (driver), `fastapi`
   (REST + OpenAPI), `uvicorn` (ASGI server), `mcp` (tool surface), `pyjwt[crypto]` (audience
-  validation). Those five pull **36** packages in total — `uv export --no-dev
-  --no-emit-project --no-hashes | grep -c '^[a-z]'` — and the MCP SDK is most of it, accepted
-  knowingly (ADR-0024). It was six: `openpyxl` was runtime while the server parsed accounting
+  validation), `cryptography` (Web Push encryption, ADR-0057; already installed as PyJWT's
+  extra, declared because we call into it). Those six pull **36** packages in total — `uv export
+  --no-dev --no-emit-project --no-hashes | grep -c '^[a-z]'` — and the MCP SDK is most of it,
+  accepted knowingly (ADR-0024). `openpyxl` was once runtime, while the server parsed accounting
   exports, and became a dev dependency when parsing moved to the agent's runtime (ADR-0041).
 - **Python 3.14**, `ruff`, `mypy --strict`, `import-linter`, and the image and CI run it. The
   exception is `skills/`: its scripts run on the agent's own interpreter, which is 3.11 in
