@@ -99,7 +99,7 @@ export function themeCss(tokens: Tokens): string {
     [
       "@font-face {",
       `  font-family: "${f.family}";`,
-      `  src: url("/${f.file}") format("woff2");`,
+      `  src: url("./${f.file}") format("woff2");`,
       `  font-weight: ${f.weight};`,
       `  font-style: ${f.style};`,
       "  font-display: swap;",

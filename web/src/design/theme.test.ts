@@ -56,11 +56,13 @@ test("the README's utility names resolve", () => {
   }
 });
 
-// Each face ships from the client's own origin with its license beside it (ADR-0049 § 6, § 9).
-const publicFonts = Object.keys(import.meta.glob("/public/fonts/*", { query: "?url" }));
+// Each face is bundled, so the build names it by its content hash and it can be cached for good,
+// and its license ships in the same build (ADR-0049 § 6, § 9).
+const fonts = Object.keys(import.meta.glob("./fonts/*", { query: "?url" }));
+const licenses = Object.keys(import.meta.glob("/public/licenses/*", { query: "?url" }));
 
-test.each(tokens.type.fonts)("$file ships with its license", ({ family, file }) => {
-  expect(publicFonts).toContain(`/public/${file}`);
-  expect(publicFonts).toContain(`/public/fonts/${family.replaceAll(" ", "")}-OFL.txt`);
-  expect(css).toContain(`src: url("/${file}") format("woff2");`);
+test.each(tokens.type.fonts)("$file is bundled, with its license", ({ family, file }) => {
+  expect(fonts).toContain(`./${file}`);
+  expect(css).toContain(`src: url("./${file}") format("woff2");`);
+  expect(licenses).toContain(`/public/licenses/${family.replaceAll(" ", "")}-OFL.txt`);
 });

@@ -2,7 +2,7 @@
 
 @font-face {
   font-family: "Public Sans";
-  src: url("/fonts/PublicSans-Regular.woff2") format("woff2");
+  src: url("./fonts/PublicSans-Regular.woff2") format("woff2");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -10,7 +10,7 @@
 
 @font-face {
   font-family: "Public Sans";
-  src: url("/fonts/PublicSans-Medium.woff2") format("woff2");
+  src: url("./fonts/PublicSans-Medium.woff2") format("woff2");
   font-weight: 500;
   font-style: normal;
   font-display: swap;
@@ -18,7 +18,7 @@
 
 @font-face {
   font-family: "Public Sans";
-  src: url("/fonts/PublicSans-SemiBold.woff2") format("woff2");
+  src: url("./fonts/PublicSans-SemiBold.woff2") format("woff2");
   font-weight: 600;
   font-style: normal;
   font-display: swap;
@@ -26,7 +26,7 @@
 
 @font-face {
   font-family: "Archivo Narrow";
-  src: url("/fonts/ArchivoNarrow-SemiBold.woff2") format("woff2");
+  src: url("./fonts/ArchivoNarrow-SemiBold.woff2") format("woff2");
   font-weight: 600;
   font-style: normal;
   font-display: swap;
@@ -34,7 +34,7 @@
 
 @font-face {
   font-family: "Archivo Narrow";
-  src: url("/fonts/ArchivoNarrow-Bold.woff2") format("woff2");
+  src: url("./fonts/ArchivoNarrow-Bold.woff2") format("woff2");
   font-weight: 700;
   font-style: normal;
   font-display: swap;
