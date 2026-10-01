@@ -1,7 +1,7 @@
 # CFOKit — Working Agreement
 
-Loaded into every session. Capability-specific rules live in `src/cfokit/*/CLAUDE.md` and
-load when you work in those directories.
+Loaded into every session. Capability-specific rules live in `src/cfokit/*/CLAUDE.md`, and the
+web client's in `web/CLAUDE.md`; each loads when you work in that directory.
 
 Rules are binding. Each cites the ADR holding its reasoning — read it before proposing
 a change. Index: `docs/decisions/README.md`. If a task appears to require breaking a rule,
@@ -16,7 +16,8 @@ Directories are organized by **artifact kind**, and packages are named for
 |---|---|---|
 | `src/cfokit/ledger/` | The double-entry primitive, kept deliberately tiny | Accounts, postings, draft/posted, reversal, close. Knows nothing about customers, invoices, banks, email, or agents. |
 | `src/cfokit/<module>/` | In-process modules — siblings of the ledger, same deployable | Depend on the ledger; never on each other; the ledger never depends on them. |
-| `skills/` | Shipped Agent Skills, as `SKILL.md` bundles | Talk to the ledger over HTTP only. Never import ledger code. |
+| `skills/` | Shipped Agent Skills, as `SKILL.md` bundles — their own kind of artifact, carrying whatever code the agent's runtime runs | Talk to the ledger over HTTP only. Never import ledger code. |
+| `web/` | The web client: a React single-page application in TypeScript, served at `/app/` (ADR-0049, ADR-0054) | Reads only `docs/contracts/openapi.json` from outside itself; never imported from. The product's only Node tooling; a skill may carry its own. |
 | `infra/` | OpenTofu for the one maintained cloud target, plus the deployment contract | Supplies env vars only. No app coupling. |
 | `docs/product/` | Vision and numbered requirements | The source for positioning; the README derives from it. |
 | `docs/decisions/` | Decision records, MADR 4.0.0. Corrected in place when wrong; nothing is final. | Not auto-loaded. Read on demand. |
@@ -107,6 +108,8 @@ uv run task dev                  # compose.yaml + compose.dev.yaml
 docker compose --profile test run --rm test   # the whole suite, the way CI gate 2 runs it
 docker compose --profile test build <service>  # after any source change, or the above runs a cache
 ```
+
+The web client has its own commands, run from `web/`; `web/CLAUDE.md` lists them.
 
 **Rebuild before you run.** Every service copies the source into an image rather than mounting
 it, so `test` runs the previous copy after an edit and `migrate` reports "no migrations to apply"

@@ -14,6 +14,12 @@
   },
   "permissions": {
     "allow": [
+      "Bash(corepack pnpm build)",
+      "Bash(corepack pnpm format)",
+      "Bash(corepack pnpm install --frozen-lockfile)",
+      "Bash(corepack pnpm lint)",
+      "Bash(corepack pnpm test:*)",
+      "Bash(corepack pnpm typecheck)",
       "Bash(docker compose build:*)",
       "Bash(docker compose config:*)",
       "Bash(docker compose logs:*)",
@@ -56,6 +62,8 @@
       "Bash(gh pr review:*)",
       "Bash(git push:*)",
       "Bash(tofu apply:*)",
+      "Bash(corepack pnpm add:*)",
+      "Bash(corepack pnpm remove:*)",
       "Bash(uv add:*)",
       "Bash(uv remove:*)",
       "Bash(uv run task migrate)"

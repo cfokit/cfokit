@@ -46,8 +46,9 @@ standard transport on one compute path.
 ### Consequences
 
 * Good, because compute scales to zero, which matches a workload of mostly-idle entities.
-* Good, because the deployment is a container and a URL rather than a cluster, a service,
-  a load balancer, and a task definition.
+* Good, because compute is a container and a URL rather than a cluster, a service and a task
+  definition. The load balancer the target does carry is for serving the web client from a CDN
+  ([ADR-0055](0055-on-gcp-the-web-client-is-served-from-a-cdn.md)), not for compute.
 * Good, because `rebook` runs as a job on the same image with no request timeout, so one
   long operation does not force a second compute stack.
 * Bad, because Cloud SQL does not scale to zero, so there is an always-on database bill
