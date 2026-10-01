@@ -30,6 +30,23 @@ A decision that future work should be bound by belongs in a decision record rath
 code comment. [`docs/decisions/README.md`](docs/decisions/README.md) explains the format and
 [`adr-template.md`](docs/decisions/adr-template.md) is the starting point.
 
+## Getting started
+
+1. **Fork the repository.** Fork [`cfokit/cfokit`](https://github.com/cfokit/cfokit) on GitHub, then
+   clone your fork and add the original as `upstream`:
+
+   ```bash
+   git clone https://github.com/<you>/cfokit.git
+   cd cfokit
+   git remote add upstream https://github.com/cfokit/cfokit.git
+   ```
+
+2. **Get a Claude Code environment with the local dependencies installed** — `uv` and Docker
+   at minimum. [Setting up](#setting-up) says what that means, cloud or local.
+3. **Ask Claude Code to build and run the stack**, or follow [Running the stack](#running-the-stack)
+   yourself. Then work on a branch of your fork and open the pull request against `cfokit/cfokit`
+   ([Opening a pull request](#opening-a-pull-request)).
+
 ## Setting up
 
 You need [`uv`](https://docs.astral.sh/uv/) (not pip, not poetry) and Docker. The code targets
@@ -82,13 +99,23 @@ names above alone. If a pull or build fails, the blocked host is in the error.
 ### Running the stack
 
 ```bash
-uv run task dev                                    # compose.yaml plus compose.dev.yaml
-docker compose --profile migrate run --rm migrate  # create the schema
+docker compose --profile migrate run --rm migrate  # 1. create the schema (starts Postgres)
+uv run task dev                                    # 2. compose.yaml plus compose.dev.yaml
 ```
 
-`uv run task dev` applies the development overlay: Postgres is published on `:5432` and logs
+Migrate first. `uv run task dev` stays in the foreground, so run it last or in a second shell.
+It applies the development overlay: Postgres is published on `:5432` and logs
 every statement. Plain `docker compose up` runs the same stack without it, which is what a
 user gets and what CI proves. Migrations are an explicit command and never run on startup.
+
+`docker compose build` does not build the `migrate` image, because that service sits behind a
+profile. `migrate run` builds it on first use, or build it explicitly with
+`docker compose --profile migrate build migrate`.
+
+**Behind a TLS-intercepting proxy?** Image builds need the proxy's CA certificate. Set
+`BUILD_CA_FILE` to the path of the CA bundle before building. Cloud sessions set it for you.
+
+Once it is up, `/healthz` and `/readyz` should both respond.
 
 **Every service copies the source into its image rather than mounting it.** After editing code,
 rebuild before you run, or you are running the previous copy:
@@ -121,7 +148,8 @@ docker compose --profile test run --rm test
 
 ## Opening a pull request
 
-- Work on a branch. Never commit to `main`.
+- Work on a branch of your fork. Never commit to `main`.
+- Open the pull request from your fork against `cfokit/cfokit`.
 - One logical change per commit, with an imperative subject line.
 - Cite the requirement or `ADR-` id when a change implements or follows one. Requirement ids
   are defined in [`requirements.md`](docs/product/requirements.md).
