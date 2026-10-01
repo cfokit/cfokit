@@ -1,0 +1,19 @@
+@import "tailwindcss";
+@import "./design/theme.css";
+
+/* The page itself, as the design system's README sets it: ledger paper, ink, Public Sans at body
+   size, and a focus ring on everything interactive. Light and dark follow the device. */
+@layer base {
+  :root {
+    color-scheme: light dark;
+  }
+
+  body {
+    @apply bg-paper font-sans text-body text-ink;
+  }
+
+  :focus-visible {
+    outline: var(--stroke-focus) solid var(--color-focus-ring);
+    outline-offset: 2px;
+  }
+}

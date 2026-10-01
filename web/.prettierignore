@@ -1,3 +1,6 @@
 dist
 dist_keycloak
 pnpm-lock.yaml
+# Copied verbatim from the design system, and generated from it.
+src/design/tokens.json
+src/design/theme.css
