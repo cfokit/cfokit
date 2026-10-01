@@ -1,0 +1,26 @@
+<!-- @dsCard group="Actions" height=104 -->
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Button — preview</title>
+  </head>
+  <body>
+    <div id="root" style="padding: 24px"></div>
+    <script>
+      var C = window.CFOKit,
+        h = React.createElement;
+      ReactDOM.createRoot(document.getElementById("root")).render(
+        h(
+          "div",
+          { className: "flex flex-wrap items-center gap-3" },
+          h(C.Button, { variant: "primary" }, "Import"),
+          h(C.Button, null, "Try another file"),
+          h(C.Button, { variant: "destructive" }, "Stop the import"),
+          h(C.Button, { variant: "link" }, "Sign out"),
+          h(C.Button, { variant: "primary", disabled: true }, "Create company"),
+        ),
+      );
+    </script>
+  </body>
+</html>

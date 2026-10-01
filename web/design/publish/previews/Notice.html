@@ -1,0 +1,41 @@
+<!-- @dsCard group="Feedback" height=420 -->
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Notice — preview</title>
+  </head>
+  <body>
+    <div id="root" style="padding: 24px"></div>
+    <script>
+      var C = window.CFOKit,
+        h = React.createElement;
+      ReactDOM.createRoot(document.getElementById("root")).render(
+        h(
+          "div",
+          { className: "flex flex-col gap-4" },
+          h(
+            C.Notice,
+            { tone: "success", label: "Matches" },
+            "25 of 27 accounts match QuickBooks exactly.",
+          ),
+          h(
+            C.Notice,
+            { tone: "warning", label: "Expected difference" },
+            "QuickBooks reports on cash basis and you chose accrual, so balances that depend on the basis differ.",
+          ),
+          h(
+            C.Notice,
+            { tone: "danger", label: "Refused" },
+            "This file isn't a QuickBooks export. Choose the .zip QuickBooks gave you, or export your books again.",
+          ),
+          h(
+            C.Notice,
+            { tone: "neutral", label: "Safe to leave" },
+            "You can close this page. Choose the same file again and the import picks up where it stopped.",
+          ),
+        ),
+      );
+    </script>
+  </body>
+</html>

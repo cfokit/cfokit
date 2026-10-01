@@ -1,0 +1,27 @@
+<!-- @dsCard group="Navigation" height=220 -->
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>StepIndicator — preview</title>
+  </head>
+  <body>
+    <div id="root" style="padding: 24px"></div>
+    <script>
+      var C = window.CFOKit,
+        h = React.createElement;
+      ReactDOM.createRoot(document.getElementById("root")).render(
+        h(C.StepIndicator, {
+          steps: [
+            "Create your company",
+            "Import your books",
+            "Compare with QuickBooks",
+            "Back to Claude",
+          ],
+          current: 1,
+          label: "Setup steps",
+        }),
+      );
+    </script>
+  </body>
+</html>

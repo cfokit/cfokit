@@ -1,0 +1,24 @@
+<!-- @dsCard group="Data" height=90 -->
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Money — preview</title>
+  </head>
+  <body>
+    <div id="root" style="padding: 24px"></div>
+    <script>
+      var C = window.CFOKit,
+        h = React.createElement;
+      ReactDOM.createRoot(document.getElementById("root")).render(
+        h(
+          "p",
+          { className: "flex flex-wrap items-baseline gap-6 text-ink" },
+          h(C.Money, { amount: "1250.00" }),
+          h(C.Money, { amount: "-1250.00" }),
+          h(C.Money, { amount: "25469.00", variant: "total" }),
+        ),
+      );
+    </script>
+  </body>
+</html>

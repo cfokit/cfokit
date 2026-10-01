@@ -1,0 +1,30 @@
+<!-- @dsCard group="Navigation" height=260 -->
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>AppFrame — preview</title>
+  </head>
+  <body>
+    <div id="root" style="padding: 24px"></div>
+    <script>
+      var C = window.CFOKit,
+        h = React.createElement;
+      ReactDOM.createRoot(document.getElementById("root")).render(
+        h(
+          C.AppFrame,
+          {
+            company: "Hollis Varga Consulting LLC",
+            person: "Dana Whitfield",
+            onSignOut: function () {},
+          },
+          h(
+            "h1",
+            { className: "font-display text-display-compact text-ink tablet:text-display" },
+            "Import your books",
+          ),
+        ),
+      );
+    </script>
+  </body>
+</html>

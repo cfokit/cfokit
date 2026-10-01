@@ -1,0 +1,5 @@
+/* The stylesheet the design system's copy of the components ships as components/bundle.css: the
+   same utilities as the client, on a theme that follows the system's data-theme switch. */
+@import "tailwindcss";
+@import "../theme.design-system.css";
+@import "../../src/base.css";

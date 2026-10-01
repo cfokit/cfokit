@@ -17,9 +17,10 @@ Directories are organized by **artifact kind**, and packages are named for
 | `src/cfokit/ledger/` | The double-entry primitive, kept deliberately tiny | Accounts, postings, draft/posted, reversal, close. Knows nothing about customers, invoices, banks, email, or agents. |
 | `src/cfokit/<module>/` | In-process modules — siblings of the ledger, same deployable | Depend on the ledger; never on each other; the ledger never depends on them. |
 | `skills/` | Shipped Agent Skills, as `SKILL.md` bundles — their own kind of artifact, carrying whatever code the agent's runtime runs | Talk to the ledger over HTTP only. Never import ledger code. |
-| `web/` | The web client: a React single-page application in TypeScript, served at `/app/` (ADR-0049, ADR-0054) | Reads only `docs/contracts/openapi.json` from outside itself; never imported from. The product's only Node tooling; a skill may carry its own. |
+| `web/` | The web client: a React single-page application in TypeScript, served at `/app/` (ADR-0049, ADR-0054) | Reads only `docs/contracts/openapi.json` from outside itself, and `docs/design/` to publish the design system; never imported from. The product's only Node tooling; a skill may carry its own. |
 | `infra/` | OpenTofu for the one maintained cloud target, plus the deployment contract | Supplies env vars only. No app coupling. |
 | `docs/product/` | Vision and numbered requirements | The source for positioning; the README derives from it. |
+| `docs/design/` | The design system's prose: the brand book, the marks' notes, a guide per component (ADR-0049 § 10) | The source; the Design System artifact is published from it and `web/design/`, never edited in its page. |
 | `docs/decisions/` | Decision records, MADR 4.0.0. Corrected in place when wrong; nothing is final. | Not auto-loaded. Read on demand. |
 | `.claude/` | Tooling for developing *this repo* | Never shipped. Distinct from `skills/`. |
 

@@ -13,7 +13,8 @@
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "test": "vitest run",
-    "theme": "vitest run src/design --update"
+    "theme": "vitest run design/theme.test.ts --update",
+    "design-system": "node design/publish/build.mjs"
   },
   "dependencies": {
     "big.js": "7.0.1",

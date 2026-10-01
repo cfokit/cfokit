@@ -15,6 +15,6 @@ export default defineConfig({
     globals: true,
     setupFiles: ["src/test-setup.ts"],
     // Vitest blanks CSS by default; the theme test reads the generated theme as text.
-    css: { include: [/src\/design\/theme\.css/] },
+    css: { include: [/design\/theme\.css/] },
   },
 });

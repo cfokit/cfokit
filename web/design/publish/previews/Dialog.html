@@ -1,0 +1,32 @@
+<!-- @dsCard group="Overlays" height=300 -->
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Dialog — preview</title>
+  </head>
+  <body>
+    <div id="root" style="padding: 24px"></div>
+    <script>
+      var C = window.CFOKit,
+        h = React.createElement;
+      ReactDOM.createRoot(document.getElementById("root")).render(
+        h(
+          C.Dialog,
+          {
+            open: true,
+            onClose: function () {},
+            title: "Stop the import?",
+            actions: h(
+              React.Fragment,
+              null,
+              h(C.Button, null, "Keep importing"),
+              h(C.Button, { variant: "destructive" }, "Stop the import"),
+            ),
+          },
+          "The transactions imported so far stay. Choose the same file again to finish.",
+        ),
+      );
+    </script>
+  </body>
+</html>

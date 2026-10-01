@@ -1,6 +1,6 @@
 import { useEffect, useId, useState, type ReactNode } from "react";
-import mark from "../design/brand/cfokit-mark.svg";
-import markDark from "../design/brand/cfokit-mark-dark.svg";
+import mark from "../../design/brand/cfokit-mark.svg";
+import markDark from "../../design/brand/cfokit-mark-dark.svg";
 import { Button } from "./Button";
 
 interface AppFrameProps {

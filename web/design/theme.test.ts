@@ -8,6 +8,18 @@ test("theme.css is generated from tokens.json", async () => {
   await expect(themeCss(tokens)).toMatchFileSnapshot("./theme.css");
 });
 
+test("the design system's theme is generated from the same tokens", async () => {
+  await expect(themeCss(tokens, "design-system")).toMatchFileSnapshot("./theme.design-system.css");
+});
+
+test("the design system's theme follows data-theme and leaves the fonts to the system", () => {
+  const ds = themeCss(tokens, "design-system");
+  expect(ds).toContain('[data-theme="dark"] {');
+  expect(ds).toContain("--color-paper: #12161c;");
+  expect(ds).not.toContain("prefers-color-scheme");
+  expect(ds).not.toContain("@font-face");
+});
+
 // The checks below take their expected values from tokens.json and the design system's README,
 // not from the generator, so a generator that drops or misplaces a token fails here too.
 
