@@ -1,12 +1,17 @@
-"""A local certificate authority, and a certificate for the issuer it signs.
+"""A local certificate authority, and certificates for the issuer and for CFOKit, signed by it.
 
 Run by the `tls` service in compose.yaml before anything that needs it. The issuer serves
 HTTPS because OAuth clients refuse to send credentials to a token endpoint over plain HTTP
 unless its host is literally `localhost` — and the issuer's host is `keycloak.localhost`, the
 one name that means the issuer both inside the compose network and on this machine.
 
+CFOKit's own services — the REST service with the web client, and the MCP service — serve HTTPS
+too, from `localhost`, so a local stack has the shape a deployment has: the web client and the
+sign-in it hands off to are both secure origins, and a client that refuses plain HTTP (an MCP
+client opening a URL for the person, among others) works locally as it does anywhere.
+
 Nothing here is installed on the host. The CA is generated once and kept, so trusting it once
-lasts; the issuer's certificate is reissued from it whenever it nears expiry. Written with
+lasts; each certificate is reissued from it whenever it nears expiry. Written with
 `cryptography`, which the image already carries for token validation, so this adds no
 dependency.
 
@@ -16,6 +21,8 @@ Layout under the output directory, one directory per consumer so each mounts onl
     ca-key/ca-key.pem           the CA private key: read only by this script
     keycloak/cert.pem           the issuer's certificate
     keycloak/key.pem            the issuer's private key
+    cfokit/cert.pem             the REST and MCP services' certificate
+    cfokit/key.pem              their private key
 
 Local-only material. A deployment reachable by anything else uses a certificate from its own
 ingress, and none of this.
@@ -24,6 +31,7 @@ ingress, and none of this.
 from __future__ import annotations
 
 import datetime
+import ipaddress
 import sys
 from pathlib import Path
 
@@ -32,9 +40,14 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
 
-# The names the issuer answers to. `keycloak.localhost` is the one every party uses; `localhost`
-# is there so a person probing the port directly is not also debugging a name mismatch.
-NAMES = ("keycloak.localhost", "localhost")
+# Each certificate, by the directory its consumer mounts, and the names it answers to. The
+# issuer's is `keycloak.localhost`, the one name every party uses; `localhost` is there so a
+# person probing the port directly is not also debugging a name mismatch. CFOKit's services are
+# reached at `localhost`, and at the loopback address by a client that resolves it first.
+LEAVES: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
+    "keycloak": (("keycloak.localhost", "localhost"), ()),
+    "cfokit": (("localhost",), ("127.0.0.1",)),
+}
 
 CA_LIFETIME = datetime.timedelta(days=3650)
 # Under 398 days, the longest a TLS server certificate may be valid and still be accepted by
@@ -111,26 +124,32 @@ def _needs_leaf(path: Path, ca: x509.Certificate, now: datetime.datetime) -> boo
     return leaf.issuer != ca.subject or leaf.not_valid_after_utc - now < REISSUE_WITHIN
 
 
-def main(root: Path) -> int:
-    now = datetime.datetime.now(datetime.UTC)
-    ca, ca_key = _authority(root, now)
-    cert_path = root / "keycloak" / "cert.pem"
+def _issue(
+    root: Path,
+    folder: str,
+    names: tuple[str, ...],
+    addresses: tuple[str, ...],
+    ca: x509.Certificate,
+    ca_key: ec.EllipticCurvePrivateKey,
+    now: datetime.datetime,
+) -> bool:
+    """Issue ``folder``'s certificate if it is missing, foreign or near expiry."""
+    cert_path = root / folder / "cert.pem"
     if not _needs_leaf(cert_path, ca, now):
-        print("tls: certificates current")
-        return 0
+        return False
 
     key = ec.generate_private_key(ec.SECP256R1())
+    alternatives: list[x509.GeneralName] = [x509.DNSName(n) for n in names]
+    alternatives += [x509.IPAddress(ipaddress.ip_address(a)) for a in addresses]
     cert = (
         x509.CertificateBuilder()
-        .subject_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, NAMES[0])]))
+        .subject_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, names[0])]))
         .issuer_name(ca.subject)
         .public_key(key.public_key())
         .serial_number(x509.random_serial_number())
         .not_valid_before(now - datetime.timedelta(minutes=5))
         .not_valid_after(now + LEAF_LIFETIME)
-        .add_extension(
-            x509.SubjectAlternativeName([x509.DNSName(n) for n in NAMES]), critical=False
-        )
+        .add_extension(x509.SubjectAlternativeName(alternatives), critical=False)
         .add_extension(x509.BasicConstraints(ca=False, path_length=None), critical=True)
         .add_extension(
             x509.KeyUsage(
@@ -156,10 +175,22 @@ def main(root: Path) -> int:
         )
         .sign(ca_key, hashes.SHA256())
     )
-    # Readable by the issuer's own user, which is not this one. Local-only material; see above.
-    _write(root / "keycloak" / "key.pem", _key_pem(key), 0o644)
+    # Readable by its consumer, which runs as another user. Local-only material; see above.
+    _write(root / folder / "key.pem", _key_pem(key), 0o644)
     _write(cert_path, cert.public_bytes(serialization.Encoding.PEM), 0o644)
-    print(f"tls: issued a certificate for {', '.join(NAMES)}")
+    print(f"tls: issued a certificate for {', '.join(names + addresses)}")
+    return True
+
+
+def main(root: Path) -> int:
+    now = datetime.datetime.now(datetime.UTC)
+    ca, ca_key = _authority(root, now)
+    issued = [
+        _issue(root, folder, names, addresses, ca, ca_key, now)
+        for folder, (names, addresses) in LEAVES.items()
+    ]
+    if not any(issued):
+        print("tls: certificates current")
     return 0
 
 

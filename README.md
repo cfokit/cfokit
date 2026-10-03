@@ -22,13 +22,22 @@ Needs [Docker](https://docs.docker.com/get-docker/) and nothing else — no clou
 ```bash
 docker compose up -d --wait                       # the stack: Postgres, identity provider, REST, MCP
 docker compose --profile migrate run --rm migrate # create the schema; never runs on startup
-curl -s http://localhost:8080/readyz              # "ready" once the database is reachable and migrated
 ```
 
-The REST API listens on `:8080` and the MCP endpoint on `:8081`. This is the real thing, not a
-demo: data lives in a named volume, and `docker compose down -v` destroys it.
+Everything serves HTTPS from a certificate authority the stack generates in `.local/tls/`. Trust
+it once, so your browser opens the pages without a warning (macOS; it asks for your password):
 
-To connect Claude Desktop, create a user and install the bookkeeper skill, continue with
+```bash
+security add-trusted-cert -r trustRoot -k ~/Library/Keychains/login.keychain-db .local/tls/ca/ca.pem
+```
+
+Then open **https://localhost:8080/app/** and create your account.
+
+The web client and REST API listen on `:8080`, the MCP endpoint on `:8081`, and the identity
+provider on `keycloak.localhost:8443`. This is the real thing, not a demo: data lives in a named
+volume, and `docker compose down -v` destroys it.
+
+To connect Claude Desktop and install the bookkeeper skill, continue with
 [`docs/connect-claude-desktop.md`](docs/connect-claude-desktop.md) (tested on macOS only). Working on the code instead?
 See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 

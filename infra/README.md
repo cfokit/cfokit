@@ -32,6 +32,8 @@ metadata lookups, no provider SDK imports at module scope.
 | `AUTH_AUDIENCE` | yes | Expected token audience. Validated on every request (ADR-0011, ADR-0019). |
 | `LOG_LEVEL` | no | Defaults to `info`. |
 | `PORT` | no | Defaults to `8080`. |
+| `TLS_CERT_FILE` | no | Serve HTTPS from this certificate. Set with `TLS_KEY_FILE`, where nothing in front of the service terminates TLS, as in the local stack; leave both unset behind an ingress that does. |
+| `TLS_KEY_FILE` | no | The private key for `TLS_CERT_FILE`. Both are set, or neither. |
 
 There is deliberately no variable selecting a cloud, a region, or a provider.
 
