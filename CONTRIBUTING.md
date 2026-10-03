@@ -30,7 +30,99 @@ A decision that future work should be bound by belongs in a decision record rath
 code comment. [`docs/decisions/README.md`](docs/decisions/README.md) explains the format and
 [`adr-template.md`](docs/decisions/adr-template.md) is the starting point.
 
+## Getting started
+
+Four steps. You do the ones that involve credentials or installing software yourself, in your
+own terminal, and Claude Code never sees your GitHub credentials. Claude Code does the rest and
+walks you through onboarding.
+
+1. **Fork** [`cfokit/cfokit`](https://github.com/cfokit/cfokit) and clone your fork. This needs
+   `git` and the [`gh`](https://cli.github.com/) CLI, signed in:
+
+   ```bash
+   gh auth login                              # once, if you have not already
+   gh repo fork cfokit/cfokit --clone --remote
+   cd cfokit
+   ```
+
+2. **Install the dependencies:**
+   - [`uv`](https://docs.astral.sh/uv/) (not pip, not poetry)
+   - Docker, with the daemon running
+   - [Claude Code](https://claude.com/claude-code)
+   - [Claude Desktop](https://claude.com/download), if you want to talk to your books
+
+   A cloud Claude Code session provisions `uv` and Docker for you
+   ([Setting up](#setting-up)). Anything that needs your credentials or a login, such as `gh`,
+   Claude Code and Claude Desktop, is yours to do either way.
+
+3. **Run Claude Code** in the clone.
+4. **Paste this prompt:**
+
+````text
+Set me up to contribute to CFOKit and walk me through onboarding. Do not use any GitHub
+credentials, and do not commit, push or open pull requests. Go one step at a time, and wait for
+me where a step needs me.
+
+1. Read CLAUDE.md and CONTRIBUTING.md.
+2. Verify the prerequisites (uv, Docker with a running daemon). Tell me exactly what is
+   missing; do not work around it. Then run `uv sync --locked`.
+3. Build and run the stack as CONTRIBUTING.md describes: build the images, run the
+   migrations, bring the stack up, and confirm /healthz and /readyz respond.
+4. Run `uv run task lint` and `uv run task test`.
+5. If I use Claude Desktop, follow docs/connect-claude-desktop.md: trust the local CA,
+   register the OAuth client, and add the `cfokit` server to claude_desktop_config.json.
+   Build the skill zip it describes (bookkeeper.zip) and tell me where it is.
+6. Guide me through "Create your account" in CONTRIBUTING.md: sign in, create my company, and
+   import my books. Tell me each URL or action, and wait until I say it is done.
+7. Once my books are imported, check what you can without my credentials (for example counts,
+   never amounts), then ask me a few initial questions about them. Suggest questions I can put
+   to the bookkeeper in Claude Desktop, such as what the balance sheet shows, what my largest
+   expenses are, and whether the import reconciled, and ask me what I see.
+8. Report each step's result, and anything you could not do, with the error output.
+````
+
+### Create your account
+
+Signing up, creating your company and importing your books are meant to be one onboarding flow
+in the web client, at <http://localhost:8080/app/> once the stack is up. A person creates an
+account and signs in with no administrator involved (`IAM-22`), through the identity provider
+and never through an agent (`IAM-10`). The flow is specified in
+[the design brief](docs/product/design-brief.md) (sign up, create your company, import), and
+the client carries onboarding and import (`PLT-24`, `IMP-09`,
+[ADR-0051](docs/decisions/0051-books-are-imported-through-the-web-client.md)). When it is done,
+come back to Claude Code and say so. It carries on from step 7 of the prompt.
+
+**The web client does not have those screens yet.** It has the design-system components and a
+heading ([ADR-0049](docs/decisions/0049-cfokit-has-a-web-client.md)), and the realm has no
+self-registration. Until the flow lands, use the interim path, which needs Claude Desktop
+connected (step 5 of the prompt):
+
+1. **Install the skill.** Quit and reopen Claude Desktop, then **Customize → Skills → `+` →
+   Create skill** and upload the `bookkeeper.zip` Claude Code built.
+2. **Create your sign-in user.** Open <https://keycloak.localhost:8443>, sign in with the local
+   `admin` / `admin` account, and follow
+   [step 2 of the Claude Desktop guide](docs/connect-claude-desktop.md#2-create-a-user-to-sign-in-as)
+   with the defaults.
+3. **Create your company.** In Claude Desktop, sign in as that user when the browser opens, then
+   ask it to create an entity. The guide has a sample sentence. Creating the entity makes you its
+   owner.
+4. **Import books.** Attach a QuickBooks export to the chat and ask the bookkeeper to import it.
+   The repo ships no sample export, so use your own or a QuickBooks sample company's.
+5. **Go back to Claude Code** and say you're done. It carries on from step 7 of the prompt.
+
+When you have a change ready, ask Claude Code to commit it on a branch, then push and open the
+pull request yourself from your terminal
+([Opening a pull request](#opening-a-pull-request)):
+
+```bash
+git push -u origin <branch>
+gh pr create --repo cfokit/cfokit
+```
+
 ## Setting up
+
+The prompt above does this for you. This is the reference for what it installs and why, and for
+doing it by hand.
 
 You need [`uv`](https://docs.astral.sh/uv/) (not pip, not poetry) and Docker. The code targets
 Python 3.14, which `uv` installs for you. Only the scripts under `skills/` run on 3.11.
@@ -41,8 +133,8 @@ uv run task --list   # every command, and what it does
 ```
 
 **Using Claude Code?** Any Claude Code environment with outbound network access works, cloud or
-local, and the agent can run everything below for you. A cloud session is provisioned
-automatically by `.claude/hooks/session-start.sh` (`uv`, Python 3.14 and 3.11, Node 24 and pnpm
+local, and the agent can run everything below except the steps that need your GitHub
+credentials. A cloud session is provisioned automatically by `.claude/hooks/session-start.sh` (`uv`, Python 3.14 and 3.11, Node 24 and pnpm
 for the web client, the locked dependencies and a Docker daemon). That hook does nothing locally, so a local session needs `uv`
 and Docker installed first. A stack in a cloud session lives inside its container, so you can
 exercise it from the session but not from your own machine.
@@ -82,13 +174,23 @@ names above alone. If a pull or build fails, the blocked host is in the error.
 ### Running the stack
 
 ```bash
-uv run task dev                                    # compose.yaml plus compose.dev.yaml
-docker compose --profile migrate run --rm migrate  # create the schema
+docker compose --profile migrate run --rm migrate  # 1. create the schema (starts Postgres)
+uv run task dev                                    # 2. compose.yaml plus compose.dev.yaml
 ```
 
-`uv run task dev` applies the development overlay: Postgres is published on `:5432` and logs
+Migrate first. `uv run task dev` stays in the foreground, so run it last or in a second shell.
+It applies the development overlay: Postgres is published on `:5432` and logs
 every statement. Plain `docker compose up` runs the same stack without it, which is what a
 user gets and what CI proves. Migrations are an explicit command and never run on startup.
+
+`docker compose build` does not build the `migrate` image, because that service sits behind a
+profile. `migrate run` builds it on first use, or build it explicitly with
+`docker compose --profile migrate build migrate`.
+
+**Behind a TLS-intercepting proxy?** Image builds need the proxy's CA certificate. Set
+`BUILD_CA_FILE` to the path of the CA bundle before building. Cloud sessions set it for you.
+
+Once it is up, `/healthz` and `/readyz` should both respond.
 
 **Every service copies the source into its image rather than mounting it.** After editing code,
 rebuild before you run, or you are running the previous copy:
@@ -121,7 +223,8 @@ docker compose --profile test run --rm test
 
 ## Opening a pull request
 
-- Work on a branch. Never commit to `main`.
+- Work on a branch of your fork. Never commit to `main`.
+- Open the pull request from your fork against `cfokit/cfokit`.
 - One logical change per commit, with an imperative subject line.
 - Cite the requirement or `ADR-` id when a change implements or follows one. Requirement ids
   are defined in [`requirements.md`](docs/product/requirements.md).
