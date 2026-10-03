@@ -29,10 +29,11 @@ docker compose --profile migrate run --rm migrate
 ```
 
 The first run generates a local certificate authority into `.local/tls/`, and the identity
-provider serves HTTPS with a certificate it signs. OAuth clients refuse to send credentials to
-a plain-HTTP token endpoint, so the sign-in does not work without it.
+provider, the web client and the MCP endpoint all serve HTTPS with certificates it signs. OAuth
+clients refuse to send credentials to a plain-HTTP token endpoint, so the sign-in does not work
+without it.
 
-**Trust that CA once**, so your browser opens the sign-in page without a certificate warning.
+**Trust that CA once**, so your browser opens CFOKit and its sign-in page without a warning.
 macOS asks for your password:
 
 ```
@@ -49,7 +50,7 @@ On Windows, first add this line to your hosts file:
 127.0.0.1 keycloak.localhost
 ```
 
-Open **http://localhost:8080/app/**, choose **Register** on the sign-in page, and create your
+Open **https://localhost:8080/app/**, choose **Register** on the sign-in page, and create your
 account with your email and a password. The web client signs you in when you're done; that
 account is the one Claude Desktop signs in as in step 3.
 
@@ -78,7 +79,7 @@ Keep the `client_id` and `client_secret` it returns. Then in
   "mcpServers": {
     "cfokit": {
       "command": "npx",
-      "args": ["-y", "mcp-remote@0.14.3", "http://localhost:8081/mcp", "44196",
+      "args": ["-y", "mcp-remote@0.14.3", "https://localhost:8081/mcp", "44196",
                "--static-oauth-client-info",
                "{\"client_id\":\"…\",\"client_secret\":\"…\"}"],
       "env": {"NODE_EXTRA_CA_CERTS": "/path/to/cfokit/.local/tls/ca/ca.pem"}
@@ -173,7 +174,7 @@ The skill will say a tool is not there rather than improvise around it. Before a
 connection is at fault, ask the deployment what it serves:
 
 ```
-curl -s http://localhost:8081/readyz | python3 -m json.tool
+curl -s --cacert .local/tls/ca/ca.pem https://localhost:8081/readyz | python3 -m json.tool
 ```
 
 ```json

@@ -16,7 +16,7 @@ test("metadata that names no issuer is an error, not a guess", async () => {
 });
 
 describe("the sign-in settings ADR-0049 § 2 requires", () => {
-  const settings = oidcSettings(ISSUER, "http://localhost:8080");
+  const settings = oidcSettings(ISSUER, "https://localhost:8080");
 
   test("authorization code, as the realm's public cfokit-web client", () => {
     expect(settings.client_id).toBe("cfokit-web");
@@ -25,8 +25,8 @@ describe("the sign-in settings ADR-0049 § 2 requires", () => {
   });
 
   test("it returns to the client's own path on its own origin", () => {
-    expect(settings.redirect_uri).toBe("http://localhost:8080/app/signed-in");
-    expect(settings.post_logout_redirect_uri).toBe("http://localhost:8080/app/");
+    expect(settings.redirect_uri).toBe("https://localhost:8080/app/signed-in");
+    expect(settings.post_logout_redirect_uri).toBe("https://localhost:8080/app/");
   });
 
   test("tokens are kept in page memory, not in browser storage", async () => {

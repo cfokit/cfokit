@@ -89,7 +89,7 @@ services:
       # The realm is imported at startup from the file mounted below.
       # Where the web client is served: the realm's cfokit-web client redirects there and nowhere
       # else, so it is the same value the REST service says about itself (ADR-0004, ADR-0049).
-      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://localhost:8080}
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
       KC_DB_USERNAME: cfokit
@@ -173,14 +173,14 @@ services:
       keycloak:
         condition: service_healthy
     environment:
-      # The complete configuration surface. Adding to it requires an ADR, because
-      # infra/README.md is the portability contract (ADR-0016).
+      # The complete configuration surface; infra/README.md names every variable. Changing its
+      # shape requires an ADR, adding a variable within it does not (ADR-0016).
       # The application connects as cfokit_app, which is not a superuser and does not own
       # the tables, so row-level security actually applies to it. The migrate job below
       # connects as the owner instead, because applying DDL needs privileges the application
       # must never hold (ADR-0003, ADR-0007). Same variable, different value per entrypoint.
       DATABASE_URL: postgresql://cfokit_app:${POSTGRES_APP_PASSWORD:-cfokit_app}@postgres:5432/cfokit
-      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://localhost:8080}
       AUTH_ISSUER_URL: ${AUTH_ISSUER_URL:-https://keycloak.localhost:8443/realms/cfokit}
       # The CA the issuer's certificate is signed by (the `tls` step). A standard OpenSSL
       # variable rather than one of ours: it replaces the trust store for this process,
@@ -188,14 +188,19 @@ services:
       SSL_CERT_FILE: /etc/cfokit/tls/ca.pem
       AUTH_AUDIENCE: ${AUTH_AUDIENCE:-cfokit-ledger}
       LOG_LEVEL: ${LOG_LEVEL:-info}
+      # HTTPS from the `tls` step's certificate for localhost, so the web client and the sign-in
+      # it hands off to are both secure origins, as they are on any deployment.
+      TLS_CERT_FILE: /etc/cfokit/tls-server/cert.pem
+      TLS_KEY_FILE: /etc/cfokit/tls-server/key.pem
     volumes:
       - ./.local/tls/ca:/etc/cfokit/tls:ro
+      - ./.local/tls/cfokit:/etc/cfokit/tls-server:ro
     ports:
       - "${PORT:-8080}:8080"
     healthcheck:
       # Liveness only — /readyz would restart the container whenever the database
       # blipped or a migration was outstanding (ADR-0004).
-      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8080/healthz')"]
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('https://localhost:8080/healthz')"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -239,22 +244,25 @@ services:
       DATABASE_URL: postgresql://cfokit_app:${POSTGRES_APP_PASSWORD:-cfokit_app}@postgres:5432/cfokit
       # PUBLIC_BASE_URL is what a client fetches protected-resource metadata from, so it is
       # this service's own address rather than the REST service's (ADR-0004).
-      PUBLIC_BASE_URL: ${MCP_PUBLIC_BASE_URL:-http://localhost:8081}
+      PUBLIC_BASE_URL: ${MCP_PUBLIC_BASE_URL:-https://localhost:8081}
       AUTH_ISSUER_URL: ${AUTH_ISSUER_URL:-https://keycloak.localhost:8443/realms/cfokit}
       SSL_CERT_FILE: /etc/cfokit/tls/ca.pem
       AUTH_AUDIENCE: ${AUTH_AUDIENCE:-cfokit-ledger}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       PORT: "8081"
+      TLS_CERT_FILE: /etc/cfokit/tls-server/cert.pem
+      TLS_KEY_FILE: /etc/cfokit/tls-server/key.pem
       # Where the import tools may read from. Unset by default, and unset means the tools are
       # not registered at all — a tool taking a path is a file-read primitive, and one any
       # holder of a token can reach should not exist unless it was asked for (ADR-0040).
       #
     volumes:
       - ./.local/tls/ca:/etc/cfokit/tls:ro
+      - ./.local/tls/cfokit:/etc/cfokit/tls-server:ro
     ports:
       - "${MCP_PORT:-8081}:8081"
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8081/healthz')"]
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('https://localhost:8081/healthz')"]
       interval: 10s
       timeout: 3s
       retries: 5

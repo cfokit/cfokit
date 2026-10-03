@@ -64,6 +64,8 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     # Binding all interfaces is correct inside a container; the platform controls ingress.
+    # TLS only when given a certificate: a local stack serves HTTPS itself, while a deployment
+    # behind an ingress that terminates TLS leaves both unset, and uvicorn serves plain HTTP.
     if args[0] == "rest":
         uvicorn.run(
             rest_app(
@@ -74,6 +76,8 @@ def main(argv: list[str] | None = None) -> int:
             port=settings.port,
             log_level=settings.log_level,
             access_log=False,
+            ssl_certfile=settings.tls_cert_file,
+            ssl_keyfile=settings.tls_key_file,
         )
         return 0
 
@@ -83,12 +87,20 @@ def main(argv: list[str] | None = None) -> int:
     # and this one has none. Every request must carry a bearer token, no cookie is issued, and
     # an attacker's page gets 401. Turning it on means an allowed-host list that must match what
     # clients send through the ingress, and a mismatch answers 421 to everything.
-    mcp_server(settings).run(
-        "streamable-http",
+    #
+    # Served by uvicorn directly rather than the SDK's run(), which takes no certificate; this
+    # is the app run() would serve, with the same settings.
+    uvicorn.run(
+        mcp_server(settings).streamable_http_app(
+            host="0.0.0.0",  # noqa: S104
+            stateless_http=True,
+            json_response=True,
+        ),
         host="0.0.0.0",  # noqa: S104
         port=settings.port,
-        stateless_http=True,
-        json_response=True,
+        log_level=settings.log_level,
+        ssl_certfile=settings.tls_cert_file,
+        ssl_keyfile=settings.tls_key_file,
     )
     return 0
 

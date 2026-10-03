@@ -63,3 +63,42 @@ def test_load_settings_fails_on_any_missing_variable(
 
     with pytest.raises(ConfigError, match=missing):
         load_settings()
+
+
+def test_tls_is_off_unless_asked_for(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Behind an ingress that terminates TLS, the service serves plain HTTP."""
+    for name in REQUIRED:
+        monkeypatch.setenv(name, "value")
+    monkeypatch.delenv("TLS_CERT_FILE", raising=False)
+    monkeypatch.delenv("TLS_KEY_FILE", raising=False)
+
+    settings = load_settings()
+
+    assert settings.tls_cert_file is None
+    assert settings.tls_key_file is None
+
+
+def test_tls_takes_a_certificate_and_its_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    for name in REQUIRED:
+        monkeypatch.setenv(name, "value")
+    monkeypatch.setenv("TLS_CERT_FILE", "/tls/cert.pem")
+    monkeypatch.setenv("TLS_KEY_FILE", "/tls/key.pem")
+
+    settings = load_settings()
+
+    assert (settings.tls_cert_file, settings.tls_key_file) == ("/tls/cert.pem", "/tls/key.pem")
+
+
+@pytest.mark.parametrize("alone", ["TLS_CERT_FILE", "TLS_KEY_FILE"])
+def test_a_certificate_without_its_key_is_refused(
+    monkeypatch: pytest.MonkeyPatch, alone: str
+) -> None:
+    """Half a TLS configuration fails at startup, not at the first handshake."""
+    for name in REQUIRED:
+        monkeypatch.setenv(name, "value")
+    monkeypatch.delenv("TLS_CERT_FILE", raising=False)
+    monkeypatch.delenv("TLS_KEY_FILE", raising=False)
+    monkeypatch.setenv(alone, "/tls/file.pem")
+
+    with pytest.raises(ConfigError, match="together"):
+        load_settings()
