@@ -748,14 +748,15 @@ the session.
 
 ### 8.1 Category scope
 
-**Status: Proposed.** The whole of this subsection is a business decision not yet made.
+**Status: Approved, except Availability.** Scope is the smallest a Type II report allows, and a
+category is added when a customer needs it.
 
 | Category | Position | Rationale |
 |---|---|---|
 | **Security** (CC1–CC9) | In scope | Mandatory. Not elective for any SOC 2 report. |
-| **Confidentiality** | In scope | Customer financial data is the core asset, and it is what a customer is actually worried about. Declining this category invites the question of why. |
+| **Confidentiality** | Out of scope | Security's common criteria already govern access to customer data and its encryption (8.4). The category adds controls over data designated confidential beyond that, which no customer has asked for. |
 | **Availability** | **Undecided** | The criteria test against *our own stated commitments*, so this category costs what we choose to promise. Making no commitment and excluding the category is defensible; making one and excluding it is not. |
-| **Processing Integrity** | **Recommended in scope** | Completeness and accuracy of processing is the substance of section 7. If those controls are built, this category is close to free — and it is the one a buyer most associates with an accounting product. |
+| **Processing Integrity** | Out of scope | Completeness and accuracy of the books is section 7's subject, and SOC 1 covers it where CFOKit operates the runtime that keeps them and is accountable for how they are kept. |
 | **Privacy** | **Out unless triggered** | Business contact data alone does not trigger it. Payroll, contractor 1099 data, and employee expense reimbursement each pull personal information in. None is built today; the first one that ships makes this category unavoidable, whatever the scope says. |
 
 ### 8.2 Untrusted content and agent manipulation
@@ -805,6 +806,9 @@ is fully compromised and cooperative with the attacker.
 > path rather than in a review cycle.
 
 ### 8.4 Confidentiality and data handling
+
+These stand with the Confidentiality category out of scope (8.1): encryption and access are
+Security's common criteria, and entity isolation is the product's own.
 
 | | Requirement | Priority | Status |
 |---|---|---|---|
