@@ -150,7 +150,9 @@ a CDN at the same path and origin instead; on GCP it does
 ### 6. A small browser surface
 
 `Content-Security-Policy: default-src 'self'`, and no script, style or font from another origin:
-everything the client needs is built into its own bundle. Anything read from a user's file or
+everything the client needs is built into its own bundle, as files, never inlined as `data:`
+URIs. The one other origin the page may reach is the issuer's, with `connect-src`: signing in
+fetches its metadata and exchanges a code at its token endpoint (§ 1). Anything read from a user's file or
 from the books is rendered as text, never as markup — which React does by default, and
 `dangerouslySetInnerHTML` is forbidden by lint. Whatever code ships to the browser carries no
 copyleft license.

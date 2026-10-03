@@ -76,5 +76,5 @@ def rest_app(
     app.include_router(assignment_api.router)
     app.include_router(activity_api.router)
     if web_root is not None:
-        mount_web_client(app, web_root)
+        mount_web_client(app, web_root, settings.auth_issuer_url)
     return app

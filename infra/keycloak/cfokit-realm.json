@@ -609,5 +609,33 @@
   "accessTokenLifespan": 28800,
   "ssoSessionIdleTimeout": 28800,
   "ssoSessionMaxLifespan": 86400,
-  "clients": []
+  "clients": [
+    {
+      "clientId": "cfokit-web",
+      "name": "CFOKit web client",
+      "description": "The web client served at /app/, signing a person in with authorization code and PKCE in their own browser (ADR-0049 §§ 1-2). Public, because a browser cannot keep a secret.",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "${PUBLIC_BASE_URL}/app/*"
+      ],
+      "webOrigins": [
+        "+"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "${PUBLIC_BASE_URL}/app/*"
+      }
+    }
+  ],
+  "registrationAllowed": true,
+  "resetPasswordAllowed": true,
+  "loginWithEmailAllowed": true,
+  "registrationEmailAsUsername": true,
+  "verifyEmail": false
 }

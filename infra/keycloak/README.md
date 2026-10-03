@@ -91,11 +91,21 @@ is not reachable and anyone who can reach it can reach the ledger anyway, is a t
 making. **A deployment reachable by anything else should shorten it**, and accept that a client
 which cannot tolerate re-authentication is a client that needs static credentials instead.
 
+**`cfokit-web`, the web client's own client.** CFOKit ships the web client, so its client ships
+with the realm: public, because a browser cannot keep a secret; authorization code with PKCE
+(S256) and nothing else; redirects and sign-out returns only to `${PUBLIC_BASE_URL}/app/`, which
+Keycloak fills from the environment at import, so the client follows the deployment's address
+rather than naming one (ADR-0049 §§ 1-2). `webOrigins` `+` lets the page's own origin, and only
+it, call the token endpoint.
+
+**People sign themselves up**, by email, and reset their own passwords (`IAM-22`, ADR-0049 § 3).
+No mail relay ships, so an address is not verified; a deployment with one turns `verifyEmail` on.
+
 ## What it deliberately does not contain
 
-**No users, and no credentials.** The first person signs in through the admin console the
-issuer ships with, which is the whole reason a complete identity provider is the default
+**No users, and no credentials.** People create their own accounts on the sign-up page the
+issuer serves, which is the whole reason a complete identity provider is the default
 (ADR-0019). A realm carrying a known password would be a credential in the repository.
 
-**No client registrations.** A client either registers itself, or an operator adds it. Naming
-one here would be provisioning a deployment we cannot see.
+**No clients but CFOKit's own.** An agent's client registers itself (RFC 7591), and anything
+else an operator adds. Naming one here would be provisioning a deployment we cannot see.
