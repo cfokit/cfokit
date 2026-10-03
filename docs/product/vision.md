@@ -444,8 +444,8 @@ These are decided, and they bound what the positioning may promise:
   questioned, and onboarding happens where it runs: the account, the company and landing its
   books, inside the agent's own conversation — the organization's agent with the hosted backend,
   CFOKit's runtime with managed bookkeeping. Each screen CFOKit draws in that conversation is
-  a deliberate decision, not a drift, and an admin console is not one of them. Rendered report output has
-  not been decided either way.
+  a deliberate decision, not a drift, and an admin console is not one of them. Rendered report
+  output has not been decided either way.
 - **Not a bank.** It reads financial data and keeps books; it does not move money.
 - **Not a filing agent.** It produces the closed year, the schedules, and the supporting
   detail a preparer works from. Whoever prepares the return files it.
