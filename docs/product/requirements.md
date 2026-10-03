@@ -735,7 +735,8 @@ continuously over one that a person assembles at examination time.
 
 Section 8.10 holds the shared control map.
 
-> **Everything in this section is `Proposed` and unreviewed**, on the same basis as section 7.
+> **Everything in this section but 8.1 is `Proposed` and unreviewed**, on the same basis as
+> section 7.
 > 8.2 in particular describes controls for a problem no established audit practice covers, so it
 > is the part most likely to be the wrong shape.
 
@@ -883,7 +884,7 @@ stated once, in the SOC 1 section, and referenced from SOC 2.
 | Exception queue and disposition | SOC1-28, SOC1-29 | CC7 | Error-versus-incident line — SOC2-28 |
 | Skills, prompts, tool definitions versioned | SOC1-34 | CC8 | None |
 | Model version as control-environment change | SOC1-35 | CC8, CC9 | Provider review — SOC2-13 |
-| Idempotent write paths | SOC1-09 | Processing Integrity | Workflow resumability — SOC2-30 |
+| Idempotent write paths | SOC1-09 | CC7 | Workflow resumability — SOC2-30 |
 | Role-based access and review | IAM-01…IAM-15 | CC6 | MFA, sessions, tokens, automatic review evidence — SOC2-19…SOC2-22 |
 | Deployment-scoped roles and named security ownership | IAM-18, IAM-19 | CC1, CC6 | None; written for CC1 |
 | Controls evidenced rather than asserted | NFR-18 | CC4 | None; it was written for both |
