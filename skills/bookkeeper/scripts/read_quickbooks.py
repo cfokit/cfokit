@@ -16,21 +16,13 @@ this boundary as the text the cell holds.
 
     python3 read_quickbooks.py <zip>                     # the shape, on stdout
     python3 read_quickbooks.py <zip> --summary           # counts only, for a person to read
-    python3 read_quickbooks.py <zip> --post <url> --entity <id>   # sign in and import
     python3 read_quickbooks.py <zip> --mcp               # the form the MCP import tools take
 
-**`--mcp` is for a runtime that cannot reach CFOKit.** A Claude Desktop chat runs this in a
-sandbox whose egress is a proxy with a domain allowlist, so no port on the operator's machine is
-reachable and `--post` cannot work. It prints the chart and the transactions in the compact form
-the `open_import` and `import_entries` tools take, and the model relays them. The archive still
-never passes through a model — what crosses is the parsed shape (ADR-0040, ADR-0041 § 6).
-
-**`--post` signs a person in.** It cannot borrow the agent session's credential: importing
-is a person's act and the ledger refuses a delegated one (ADR-0007), so a token carrying an
-RFC 8693 `act` claim would be rejected on arrival. RFC 8628 device authorization, because
-this may run in a container with no browser and no port it can bind, and the person
-approving may be at another machine. Nothing is cached — one sign-in per run, for an
-operation a company performs about once.
+**It never calls CFOKit.** It runs where an agent runs, and a credential never passes through
+an agent or a model (`IAM-10`), so this script holds none and sends nothing. `--mcp` prints the
+chart and the transactions in the compact form the `open_import` and `import_entries` tools
+take, and the model relays them; the archive still never passes through a model — what crosses
+is the parsed shape (ADR-0040, ADR-0041 § 6).
 
 Exit status is 0 on success and 1 on a refusal, with the reason on stderr.
 """
@@ -42,10 +34,6 @@ import io
 import json
 import re
 import sys
-import time
-import urllib.error
-import urllib.parse
-import urllib.request
 import xml.etree.ElementTree as ET
 import zipfile
 from datetime import datetime
@@ -54,19 +42,6 @@ from typing import Any
 
 SYSTEM = "QuickBooks Online"
 SHAPE_VERSION = "1"
-
-# Declared in the realm this deployment ships (ADR-0041). A public client, so it holds no
-# secret and there is nothing here to keep out of a repository.
-CLIENT_ID = "cfokit-importer"
-
-# Entries per request. Small enough that a request is short and a failure loses little;
-# large enough that 5,556 transactions is a dozen requests rather than a thousand. At the
-# measured 10.2 ms per transaction this is about five seconds of posting.
-BATCH = 500
-
-# A person opening a browser, reading a code and approving. Generous: the failure this
-# guards is a script waiting for an approval that is never coming, not a slow reader.
-SIGN_IN_TIMEOUT_SECONDS = 600
 
 # QuickBooks Online exports one currency per company file and states it in none of these
 # reports. Declared rather than inferred: `IMP-07` refuses a foreign amount, and that refusal
@@ -662,231 +637,6 @@ def read(archive_bytes: bytes) -> dict[str, Any]:
     }
 
 
-# --- signing a person in, and posting -------------------------------------------------------
-
-
-def _http(url: str, *, payload: Any = None, token: str | None = None, form: Any = None) -> Any:
-    """One JSON request. `urllib` because this script depends on nothing.
-
-    A refusal comes back as JSON carrying a stable `code` (ADR-0015), so an HTTP error is read
-    rather than raised blindly: the code is what a person needs to see.
-    """
-    data = None
-    headers = {"Accept": "application/json"}
-    if form is not None:
-        data = urllib.parse.urlencode(form).encode()
-        headers["Content-Type"] = "application/x-www-form-urlencoded"
-    elif payload is not None:
-        data = json.dumps(payload).encode()
-        headers["Content-Type"] = "application/json"
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
-
-    request = urllib.request.Request(url, data=data, headers=headers)  # noqa: S310
-    try:
-        with urllib.request.urlopen(request, timeout=120) as response:  # noqa: S310
-            body = response.read()
-            return json.loads(body) if body else {}
-    except urllib.error.HTTPError as failed:
-        raw = failed.read()
-        try:
-            detail = json.loads(raw)
-        except ValueError:
-            detail = {"code": f"http_{failed.code}", "message": raw.decode(errors="replace")}
-        detail["_status"] = failed.code
-        return detail
-    except urllib.error.URLError as unreachable:
-        raise Refused("unreachable", f"{url}: {unreachable.reason}") from unreachable
-
-
-def _issuer(base: str) -> str:
-    """Which issuer guards this deployment, asked of the deployment itself (RFC 9728).
-
-    Discovered rather than configured. Handing an operator a second URL to get right is the kind
-    of setup step that does not survive contact with one, and `AUTH_ISSUER_URL` is the server's
-    business rather than theirs.
-    """
-    found = _http(base.rstrip("/") + "/.well-known/oauth-protected-resource")
-    servers = found.get("authorization_servers") or []
-    if not servers:
-        raise Refused("unreachable", f"{base} names no authorization server")
-    return str(servers[0])
-
-
-def sign_in(base: str, *, out: Any = sys.stderr) -> str:
-    """A person's access token, by RFC 8628 device authorization.
-
-    **A person's, not this script's.** Importing a company's books is a person's act and the
-    ledger refuses a delegated one, so there is no machine credential that would work here even
-    if one were available (ADR-0007, `IAM-10`).
-
-    Nothing is cached. One sign-in per run is the price of not leaving a standing credential in
-    an agent's runtime for an operation a company performs about once.
-    """
-    metadata = _http(_issuer(base).rstrip("/") + "/.well-known/openid-configuration")
-    endpoint = metadata.get("device_authorization_endpoint")
-    if not endpoint:
-        raise Refused(
-            "unreachable",
-            "this issuer does not offer device authorization; see infra/README.md for the"
-            " loopback fallback",
-        )
-
-    started = _http(endpoint, form={"client_id": CLIENT_ID})
-    if "device_code" not in started:
-        raise Refused("unreachable", f"the issuer refused the sign-in: {started}")
-
-    print(
-        f"\nTo import these books, approve this sign-in:\n"
-        f"    {started.get('verification_uri_complete') or started['verification_uri']}\n"
-        f"    code: {started['user_code']}\n",
-        file=out,
-    )
-
-    interval = int(started.get("interval", 5))
-    deadline = time.monotonic() + SIGN_IN_TIMEOUT_SECONDS
-    while time.monotonic() < deadline:
-        time.sleep(interval)
-        got = _http(
-            metadata["token_endpoint"],
-            form={
-                "client_id": CLIENT_ID,
-                "device_code": started["device_code"],
-                "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
-            },
-        )
-        if "access_token" in got:
-            return str(got["access_token"])
-        error = got.get("error")
-        if error == "slow_down":
-            interval += 5
-        elif error not in {"authorization_pending", None}:
-            raise Refused("not_authenticated", f"the sign-in was refused: {error}")
-    raise Refused("not_authenticated", "the sign-in was not approved in time")
-
-
-def post(books: dict[str, Any], base: str, entity_id: str, token: str, *, out: Any) -> int:
-    """Open the import, send the entries in batches, and reconcile (`IMP-01` to `IMP-08`).
-
-    The client holds the loop counter, which is what keeps every request short without anything
-    on the server remembering where an import stopped. A run that dies is resumed by running it
-    again: each entry's key is derived from this file's fingerprint and the row's own reference,
-    so what already landed replays and only the remainder posts (ADR-0029).
-    """
-    base = base.rstrip("/")
-    opened = _http(
-        f"{base}/entities/{entity_id}/imports",
-        payload={
-            key: books[key]
-            for key in (
-                "shape_version",
-                "system",
-                "fingerprint",
-                "basis",
-                "balances_basis",
-                "commodity",
-                "accounts",
-            )
-        },
-        token=token,
-    )
-    if "import_id" not in opened:
-        raise Refused(
-            str(opened.get("code", "import_refused")), str(opened.get("message", opened))
-        )
-    print(
-        f"opened import {opened['import_id']}:"
-        f" {opened['accounts_created']} accounts created,"
-        f" {opened['accounts_already_present']} already present",
-        file=out,
-    )
-
-    entries = books["entries"]
-    url = f"{base}/entities/{entity_id}/imports/{opened['import_id']}/entries"
-    posted = replayed = 0
-    refusals: list[dict[str, Any]] = []
-    for start in range(0, len(entries), BATCH):
-        chunk = entries[start : start + BATCH]
-        done = _http(
-            url,
-            payload={
-                "system": books["system"],
-                "fingerprint": books["fingerprint"],
-                "entries": chunk,
-            },
-            token=token,
-        )
-        if "posted" not in done:
-            raise Refused(
-                str(done.get("code", "import_refused")), str(done.get("message", done))
-            )
-        posted += done["posted"]
-        replayed += done["replayed"]
-        refusals.extend(done["refusals"])
-        print(
-            f"  {min(start + BATCH, len(entries))}/{len(entries)}"
-            f"  posted {posted}, replayed {replayed}, skipped {len(refusals)}",
-            file=out,
-        )
-
-    checked = _http(
-        f"{base}/entities/{entity_id}/imports/{opened['import_id']}/reconciliation",
-        payload={
-            "balances": books["balances"],
-            "statements": books["statements"],
-            "journal_total": books["journal_total"],
-        },
-        token=token,
-    )
-    return _report(posted, replayed, refusals, checked, out=out)
-
-
-def _report(
-    posted: int, replayed: int, refusals: list[dict[str, Any]], checked: Any, *, out: Any
-) -> int:
-    """What happened, and whether it agreed. Amounts go to stdout, progress to stderr.
-
-    `IMP-08` is the answer an operator needs: agreement demonstrated against the figures the
-    source states for itself. Anything short of exact agreement is a finding, never a rounding
-    to explain away (`NFR-01`).
-    """
-    print(f"\nposted {posted}, replayed {replayed}, skipped {len(refusals)}", file=out)
-    for refusal in refusals[:20]:
-        print(
-            f"  skipped {refusal['reference']}: {refusal['code']} — {refusal['detail']}",
-            file=out,
-        )
-
-    if "agreed" not in checked:
-        raise Refused(
-            str(checked.get("code", "import_refused")), str(checked.get("message", checked))
-        )
-    print(f"reconciled {checked['agreed']} of {checked['compared']} accounts exactly", file=out)
-    for divergence in checked["divergences"]:
-        print(
-            f"  DIVERGES {divergence['account_code']}:"
-            f" ours {divergence['ours']} theirs {divergence['theirs']}",
-            file=out,
-        )
-    for statement in checked["statements"]:
-        print(
-            f"{statement['report']}: {statement['agreed']} agree,"
-            f" {len(statement['divergences'])} diverge"
-            f" (theirs {statement['their_basis']}, ours {statement['our_basis']})",
-            file=out,
-        )
-        for divergence in statement["divergences"]:
-            print(
-                f"  DIVERGES {divergence['account_code']}:"
-                f" ours {divergence['ours']} theirs {divergence['theirs']}",
-                file=out,
-            )
-    diverged = bool(checked["divergences"]) or any(
-        statement["divergences"] for statement in checked["statements"]
-    )
-    return 1 if (diverged or refusals) else 0
-
-
 def for_mcp(books: dict[str, Any]) -> str:
     """The chart and the transactions, in the form the MCP import tools take.
 
@@ -975,10 +725,6 @@ def summarize(books: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def _flag(flags: list[str], name: str) -> str | None:
-    return flags[flags.index(name) + 1] if name in flags else None
-
-
 def main(argv: list[str]) -> int:
     if not argv or argv[0] in {"-h", "--help"}:
         print(__doc__)
@@ -987,17 +733,6 @@ def main(argv: list[str]) -> int:
     try:
         with open(path, "rb") as handle:  # noqa: PTH123 - stdlib only, no pathlib needed
             books = read(handle.read())
-
-        if "--post" in flags:
-            base = _flag(flags, "--post")
-            entity_id = _flag(flags, "--entity")
-            if not base or not entity_id:
-                print("--post needs a CFOKit URL and --entity <id>", file=sys.stderr)
-                return 1
-            # The summary first, and to stderr, so a person sees what is about to happen while
-            # they are being asked to approve it (`IMP-05`).
-            print(summarize(books), file=sys.stderr)
-            return post(books, base, entity_id, sign_in(base), out=sys.stderr)
 
         if "--mcp" in flags:
             print(for_mcp(books))

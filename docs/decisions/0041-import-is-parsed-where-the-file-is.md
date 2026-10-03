@@ -7,7 +7,7 @@ decision-makers: [Geoff]
 
 # ADR-0041: An import is parsed where the file is, and the books arrive as a neutral shape
 
-**Requirements served:** `IMP-01`, `IMP-03`, `IMP-05`, `IMP-08`, `NFR-04`, `NFR-12`, `PLT-02`.
+**Requirements served:** `IMP-01`, `IMP-03`, `IMP-05`, `IMP-08`, `IAM-10`, `IAM-11`, `NFR-04`, `NFR-12`, `PLT-02`.
 
 ## Context and Problem Statement
 
@@ -65,10 +65,13 @@ probe before relying on any of this for a new decision.
 
 So the transport is not one question but two, and they have different answers:
 
-- **A runtime with host access** — Claude Code, and any agent running as an ordinary process —
-  posts the shape directly, and no transaction passes through a model.
-- **A sandboxed runtime** — a Claude Desktop chat — cannot reach CFOKit by any route. The model
-  is the only bridge between the sandbox that holds the file and the MCP server that can write.
+- **Reach.** A sandboxed runtime — a Claude Desktop chat — cannot open a socket to CFOKit by any
+  route. A runtime with host access can.
+- **Credentials.** Neither may hold the credential a post needs. A credential never passes through
+  an agent or a model (`IAM-10`), and the reader always runs where an agent does. So it never
+  calls CFOKit: the parsed shape reaches CFOKit through a client that holds the
+  person's credential outside the agent — the MCP connection the host signs in (§ 6), or a page the
+  person signs into themselves (ADR-0051).
 
 ## Decision Drivers
 
@@ -145,36 +148,25 @@ Retry stays safe because [ADR-0029](0029-mandatory-idempotency-keys.md)'s keys a
 file's fingerprint and the source's own row reference: a batch sent twice is a replay, and a client
 that dies mid-import resumes by sending the same batches again.
 
-### 5. The script authenticates as a person, by device flow, and caches nothing
+### 5. The script holds no credential and calls nothing
 
-The script POSTs, so it needs a credential, and it cannot borrow the agent session's: `apply`
-refuses anything that is not `ActorClass.PERSON`, and a token an agent session holds carries an
-RFC 8693 `act` claim. **A person-facing sign-in is therefore the design rather than friction added
-to it** — ADR-0007's "the agent proposes; a person's confirmation posts", applied to the largest
-single act of posting the system offers.
+The reader parses and prints. It never signs anyone in and never sends a request, because any
+credential it obtained would sit in the agent's runtime, where the code the model writes can read
+it (`IAM-10`), and would let the agent act as the person with nothing of its own on the action
+(`IAM-11`).
 
-**RFC 8628 device authorization**, against a public client declared in the realm. The script
-discovers `device_authorization_endpoint` from `AUTH_ISSUER_URL`'s metadata, prints a URL and a
-user code, and polls — no issuer-specific code (ADR-0019), and no bound port or local browser,
-neither of which an agent runtime reliably has. It is what `gh`, `aws` and `az` do, for that
-reason.
+No OAuth grant avoids that. Each delivers the token to the client that runs it, so a client running
+in an agent's runtime puts the credential there: device authorization (RFC 8628) delivers it to the
+polling script, a loopback redirect (RFC 8252) to the script's listener, and a sender-constrained
+token (RFC 9449) leaves its key beside it. A token exchanged for the agent (RFC 8693) carries an
+`act` claim, and importing is a person's act that `apply` refuses to anything else
+([ADR-0042](0042-person-only-acts-are-a-capability.md)). CFOKit issues no credentials (`IAM-10`),
+so it mints no import token either.
 
-**A public client, so it ships in the realm.** It holds no secret, which is why it can be in the
-repository where the Claude Desktop client deliberately is not. A self-hoster gets it with the
-realm rather than registering one.
-
-**Nothing is cached — no token, no refresh token.** One sign-in per run. A standing refresh token
-in an agent runtime is a credential sitting where a great deal can read it, in exchange for
-convenience on an operation a company performs approximately once. A run that dies is resumed by
-signing in again, which is safe because ADR-0029's derived keys make the repeat a replay.
-
-CFOKit issues nothing. `IAM-10` says it "issues no credentials", so an endpoint minting a short-lived import token was considered and rejected outright
-rather than weighed.
-
-**Device flow is not universal, and that is a contract line rather than a surprise.** It joins the
-issuer contract `infra/README.md` states and the conformance suite verifies, on the same footing as
-RFC 8707 — which no issuer implements and which the suite records as a strict xfail. Loopback with
-PKCE (RFC 8252) is the documented fallback for an issuer without it.
+The import therefore runs through a client whose credential stays outside the agent: the MCP
+connection, whose token the host holds and the server alone accepts (§ 6), or the web client's
+import page, which the person signs into in their own browser
+([ADR-0051](0051-books-are-imported-through-the-web-client.md)).
 
 ### 6. A sandboxed runtime imports over MCP, and the model is the bridge
 
@@ -240,9 +232,6 @@ arrives by accident. The script runs locally as readily as it runs anywhere.
 
 ### Consequences
 
-* Good, because the import is the one operation that already had to be a person's act, so the
-  credential it needs and the credential it can get are the same one — the constraint and the
-  mechanism agree instead of fighting.
 * Good, because the runtime dependency count goes **down**. `openpyxl` was added for the reader and
   nothing else imports it.
 * Good, because the operator's file never leaves their machine, on a hosted deployment as much as a
@@ -282,10 +271,6 @@ is written by whoever made the file.
 
 The contract itself is gated by CI gate 5 (`ADR-0015`): the neutral shape is a published interface,
 so a change to it appears in a pull request as a change to a contract.
-
-The issuer contract's device-flow line is verified by `tests/integration/test_issuer_conformance.py`
-against the running issuer, which is where `AUTH_ISSUER_URL`'s other obligations are already
-measured rather than assumed.
 
 **Not gated:** nothing detects a skill emitting an older shape than the server expects. A version
 field makes it detectable at the boundary; nothing makes it impossible.

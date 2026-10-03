@@ -147,13 +147,9 @@ Keep the `entity_id` it returns.
 
 ## 6. Import, reconcile, compare
 
-Ask the skill in Claude Desktop, or run it yourself — the script is the same either way. It
-reads the export on your machine and needs only Python 3:
-
-```
-python3 skills/bookkeeper/scripts/read_quickbooks.py \
-  "~/exports/Growth Science LLC Sep 5, 2026.zip" --summary
-```
+Attach the QuickBooks export to a Claude Desktop chat and ask the skill to import it into the
+entity from step 5. The skill's script reads the export in Claude's sandbox and first shows you
+what it holds:
 
 ```
 QuickBooks Online, USD
@@ -166,27 +162,12 @@ QuickBooks Online, USD
   obligation accounts will differ by what is unsettled (ADR-0037)
 ```
 
-Nothing has been sent yet. When you are satisfied, add `--post`:
+Nothing has been sent yet. When you are satisfied, the skill imports through the MCP tools —
+`open_import`, `import_entries` in batches, then `reconcile_import` — signed in as you through
+Claude Desktop's connection. The script itself never calls CFOKit: a credential never passes
+through an agent or a model (`IAM-10`). The reconciliation reads like this:
 
 ```
-SSL_CERT_FILE=.local/tls/ca/ca.pem python3 skills/bookkeeper/scripts/read_quickbooks.py \
-  "~/exports/Growth Science LLC Sep 5, 2026.zip" \
-  --post http://localhost:8080 --entity <entity-id>
-```
-
-`SSL_CERT_FILE` is there because the script signs you in with the identity provider over HTTPS,
-and Python trusts its own certificate list rather than the macOS keychain.
-
-It prints a URL and a short code. **Approve it in a browser as yourself** — importing is a
-person's act, and a token from a delegated agent session is refused with `not_a_person`
-(ADR-0007). Then:
-
-```
-opened import 6f9b… : 62 accounts created, 0 already present
-  500/5556  posted 500, replayed 0, skipped 0
-  ...
- 5556/5556  posted 5553, replayed 0, skipped 3
-
 posted 5553, replayed 0, skipped 3
 reconciled 25 of 27 accounts exactly
   DIVERGES Accounts Receivable (A/R): ours 25469.0000000000 theirs 0
@@ -200,8 +181,8 @@ income not yet recognized against it. The journal is accrual and the reports wer
 basis, so they differ by exactly what is unsettled — ADR-0037 predicts it. To compare like with
 like, set QuickBooks' accounting method to Accrual and re-export.
 
-**Run it again and it is safe.** Each entry's key is derived from the file and the row, so a run
-that died partway resumes: `replayed` rises and `posted` stays at zero. A *re-export* is a
+**Run it again and it is safe.** Each entry's key is derived from the file and the row, so an
+import that died partway resumes: `replayed` rises and `posted` stays at zero. A *re-export* is a
 different file and therefore a second import — use a fresh entity for one.
 
 ## When a tool is missing

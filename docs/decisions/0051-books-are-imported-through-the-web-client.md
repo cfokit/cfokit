@@ -7,7 +7,7 @@ decision-makers: [Geoff]
 
 # ADR-0051: Books are imported through the web client, which reads the export, not through a model
 
-**Requirements served:** `IMP-01`, `IMP-05`, `IMP-08`, `IMP-09`, `NFR-01`.
+**Requirements served:** `IMP-01`, `IMP-05`, `IMP-08`, `IMP-09`, `IAM-10`, `NFR-01`.
 
 ## Context and Problem Statement
 
@@ -122,7 +122,8 @@ browser has one, and the Claude app is such a runtime. Keeping § 6 would keep i
 live path a customer could hit after the page existed.
 
 The REST endpoints and ADR-0041 §§ 1–5 are unchanged: the neutral shape is still the contract,
-and a script posting it is still a client like any other.
+and any client that signs a person in through the identity provider may post it. The skill's
+reader is not one: it runs where an agent does, so it holds no credential (`IAM-10`, ADR-0041 § 5).
 
 ### Consequences
 
