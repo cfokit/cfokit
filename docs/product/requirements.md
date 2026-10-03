@@ -56,7 +56,7 @@ These are decided. Each bounds what the product may promise.
 | Not in scope | Boundary |
 |---|---|
 | Acting as a CFO | CFOKit does the bookkeeper and controller work beneath the role. The role is always held by a person. |
-| An admin console, or a web client that duplicates the agent | The agent keeps and questions the books. The web client carries work a conversation does badly, beginning with onboarding and import (PLT-24, IMP-09), and each capability added to it is a deliberate decision, not drift. |
+| An admin console, or a web client that duplicates the agent | The agent keeps and questions the books, and onboarding happens in the agent's own conversation (IMP-09). Each capability a web client gains is a deliberate decision, not drift (PLT-24). |
 | Moving money | CFOKit reads financial data and keeps books. It does not initiate payment. |
 | Filing returns | CFOKit produces the closed year and supporting detail. A preparer files. |
 | Being hosted-only | Self-hosting is a product promise, not a trial edition. |
@@ -147,7 +147,7 @@ Getting an existing company's books in, from whatever the company runs today.
 | **IMP-06** | An import declares the accounting basis of the data it carries, and is refused where that conflicts with the entity's declared basis. | Should | Approved |
 | **IMP-07** | An import carrying amounts in a currency other than the entity's functional currency is refused, on the same terms as any other foreign amount. | Should | Approved |
 | **IMP-08** | An import produces a reconciliation the operator can check against the source system — balances by account, and totals by period — so that agreement is demonstrated rather than assumed. | Should | Approved |
-| **IMP-09** | An operator can import a company's books from the web client, with no agent involved in the transfer and no figure retyped by a model or a person. | Should | Approved |
+| **IMP-09** | An operator can import a company's books with no figure passing through a model and none retyped by a person. | Should | Approved |
 
 **Acceptance, IMP-08.** The operator compares two figures per account and either agrees the
 import or rejects it, without exporting anything from the source system a second time.
