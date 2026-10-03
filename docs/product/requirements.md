@@ -735,7 +735,8 @@ continuously over one that a person assembles at examination time.
 
 Section 8.10 holds the shared control map.
 
-> **Everything in this section is `Proposed` and unreviewed**, on the same basis as section 7.
+> **Everything in this section but 8.1 is `Proposed` and unreviewed**, on the same basis as
+> section 7.
 > 8.2 in particular describes controls for a problem no established audit practice covers, so it
 > is the part most likely to be the wrong shape.
 
@@ -748,14 +749,15 @@ the session.
 
 ### 8.1 Category scope
 
-**Status: Proposed.** The whole of this subsection is a business decision not yet made.
+**Status: Approved, except Availability.** Scope is the smallest a Type II report allows, and a
+category is added when a customer needs it.
 
 | Category | Position | Rationale |
 |---|---|---|
 | **Security** (CC1–CC9) | In scope | Mandatory. Not elective for any SOC 2 report. |
-| **Confidentiality** | In scope | Customer financial data is the core asset, and it is what a customer is actually worried about. Declining this category invites the question of why. |
+| **Confidentiality** | Out of scope | Security's common criteria already govern access to customer data and its encryption (8.4). The category adds controls over data designated confidential beyond that, which no customer has asked for. |
 | **Availability** | **Undecided** | The criteria test against *our own stated commitments*, so this category costs what we choose to promise. Making no commitment and excluding the category is defensible; making one and excluding it is not. |
-| **Processing Integrity** | **Recommended in scope** | Completeness and accuracy of processing is the substance of section 7. If those controls are built, this category is close to free — and it is the one a buyer most associates with an accounting product. |
+| **Processing Integrity** | Out of scope | Completeness and accuracy of the books is section 7's subject, and SOC 1 covers it where CFOKit operates the runtime that keeps them and answers to the company for how it keeps them. |
 | **Privacy** | **Out unless triggered** | Business contact data alone does not trigger it. Payroll, contractor 1099 data, and employee expense reimbursement each pull personal information in. None is built today; the first one that ships makes this category unavoidable, whatever the scope says. |
 
 ### 8.2 Untrusted content and agent manipulation
@@ -805,6 +807,9 @@ is fully compromised and cooperative with the attacker.
 > path rather than in a review cycle.
 
 ### 8.4 Confidentiality and data handling
+
+These stand with the Confidentiality category out of scope (8.1): encryption and access are
+Security's common criteria, and entity isolation is the product's own.
 
 | | Requirement | Priority | Status |
 |---|---|---|---|
@@ -879,7 +884,7 @@ stated once, in the SOC 1 section, and referenced from SOC 2.
 | Exception queue and disposition | SOC1-28, SOC1-29 | CC7 | Error-versus-incident line — SOC2-28 |
 | Skills, prompts, tool definitions versioned | SOC1-34 | CC8 | None |
 | Model version as control-environment change | SOC1-35 | CC8, CC9 | Provider review — SOC2-13 |
-| Idempotent write paths | SOC1-09 | Processing Integrity | Workflow resumability — SOC2-30 |
+| Idempotent write paths | SOC1-09 | CC7 | Workflow resumability — SOC2-30 |
 | Role-based access and review | IAM-01…IAM-15 | CC6 | MFA, sessions, tokens, automatic review evidence — SOC2-19…SOC2-22 |
 | Deployment-scoped roles and named security ownership | IAM-18, IAM-19 | CC1, CC6 | None; written for CC1 |
 | Controls evidenced rather than asserted | NFR-18 | CC4 | None; it was written for both |
