@@ -87,6 +87,9 @@ services:
         condition: service_completed_successfully
     environment:
       # The realm is imported at startup from the file mounted below.
+      # Where the web client is served: the realm's cfokit-web client redirects there and nowhere
+      # else, so it is the same value the REST service says about itself (ADR-0004, ADR-0049).
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
       KC_DB_USERNAME: cfokit

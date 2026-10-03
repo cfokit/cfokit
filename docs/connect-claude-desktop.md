@@ -41,35 +41,17 @@ security add-trusted-cert -r trustRoot -k ~/Library/Keychains/login.keychain-db 
 
 It stays trusted until you delete `.local/tls/`, which makes a new CA on the next start.
 
-## 2. Create a user to sign in as
+## 2. Create your account
 
-The realm ships with no users. On Windows, first add this line to your hosts file:
+On Windows, first add this line to your hosts file:
 
 ```
 127.0.0.1 keycloak.localhost
 ```
 
-**1. Open https://keycloak.localhost:8443** and sign in with `admin` / `admin`.
-
-You will see a yellow banner: *"You are logged in as a temporary admin user."* It does not
-block anything here.
-
-**2. Switch realms.** Top left, under the Keycloak logo, is a box reading **master**. Click it
-and choose **CFOKit** (`cfokit`). A user created in `master` cannot sign in to CFOKit.
-
-**3. Left menu → `Users` → `Create new user`.** Under **Manage**, not **Configure**.
-
-**4. Fill in `Username`, `Email`, `First name` and `Last name`, then click `Create`.** Only
-`Username` carries an asterisk, but all four are required; leave one out and Keycloak asks for
-it mid-sign-in.
-
-**5. Open the `Credentials` tab and click `Set password`.** The create form has no password
-field.
-
-**6. Enter the password twice and turn `Temporary` OFF.** It defaults to On, which makes
-Keycloak demand a new password at first sign-in. Any non-empty password is accepted.
-
-**7. Click `Save`.**
+Open **http://localhost:8080/app/**, choose **Register** on the sign-in page, and create your
+account with your email and a password. The web client signs you in when you're done; that
+account is the one Claude Desktop signs in as in step 3.
 
 ## 3. Configure Claude Desktop
 

@@ -9,6 +9,9 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   build: {
     outDir: "dist",
+    // Never inline a file as a data: URI. The CSP is default-src 'self' (ADR-0049 § 6), which
+    // refuses data: images and fonts, and every file is a hashed asset of its own anyway.
+    assetsInlineLimit: 0,
   },
   test: {
     environment: "jsdom",

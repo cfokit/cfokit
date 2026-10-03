@@ -83,6 +83,14 @@ def test_every_client_response_carries_the_csp(client: TestClient) -> None:
         assert client.get(path).headers["x-content-type-options"] == "nosniff"
 
 
+def test_the_page_may_connect_to_the_issuer_and_nowhere_else(client: TestClient) -> None:
+    """ADR-0049 § 6: signing in fetches the issuer's metadata and token endpoint, so connect-src
+    names the issuer's origin, scheme and port included, and no other."""
+    csp = client.get("/app/").headers["content-security-policy"]
+    directives = dict(d.strip().split(" ", 1) for d in csp.split(";"))
+    assert directives["connect-src"] == "'self' http://localhost:8180"
+
+
 def test_hashed_assets_are_immutable_and_the_index_revalidates(client: TestClient) -> None:
     """ADR-0055 § 2: a content-hashed file never changes meaning; the index must, per deploy."""
     asset = client.get("/app/assets/index-abc123.js").headers["cache-control"]

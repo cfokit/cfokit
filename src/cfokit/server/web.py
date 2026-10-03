@@ -13,25 +13,33 @@ None of it appears in the OpenAPI document, because none of it is API (ADR-0015)
 from __future__ import annotations
 
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, RedirectResponse, Response
 
-__all__ = ["SECURITY_HEADERS", "mount_web_client"]
+__all__ = ["mount_web_client", "security_headers"]
 
 PREFIX = "/app"
 
+
 # The client's security headers, in one place: the REST service sends these for /app/, and the
 # CDN on GCP is configured with the same values (ADR-0049 § 6, ADR-0055 § 2). Everything the
-# client loads is bundled, so its own origin is the only source it needs.
-SECURITY_HEADERS: dict[str, str] = {
-    "Content-Security-Policy": (
-        "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; "
-        "form-action 'self'"
-    ),
-    "X-Content-Type-Options": "nosniff",
-    "Referrer-Policy": "same-origin",
-}
+# client loads is bundled, so its own origin is the only source it needs — except that signing
+# in fetches the issuer's metadata and exchanges a code at its token endpoint, so the page may
+# connect to the issuer's origin and nowhere else.
+def security_headers(issuer_url: str) -> dict[str, str]:
+    """The headers for every response under ``/app/``, given the issuer it signs in with."""
+    issuer = urlsplit(issuer_url)
+    return {
+        "Content-Security-Policy": (
+            f"default-src 'self'; connect-src 'self' {issuer.scheme}://{issuer.netloc}; "
+            "base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'"
+        ),
+        "X-Content-Type-Options": "nosniff",
+        "Referrer-Policy": "same-origin",
+    }
+
 
 # Vite names every file under assets/ by its content hash, so a name never changes meaning and
 # can be cached for a year. Everything else — index.html, and later the service worker and the
@@ -40,14 +48,15 @@ IMMUTABLE = "public, max-age=31536000, immutable"
 REVALIDATE = "no-cache"
 
 
-def mount_web_client(app: FastAPI, root: Path) -> None:
+def mount_web_client(app: FastAPI, root: Path, issuer_url: str) -> None:
     """Serve the build in ``root`` at ``/app/``, and send ``/`` there."""
     root = root.resolve()
+    headers = security_headers(issuer_url)
     index = root / "index.html"
 
     def respond(path: Path) -> Response:
         cache = IMMUTABLE if path.parent == root / "assets" else REVALIDATE
-        return FileResponse(path, headers={**SECURITY_HEADERS, "Cache-Control": cache})
+        return FileResponse(path, headers={**headers, "Cache-Control": cache})
 
     @app.get("/", include_in_schema=False)
     def to_client() -> RedirectResponse:
