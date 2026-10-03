@@ -32,14 +32,12 @@ code comment. [`docs/decisions/README.md`](docs/decisions/README.md) explains th
 
 ## Getting started
 
-Anything that needs your GitHub credentials you run yourself, in your own terminal. Claude Code
-never sees them. Claude Code does the rest.
+Four steps. You do the ones that involve credentials or installing software yourself, in your
+own terminal, and Claude Code never sees your GitHub credentials. Claude Code does the rest and
+walks you through onboarding.
 
-Before you begin, have `git` and the [`gh`](https://cli.github.com/) CLI installed. Claude Code
-checks and installs the rest (`uv`, Docker).
-
-1. **Fork and clone** with `gh`. This forks `cfokit/cfokit`, clones your fork and adds
-   `upstream` for you:
+1. **Fork** [`cfokit/cfokit`](https://github.com/cfokit/cfokit) and clone your fork. This needs
+   `git` and the [`gh`](https://cli.github.com/) CLI, signed in:
 
    ```bash
    gh auth login                              # once, if you have not already
@@ -47,29 +45,41 @@ checks and installs the rest (`uv`, Docker).
    cd cfokit
    ```
 
-2. **Run [Claude Code](https://claude.com/claude-code)** in that directory.
-3. **Paste this prompt:**
+2. **Install the dependencies:**
+   - [`uv`](https://docs.astral.sh/uv/) (not pip, not poetry)
+   - Docker, with the daemon running
+   - [Claude Code](https://claude.com/claude-code)
+   - [Claude Desktop](https://claude.com/download), if you want to talk to your books
+
+   A cloud Claude Code session provisions `uv` and Docker for you
+   ([Setting up](#setting-up)). Anything that needs your credentials or a login, such as `gh`,
+   Claude Code and Claude Desktop, is yours to do either way.
+
+3. **Run Claude Code** in the clone.
+4. **Paste this prompt:**
 
 ````text
-Set me up to contribute to CFOKit. Do not use any GitHub credentials, and do not commit,
-push or open pull requests.
+Set me up to contribute to CFOKit and walk me through onboarding. Do not use any GitHub
+credentials, and do not commit, push or open pull requests. Go one step at a time, and wait for
+me where a step needs me.
 
 1. Read CLAUDE.md and CONTRIBUTING.md.
-2. Check that the prerequisites are installed (uv, Docker with a running daemon), install any
-   that are missing or tell me exactly how to, and run `uv sync --locked`.
+2. Verify the prerequisites (uv, Docker with a running daemon). Tell me exactly what is
+   missing; do not work around it. Then run `uv sync --locked`.
 3. Build and run the stack as CONTRIBUTING.md describes: build the images, run the
    migrations, bring the stack up, and confirm /healthz and /readyz respond.
 4. Run `uv run task lint` and `uv run task test`.
 5. If I use Claude Desktop, follow docs/connect-claude-desktop.md: trust the local CA,
    register the OAuth client, and add the `cfokit` server to claude_desktop_config.json.
-   Then build the skill zip it describes (bookkeeper.zip) and tell me where it is.
-6. Stop and give me the steps for "Create your account" in CONTRIBUTING.md. When I say I'm
-   done, check what I created: query the running stack for my entity and its imported
-   transactions, and report counts, not amounts.
-7. Report each step's result, and anything you could not do, with the error output.
+   Build the skill zip it describes (bookkeeper.zip) and tell me where it is.
+6. Guide me through "Create your account" in CONTRIBUTING.md: sign in, create my company, and
+   import my books. Tell me each URL or action, and wait until I say it is done.
+7. Once my books are imported, check what you can without my credentials (for example counts,
+   never amounts), then ask me a few initial questions about them. Suggest questions I can put
+   to the bookkeeper in Claude Desktop, such as what the balance sheet shows, what my largest
+   expenses are, and whether the import reconciled, and ask me what I see.
+8. Report each step's result, and anything you could not do, with the error output.
 ````
-
-4. **Create your account** in a browser, because it involves signing in. See below.
 
 ### Create your account
 
@@ -80,7 +90,7 @@ and never through an agent (`IAM-10`). The flow is specified in
 [the design brief](docs/product/design-brief.md) (sign up, create your company, import), and
 the client carries onboarding and import (`PLT-24`, `IMP-09`,
 [ADR-0051](docs/decisions/0051-books-are-imported-through-the-web-client.md)). When it is done,
-come back to Claude Code and say so. It checks the entity and the import against the stack.
+come back to Claude Code and say so. It carries on from step 7 of the prompt.
 
 **The web client does not have those screens yet.** It has the design-system components and a
 heading ([ADR-0049](docs/decisions/0049-cfokit-has-a-web-client.md)), and the realm has no
@@ -98,7 +108,7 @@ connected (step 5 of the prompt):
    owner.
 4. **Import books.** Attach a QuickBooks export to the chat and ask the bookkeeper to import it.
    The repo ships no sample export, so use your own or a QuickBooks sample company's.
-5. **Go back to Claude Code** and say you're done.
+5. **Go back to Claude Code** and say you're done. It carries on from step 7 of the prompt.
 
 When you have a change ready, ask Claude Code to commit it on a branch, then push and open the
 pull request yourself from your terminal
