@@ -32,30 +32,82 @@ code comment. [`docs/decisions/README.md`](docs/decisions/README.md) explains th
 
 ## Getting started
 
-1. **Fork** [`cfokit/cfokit`](https://github.com/cfokit/cfokit) on GitHub.
-2. **Run [Claude Code](https://claude.com/claude-code)** in an empty directory, cloud or local.
-3. **Paste this prompt** (replace `<you>` with your GitHub username):
+Anything that needs your GitHub credentials you run yourself, in your own terminal. Claude Code
+never sees them. Claude Code does the rest.
+
+Before you begin, have `git` and the [`gh`](https://cli.github.com/) CLI installed. Claude Code
+checks and installs the rest (`uv`, Docker).
+
+1. **Fork and clone** with `gh`. This forks `cfokit/cfokit`, clones your fork and adds
+   `upstream` for you:
+
+   ```bash
+   gh auth login                              # once, if you have not already
+   gh repo fork cfokit/cfokit --clone --remote
+   cd cfokit
+   ```
+
+2. **Run [Claude Code](https://claude.com/claude-code)** in that directory.
+3. **Paste this prompt:**
 
 ````text
-I forked cfokit/cfokit to github.com/<you>/cfokit. Set me up to contribute:
+Set me up to contribute to CFOKit. Do not use any GitHub credentials, and do not commit,
+push or open pull requests.
 
-1. Clone my fork, add cfokit/cfokit as the `upstream` remote, and cd into it.
-2. Read CLAUDE.md and CONTRIBUTING.md.
-3. Check that the prerequisites are installed (git, uv, Docker with a running daemon),
-   install any that are missing or tell me exactly how to, and run `uv sync --locked`.
-4. Build and run the stack as CONTRIBUTING.md describes: build the images, run the
+1. Read CLAUDE.md and CONTRIBUTING.md.
+2. Check that the prerequisites are installed (uv, Docker with a running daemon), install any
+   that are missing or tell me exactly how to, and run `uv sync --locked`.
+3. Build and run the stack as CONTRIBUTING.md describes: build the images, run the
    migrations, bring the stack up, and confirm /healthz and /readyz respond.
-5. Run `uv run task lint` and `uv run task test`.
-6. Report each step's result, and anything you could not do, with the error output.
-
-Do not commit or push anything.
+4. Run `uv run task lint` and `uv run task test`.
+5. If I use Claude Desktop, follow docs/connect-claude-desktop.md: trust the local CA,
+   register the OAuth client, and add the `cfokit` server to claude_desktop_config.json.
+   Then build the skill zip it describes (bookkeeper.zip) and tell me where it is.
+6. Stop and give me the steps for "Create your account" in CONTRIBUTING.md. When I say I'm
+   done, check what I created: query the running stack for my entity and its imported
+   transactions, and report counts, not amounts.
+7. Report each step's result, and anything you could not do, with the error output.
 ````
 
-Claude Code then does the rest. After that, ask it to make your change on a branch of your fork,
-and to open the pull request against `cfokit/cfokit` when you are ready
-([Opening a pull request](#opening-a-pull-request)). A local session needs `git` and, for the
-fork-aware steps, the [`gh`](https://cli.github.com/) CLI or a GitHub connector; a cloud session
-is provisioned for you (see [Setting up](#setting-up)).
+4. **Create your account** in a browser, because it involves signing in. See below.
+
+### Create your account
+
+Signing up, creating your company and importing your books are meant to be one onboarding flow
+in the web client, at <http://localhost:8080/app/> once the stack is up. A person creates an
+account and signs in with no administrator involved (`IAM-22`), through the identity provider
+and never through an agent (`IAM-10`). The flow is specified in
+[the design brief](docs/product/design-brief.md) (sign up, create your company, import), and
+the client carries onboarding and import (`PLT-24`, `IMP-09`,
+[ADR-0051](docs/decisions/0051-books-are-imported-through-the-web-client.md)). When it is done,
+come back to Claude Code and say so. It checks the entity and the import against the stack.
+
+**The web client does not have those screens yet.** It has the design-system components and a
+heading ([ADR-0049](docs/decisions/0049-cfokit-has-a-web-client.md)), and the realm has no
+self-registration. Until the flow lands, use the interim path, which needs Claude Desktop
+connected (step 5 of the prompt):
+
+1. **Install the skill.** Quit and reopen Claude Desktop, then **Customize → Skills → `+` →
+   Create skill** and upload the `bookkeeper.zip` Claude Code built.
+2. **Create your sign-in user.** Open <https://keycloak.localhost:8443>, sign in with the local
+   `admin` / `admin` account, and follow
+   [step 2 of the Claude Desktop guide](docs/connect-claude-desktop.md#2-create-a-user-to-sign-in-as)
+   with the defaults.
+3. **Create your company.** In Claude Desktop, sign in as that user when the browser opens, then
+   ask it to create an entity. The guide has a sample sentence. Creating the entity makes you its
+   owner.
+4. **Import books.** Attach a QuickBooks export to the chat and ask the bookkeeper to import it.
+   The repo ships no sample export, so use your own or a QuickBooks sample company's.
+5. **Go back to Claude Code** and say you're done.
+
+When you have a change ready, ask Claude Code to commit it on a branch, then push and open the
+pull request yourself from your terminal
+([Opening a pull request](#opening-a-pull-request)):
+
+```bash
+git push -u origin <branch>
+gh pr create --repo cfokit/cfokit
+```
 
 ## Setting up
 
@@ -71,8 +123,8 @@ uv run task --list   # every command, and what it does
 ```
 
 **Using Claude Code?** Any Claude Code environment with outbound network access works, cloud or
-local, and the agent can run everything below for you. A cloud session is provisioned
-automatically by `.claude/hooks/session-start.sh` (`uv`, Python 3.14 and 3.11, Node 24 and pnpm
+local, and the agent can run everything below except the steps that need your GitHub
+credentials. A cloud session is provisioned automatically by `.claude/hooks/session-start.sh` (`uv`, Python 3.14 and 3.11, Node 24 and pnpm
 for the web client, the locked dependencies and a Docker daemon). That hook does nothing locally, so a local session needs `uv`
 and Docker installed first. A stack in a cloud session lives inside its container, so you can
 exercise it from the session but not from your own machine.
