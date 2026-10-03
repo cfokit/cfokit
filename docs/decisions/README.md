@@ -94,13 +94,14 @@ nothing cites these but this repository. They are added when something breaks wi
 | [0048](0048-merge-eligibility-is-policy.md) | A deterministic policy decides whether a pull request may merge; a reviewing model can only withhold it | Proposed |
 | [0049](0049-cfokit-has-a-web-client.md) | CFOKit has a web client, served by the API and signed in through the issuer | Proposed |
 | [0050](0050-the-import-oracle-is-basis-free.md) | An import is checked against the journal's own total, and a basis difference must net to zero | Proposed |
-| [0051](0051-books-are-imported-through-the-web-client.md) | Books are imported through the web client, which reads the export, not through a model | Proposed |
+| [0051](0051-books-are-imported-through-the-web-client.md) | Books are imported through the web client, which reads the export, not through a model | Superseded by ADR-0058 |
 | [0052](0052-notifications-are-records-delivered-after-commit.md) | Notifications are records, delivered after their commit through CFOKit's own channels | Proposed |
 | [0053](0053-an-invoice-is-a-page-delivered-by-public-address.md) | An issued invoice is a page, and what is delivered depends on the deployment's public address | Proposed |
 | [0054](0054-the-web-client-lives-in-web.md) | The web client lives in a top-level `web/` directory, with its toolchain | Proposed |
 | [0055](0055-on-gcp-the-web-client-is-served-from-a-cdn.md) | On GCP the web client is served from a bucket behind Cloud CDN, on the API's origin | Proposed |
 | [0056](0056-a-notification-is-open-until-answered-or-dismissed.md) | A notification is open until its question is answered or its recipient dismisses it, and open notifications are read through the published interface | Proposed |
 | [0057](0057-push-is-web-push-sent-by-cfokit.md) | Push notifications are Web Push to the installed web client, sent by CFOKit's own process | Proposed |
+| [0058](0058-onboarding-with-your-own-agent-is-one-path-inside-its-conversation.md) | Onboarding with the organization's own agent is one path, inside its conversation | Proposed |
 
 ## Deferred — decided in principle, waiting on a need
 
