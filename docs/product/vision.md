@@ -286,12 +286,25 @@ instead.
 CFOKit is Apache 2.0 licensed and stays that way. Anyone can run it, fork it, or build on it without
 asking, and the self-hosted build is complete rather than a limited edition.
 
-The commercial product is the hosted service, and what it sells is assurance.
+The commercial product is CFOKit operated for you. It comes in two offerings, which sell
+different things: the hosted backend sells operation, assured by SOC 2; managed bookkeeping
+sells the keeping of the books, assured by SOC 1 and SOC 2.
+
+- **The hosted backend** — your agent, our ledger. CFOKit operates the books, the MCP surface
+  and the API for an agent runtime the organization already has, which supplies its own
+  inference. What is assured is the environment: a SOC 2 Type II report on how it is secured.
+- **Managed bookkeeping** — your books, kept by CFOKit. CFOKit operates its own runtime, running
+  models it chooses and tunes for each kind of bookkeeping work, and answers to the company for
+  how it keeps the books. The company delegates the keeping, as it would to any bookkeeper it
+  hired; it stays accountable for its books, and nothing about that moves to CFOKit. What is
+  assured is the keeping: a SOC 1 Type II report on CFOKit's controls over the books, beside
+  the SOC 2. Only here can CFOKit stand behind an entry, because only here did it choose the
+  model that made it.
 
 Nobody reads the source to decide whether to trust their general ledger to it. Early
 adopters trust it because trying it costs nothing and because people they recognize are
 already running it. Everyone downstream — a fractional CFO, an accountant, a lender —
-trusts it because an independent auditor has attested to how the hosted service is operated.
+trusts it because an independent auditor has attested to how CFOKit operates it.
 That report is the one asset a fork cannot copy, and the operating history behind it takes
 years to accumulate.
 
@@ -311,8 +324,8 @@ ledger, the MCP surface, the API, and the compliance posture around them — a c
 cost structure of Postgres, compute, and storage, which does not move with token prices.
 Pricing is an ordinary question about the value of the stack being displaced.
 
-**Where an entity needs its books produced under attestation, CFOKit operates the runtime and
-holds the inference relationship**, because the obligations that make attestation worth buying
+**For managed bookkeeping, CFOKit operates the runtime, chooses the models and holds the
+inference relationship**, because the obligations that make attestation worth buying
 — zero retention, no training on submitted data, deletion that reaches the provider — can only
 be enforced by whoever holds the contract. Producing assurance is not a SaaS cost structure. It
 is a recurring Type 2 examination, the readiness work before the first one, the retention of
@@ -354,12 +367,14 @@ Nothing you do above that threshold makes the business better. CFOKit keeps them
 shows you why every transaction landed where it did, so trusting them is not an act of faith.
 It costs nothing to try.
 
-Move to the hosted service when running it yourself stops being the thing you want to spend
-attention on — not only the Postgres, but being the person accountable for how the books are
-operated. Self-hosting means you hold the operator's controls as well as the company's, and
-you cannot attest to your own deployment. When someone downstream needs assurance about how
-the books are kept — a lender, an acquirer, a customer's auditor — that is what the hosted
-service sells, and it is the one thing a self-hosted build cannot produce for itself.
+Move to the hosted backend when running it yourself stops being the thing you want to spend
+attention on — the Postgres, and the operator's controls you hold as well as the company's.
+Move to managed bookkeeping when you would rather delegate the keeping of the books. You remain
+accountable for them, as you are with any bookkeeper you hire; what changes is who does the work
+and answers to you for it. When someone downstream needs assurance about how they are kept — a
+lender, an acquirer, a customer's auditor — managed bookkeeping is what produces it, and it is the one thing a
+self-hosted build, or your own agent, cannot produce for itself: nobody attests to a deployment
+they run themselves, or to entries made by a model they chose.
 
 **For the owner-operator.** You already pay for QuickBooks and still do the work. CFOKit does
 the work: transactions categorized as they arrive, books that are current rather than
@@ -426,11 +441,11 @@ These are decided, and they bound what the positioning may promise:
   the owner-operator does. Where that person wants help with the judgment rather than with the
   books, the guidance skill answers a bounded set of questions and states its limits.
 - **Not a dashboard you run the business from.** The agent is how the books are kept and
-  questioned. A web client, signed in through the identity provider, carries the work a
-  conversation does badly — onboarding to begin with: the account, the company, and landing its
-  books. Each thing it grows to do
-  is a deliberate decision, not a drift, and an admin console is not one of them. Rendered
-  report output has not been decided either way.
+  questioned, and onboarding happens where it runs: the account, the company and landing its
+  books, inside the agent's own conversation — the organization's agent with the hosted backend,
+  CFOKit's runtime with managed bookkeeping. Each screen CFOKit draws there is a deliberate
+  decision, not a drift, and an admin console is not one of them. Rendered report output has
+  not been decided either way.
 - **Not a bank.** It reads financial data and keeps books; it does not move money.
 - **Not a filing agent.** It produces the closed year, the schedules, and the supporting
   detail a preparer works from. Whoever prepares the return files it.
