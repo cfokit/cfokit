@@ -2678,7 +2678,7 @@
   "paths": {
     "/.well-known/oauth-protected-resource": {
       "get": {
-        "description": "Where a client should go to be issued a token for this API.\n\nThe MCP surface has served this since the SDK's auth middleware was wired; REST did not,\nso a client of the REST API had to be told the issuer out of band. The importer that\nships with the skill signs a person in by device flow (ADR-0041) and needs to discover\nthe issuer from the resource it is about to write to — being handed a second URL to\nconfigure is the kind of setup step that does not survive contact with an operator.\n\n`PUBLIC_BASE_URL` is authoritative for what this service says about itself. Never a\nrequest header: behind a proxy or a tunnel they lie.",
+        "description": "Where a client should go to be issued a token for this API.\n\nThe MCP surface serves this through the SDK's auth middleware; REST serves it here, so a\nclient of the REST API — the web client among them — discovers the issuer from the\nresource it is about to write to rather than being configured with a second URL, the\nkind of setup step that does not survive contact with an operator.\n\n`PUBLIC_BASE_URL` is authoritative for what this service says about itself. Never a\nrequest header: behind a proxy or a tunnel they lie.",
         "operationId": "protected_resource__well_known_oauth_protected_resource_get",
         "responses": {
           "200": {

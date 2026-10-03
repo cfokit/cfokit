@@ -76,17 +76,9 @@ That prints what the export holds — how many transactions, over what period, h
 and any the source states no type for. Show the user that before anything else. It is counts and
 account names only; it carries no amounts, and neither should you.
 
-**Then the import. Which route depends on whether you can reach CFOKit from here.**
-
-Try `--post` first. It signs the user in — a browser page and a short code — then opens the
-import, sends the transactions in batches, and reconciles:
-
-```
-python3 scripts/read_quickbooks.py <export.zip> --post <cfokit-url> --entity <entity-id>
-```
-
-If that reports `unreachable`, you are in a sandbox that cannot open a socket to CFOKit. Use the
-tools instead:
+**Then the import, through the tools.** The script never calls CFOKit itself: a credential never
+passes through an agent or a model, so nothing running here can hold one. It prints the import in
+the form the tools take:
 
 ```
 python3 scripts/read_quickbooks.py <export.zip> --mcp
@@ -103,7 +95,7 @@ divergence away. Report it.
 
 **The archive never enters this conversation.** Point the script at the path, never at its
 contents: it is a zip of spreadsheets, and reading it to you would gain nothing and lose figures.
-What the `--mcp` route puts in front of you is the *parsed* result, which is a different thing —
+What `--mcp` puts in front of you is the *parsed* result, which is a different thing —
 already checked, already balanced, and the only way into books you cannot otherwise reach.
 
 **Safe to run again.** Every entry's key is derived from the file and the row, so a run that dies

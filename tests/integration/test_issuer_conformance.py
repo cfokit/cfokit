@@ -392,22 +392,3 @@ def test_a_token_names_its_issuer_and_subject(
 
     assert payload["iss"].rstrip("/") == ISSUER
     assert payload["sub"]
-
-
-def test_the_issuer_supports_device_authorization(metadata: dict[str, Any]) -> None:
-    """RFC 8628, for the importer that ships with the skill (ADR-0041).
-
-    The reader runs in an agent's runtime, which may have no browser and no bindable port, and
-    the person approving may be at another machine — so a redirect flow has nothing to redirect
-    to. `infra/README.md` states this as a contract line; this is where it is measured rather
-    than assumed.
-
-    An issuer without it is not disqualified: RFC 8252 loopback-with-PKCE is the documented
-    fallback. It would fail here first, which is the point of measuring.
-    """
-    assert metadata.get("device_authorization_endpoint"), (
-        "the issuer advertises no device_authorization_endpoint"
-    )
-    assert "urn:ietf:params:oauth:grant-type:device_code" in metadata.get(
-        "grant_types_supported", []
-    )

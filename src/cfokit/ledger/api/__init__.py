@@ -297,11 +297,10 @@ def create_app(settings: Settings, authenticator: Authenticator | None = None) -
     def protected_resource() -> dict[str, object]:
         """Where a client should go to be issued a token for this API.
 
-        The MCP surface has served this since the SDK's auth middleware was wired; REST did not,
-        so a client of the REST API had to be told the issuer out of band. The importer that
-        ships with the skill signs a person in by device flow (ADR-0041) and needs to discover
-        the issuer from the resource it is about to write to — being handed a second URL to
-        configure is the kind of setup step that does not survive contact with an operator.
+        The MCP surface serves this through the SDK's auth middleware; REST serves it here, so a
+        client of the REST API — the web client among them — discovers the issuer from the
+        resource it is about to write to rather than being configured with a second URL, the
+        kind of setup step that does not survive contact with an operator.
 
         `PUBLIC_BASE_URL` is authoritative for what this service says about itself. Never a
         request header: behind a proxy or a tunnel they lie.
