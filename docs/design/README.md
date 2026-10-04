@@ -126,7 +126,7 @@ live in its code and are published into this system from there.
   right-aligned, a differing row marked with an `ochre` tick in its first cell. Totals from the
   API in `money-total` beneath, not summed on the page. Below `bp-tablet` a table of two figures
   per row (ours and QuickBooks') becomes a list: the account name on one line and the two
-  figures labelled beneath it. A wider table keeps its columns, scrolls sideways within its own
+  figures labeled beneath it. A wider table keeps its columns, scrolls sideways within its own
   frame and keeps the first column fixed; the page never scrolls sideways.
 - **Card.** Only for an object that stands apart: `surface`, `radius-lg`, a `rule` border,
   `space-6` padding. Lists of rows are tables, not cards.

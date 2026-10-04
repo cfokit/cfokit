@@ -195,7 +195,7 @@ The strongest alternative, and the one CFOKit's largest audience already expects
 * Good, because it maximizes fidelity and would make historical report reproduction natural.
 * Bad, because it is redundant. In a double-entry system the postings **are** the event log;
   layering a separate event stream over an already append-only ledger duplicates it.
-* Bad, because rebuilding projections pulls toward materialised balances, whereas balances are
+* Bad, because rebuilding projections pulls toward materialized balances, whereas balances are
   derived by aggregation over postings (ADR-0003).
 
 ### Configurable per entity — hard for CFO-managed books, soft for founders

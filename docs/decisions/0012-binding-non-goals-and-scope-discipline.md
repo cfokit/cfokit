@@ -52,9 +52,9 @@ Chosen option: the following are **binding non-goals**. Do not build them, and d
 | Non-goal | Why it is listed |
 |---|---|
 | Web UI or admin console | A second product surface: its own auth, session handling, XSS surface, and design work. The web client passed this gate in [ADR-0049](0049-cfokit-has-a-web-client.md); an admin console has not |
-| Plugin system | Extension points cannot be designed before there are extensions to generalise from |
+| Plugin system | Extension points cannot be designed before there are extensions to generalize from |
 | Custom query language | Reimplementing SQL, worse, against a database chosen for its query capability |
-| Caching or rollup layer | ADR-0003 chose derived balances deliberately; materialisation belongs behind profiler evidence |
+| Caching or rollup layer | ADR-0003 chose derived balances deliberately; materialization belongs behind profiler evidence |
 | Read replicas | Replication lag against read-your-writes on a ledger, for a workload that is mostly idle |
 | GraphQL | Caller-composed queries sit badly with per-entity grant checks (ADR-0011) |
 | Websockets or SSE transport | Stateful connections against a scale-to-zero container (ADR-0017) |

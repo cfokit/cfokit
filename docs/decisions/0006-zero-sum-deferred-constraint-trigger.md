@@ -44,7 +44,7 @@ would reject every valid transaction.
 * Application-layer validation only
 * An immediate (non-deferred) constraint trigger
 * A `CHECK` constraint
-* A materialised balance column, kept consistent by the application
+* A materialized balance column, kept consistent by the application
 * Application validation plus a periodic reconciliation job
 * `SERIALIZABLE` isolation instead of an explicit constraint
 
@@ -125,15 +125,15 @@ The natural first thought, and the cheapest mechanism if it worked.
 * Bad, because `CHECK` constraints operate on a single row. Zero-sum is a property of a *set* of
   postings, which is outside what `CHECK` can express.
 
-### A materialised balance column, kept consistent by the application
+### A materialized balance column, kept consistent by the application
 
 Store a running total per transaction and constrain it to zero.
 
 * Good, because the constraint then becomes expressible as a simple `CHECK`.
 * Bad, because it denormalizes state that is derivable, and correctness then depends on the column
   being maintained correctly — the same class of problem one layer down, now with the added
-  possibility of the materialised value disagreeing with the postings it summarizes.
-* Bad, because ADR-0003 rejected materialised balances generally, on the grounds that they should
+  possibility of the materialized value disagreeing with the postings it summarizes.
+* Bad, because ADR-0003 rejected materialized balances generally, on the grounds that they should
   be introduced under profiler evidence rather than as a correctness mechanism.
 
 ### Application validation plus a periodic reconciliation job

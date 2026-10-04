@@ -167,6 +167,6 @@ This is a one-way door, which is why it is decided before the schema exists.
 - A jurisdiction or instrument requires more than ten decimal places, at which point the scale
   changes — a migration, not a redesign.
 - Measured aggregation performance becomes a real bottleneck **and** profiling attributes it to
-  `NUMERIC`. The remedy would then be materialised aggregates, not floats.
+  `NUMERIC`. The remedy would then be materialized aggregates, not floats.
 
 Nothing about developer convenience or storage cost is a revisit trigger.

@@ -258,6 +258,6 @@ per-client channels would be badly disrupted, so the cost is to them rather than
 * Slack changes its event delivery model, or Socket Mode becomes the only supported path — which would
   force a return to ADR-0012, since websockets would then be unavoidable rather than chosen.
 * A second delivery surface is genuinely needed, at which point the channel-to-entity binding
-  generalises to a conversation-to-entity binding and should be designed once rather than twice.
+  generalizes to a conversation-to-entity binding and should be designed once rather than twice.
 * Self-hosted demand for Slack without public ingress becomes real, which is the case that would
   justify re-examining Socket Mode against the non-goals list.

@@ -138,7 +138,7 @@ smell.
   a citation and a test refuses one without it.
 - **Recording what the code returned and asserting that is never a specification.** It pins current
   behavior including its defects, which reintroduces at the top of the pyramid exactly the blind
-  spot layer 2 exists to close. It is legitimate only as a characterisation test taken deliberately
+  spot layer 2 exists to close. It is legitimate only as a characterization test taken deliberately
   before a refactor and labeled as one, and it never stands in for a case at layer 2 or layer 4.
 - **Evals pin the model version** (ADR-0033, `SOC1-35`). An eval run against an unpinned model
   measures the model, not the change.

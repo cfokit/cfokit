@@ -10,7 +10,7 @@ interface TextFieldProps extends Omit<ComponentProps<"input">, "id" | "className
 }
 
 /**
- * A labelled text input. Typed text is `input` size (16px) on every device, because iOS Safari
+ * A labeled text input. Typed text is `input` size (16px) on every device, because iOS Safari
  * zooms into anything smaller. Pass `inputMode` and `autoComplete` so a phone shows the right
  * keyboard: `inputMode="decimal"` for an amount, `type="email"` for an email.
  */

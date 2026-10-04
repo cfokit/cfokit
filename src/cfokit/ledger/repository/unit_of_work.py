@@ -564,7 +564,7 @@ class Database:
 
         A connection per call rather than a pool. Pooling means another runtime dependency,
         and runtime dependencies are decisions here — the workload is low write concurrency
-        per entity (ADR-0003), so this is not the thing to optimise first.
+        per entity (ADR-0003), so this is not the thing to optimize first.
 
         The exception to that reasoning is a bulk import, which is thousands of writes in a
         loop and pays the connection cost on every one. It shares the transaction instead:

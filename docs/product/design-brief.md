@@ -96,7 +96,7 @@ canvas from this file.
 >
 > On a phone, the primary action sits in a bar at the bottom of the screen; the drop zone is a
 > "Choose file" button that opens the device's file picker; and the reconciliation's two-figure
-> table becomes a list with the account name above its two labelled figures.
+> table becomes a list with the account name above its two labeled figures.
 >
 > No filler or lorem ipsum: use realistic figures from a small consulting business, about 5,500
 > transactions over eight years. Names read from a file are shown as plain text. Accounting terms

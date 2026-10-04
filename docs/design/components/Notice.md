@@ -7,8 +7,8 @@ A panel that says what happened or what to know, with a leading word that carrie
 - `tone="danger"`: refused, failed ("Refused", "Differs").
 - `tone="neutral"`: information with no state ("Safe to leave").
 
-A 1px border in the state's colour and the `label` word in that colour; the body is `ink`. Nothing
-depends on telling colours apart, and there is no coloured left bar. Errors say what went wrong and
+A 1px border in the state's color and the `label` word in that color; the body is `ink`. Nothing
+depends on telling colors apart, and there is no colored left bar. Errors say what went wrong and
 what to do, without apology.
 
 Pass `announce` when the notice appears in response to something, such as a refusal after an upload,

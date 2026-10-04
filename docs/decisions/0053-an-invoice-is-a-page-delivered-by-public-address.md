@@ -93,7 +93,7 @@ link is stable (`AR-08`).
 
 CFOKit records what it knows (`AR-19`): that it sent the link, and every event the relay reports on
 that email, where it sent it; that the PDF was downloaded or the link copied, where the operator
-delivered it; and every view of the page, by whatever route its link travelled — forwarded to a
+delivered it; and every view of the page, by whatever route its link traveled — forwarded to a
 customer's accounts team, pasted into a chat, or clicked from CFOKit's email. A view of the page is
 what tells an invoice opened from one never opened (`AR-17`).
 
@@ -108,7 +108,7 @@ invoice and nothing else, and it can be revoked.
   account.
 * Good, because a deployment on one machine invoices by PDF with nothing public.
 * Good, because figures never pass through a relay.
-* Good, because page views record an invoice being opened however its link travelled.
+* Good, because page views record an invoice being opened however its link traveled.
 * Bad, because a customer of a deployment with no public address receives a document rather than a
   link, and sees no later correction unless it is sent to them too.
 * Bad, because rendering the page as a PDF is a capability CFOKit has to provide.

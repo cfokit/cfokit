@@ -141,7 +141,7 @@ against it, and that a divergence set which does not net is a failure rather tha
 
 * Good, because both halves use only what the export already contains.
 * Good, because the basis-free half is the strongest and depends on nothing the source declares.
-* Bad, because neither half localises a wrong-account posting on its own.
+* Bad, because neither half localizes a wrong-account posting on its own.
 
 ### Require the operator to re-export on an accrual basis
 
@@ -172,7 +172,7 @@ against it, and that a divergence set which does not net is a failure rather tha
 ## Revisit when
 
 * A second reader lands whose source prints no journal total, which tests whether the basis-free
-  half generalises or is a QuickBooks convenience.
+  half generalizes or is a QuickBooks convenience.
 * Obligation–settlement links exist for imported books, which would make a per-account cash view
   derivable and turn the rejected option into the best one.
 * The conformance corpus covers cash-to-accrual conversion, which is where the claim this record

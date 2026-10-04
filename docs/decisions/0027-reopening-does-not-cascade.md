@@ -16,12 +16,12 @@ close cannot ship without it: **when March is reopened, what happens to April?**
 
 NetSuite answers by cascading — reopening a period reopens every subsequent closed period. That is
 the right answer *for NetSuite*, and the reason is architectural rather than accounting. NetSuite
-materialises period balances, so April's opening figures are stored values derived from March's
+materializes period balances, so April's opening figures are stored values derived from March's
 closing state. Change March and the stored April figures are wrong, so April must be reopened to be
 recomputed.
 
 **CFOKit does not have that problem.** ADR-0003 chose Postgres partly so that balances are `SUM()`
-over postings, and rejected materialised balances explicitly; ADR-0006 rejected them again as a
+over postings, and rejected materialized balances explicitly; ADR-0006 rejected them again as a
 correctness mechanism. There is no stored April opening balance to invalidate. Post into March and
 April's trial balance simply computes a different, correct answer the next time it is asked for.
 
@@ -55,7 +55,7 @@ That is a real dependency, and it is the only one.
 * No cascade and no re-run: accept the stale closing entry
 * Refuse to reopen a period inside a fiscal year whose close has run
 * Post a compensating entry to retained earnings instead of re-running the close
-* Materialise period balances, making the full cascade necessary and honest
+* Materialize period balances, making the full cascade necessary and honest
 
 ## Decision Outcome
 
@@ -156,15 +156,15 @@ Leave the original closing entries alone and post the difference.
   compensating entry looks like an ordinary adjustment and the reopening becomes invisible in the
   place it matters most.
 
-### Materialise period balances
+### Materialize period balances
 
 Store opening balances per period, making the full cascade necessary and therefore honest.
 
 * Good, because it would make period reports cheaper on large ledgers.
-* Bad, because ADR-0003 and ADR-0006 both rejected materialised balances, the second on the grounds
+* Bad, because ADR-0003 and ADR-0006 both rejected materialized balances, the second on the grounds
   that a stored value can disagree with the postings it summarizes. Introducing them to justify a
   cascade would be adopting a constraint in order to obey it.
-* Bad, because materialisation belongs behind profiler evidence, and there is none.
+* Bad, because materialization belongs behind profiler evidence, and there is none.
 
 ## More Information
 

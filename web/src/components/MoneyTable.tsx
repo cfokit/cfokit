@@ -37,7 +37,7 @@ function Flag() {
  * `money`, totals from the API beneath in `money-total`. The first column names the row.
  *
  * Below `bp-tablet`, a table of one or two figures per row becomes a list: the row's name on one
- * line, its other text in `caption`, and its figures beside it or labelled beneath. A wider table
+ * line, its other text in `caption`, and its figures beside it or labeled beneath. A wider table
  * keeps its columns and scrolls sideways within its own frame, its first column fixed; the page
  * never scrolls sideways.
  */
