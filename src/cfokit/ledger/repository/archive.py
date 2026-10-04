@@ -156,6 +156,28 @@ TABLES: tuple[tuple[str, str], ...] = (
         "SELECT entity_id, next FROM invoice_series WHERE entity_id = %(entity_id)s",
     ),
     (
+        # What each import was reconciled to when it finished (`IMP-08`): the comparison the
+        # person was shown, which a restore keeps rather than reruns against later books.
+        "import_reconciliation",
+        "SELECT id, import_id, since, as_of, stated_debits, stated_credits, our_debits,"
+        " our_credits, recorded_by, recorded_at FROM import_reconciliation"
+        " WHERE entity_id = %(entity_id)s ORDER BY recorded_at, id",
+    ),
+    (
+        "import_reconciliation_comparison",
+        "SELECT c.id, c.reconciliation_id, c.position, c.report, c.their_basis, c.our_basis,"
+        " c.agreed FROM import_reconciliation_comparison c"
+        " JOIN import_reconciliation r ON r.id = c.reconciliation_id"
+        " WHERE c.entity_id = %(entity_id)s ORDER BY r.recorded_at, c.reconciliation_id,"
+        " c.position",
+    ),
+    (
+        "import_reconciliation_line",
+        "SELECT l.id, l.comparison_id, l.kind, l.account_code, l.ours, l.theirs"
+        " FROM import_reconciliation_line l"
+        " WHERE l.entity_id = %(entity_id)s ORDER BY l.comparison_id, l.account_code, l.id",
+    ),
+    (
         "audit_log",
         "SELECT id, request_id, actor, action, subject_type, subject_id, occurred_at, detail"
         " FROM audit_log WHERE entity_id = %(entity_id)s ORDER BY occurred_at, id",

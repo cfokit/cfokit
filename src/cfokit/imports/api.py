@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Iterable
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Annotated, Literal
 
@@ -31,14 +31,11 @@ from pydantic import BaseModel, Field
 from cfokit.imports import (
     ImportRefused,
     Refusal,
-    check_total,
-    compare,
-    nets_to_zero,
     open_books,
     post_entries,
 )
 from cfokit.imports import _import_id as import_id_for
-from cfokit.imports import _reconcile as reconcile_balances
+from cfokit.imports.reconciliation import Reconciled, reconciliations, record_reconciliation
 from cfokit.imports.source import (
     SourceAccount,
     SourceBooks,
@@ -250,8 +247,14 @@ class TotalAgreementModel(BaseModel):
 
 
 class ReconcileImportResponse(BaseModel):
-    """No tolerance. `NFR-01`: "a tolerance is a defect, not a target"."""
+    """One recorded reconciliation. No tolerance: `NFR-01`, "a tolerance is a defect, not a
+    target"."""
 
+    reconciliation_id: str
+    import_id: str
+    recorded_at: datetime
+    since: date | None = Field(description="Start of the period compared. Null is all dates.")
+    as_of: date | None = Field(description="End of the period compared. Null is all dates.")
     agreed: int
     compared: int
     journal_total: TotalAgreementModel | None = Field(
@@ -268,6 +271,12 @@ class ReconcileImportResponse(BaseModel):
     )
     divergences: list[DivergenceModel] = Field(default_factory=list)
     statements: list[StatementComparisonModel] = Field(default_factory=list)
+
+
+class ImportReconciliationsResponse(BaseModel):
+    reconciliations: list[ReconcileImportResponse] = Field(
+        description="Newest first. The first for an import is its current answer."
+    )
 
 
 router = APIRouter(tags=["import"])
@@ -377,7 +386,8 @@ def post_import_entries(
 
 @router.post(
     "/entities/{entity_id}/imports/{import_id}/reconciliation",
-    summary="Compare the imported books against the figures the source states",
+    summary="Compare the imported books against the figures the source states, and record it",
+    status_code=201,
     responses=ERRORS,
 )
 def reconcile_import(
@@ -386,6 +396,7 @@ def reconcile_import(
     body: ReconcileImportRequest,
     acting: Annotated[Principal, Depends(get_principal)],
     database: Annotated[Database, Depends(get_database)],
+    request_id: Annotated[str | None, Header(alias="X-Request-Id")] = None,
 ) -> ReconcileImportResponse:
     """`IMP-08`, and the reason any of this is trustworthy.
 
@@ -393,14 +404,15 @@ def reconcile_import(
     a sum computed from the same journal that was just loaded — that would be our arithmetic
     against itself (`NFR-01`).
 
-    Reads only, so it may be repeated, and it is a read rather than a person's act: anyone who
-    may read this entity's books may check them.
+    **Recorded with the import**, so a later conversation explains what the person was shown
+    rather than a comparison rerun against books that have moved on. A person's act, like the
+    import it finishes; an agent reads it from `GET …/imports/reconciliations`. Run again, it
+    records again beside the first.
 
     No tolerance. Where the source's statements were run on a different basis from its
     journal, the obligation accounts differ by exactly what is unsettled — ADR-0037
     predicts it, and it is reported as a divergence rather than absorbed.
     """
-    del import_id  # names the import for the caller; the comparison is over the books
     books = SourceBooks(
         system="",
         fingerprint="",
@@ -431,15 +443,50 @@ def reconcile_import(
             for statement in body.statements
         ),
     )
-    agreed, compared, divergences = reconcile_balances(
-        database, entity_id=entity_id, principal=acting, books=books, as_of=body.as_of
+    return _rendered(
+        record_reconciliation(
+            database,
+            entity_id=entity_id,
+            principal=acting,
+            request_id=request_id or f"req-{uuid.uuid4().hex}",
+            import_id=import_id,
+            books=books,
+            since=body.since,
+            as_of=body.as_of,
+        )
     )
-    total = check_total(
-        database, entity_id=entity_id, principal=acting, books=books, as_of=body.as_of
+
+
+@router.get(
+    "/entities/{entity_id}/imports/reconciliations",
+    summary="The reconciliations recorded for this entity's imports",
+    responses=ERRORS,
+)
+def import_reconciliations(
+    entity_id: str,
+    acting: Annotated[Principal, Depends(get_principal)],
+    database: Annotated[Database, Depends(get_database)],
+) -> ImportReconciliationsResponse:
+    """What each import was reconciled to when it finished: whether the books match the
+    source, and where they do not. A read."""
+    return ImportReconciliationsResponse(
+        reconciliations=[
+            _rendered(found)
+            for found in reconciliations(database, entity_id=entity_id, principal=acting)
+        ]
     )
+
+
+def _rendered(reconciled: Reconciled) -> ReconcileImportResponse:
+    total = reconciled.total
     return ReconcileImportResponse(
-        agreed=agreed,
-        compared=compared,
+        reconciliation_id=reconciled.id,
+        import_id=reconciled.import_id,
+        recorded_at=reconciled.recorded_at,
+        since=reconciled.since,
+        as_of=reconciled.as_of,
+        agreed=reconciled.balances.agreed,
+        compared=reconciled.balances.compared,
         journal_total=(
             None
             if total is None
@@ -452,8 +499,8 @@ def reconcile_import(
                 difference=total.difference,
             )
         ),
-        divergences_net_to_zero=nets_to_zero(divergences),
-        divergences=_divergences(divergences),
+        divergences_net_to_zero=reconciled.divergences_net_to_zero,
+        divergences=_divergences(reconciled.balances.divergences),
         statements=[
             StatementComparisonModel(
                 report=comparison.report,
@@ -465,14 +512,7 @@ def reconcile_import(
                 only_theirs=list(comparison.only_theirs),
                 unmatched=list(comparison.unmatched),
             )
-            for comparison in compare(
-                database,
-                entity_id=entity_id,
-                principal=acting,
-                books=books,
-                since=body.since,
-                as_of=body.as_of,
-            )
+            for comparison in reconciled.statements
         ],
     )
 

@@ -949,6 +949,23 @@
         "title": "GrantRoleRequest",
         "type": "object"
       },
+      "ImportReconciliationsResponse": {
+        "properties": {
+          "reconciliations": {
+            "description": "Newest first. The first for an import is its current answer.",
+            "items": {
+              "$ref": "#/components/schemas/ReconcileImportResponse"
+            },
+            "title": "Reconciliations",
+            "type": "array"
+          }
+        },
+        "required": [
+          "reconciliations"
+        ],
+        "title": "ImportReconciliationsResponse",
+        "type": "object"
+      },
       "IssueStatementRequest": {
         "description": "Mark a statement issued, fixing what was reported, to whom, and when (RPT-17).",
         "properties": {
@@ -1642,11 +1659,24 @@
         "type": "object"
       },
       "ReconcileImportResponse": {
-        "description": "No tolerance. `NFR-01`: \"a tolerance is a defect, not a target\".",
+        "description": "One recorded reconciliation. No tolerance: `NFR-01`, \"a tolerance is a defect, not a\ntarget\".",
         "properties": {
           "agreed": {
             "title": "Agreed",
             "type": "integer"
+          },
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "End of the period compared. Null is all dates.",
+            "title": "As Of"
           },
           "compared": {
             "title": "Compared",
@@ -1665,6 +1695,10 @@
             "title": "Divergences Net To Zero",
             "type": "boolean"
           },
+          "import_id": {
+            "title": "Import Id",
+            "type": "string"
+          },
           "journal_total": {
             "anyOf": [
               {
@@ -1676,6 +1710,28 @@
             ],
             "description": "Our totals against the one the source states for its raw journal. Null where the source printed none."
           },
+          "reconciliation_id": {
+            "title": "Reconciliation Id",
+            "type": "string"
+          },
+          "recorded_at": {
+            "format": "date-time",
+            "title": "Recorded At",
+            "type": "string"
+          },
+          "since": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Start of the period compared. Null is all dates.",
+            "title": "Since"
+          },
           "statements": {
             "items": {
               "$ref": "#/components/schemas/StatementComparisonModel"
@@ -1685,6 +1741,11 @@
           }
         },
         "required": [
+          "reconciliation_id",
+          "import_id",
+          "recorded_at",
+          "since",
+          "as_of",
           "agreed",
           "compared"
         ],
@@ -4503,6 +4564,105 @@
         ]
       }
     },
+    "/entities/{entity_id}/imports/reconciliations": {
+      "get": {
+        "description": "What each import was reconciled to when it finished: whether the books match the\nsource, and where they do not. A read.",
+        "operationId": "import_reconciliations_entities__entity_id__imports_reconciliations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportReconciliationsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "The reconciliations recorded for this entity's imports",
+        "tags": [
+          "import"
+        ]
+      }
+    },
     "/entities/{entity_id}/imports/{import_id}/entries": {
       "post": {
         "description": "Each entry is a write through the ledger's ordinary path (`IMP-02`, `IMP-04`).\n\n**Safe to retry.** Every entry's idempotency key is derived from the file's fingerprint and\nthe source's own reference, so a batch sent twice is a replay rather than a second set of\nbooks (ADR-0029) — which is what lets a client that dies mid-import resume by sending the\nsame batches again. `replayed` counts what a previous attempt had already done, and is never\nsummed with `posted`.\n\n`import_id` must be the one this fingerprint yields. It is derived rather than stored, so\nthis is a check that the caller is continuing the import it opened rather than a lookup.\n\nA row this cannot post is reported and the rest of the batch proceeds: `IMP-05` asks for an\nimport that skips a malformed row rather than abandoning eleven thousand good ones.",
@@ -4639,7 +4799,7 @@
     },
     "/entities/{entity_id}/imports/{import_id}/reconciliation": {
       "post": {
-        "description": "`IMP-08`, and the reason any of this is trustworthy.\n\nAgreement is demonstrated against the balances the source states **for itself**, not against\na sum computed from the same journal that was just loaded — that would be our arithmetic\nagainst itself (`NFR-01`).\n\nReads only, so it may be repeated, and it is a read rather than a person's act: anyone who\nmay read this entity's books may check them.\n\nNo tolerance. Where the source's statements were run on a different basis from its\njournal, the obligation accounts differ by exactly what is unsettled — ADR-0037\npredicts it, and it is reported as a divergence rather than absorbed.",
+        "description": "`IMP-08`, and the reason any of this is trustworthy.\n\nAgreement is demonstrated against the balances the source states **for itself**, not against\na sum computed from the same journal that was just loaded — that would be our arithmetic\nagainst itself (`NFR-01`).\n\n**Recorded with the import**, so a later conversation explains what the person was shown\nrather than a comparison rerun against books that have moved on. A person's act, like the\nimport it finishes; an agent reads it from `GET …/imports/reconciliations`. Run again, it\nrecords again beside the first.\n\nNo tolerance. Where the source's statements were run on a different basis from its\njournal, the obligation accounts differ by exactly what is unsettled — ADR-0037\npredicts it, and it is reported as a divergence rather than absorbed.",
         "operationId": "reconcile_import_entities__entity_id__imports__import_id__reconciliation_post",
         "parameters": [
           {
@@ -4658,6 +4818,22 @@
             "schema": {
               "title": "Import Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Request-Id"
             }
           },
           {
@@ -4688,7 +4864,7 @@
           "required": true
         },
         "responses": {
-          "200": {
+          "201": {
             "content": {
               "application/json": {
                 "schema": {
@@ -4749,7 +4925,7 @@
             "description": "Unprocessable Content"
           }
         },
-        "summary": "Compare the imported books against the figures the source states",
+        "summary": "Compare the imported books against the figures the source states, and record it",
         "tags": [
           "import"
         ]

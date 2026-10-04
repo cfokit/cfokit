@@ -336,6 +336,23 @@
     "name": "create_entity"
   },
   {
+    "description": "What each import into this entity was reconciled to when it finished, newest first; the first for an import is its current answer. Use it to answer whether the books match the system they were imported from. journal_total compares the source's own journal total with ours and is basis-free. balances compares the source's stated balances with ours in posting signs (positive is a debit); divergences that net to zero are consistent with the source's reports being on a different accounting basis, and ones that do not are a defect. statements compares each statement the source printed, signed as printed, and lists accounts on one side only and rows the reader could not match. Writes nothing.",
+    "inputSchema": {
+      "properties": {
+        "entity_id": {
+          "title": "Entity Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity_id"
+      ],
+      "title": "reconciliations_toolArguments",
+      "type": "object"
+    },
+    "name": "import_reconciliations"
+  },
+  {
     "description": "Mark a statement issued, fixing what was reported, to whom, and when. Pass the rendered figures you gave the recipient: they are stored rather than re-derived, because re-deriving assumes the presentation never changes. A correction posted afterwards marks the statement superseded, with no flag to maintain.",
     "inputSchema": {
       "properties": {

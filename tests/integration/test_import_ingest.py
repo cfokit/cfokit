@@ -11,6 +11,7 @@ the neutral shape, and these tests are written against that shape directly.
 from __future__ import annotations
 
 import uuid
+from decimal import Decimal
 from typing import Any
 
 import pytest
@@ -345,7 +346,7 @@ def test_it_reconciles_against_the_sources_own_figures(client: TestClient, entit
         },
     )
 
-    assert response.status_code == 200
+    assert response.status_code == 201
     assert response.json()["agreed"] == 2
     assert response.json()["compared"] == 2
     assert response.json()["divergences"] == []
@@ -364,18 +365,36 @@ def test_a_divergence_is_reported_with_both_figures(client: TestClient, entity: 
     body = response.json()
     assert body["agreed"] == 0
     assert body["divergences"][0]["account_code"] == "Checking"
-    assert body["divergences"][0]["theirs"] == "90.00"
+    assert Decimal(body["divergences"][0]["theirs"]) == Decimal("90.00")
 
 
-def test_reconciling_reads_and_may_be_repeated(client: TestClient, entity: str) -> None:
-    """Anyone who may read this entity's books may check them: it is a read, not a person's
-    act, so an agent session is not refused here."""
+def test_reconciling_again_records_again(client: TestClient, entity: str) -> None:
+    """A second reconciliation sits beside the first rather than replacing it (ADR-0007)."""
     import_id = opened(client, entity)
     url = f"/entities/{entity}/imports/{import_id}/reconciliation"
     payload = {"balances": [{"account_code": "Checking", "balance": "0.00"}]}
 
-    assert client.post(url, json=payload).status_code == 200
-    assert client.post(url, json=payload).status_code == 200
+    first = client.post(url, json=payload).json()["reconciliation_id"]
+    second = client.post(url, json=payload).json()["reconciliation_id"]
+
+    assert first != second
+
+
+def test_a_delegated_agent_may_not_record_one(settings: Settings, entity: str) -> None:
+    """Recording what the import was reconciled to finishes the import, which is a person's act
+    (ADR-0007). An agent reads it instead."""
+    import_id = opened(
+        TestClient(rest_app(settings, authenticator=StubAuthenticator())), entity
+    )
+    agent = TestClient(rest_app(settings, authenticator=StubAuthenticator(AGENT)))
+
+    response = agent.post(
+        f"/entities/{entity}/imports/{import_id}/reconciliation",
+        json={"balances": [{"account_code": "Checking", "balance": "0.00"}]},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["code"] == "not_a_person"
 
 
 def test_a_statement_is_compared_by_account(client: TestClient, entity: str) -> None:
