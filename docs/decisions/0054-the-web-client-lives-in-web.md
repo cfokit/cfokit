@@ -90,7 +90,7 @@ without separating the client from the contract it is typed against.
   a shared package.
 * **`tokens.json`**, the one file from Claude Design that enters the repository (ADR-0049 § 10),
   because it is an input to the client's build and has no other consumer.
-* **The onboarding panel** of ADR-0058, built here from the client's components, with its
+* **The getting-started pages** of ADR-0058, built here from the client's components, with their
   TypeScript export reader and the reader's tests against the synthetic export.
 * **`web/CLAUDE.md`**, carrying the client's rules — the money rule, the `dangerouslySetInnerHTML`
   ban, the license rule for the bundle — so they load when work happens there, as a capability's

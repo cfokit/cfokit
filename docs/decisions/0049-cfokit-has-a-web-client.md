@@ -211,7 +211,7 @@ The build is a stage of the one image; nothing is served from a Node process.
 | Sign-in screens | Keycloakify | The issuer's pages written as React components on the client's theme (§ 1) |
 | Auth | `oidc-client-ts` + `react-oidc-context` | Maintained PKCE, refresh and redirect handling. Configured with an in-memory user store; only its sign-in state uses `sessionStorage`, as § 2 requires |
 | Money | `big.js` | Amounts arrive as decimal strings and are displayed without ever becoming a JavaScript `number` |
-| Parsing | A Web Worker, called through Comlink | A large export does not block the onboarding panel's page (ADR-0058) |
+| Parsing | A Web Worker, called through Comlink | A large export does not block the getting-started pages (ADR-0058) |
 | Tests | Vitest, Testing Library, MSW; Playwright end to end; axe for accessibility | Component, contract-mocked and cross-browser layers |
 | Fonts | Public Sans (interface and money) and Archivo Narrow (display), bundled from their upstream releases | The design system's faces, served from the client's own origin, content-hashed like the rest of the build, with their license texts in the same build; the system interface font is every stack's fallback |
 | Tooling | pnpm with a pinned lockfile; ESLint with typescript-eslint; Prettier | Pinned and updated by Dependabot, like every other dependency |
@@ -356,8 +356,8 @@ does.
 **Reversal cost.** Low while the web client is one page; rising with every page added.
 
 Related: ADR-0012 (the gate), ADR-0019 (the issuer), ADR-0023 (one image), ADR-0042 (acts reserved
-to a person), ADR-0058 (onboarding, which this client does not carry for an organization's own
-agent).
+to a person), ADR-0058 (getting started, which this client carries for both offerings), ADR-0034 (the
+runtime, which this client is).
 
 ## Revisit when
 
@@ -367,7 +367,6 @@ agent).
   customer rather than a test.
 * React Server Components or a server-rendered framework become necessary for something this
   client needs, which would reopen the static, same-origin shape.
-* Managed bookkeeping is built. This client, with mobile and tablet apps, becomes the container
-  in which CFOKit chooses the model for each part of the experience (ADR-0058), and the context
-  this record argues from — onboarding — is rewritten for that offering.
+* Managed bookkeeping is built, and this client becomes the runtime that hosts the skills and
+  chooses the model for each use case (ADR-0034 § 4).
 * Operators ask to record or review the books without a connection, which reopens offline-first.

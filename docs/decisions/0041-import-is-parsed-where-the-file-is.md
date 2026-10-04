@@ -70,8 +70,8 @@ So the transport is not one question but two, and they have different answers:
 - **Credentials.** Neither may hold the credential a post needs. A credential never passes through
   an agent or a model (`IAM-10`), and the reader always runs where an agent does. So it never
   calls CFOKit: the parsed shape reaches CFOKit through a client that holds the person's
-  credential outside the agent — the MCP connection the host signs in, which the onboarding panel
-  calls through (ADR-0058).
+  credential outside the agent — the web client, signed in on the issuer's page in the person's
+  browser (ADR-0058).
 
 ## Decision Drivers
 
