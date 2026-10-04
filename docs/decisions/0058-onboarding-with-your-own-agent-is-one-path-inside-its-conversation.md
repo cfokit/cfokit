@@ -181,6 +181,11 @@ built on the MCP Apps SDK 2.0.1:
 | The same tool, asked for by the model | Not in the model's tool list: "I searched for it and nothing matches" |
 | `ui/update-model-context` | Accepted, with nothing shown |
 | `ui/message` | Placed in the person's message box, under a warning, for them to send |
+| The client's own components, with their stylesheet and fonts inlined | Rendered as designed: the field, drop zone, progress, notices, money table and buttons |
+| Public Sans and Archivo Narrow, inlined as `data:` URIs | Loaded |
+| The host's theme, applied as `data-theme` | Followed, light and dark |
+| A file `accept` does not allow, dropped on the drop zone | Refused |
+| The panel's width | 399 px when it loads, widening after, to the tablet layout |
 * Not gated: that no other onboarding route is built. That is review.
 
 ## Pros and Cons of the Options
