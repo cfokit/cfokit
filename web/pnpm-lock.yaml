@@ -172,6 +172,9 @@ importers:
       big.js:
         specifier: 7.0.1
         version: 7.0.1
+      comlink:
+        specifier: 4.4.2
+        version: 4.4.2
       keycloakify:
         specifier: 11.16.0
         version: 11.16.0
@@ -894,6 +897,9 @@ packages:
   chai@6.2.2:
     resolution: {integrity: sha512-NUPRluOfOiTKBKvWPtSD4PhFvWCqOi0BGStNWs57X9js7XGTprSmFoz5F0tWhR4WPjNeR9jXqdC7/UpSJTnlRg==}
     engines: {node: '>=18'}
+
+  comlink@4.4.2:
+    resolution: {integrity: sha512-OxGdvBmJuNKSCMO4NTl1L47VRp6xn2wG4F/2hYzB6tiCb709otOxtEYCSvK80PtjODfXXZu8ds+Nw5kVCjqd2g==}
 
   convert-source-map@2.0.0:
     resolution: {integrity: sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==}
@@ -2323,6 +2329,8 @@ snapshots:
   caniuse-lite@1.0.30001812: {}
 
   chai@6.2.2: {}
+
+  comlink@4.4.2: {}
 
   convert-source-map@2.0.0: {}
 

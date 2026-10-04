@@ -41,11 +41,8 @@ from cfokit.server import mcp_server, rest_app  # noqa: E402
 # A DSN that is never connected to. Generating a contract must not need a database, or the
 # gate would need one too (ADR-0004).
 #
-# Nothing here is conditional on configuration. It was: the import tools existed only where
-# `IMPORT_ROOT` named a directory, so the contract had to be generated with it set or a
-# deployment would expose less than the contract listed. Import's surface is now REST and
-# unconditional (ADR-0041), so the published contract no longer depends on how a deployment
-# is configured — which is the property a caller binds to.
+# Nothing here is conditional on configuration, so the published contract does not depend on how
+# a deployment is configured — which is the property a caller binds to.
 SETTINGS = Settings(
     database_url="postgresql://contract.invalid/none",
     public_base_url="http://localhost:8080",

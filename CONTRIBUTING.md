@@ -33,7 +33,7 @@ code comment. [`docs/decisions/README.md`](docs/decisions/README.md) explains th
 ## Setting up
 
 You need [`uv`](https://docs.astral.sh/uv/) (not pip, not poetry) and Docker. The code targets
-Python 3.14, which `uv` installs for you. Only the scripts under `skills/` run on 3.11.
+Python 3.14, which `uv` installs for you.
 
 ```bash
 uv sync              # install everything
@@ -42,7 +42,7 @@ uv run task --list   # every command, and what it does
 
 **Using Claude Code?** Any Claude Code environment with outbound network access works, cloud or
 local, and the agent can run everything below for you. A cloud session is provisioned
-automatically by `.claude/hooks/session-start.sh` (`uv`, Python 3.14 and 3.11, Node 24 and pnpm
+automatically by `.claude/hooks/session-start.sh` (`uv`, Python 3.14, Node 24 and pnpm
 for the web client, the locked dependencies and a Docker daemon). That hook does nothing locally, so a local session needs `uv`
 and Docker installed first. A stack in a cloud session lives inside its container, so you can
 exercise it from the session but not from your own machine.
@@ -51,7 +51,7 @@ exercise it from the session but not from your own machine.
 
 | For | Host |
 |---|---|
-| `uv` binary and the Python 3.14 and 3.11 downloads | `github.com` and its release-asset hosts (`*.githubusercontent.com`) |
+| `uv` binary and the Python 3.14 download | `github.com` and its release-asset hosts (`*.githubusercontent.com`) |
 | Node, at the version `web/.nvmrc` pins, for the web client | `nodejs.org` |
 | Python packages (`uv sync`, image builds) | `pypi.org`, `files.pythonhosted.org` |
 | `python` and `postgres` images | Docker Hub: `registry-1.docker.io`, `auth.docker.io`, `production.cloudflare.docker.com` |

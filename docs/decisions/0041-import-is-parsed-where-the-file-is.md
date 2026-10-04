@@ -59,9 +59,8 @@ script run in a Desktop chat on 2026-09-29:
 | `https://example.com` | the proxy refused the tunnel: 403 |
 | `https://www.google.com` | the proxy refused the tunnel: 403 |
 
-Anthropic documents 3.11 for the API's code-execution tool, which agrees.
-`tests/test_reader_script.py` runs the reader on 3.11, and ruff holds `skills/` to it. Re-run the
-probe before relying on any of this for a new decision.
+Anthropic documents 3.11 for the API's code-execution tool, which agrees. Re-run the probe before
+relying on any of this for a new decision.
 
 So the transport is not one question but two, and they have different answers:
 
@@ -112,6 +111,9 @@ published shape, and it needs nothing from CFOKit but the contract — which is 
 
 ### 2. The reader ships with the skill, and CI tests it as a client
 
+**Superseded by [ADR-0058](0058-getting-started-is-one-path-on-the-web.md):** the reader is the getting-started page's, in TypeScript, and CI tests
+it against the synthetic export in the same way.
+
 A stdlib-only script — an `.xlsx` is a zip of XML with a shared-strings table — distributed in the
 skill bundle. No `openpyxl` in the agent runtime and none on the server.
 
@@ -150,6 +152,9 @@ that dies mid-import resumes by sending the same batches again.
 
 ### 5. The script holds no credential and calls nothing
 
+**Superseded by [ADR-0058](0058-getting-started-is-one-path-on-the-web.md):** the reader runs in the person's browser, inside a web client signed in on
+the issuer's page, so no script exists to hold one.
+
 The reader parses and prints. It never signs anyone in and never sends a request, because any
 credential it obtained would sit in the agent's runtime, where the code the model writes can read
 it (`IAM-10`), and would let the agent act as the person with nothing of its own on the action
@@ -170,7 +175,8 @@ the import API with the person's own token, and nothing passes through an agent
 
 ### 6. A sandboxed runtime imports over MCP, and the model is the bridge
 
-**Superseded by [ADR-0058](0058-getting-started-is-one-path-on-the-web.md).** Sections 1–5 stand.
+**Superseded by [ADR-0058](0058-getting-started-is-one-path-on-the-web.md).** Sections 1, 3, 4, 7
+and 8 stand.
 
 Where the runtime cannot reach CFOKit, the same neutral shape arrives as MCP tool arguments. The
 sandbox parses the archive and hands the model a compact rendering; the model calls the tool.
@@ -261,9 +267,8 @@ arrives by accident. The script runs locally as readily as it runs anywhere.
 
 ### Confirmation
 
-The reader's own conformance is CI running the distributed script against the synthetic export and
-comparing what it emits against the shape the server accepts — a layer 3 test in
-`ADR-0036`'s terms, driving the script as the skill drives it.
+The reader's own conformance is CI running it against the synthetic export and comparing what it
+emits against the shape the server accepts — a layer 3 test in `ADR-0036`'s terms.
 
 The bounds are gated where the parsing is: an archive past each bound is refused, and a member
 whose declared size understates what it delivers is refused on read, because the central directory
@@ -272,7 +277,7 @@ is written by whoever made the file.
 The contract itself is gated by CI gate 5 (`ADR-0015`): the neutral shape is a published interface,
 so a change to it appears in a pull request as a change to a contract.
 
-**Not gated:** nothing detects a skill emitting an older shape than the server expects. A version
+**Not gated:** nothing detects a client emitting an older shape than the server expects. A version
 field makes it detectable at the boundary; nothing makes it impossible.
 
 ## Pros and Cons of the Options

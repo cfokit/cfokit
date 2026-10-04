@@ -5,6 +5,7 @@ import {
   AppFrame,
   Button,
   Card,
+  CopyBlock,
   Dialog,
   DropZone,
   Money,
@@ -131,6 +132,21 @@ describe("TextLink", () => {
     expect(screen.getByRole("link", { name: "Create an account" }).getAttribute("href")).toBe(
       "/register",
     );
+  });
+});
+
+describe("CopyBlock", () => {
+  test("shows the text exactly, and copies it, saying so", async () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    const text = "line one\n  line two";
+    render(<CopyBlock label="Your first question" text={text} />);
+
+    const block = screen.getByRole("figure", { name: "Your first question" });
+    expect(block.querySelector("pre")?.textContent).toBe(text);
+    fireEvent.click(within(block).getByRole("button", { name: "Copy" }));
+    await waitFor(() => expect(within(block).getByRole("button", { name: "Copied" })).toBeTruthy());
+    expect(writeText).toHaveBeenCalledWith(text);
   });
 });
 

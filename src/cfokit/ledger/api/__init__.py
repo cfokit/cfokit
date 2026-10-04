@@ -38,6 +38,7 @@ from cfokit.ledger.api.models import (
     CloseYearRequest,
     ComparativeLineModel,
     ComparativeProfitAndLossResponse,
+    ConnectionResponse,
     CreateAccountRequest,
     CreateEntityRequest,
     EntityCreatedResponse,
@@ -310,6 +311,22 @@ def create_app(settings: Settings, authenticator: Authenticator | None = None) -
             "authorization_servers": [settings.auth_issuer_url],
             "bearer_methods_supported": ["header"],
         }
+
+    @app.get(
+        "/connection",
+        tags=["operations"],
+        summary="Where an agent connects to this deployment",
+        responses=ERRORS,
+    )
+    def connection(
+        _acting: Annotated[Principal, Depends(get_principal)],
+    ) -> ConnectionResponse:
+        """The MCP surface's address, from configuration, for the web client to show a person
+        connecting their agent. Configured rather than derived: the REST service cannot know
+        where another service is reachable, and request headers lie behind a proxy
+        (ADR-0004)."""
+        base = settings.mcp_public_base_url
+        return ConnectionResponse(mcp_url=None if base is None else f"{base.rstrip('/')}/mcp")
 
     @app.get("/healthz", tags=["operations"], summary="Liveness")
     def healthz() -> dict[str, str]:

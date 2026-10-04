@@ -1,7 +1,7 @@
 #!/bin/bash
 # Prepares a Claude Code cloud session to run the gates CI runs (CLAUDE.md § CI gates).
 #
-# Host: uv at the version CI pins, which fetches Python 3.14 and 3.11 into its own cache, then
+# Host: uv at the version CI pins, which fetches Python 3.14 into its own cache, then
 # `uv sync --locked`. That covers lint, money, decisions, contracts and the unit tests.
 # Node: the version web/.nvmrc pins, and the web client's dependencies through pnpm, so the
 # web client's lint, tests and build run as its CI job runs them (ADR-0054).
@@ -28,7 +28,7 @@ if [ "$(uv --version 2>/dev/null | awk '{print $2}')" != "$UV_VERSION" ]; then
   hash -r
 fi
 
-uv python install --quiet 3.14 3.11
+uv python install --quiet 3.14
 uv sync --locked --quiet
 
 # Node's own CA store does not include the session proxy's, so corepack and pnpm need it named.

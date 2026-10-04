@@ -197,6 +197,8 @@ services:
       # it hands off to are both secure origins, as they are on any deployment.
       TLS_CERT_FILE: /etc/cfokit/tls-server/cert.pem
       TLS_KEY_FILE: /etc/cfokit/tls-server/key.pem
+      # The MCP service's own address, which the web client shows a person connecting their agent.
+      MCP_PUBLIC_BASE_URL: ${MCP_PUBLIC_BASE_URL:-https://localhost:8081}
     volumes:
       - ./.local/tls/ca:/etc/cfokit/tls:ro
       - ./.local/tls/cfokit:/etc/cfokit/tls-server:ro

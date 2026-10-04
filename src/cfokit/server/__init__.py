@@ -24,7 +24,6 @@ from cfokit.activity import mcp as activity_mcp
 from cfokit.assignment import api as assignment_api
 from cfokit.assignment import mcp as assignment_mcp
 from cfokit.imports import api as imports_api
-from cfokit.imports import mcp as imports_mcp
 from cfokit.ledger.api import create_app
 from cfokit.ledger.config import Settings
 from cfokit.ledger.mcp import acting, create_server
@@ -38,19 +37,11 @@ __all__ = ["mcp_server", "rest_app"]
 def mcp_server(settings: Settings, authenticator: Authenticator | None = None) -> MCPServer:
     """The MCP surface: the ledger's tools, plus each module's.
 
-    Import contributes tools again, on different terms. They took a path to a file the
-    server would read, which needed a directory mounted where the server could see it — no
-    analogue on a hosted deployment, and not an onboarding step anybody completes. These take
-    the parsed shape, because a sandboxed agent runtime cannot open a socket to CFOKit and the
-    model is then the only bridge between the file and the books (ADR-0041 § 6).
-
-    Registered unconditionally. The old ones existed only where `IMPORT_ROOT` named a
-    directory, because a tool taking a path is a file-read primitive; these take a body, so
-    there is nothing to withhold and the published contract no longer depends on how a
-    deployment is configured.
+    Import contributes none. Books are imported on the getting-started pages, which read the
+    export in the person's browser and post it over REST with their own token, so no figure
+    passes through a model (ADR-0058).
     """
     server = create_server(settings, authenticator=authenticator)
-    imports_mcp.register(server, Database(settings.database_url), acting=acting)
     assignment_mcp.register(server, Database(settings.database_url), acting=acting)
     activity_mcp.register(server, Database(settings.database_url), acting=acting)
     return server

@@ -8,10 +8,9 @@ ledger adapter importing this would be exactly that dependency (ADR-0022).
 minute of posting: too much for one request, and nothing like enough to need a job. The
 client holds the loop counter, so each request is short and progress is inherent.
 
-**The archive never arrives.** It is parsed in the agent's own runtime by the reader
-that ships with the skill, so this process parses no foreign binary format and a
-hostile spreadsheet reaches the machine whose owner opened it and nothing else
-(`NFR-04`).
+**The archive never arrives.** It is parsed in the person's browser by the web client's
+reader, so this process parses no foreign binary format and a hostile spreadsheet reaches
+the machine whose owner opened it and nothing else (`NFR-04`, ADR-0058).
 
 **This shape is the published contract**, not a QuickBooks export. A reader for a
 system CFOKit has never heard of targets these models and needs nothing else

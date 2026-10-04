@@ -78,6 +78,22 @@ def test_tls_is_off_unless_asked_for(monkeypatch: pytest.MonkeyPatch) -> None:
     assert settings.tls_key_file is None
 
 
+def test_the_mcp_address_is_read_when_set(monkeypatch: pytest.MonkeyPatch) -> None:
+    for name in REQUIRED:
+        monkeypatch.setenv(name, "value")
+    monkeypatch.setenv("MCP_PUBLIC_BASE_URL", "https://mcp.example.test")
+
+    assert load_settings().mcp_public_base_url == "https://mcp.example.test"
+
+
+def test_the_mcp_address_is_optional(monkeypatch: pytest.MonkeyPatch) -> None:
+    for name in REQUIRED:
+        monkeypatch.setenv(name, "value")
+    monkeypatch.delenv("MCP_PUBLIC_BASE_URL", raising=False)
+
+    assert load_settings().mcp_public_base_url is None
+
+
 def test_tls_takes_a_certificate_and_its_key(monkeypatch: pytest.MonkeyPatch) -> None:
     for name in REQUIRED:
         monkeypatch.setenv(name, "value")

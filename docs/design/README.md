@@ -128,6 +128,9 @@ live in its code and are published into this system from there.
   per row (ours and QuickBooks') becomes a list: the account name on one line and the two
   figures labeled beneath it. A wider table keeps its columns, scrolls sideways within its own
   frame and keeps the first column fixed; the page never scrolls sideways.
+- **Copy block.** Text to copy somewhere else — a prompt, a command, a configuration — on
+  `sunken` with a `rule` border and `radius-md`, its label above it and a "Copy" link at the
+  right that reads "Copied" once it has. The text wraps and stays selectable. Never for figures.
 - **Card.** Only for an object that stands apart: `surface`, `radius-lg`, a `rule` border,
   `space-6` padding. Lists of rows are tables, not cards.
 - **App frame.** A `bar-height` header on `surface` with a bottom `rule`: the mark and the

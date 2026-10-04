@@ -42,7 +42,7 @@ security add-trusted-cert -r trustRoot -k ~/Library/Keychains/login.keychain-db 
 
 It stays trusted until you delete `.local/tls/`, which makes a new CA on the next start.
 
-## 2. Create your account
+## 2. Create your account and bring in your books
 
 On Windows, first add this line to your hosts file:
 
@@ -51,8 +51,13 @@ On Windows, first add this line to your hosts file:
 ```
 
 Open **https://localhost:8080/app/**, choose **Register** on the sign-in page, and create your
-account with your email and a password. The web client signs you in when you're done; that
-account is the one Claude Desktop signs in as in step 3.
+account with your email and a password. That account is the one Claude Desktop signs in as in
+step 3.
+
+The web client then takes you through getting started: choose your QuickBooks Online export (the
+.zip from **Settings → Export data**, all dates), confirm the company it describes, and import.
+The export is read in your browser and never uploaded; what is posted is what was read from it,
+signed in as you. When it finishes, the page shows whether the books agree with QuickBooks.
 
 ## 3. Configure Claude Desktop
 
@@ -111,62 +116,10 @@ cd skills && zip -r ~/Downloads/bookkeeper.zip bookkeeper
 
 Then in Claude Desktop: **Customize → Skills → `+` → Create skill**, and upload that zip.
 
-## 5. Create your books
+## 5. Ask about your books
 
-In Claude Desktop:
-
-> Create an entity called "My Company", accrual basis, fiscal year ending 31 December, USD,
-> America/New_York.
-
-Creating an entity needs an authenticated caller and no prior role — it is the one act with
-that property, and **the act of creating it is what makes you its owner** (`IAM-05`, `IAM-06`).
-There is nothing to provision and no grant for anyone to make.
-
-Every declaration is required and none has a default. The basis, the fiscal year end, the
-currency and the time zone are what every report the entity ever produces is computed against,
-and a default would be an undeclared state wearing a value (`LED-14`, `LED-15`, `PLT-08`).
-
-Keep the `entity_id` it returns.
-
-## 6. Import, reconcile, compare
-
-Attach the QuickBooks export to a Claude Desktop chat and ask the skill to import it into the
-entity from step 5. The skill's script reads the export in Claude's sandbox and first shows you
-what it holds:
-
-```
-QuickBooks Online, USD
-  5556 transactions, 11580 posting lines
-  62 accounts
-  covering 2018-04-11 to 2026-09-01
-  entries unknown basis, stated balances cash basis
-  2 accounts the source states no type for: [...]
-  NOTE: the stated balances were run on a different basis from the journal, so the
-  obligation accounts will differ by what is unsettled (ADR-0037)
-```
-
-Nothing has been sent yet. When you are satisfied, the skill imports through the MCP tools —
-`open_import`, `import_entries` in batches, then `reconcile_import` — signed in as you through
-Claude Desktop's connection. The script itself never calls CFOKit: a credential never passes
-through an agent or a model (`IAM-10`). The reconciliation reads like this:
-
-```
-posted 5553, replayed 0, skipped 3
-reconciled 25 of 27 accounts exactly
-  DIVERGES Accounts Receivable (A/R): ours 25469.0000000000 theirs 0
-  DIVERGES Services: ours -2518417.0400000000 theirs -2492948.04
-profit_and_loss: 44 agree, 1 diverge (theirs cash, ours accrual)
-balance_sheet: 10 agree, 1 diverge (theirs cash, ours accrual)
-```
-
-**Those two divergences are the same figure**, 25,469.00, appearing as the receivable and as the
-income not yet recognized against it. The journal is accrual and the reports were run on a cash
-basis, so they differ by exactly what is unsettled — ADR-0037 predicts it. To compare like with
-like, set QuickBooks' accounting method to Accrual and re-export.
-
-**Run it again and it is safe.** Each entry's key is derived from the file and the row, so an
-import that died partway resumes: `replayed` rises and `posted` stays at zero. A *re-export* is a
-different file and therefore a second import — use a fresh entity for one.
+The last page of getting started has **Continue in Claude**, which opens Claude Desktop on a new
+chat with the first question already written and naming your company. Send it.
 
 ## When a tool is missing
 
@@ -193,18 +146,16 @@ docker compose up -d --build mcp ledger
 
 ## Reading the result
 
-**Three statements, one divergence, appearing twice.** On a real set of books the trial balance
-agreed on 25 of 27 accounts, the profit and loss on 44 of 45, and the balance sheet on 10 of 11
-— and every disagreement was the same figure: receivables outstanding, once as the receivable
-and once as the revenue not yet recognized against it.
+**A cash-basis difference is expected.** QuickBooks' reports are often run on the cash basis, and
+CFOKit records every invoice and bill when it happens, so receivables and the income not yet
+recognized against them differ by exactly what is unsettled — ADR-0037 predicts it, and the
+import page marks it as expected. To compare like with like, set QuickBooks' accounting method to
+Accrual and re-export.
 
-That is the difference between an accrual ledger and cash-basis statements, which ADR-0037
-predicts. `expect_obligation_accounts_to_differ` says so before you look. **The prediction is
-what makes a different figure a defect** rather than something to explain away.
+**Importing the same file again is safe.** Each transaction's key is derived from the file and
+its row, so an import that stopped partway resumes and nothing is counted twice. A *re-export* is
+a different file, and therefore a second import: use a fresh company for one.
 
-**Skipped rows are refusals decided before anything was posted.** A transaction with one line
-records no movement of value; one whose debits and credits differ cannot balance. They are named
-in the report with the reference they came in under.
-
-**Accounts the source states no type for** are created as assets, which is inert for a trial
-balance, and listed so the choice is visible rather than discovered in a statement later.
+**Rows left out are refusals decided before anything was posted.** A transaction with one line
+records no movement of value; one whose debits and credits differ cannot balance. The page names
+each with the row it came from.

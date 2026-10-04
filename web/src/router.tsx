@@ -1,20 +1,71 @@
 import { createRootRoute, createRoute, createRouter, Outlet } from "@tanstack/react-router";
 import { SignedIn } from "./auth/SignedIn";
-import { Home } from "./Home";
+import { ConnectPage } from "./start/ConnectPage";
+import { FirstQuestion } from "./start/FirstQuestion";
+import { GettingStarted } from "./start/GettingStarted";
+import { ImportPage } from "./start/ImportPage";
+import { StartedProvider } from "./start/state";
 
 // Where the operator is lives in the URL, so a reload or a link lands on the same page
 // (ADR-0049 § 2). The client is served at /app/ (ADR-0049 § 5).
 
-const root = createRootRoute({ component: Outlet });
+const root = createRootRoute({
+  component: () => (
+    <StartedProvider>
+      <Outlet />
+    </StartedProvider>
+  ),
+});
 
-const home = createRoute({
+// Getting started (ADR-0058): the export and the company it describes, then the import into that
+// company, connecting Claude, and the first question.
+const start = createRoute({
   getParentRoute: () => root,
   path: "/",
   component: () => (
     <SignedIn>
-      <Home />
+      <GettingStarted />
     </SignedIn>
   ),
+});
+
+const importing = createRoute({
+  getParentRoute: () => root,
+  path: "/companies/$entityId/import",
+  component: function Importing() {
+    const { entityId } = importing.useParams();
+    return (
+      <SignedIn>
+        <ImportPage entityId={entityId} />
+      </SignedIn>
+    );
+  },
+});
+
+const connect = createRoute({
+  getParentRoute: () => root,
+  path: "/companies/$entityId/connect",
+  component: function Connect() {
+    const { entityId } = connect.useParams();
+    return (
+      <SignedIn>
+        <ConnectPage entityId={entityId} />
+      </SignedIn>
+    );
+  },
+});
+
+const ask = createRoute({
+  getParentRoute: () => root,
+  path: "/companies/$entityId/ask",
+  component: function Ask() {
+    const { entityId } = ask.useParams();
+    return (
+      <SignedIn>
+        <FirstQuestion entityId={entityId} />
+      </SignedIn>
+    );
+  },
 });
 
 // The issuer sends the person back here with a code; the sign-in provider exchanges it and
@@ -26,7 +77,7 @@ const signedIn = createRoute({
 });
 
 export const router = createRouter({
-  routeTree: root.addChildren([home, signedIn]),
+  routeTree: root.addChildren([start, importing, connect, ask, signedIn]),
   basepath: "/app",
 });
 
