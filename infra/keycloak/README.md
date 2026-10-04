@@ -101,6 +101,11 @@ it, call the token endpoint.
 **People sign themselves up**, by email, and reset their own passwords (`IAM-22`, ADR-0049 § 3).
 No mail relay ships, so an address is not verified; a deployment with one turns `verifyEmail` on.
 
+**Every account sets up a second factor.** `CONFIGURE_TOTP` is a default required action, so a
+new account adds an authenticator app before its first sign-in completes, and is asked for a code
+at each sign-in after (`IAM-23`). `requiredActions` is restated in full for the same reason
+`clientScopes` is: declaring it replaces Keycloak's list.
+
 ## What it deliberately does not contain
 
 **No users, and no credentials.** People create their own accounts on the sign-up page the
