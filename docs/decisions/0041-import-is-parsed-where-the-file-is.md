@@ -69,9 +69,9 @@ So the transport is not one question but two, and they have different answers:
   route. A runtime with host access can.
 - **Credentials.** Neither may hold the credential a post needs. A credential never passes through
   an agent or a model (`IAM-10`), and the reader always runs where an agent does. So it never
-  calls CFOKit: the parsed shape reaches CFOKit through a client that holds the
-  person's credential outside the agent — the MCP connection the host signs in (§ 6), or a page the
-  person signs into themselves (ADR-0051).
+  calls CFOKit: the parsed shape reaches CFOKit through a client that holds the person's
+  credential outside the agent — the MCP connection the host signs in, which the onboarding panel
+  calls through (ADR-0058).
 
 ## Decision Drivers
 
@@ -164,13 +164,13 @@ token (RFC 9449) leaves its key beside it. A token exchanged for the agent (RFC 
 so it mints no import token either.
 
 The import therefore runs through a client whose credential stays outside the agent: the MCP
-connection, whose token the host holds and the server alone accepts (§ 6), or the web client's
-import page, which the person signs into in their own browser
-([ADR-0051](0051-books-are-imported-through-the-web-client.md)).
+connection, whose token the host holds and the server alone accepts. The onboarding panel calls
+the import tools through it, and they are visible to the panel only
+([ADR-0058](0058-onboarding-with-your-own-agent-is-one-path-inside-its-conversation.md)).
 
 ### 6. A sandboxed runtime imports over MCP, and the model is the bridge
 
-**Superseded by [ADR-0051](0051-books-are-imported-through-the-web-client.md).** Sections 1–5 stand.
+**Superseded by [ADR-0058](0058-onboarding-with-your-own-agent-is-one-path-inside-its-conversation.md).** Sections 1–5 stand.
 
 Where the runtime cannot reach CFOKit, the same neutral shape arrives as MCP tool arguments. The
 sandbox parses the archive and hands the model a compact rendering; the model calls the tool.

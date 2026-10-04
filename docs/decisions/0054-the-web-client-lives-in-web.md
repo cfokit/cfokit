@@ -14,8 +14,8 @@ application in TypeScript, built by Vite into static files that the REST service
 pnpm, ESLint, Vitest and Playwright as its tooling. It also gives the bundled issuer a sign-in
 theme written with Keycloakify from the client's own components, a `tokens.json` exported from
 Claude Design that generates the client's Tailwind theme, and — through
-[ADR-0051](0051-books-are-imported-through-the-web-client.md) — an export reader in TypeScript
-that CI runs against the Python reader in `skills/`.
+[ADR-0058](0058-onboarding-with-your-own-agent-is-one-path-inside-its-conversation.md) — the
+onboarding panel the MCP server serves, with its export reader in TypeScript.
 
 None of these has a place in the repository. [ADR-0020](0020-repository-layout-artifact-kinds.md)
 organizes directories by artifact kind, and its directories hold Python source (`src/`), skill
@@ -90,8 +90,8 @@ without separating the client from the contract it is typed against.
   a shared package.
 * **`tokens.json`**, the one file from Claude Design that enters the repository (ADR-0049 § 10),
   because it is an input to the client's build and has no other consumer.
-* **The TypeScript export reader** of ADR-0051 and its tests. The differential test that runs it
-  beside the Python reader in `skills/` reads the same fixture; neither reader imports the other.
+* **The onboarding panel** of ADR-0058, built here from the client's components, with its
+  TypeScript export reader and the reader's tests against the synthetic export.
 * **`web/CLAUDE.md`**, carrying the client's rules — the money rule, the `dangerouslySetInnerHTML`
   ban, the license rule for the bundle — so they load when work happens there, as a capability's
   `CLAUDE.md` does under `src/cfokit/`.
@@ -241,7 +241,8 @@ CI job and the Dependabot entry. Splitting it into a workspace later is an inter
 
 Related: [ADR-0020](0020-repository-layout-artifact-kinds.md) (the layout this extends),
 [ADR-0049](0049-cfokit-has-a-web-client.md) (the client),
-[ADR-0051](0051-books-are-imported-through-the-web-client.md) (the export reader),
+[ADR-0058](0058-onboarding-with-your-own-agent-is-one-path-inside-its-conversation.md) (the
+onboarding panel and its export reader),
 [ADR-0023](0023-one-image-many-entrypoints.md) (one image), and the Keycloakify Vite integration at
 docs.keycloakify.dev.
 
