@@ -83,9 +83,22 @@ problems and are not:
   debits and credits differ cannot balance; the import refuses both and names them. Do not offer
   to repair them; a source's malformed row is the user's to decide about.
 
-**The comparison with QuickBooks is shown to the person when the import finishes.** If you have no
-tool that reads it, say so — never rebuild it from the trial balance, which would be the books
-checked against themselves.
+**"Do my books match QuickBooks?" is usually the first question, and `import_reconciliations`
+answers it.** It returns what each import was reconciled to when it finished, newest first — the
+comparison the person was shown — so answer from it rather than from a fresh report:
+
+- `journal_total` is QuickBooks' own journal total against ours. It carries no basis, so if it
+  agrees, every transaction came across at the right size.
+- `balances` is QuickBooks' stated balance for each account against ours, signed as postings.
+  Divergences with `divergences_net_to_zero` true are the basis difference above; say which
+  accounts and by how much. If they do not net to zero, that is a real difference: name each
+  account with both figures and do not explain it away.
+- `statements` is each report QuickBooks printed against CFOKit's own, signed as printed, with
+  accounts that appear on one side only and rows the reader could not match.
+
+Never rebuild the comparison from the trial balance: that would be the books checked against
+themselves. If there is no reconciliation, say the import has not finished on the
+getting-started pages.
 
 ## Recording a bank or card statement
 

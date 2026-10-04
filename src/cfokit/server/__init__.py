@@ -24,6 +24,7 @@ from cfokit.activity import mcp as activity_mcp
 from cfokit.assignment import api as assignment_api
 from cfokit.assignment import mcp as assignment_mcp
 from cfokit.imports import api as imports_api
+from cfokit.imports import mcp as imports_mcp
 from cfokit.ledger.api import create_app
 from cfokit.ledger.config import Settings
 from cfokit.ledger.mcp import acting, create_server
@@ -37,11 +38,13 @@ __all__ = ["mcp_server", "rest_app"]
 def mcp_server(settings: Settings, authenticator: Authenticator | None = None) -> MCPServer:
     """The MCP surface: the ledger's tools, plus each module's.
 
-    Import contributes none. Books are imported on the getting-started pages, which read the
-    export in the person's browser and post it over REST with their own token, so no figure
-    passes through a model (ADR-0058).
+    Import contributes a read and nothing else. Books are imported on the getting-started pages,
+    which read the export in the person's browser and post it over REST with their own token, so
+    no figure passes through a model (ADR-0058); what the agent reads afterwards is what the
+    import was reconciled to.
     """
     server = create_server(settings, authenticator=authenticator)
+    imports_mcp.register(server, Database(settings.database_url), acting=acting)
     assignment_mcp.register(server, Database(settings.database_url), acting=acting)
     activity_mcp.register(server, Database(settings.database_url), acting=acting)
     return server
