@@ -3,7 +3,8 @@
 A British spelling in any tracked text file fails here. The list is the spellings that have
 actually appeared in this repository and their closest relatives, not a dictionary: a new one
 that slips through is added when it is found. Third-party texts carried verbatim, such as the
-fonts' licenses, are not ours to respell.
+fonts' licenses, are not ours to respell, and this file is exempt because its
+pattern and its test inputs must write the British forms.
 """
 
 from __future__ import annotations
@@ -18,7 +19,9 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 
 TEXT = re.compile(r"\.(md|py|ts|tsx|mjs|js|css|html|json|ya?ml|toml|sql|txt|sh)$")
-VERBATIM = re.compile(r"(^|/)(licenses/|.*-OFL\.txt$|pnpm-lock\.yaml$|uv\.lock$)")
+VERBATIM = re.compile(
+    r"(^|/)(licenses/|tests/test_us_english\.py$|.*-OFL\.txt$|pnpm-lock\.yaml$|uv\.lock$)"
+)
 
 # -ise, -ised, -ising, -isation on stems that take -ize in US English.
 _STEMS = (

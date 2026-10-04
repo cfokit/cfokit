@@ -80,10 +80,6 @@ Shared code between packages requires an ADR. Default to duplication.
 
 ## Documentation
 
-**US English everywhere** — code, identifiers, schema, documents, commit messages, and what you
-write to the user. "Color", "labeled", "organization", "synchronize". `tests/test_us_english.py`
-fails on a British spelling in any tracked text file.
-
 `docs/decisions/` holds decision records in [MADR 4.0.0](https://adr.github.io/madr/).
 `CLAUDE.md` files hold the rules; the records hold the reasoning. Read the cited record
 before proposing a change to a rule. (ADR-0001)
