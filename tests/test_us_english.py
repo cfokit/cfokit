@@ -50,7 +50,7 @@ def tracked_text_files() -> list[Path]:
         capture_output=True,
         text=True,
         check=True,
-    ).stdout.split()
+    ).stdout.splitlines()
     return [ROOT / n for n in names if TEXT.search(n) and not VERBATIM.search(n)]
 
 

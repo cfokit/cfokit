@@ -142,10 +142,23 @@ changing a model behind a stable identifier.
 These are separable — either could be superseded without reopening the other — so under
 ADR-0001's one-decision-per-file rule they are two records. This one decides the runtime.
 
-**What the runtime is.** Desktop, mobile, terminal, or something else is a product-surface question,
-and a user-facing interaction surface is adjacent enough to the "web UI or admin console" non-goal
-that it clears ADR-0012's gate on its own terms, as Slack did in ADR-0021. This record establishes
-only that *some* CFOKit-operated runtime exists.
+### 4. The runtime hosts the skills, the MCP connection and the panels
+
+The runtime is a host for the same surface an organization's own agent uses: the bookkeeper skills,
+the MCP connection to CFOKit, and the MCP App panels, exactly as Claude Desktop hosts them. What it
+adds is what only an operated runtime can: choosing the model for each use case — coding a
+transaction, reconciling a statement, answering a question — under the provider relationship
+ADR-0035 gives CFOKit, and capturing the evidence `SOC1-06` and `SOC1-35` require.
+
+**So a capability is built once, as skills, tools and panels**, and runs in both hosts: an
+organization's own agent with the hosted backend, and CFOKit's runtime with managed bookkeeping.
+Nothing is built as a page only the runtime can show. The exception is getting started — the
+lead, the plan, the subscription, registration and the first import — which happens on web
+pages before any agent is involved (ADR-0058).
+
+**The runtime is the web app**, served by CFOKit — the web client of ADR-0049, which cleared
+ADR-0012's gate. Mobile apps follow, and a desktop app if one is
+warranted; each is the same host, not a second product.
 
 ### Consequences
 
@@ -274,8 +287,7 @@ it distinguishable in the data.
 
 **Follow-on obligations.**
 
-* The product-surface decision — desktop, mobile, or otherwise — clears ADR-0012's gate on its own
-  terms and is recorded there when it passes, as ADR-0021 was.
+* A mobile or desktop app is the same host on another platform, and is recorded when it is built.
 * A separate record on inference credential ownership (§ 3).
 * The first-party runtime consumes the published tool surface and no other.
 * Coverage is legible to an operator, not only to an examiner (§ 2).
