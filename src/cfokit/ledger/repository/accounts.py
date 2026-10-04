@@ -2,7 +2,7 @@
 
 Balances are `SUM()` over postings and never stored. ADR-0003 chose Postgres partly for this,
 and ADR-0027 depends on it: reopening a period recomputes rather than invalidating, because
-there is nothing materialised to invalidate.
+there is nothing materialized to invalidate.
 """
 
 from __future__ import annotations

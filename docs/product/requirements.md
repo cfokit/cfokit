@@ -63,8 +63,8 @@ These are decided. Each bounds what the product may promise.
 | Any commercial service built on CFOKit | Its existence, pricing, billing, subscriptions, and operating policies — including disclosure practice — are business decisions, not product requirements. The product must not presume a commercial operator exists. |
 | Accounts payable, purchase orders, quotes, estimates | Not included until a stated need arrives. |
 | SOX compliance | Sarbanes-Oxley applies to public companies and their auditors. CFOKit does not serve public companies and is not built to. Out of scope until it deliberately is. Note that individual SOX provisions on record destruction reach private companies; those are retention obligations and are handled under PLT-19 and PLT-20, not as SOX scope. |
-| Statutory localisation | Jurisdiction-specific tax regimes and their return formats, statutory charts of accounts, and e-invoicing mandates. The incumbents ship separate regional editions rather than configure one product, because these differences are too deep to configure. Out of scope until a jurisdiction is chosen deliberately. |
-| Compliance obligation tracking | Recurring obligations and deadlines are jurisdiction-specific, which statutory localisation already excludes, and tracking them is neither a statement nor a query. Revisit only if a jurisdiction is chosen deliberately. |
+| Statutory localization | Jurisdiction-specific tax regimes and their return formats, statutory charts of accounts, and e-invoicing mandates. The incumbents ship separate regional editions rather than configure one product, because these differences are too deep to configure. Out of scope until a jurisdiction is chosen deliberately. |
+| Compliance obligation tracking | Recurring obligations and deadlines are jurisdiction-specific, which statutory localization already excludes, and tracking them is neither a statement nor a query. Revisit only if a jurisdiction is chosen deliberately. |
 | Enterprise-scale accounting | Consolidation across dozens of entities, multi-currency treasury, statutory reporting regimes, and the volumes that come with them. The target is the small-business segment the incumbents serve. Revisit only once that segment is won. |
 
 ---
@@ -197,7 +197,7 @@ Getting transactions in, deciding where they belong, and agreeing that the books
 | **BKP-13** | An incoming transaction can be matched to a record the books already hold — an expected payment, or a transaction entered by hand ahead of the feed — rather than creating a duplicate. | Must | Approved |
 | **BKP-14** | A movement between two of the entity's own accounts is recognized as one transfer rather than as unrelated income and expense, whether it arrives as two feed transactions or one. | Must | Approved |
 | **BKP-15** | An account can be reconciled against a statement balance for a period, and the reconciliation is a durable record of the account having been agreed as of that date. A reconciliation later found to be wrong is superseded by a new one rather than edited, and both remain visible. | Must | Approved |
-| **BKP-16** | Feeds synchronise on a schedule the entity controls, with no person triggering them. | Must | Approved |
+| **BKP-16** | Feeds synchronize on a schedule the entity controls, with no person triggering them. | Must | Approved |
 | **BKP-17** | A document — a receipt, an invoice, a statement — can be attached to a transaction, an account, or a period, and is retained and exported with what it is attached to. | Could | Deferred — activates when an entity needs supporting documents held with its books. Not built before then |
 | **BKP-18** | A document supplies the content of a draft transaction, which is then assigned and posted like any other. | Could | Deferred — activates with BKP-17 |
 | **BKP-19** | Where a transaction was derived from something outside the books — a feed record, an uploaded statement, a document — it records what it came from, and that link survives for the life of the transaction. | Must | Approved |
@@ -452,7 +452,7 @@ stricter target than the global one.
 | **NFR-17** | Every capability is present in every deployment. No build withholds one. | Parity | Must | Zero deployment-specific capabilities |
 | **NFR-18** | Controls are evidenced rather than asserted. For every control these requirements state, the system produces the record showing it operated throughout a stated period. A control that cannot be evidenced does not count as implemented. | Auditability | Must | Every stated control evidenced |
 | **NFR-19** | The product is operable by someone who runs a business rather than someone who keeps books. Where an accounting term is unavoidable it is explained in place, and no ordinary task requires knowing what a contra account is. | Usability | Should | A non-accountant completes onboarding, categorization, and a month-end close unaided |
-| **NFR-20** | Dates, numbers, and currency are presented in the conventions of the entity's locale, and the interface is available in languages other than English. Deferred; it activates when an entity operates outside the initial locale, and is not built before then. | Localisation | Could | Dates, numbers, and currency correct for the entity's declared locale |
+| **NFR-20** | Dates, numbers, and currency are presented in the conventions of the entity's locale, and the interface is available in languages other than English. Deferred; it activates when an entity operates outside the initial locale, and is not built before then. | Localization | Could | Dates, numbers, and currency correct for the entity's declared locale |
 | **NFR-21** | A contributor can build the system, run its full test suite, and exercise it end to end from a clean checkout, with no credentials, no accounts, and no access anyone has to grant them. | Contributability | Must | Clean checkout to passing suite, unaided |
 | **NFR-22** | Correctness guarantees attach to what the ledger records and computes, never to a judgment an agent made. Where CFOKit does not operate the agent runtime, the model behind a coding decision is not identifiable to CFOKit and its effect on accuracy is not observable — a poor one degrades the books silently rather than visibly. The system states that limit rather than implying uniform assurance. | Correctness | Must | No assurance claimed for a component CFOKit cannot observe |
 | **NFR-23** | Alteration, removal, or absence of a financial record is detectable from the records themselves, rather than only by comparison against a backup or a log held elsewhere. | Integrity | Must | Any alteration, removal, or gap detectable from the records alone |
@@ -476,7 +476,7 @@ a row inherits the global target unchanged.
 |---|---|---|
 | **NFR-01** Correctness | Ledger | Exactness, not accuracy within a tolerance. A tolerance is a defect, not a target. |
 | **NFR-02** Integrity | Import | An import applies completely or not at all. A partially applied import is never left in the books. |
-| **NFR-03** Idempotency | Bookkeeping | A transaction appearing in two overlapping pulls, or in a re-run of the same pull, is recorded once. Synchronisation may be repeated freely. |
+| **NFR-03** Idempotency | Bookkeeping | A transaction appearing in two overlapping pulls, or in a re-run of the same pull, is recorded once. Synchronization may be repeated freely. |
 | **NFR-03** Idempotency | Accounts Receivable | A retried or overlapping scheduled run does not send a customer a duplicate invoice or reminder, and does not post a payment twice. |
 | **NFR-05** Confidentiality | Platform | Financial detail must not cross into a conversational channel or an outbound message except where the binding and the role have both been established for that entity. |
 | **NFR-09** Performance | Reporting | The only module carrying an interactive latency target. Statement production may take longer than a query, and says so. |
@@ -606,7 +606,7 @@ reopening; PLT-08 fixes the time zone period boundaries are determined in.
 |---|---|---|---|
 | **SOC1-16** | The accounting period is a first-class record, not a date range computed when a report is asked for. | Must | Proposed |
 | **SOC1-17** | A closed period admits nothing from any actor over any interface, agents included, and reopening it requires an administrative role, is recorded, and captures the reason. There is no privileged path around either. | Must | Proposed |
-| **SOC1-18** | All timestamps are generated by the server from a synchronised source and stored in UTC. No client-supplied time is trusted for any record affecting financial data. | Must | Proposed |
+| **SOC1-18** | All timestamps are generated by the server from a synchronized source and stored in UTC. No client-supplied time is trusted for any record affecting financial data. | Must | Proposed |
 | **SOC1-19** | Which period a transaction falls in is determined in the entity's time zone, never in the deployment's and never in UTC. A UTC timestamp records when something happened; it never decides which period it happened in. | Must | Proposed |
 | **SOC1-20** | Where a correction posted after a statement was issued changes that statement's figures, the issued statement is marked superseded, and both what was reported and what is now true remain retrievable. | Must | Proposed |
 
@@ -798,7 +798,7 @@ is fully compromised and cooperative with the attacker.
 |---|---|---|---|
 | **SOC2-09** | Every third party that receives customer financial data during agent operation — inference, document extraction, embedding or vector storage — is enumerated in a registry the system maintains, not in a document maintained beside it. | Must | Proposed |
 | **SOC2-10** | A provider that does not contractually offer zero data retention and no training on submitted data cannot be configured to receive customer data. This is a constraint the system enforces on configuration, not a procurement preference. | Must | Proposed |
-| **SOC2-11** | What is sent to a provider is the minimum the task requires. Whether raw financial records leave the system, or redacted or tokenised representations, is recorded per provider and per operation. | Must | Proposed |
+| **SOC2-11** | What is sent to a provider is the minimum the task requires. Whether raw financial records leave the system, or redacted or tokenized representations, is recorded per provider and per operation. | Must | Proposed |
 | **SOC2-12** | Where data residency is committed to, inference and extraction routing respects it, and a request that cannot be routed compliantly fails rather than falling back. | Should | Proposed |
 | **SOC2-13** | Changing an inference provider, or a model version, is a change to the control environment under SOC1-35. | Must | Proposed |
 

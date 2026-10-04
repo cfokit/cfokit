@@ -1,6 +1,6 @@
 # Dialog
 
-A modal question: a `surface` panel with `radius-lg` and `shadow-overlay`, centred; on a phone, a sheet rising from the bottom edge with its actions in thumb reach.
+A modal question: a `surface` panel with `radius-lg` and `shadow-overlay`, centered; on a phone, a sheet rising from the bottom edge with its actions in thumb reach.
 
 The title is a question; the actions say what each does ("Keep importing", "Stop the import"), the
 primary one last. Escape and the actions close it. The page behind is held still and dimmed.

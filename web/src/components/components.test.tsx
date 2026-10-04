@@ -250,7 +250,7 @@ describe("MoneyTable", () => {
     expect(within(table).getByText("Look at this:", { exact: false })).toBeTruthy();
   });
 
-  test("two figures a row become a labelled list below bp-tablet", () => {
+  test("two figures a row become a labeled list below bp-tablet", () => {
     render(<MoneyTable caption="Balances" columns={columns} rows={rows} currency="USD" />);
     const list = screen.getByRole("list", { name: "Balances" });
     expect(list.className).toContain("tablet:hidden");

@@ -206,7 +206,7 @@ The build is a stage of the one image; nothing is served from a Node process.
 | Client state | Component state and context; Zustand only if something is genuinely global | There is little that is not server state or the URL |
 | Components | Radix primitives | Accessible behavior — focus, keyboard, ARIA — with no imposed look |
 | Styling | Tailwind, its theme generated from the design system's `tokens.json` | One source for color, type and spacing, shared with the designs (§ 10) |
-| Tables | TanStack Table | Ledgers, trial balances and reconciliations: sorting, virtualised long lists |
+| Tables | TanStack Table | Ledgers, trial balances and reconciliations: sorting, virtualized long lists |
 | Forms | React Hook Form + Zod | Validation declared once; schemas can come from the contract |
 | Sign-in screens | Keycloakify | The issuer's pages written as React components on the client's theme (§ 1) |
 | Auth | `oidc-client-ts` + `react-oidc-context` | Maintained PKCE, refresh and redirect handling. Configured with an in-memory user store; only its sign-in state uses `sessionStorage`, as § 2 requires |

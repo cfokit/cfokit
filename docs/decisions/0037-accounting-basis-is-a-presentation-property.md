@@ -188,7 +188,7 @@ The most literal reading of `AR-16`, and the one a reader would land on without 
   thing to explain.
 * Bad, because it fails `LED-14` for the same reason as the option above, and more sharply: two
   entities on different bases would have structurally different ledgers, so nothing about reporting,
-  migration, or the oracle would generalise across them.
+  migration, or the oracle would generalize across them.
 * Bad, because a cash-basis entity would post no receivable, contradicting `AR-16`'s own first
   sentence.
 
@@ -228,4 +228,4 @@ derivation is tested; `LED-17` for the storage obligation this builds on.
 * A jurisdiction requires a basis whose recognition cannot be derived from obligation and settlement
   events, which would be the first real challenge to the model rather than to the choice.
 * Accounts payable enters scope, which is the symmetric case and the first test of whether this
-  generalises beyond receivables.
+  generalizes beyond receivables.

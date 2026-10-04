@@ -7,7 +7,7 @@ The first column names the row. The currency is shown once, in each money column
 differs. Totals are the API's, never summed on the page. Lists of rows are tables, not cards.
 
 Below `bp-tablet`, a table with one or two figures per row becomes a list: the row's name on one
-line, its other text in `caption`, and its figures beside it or labelled beneath. A wider table keeps
+line, its other text in `caption`, and its figures beside it or labeled beneath. A wider table keeps
 its columns and scrolls sideways within its own frame, first column fixed; the page never scrolls
 sideways.
 

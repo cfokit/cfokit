@@ -1,6 +1,6 @@
 # TextField
 
-A labelled text input, with optional help below it and an error that is a sentence, not only a red border.
+A labeled text input, with optional help below it and an error that is a sentence, not only a red border.
 
 The label sits `space-2` above the input, in `label`; fields sit `space-6` apart. Typed text is
 `input` (16px) on every device, because iOS Safari zooms into anything smaller. Help text is where an

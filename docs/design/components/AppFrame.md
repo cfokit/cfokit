@@ -4,7 +4,7 @@ The frame every signed-in screen sits in: a header with the mark and the company
 
 The header is `bar-height` on `surface` with a bottom `rule`. Below `bp-tablet` the person and "Sign
 out" move into an "Account" menu. The header and gutters add the device's safe-area insets. Content
-is centred and stops widening at `content-max`. Sign-in screens have no frame: the lockup above a
+is centered and stops widening at `content-max`. Sign-in screens have no frame: the lockup above a
 single `Card` on `paper`.
 
 Props: `company`, `person`, `onSignOut`, `children` (the screen).
