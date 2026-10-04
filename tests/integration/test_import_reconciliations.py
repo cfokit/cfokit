@@ -297,6 +297,25 @@ def test_one_audit_row_per_reconciliation(
     assert detail == {"import_id": import_id, "compared": 4, "divergences": 0, "statements": 2}
 
 
+def test_two_statements_of_one_report_are_refused_not_a_server_error(
+    client: TestClient, entity: str
+) -> None:
+    """One comparison per report is what is recorded, so a repeat is refused up front."""
+    import_id = imported(client, entity)
+
+    response = client.post(
+        f"/entities/{entity}/imports/{import_id}/reconciliation",
+        json={"statements": [STATEMENTS[0], STATEMENTS[0]]},
+    )
+
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "import_refused"
+    assert (
+        client.get(f"/entities/{entity}/imports/reconciliations").json()["reconciliations"]
+        == []
+    )
+
+
 def test_a_reconciliation_cannot_be_rewritten(
     client: TestClient, entity: str, app_conn: psycopg.Connection[Any]
 ) -> None:

@@ -413,6 +413,11 @@ def reconcile_import(
     journal, the obligation accounts differ by exactly what is unsettled — ADR-0037
     predicts it, and it is reported as a divergence rather than absorbed.
     """
+    reports = [statement.report for statement in body.statements]
+    if len(set(reports)) != len(reports):
+        raise ImportRefused(
+            "a reconciliation takes one statement of each report; send each report once"
+        )
     books = SourceBooks(
         system="",
         fingerprint="",
