@@ -1,4 +1,4 @@
-import { StrictMode } from "react";
+import { lazy, StrictMode, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider } from "@tanstack/react-router";
 import { UserManager, type User } from "oidc-client-ts";
@@ -21,23 +21,41 @@ function returnFromSignIn(user: User | undefined) {
   void router.navigate({ to: to.replace(/^\/app/, "") || "/", replace: true });
 }
 
-discoverIssuer()
-  .then((issuer) => {
-    const userManager = new UserManager(oidcSettings(issuer, window.location.origin));
-    root.render(
-      <StrictMode>
-        <AuthProvider userManager={userManager} onSigninCallback={returnFromSignIn}>
-          <RouterProvider router={router} />
-        </AuthProvider>
-      </StrictMode>,
-    );
-  })
-  .catch(() => {
-    root.render(
-      <main className="mx-auto max-w-reading-max p-6">
-        <Notice tone="danger" label="Can't reach CFOKit" announce>
-          The page loaded, but CFOKit isn&apos;t answering. Reload to try again.
-        </Notice>
-      </main>,
-    );
-  });
+function startClient() {
+  discoverIssuer()
+    .then((issuer) => {
+      const userManager = new UserManager(oidcSettings(issuer, window.location.origin));
+      root.render(
+        <StrictMode>
+          <AuthProvider userManager={userManager} onSigninCallback={returnFromSignIn}>
+            <RouterProvider router={router} />
+          </AuthProvider>
+        </StrictMode>,
+      );
+    })
+    .catch(() => {
+      root.render(
+        <main className="mx-auto max-w-reading-max p-6">
+          <Notice tone="danger" label="Can't reach CFOKit" announce>
+            The page loaded, but CFOKit isn&apos;t answering. Reload to try again.
+          </Notice>
+        </main>,
+      );
+    });
+}
+
+// The same build is the issuer's sign-in theme (ADR-0054 § 1): on the issuer's pages, Keycloak
+// supplies window.kcContext and the page it names is drawn instead of the client.
+const KcPage = lazy(() => import("./login/KcPage"));
+
+if (window.kcContext === undefined) {
+  startClient();
+} else {
+  root.render(
+    <StrictMode>
+      <Suspense>
+        <KcPage kcContext={window.kcContext} />
+      </Suspense>
+    </StrictMode>,
+  );
+}

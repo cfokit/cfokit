@@ -1,12 +1,22 @@
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
+import { keycloakify } from "keycloakify/vite-plugin";
 import { defineConfig } from "vitest/config";
 
 // The client is served at /app/ on the API's origin — by the REST service, or on GCP by a CDN at
-// the same path (ADR-0049 § 5, ADR-0055).
+// the same path (ADR-0049 § 5, ADR-0055). The same project builds the issuer's sign-in theme
+// (ADR-0054 § 1): `keycloakify build` writes it as a JAR to dist_keycloak/.
 export default defineConfig({
   base: "/app/",
-  plugins: [react(), tailwindcss()],
+  plugins: [
+    react(),
+    tailwindcss(),
+    keycloakify({
+      themeName: "cfokit",
+      accountThemeImplementation: "none",
+      keycloakVersionTargets: { "22-to-25": false, "all-other-versions": "cfokit-theme.jar" },
+    }),
+  ],
   build: {
     outDir: "dist",
     // Never inline a file as a data: URI. The CSP is default-src 'self' (ADR-0049 § 6), which
