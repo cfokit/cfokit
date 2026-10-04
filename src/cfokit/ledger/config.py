@@ -49,6 +49,11 @@ class Settings:
     tls_key_file: str | None = None
     """The private key for ``tls_cert_file``. Both are set, or neither."""
 
+    mcp_public_base_url: str | None = None
+    """Optional, on the REST service: the MCP service's own ``PUBLIC_BASE_URL``, so the web
+    client can tell a person what to connect their agent to. Configured, never derived from a
+    request (ADR-0004)."""
+
 
 def require_env(name: str) -> str:
     """Read a required variable, or raise without disclosing its value."""
@@ -85,4 +90,5 @@ def load_settings() -> Settings:
         log_level=optional_env("LOG_LEVEL", "info"),
         tls_cert_file=tls_cert_file,
         tls_key_file=tls_key_file,
+        mcp_public_base_url=os.environ.get("MCP_PUBLIC_BASE_URL") or None,
     )

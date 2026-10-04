@@ -13,7 +13,21 @@ export class ApiError extends Error {
 }
 
 export interface Api {
+  get<T>(path: string): Promise<T>;
   post<T>(path: string, body: unknown): Promise<T>;
+}
+
+async function answer<T>(response: Response): Promise<T> {
+  const payload: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    const problem = (payload ?? {}) as { code?: unknown; message?: unknown };
+    throw new ApiError(
+      response.status,
+      typeof problem.code === "string" ? problem.code : "unexpected",
+      typeof problem.message === "string" ? problem.message : response.statusText,
+    );
+  }
+  return payload as T;
 }
 
 /**
@@ -22,29 +36,22 @@ export interface Api {
  */
 export function useApi(): Api {
   const token = useAuth().user?.access_token;
-  return useMemo(
-    () => ({
-      async post<T>(path: string, body: unknown): Promise<T> {
-        const response = await fetch(path, {
-          method: "POST",
-          headers: {
-            "content-type": "application/json",
-            ...(token === undefined ? {} : { authorization: `Bearer ${token}` }),
-          },
-          body: JSON.stringify(body),
-        });
-        const payload: unknown = await response.json().catch(() => null);
-        if (!response.ok) {
-          const problem = (payload ?? {}) as { code?: unknown; message?: unknown };
-          throw new ApiError(
-            response.status,
-            typeof problem.code === "string" ? problem.code : "unexpected",
-            typeof problem.message === "string" ? problem.message : response.statusText,
-          );
-        }
-        return payload as T;
+  return useMemo(() => {
+    const authorization: Record<string, string> =
+      token === undefined ? {} : { authorization: `Bearer ${token}` };
+    return {
+      async get<T>(path: string): Promise<T> {
+        return answer<T>(await fetch(path, { headers: authorization }));
       },
-    }),
-    [token],
-  );
+      async post<T>(path: string, body: unknown): Promise<T> {
+        return answer<T>(
+          await fetch(path, {
+            method: "POST",
+            headers: { "content-type": "application/json", ...authorization },
+            body: JSON.stringify(body),
+          }),
+        );
+      },
+    };
+  }, [token]);
 }

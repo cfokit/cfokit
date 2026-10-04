@@ -311,9 +311,27 @@ describe("connecting Claude and the first question", () => {
     };
     const { container } = withExport(<ConnectPage entityId="ent-1" />);
     await screen.findByText(/register-here/);
-    expect(requests[0]?.path).toBe(
+    expect(requests.map((request) => request.path)).toContain(
       "https://issuer.test/realms/cfokit/.well-known/openid-configuration",
     );
+    await noViolations(container);
+  });
+
+  test("Claude is pointed at the MCP address the deployment configures", async () => {
+    answers["/connection"] = { mcp_url: "https://mcp.example.test/mcp" };
+    withExport(<ConnectPage entityId="ent-1" />);
+    const block = await screen.findByRole("figure", { name: "Configuration" });
+    expect(block.textContent).toContain('"https://mcp.example.test/mcp"');
+    expect(requests.find((request) => request.path === "/connection")?.authorization).toBe(
+      "Bearer a-token",
+    );
+  });
+
+  test("a deployment that does not say where Claude connects is told so, not guessed", async () => {
+    answers["/connection"] = { mcp_url: null };
+    const { container } = withExport(<ConnectPage entityId="ent-1" />);
+    await screen.findByText(/MCP_PUBLIC_BASE_URL/);
+    expect(screen.queryByRole("figure", { name: "Configuration" })).toBeNull();
     await noViolations(container);
   });
 

@@ -1,12 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useAuth } from "react-oidc-context";
+import { useApi } from "../api";
 import { ActionBar, Button, Card, CopyBlock, Notice } from "../components";
 import { StartFrame } from "./StartFrame";
 
-// The local stack's MCP endpoint, as compose.yaml publishes it and docs/connect-claude-desktop.md
-// configures it.
-const MCP_URL = "https://localhost:8081/mcp";
 // The port mcp-remote listens on for the sign-in's return, fixed so the client is registered once.
 const CALLBACK_PORT = 44196;
 
@@ -32,6 +30,30 @@ function useRegistrationEndpoint(): string | null {
   return endpoint;
 }
 
+/**
+ * Where this deployment's MCP surface is reachable, as its operator configured it: `null` while
+ * asking, `undefined` when the deployment does not say.
+ */
+function useMcpUrl(): string | null | undefined {
+  const api = useApi();
+  const [url, setUrl] = useState<string | null | undefined>(null);
+  useEffect(() => {
+    let current = true;
+    api
+      .get<{ mcp_url: string | null }>("/connection")
+      .then((connection) => {
+        if (current) setUrl(connection.mcp_url ?? undefined);
+      })
+      .catch(() => {
+        if (current) setUrl(undefined);
+      });
+    return () => {
+      current = false;
+    };
+  }, [api]);
+  return url;
+}
+
 function registration(endpoint: string): string {
   const client = {
     client_name: "CFOKit for Claude Desktop",
@@ -51,26 +73,28 @@ function registration(endpoint: string): string {
   ].join("\n");
 }
 
-const CONFIGURATION = JSON.stringify(
-  {
-    mcpServers: {
-      cfokit: {
-        command: "npx",
-        args: [
-          "-y",
-          "mcp-remote@0.14.3",
-          MCP_URL,
-          String(CALLBACK_PORT),
-          "--static-oauth-client-info",
-          '{"client_id":"CLIENT_ID","client_secret":"CLIENT_SECRET"}',
-        ],
-        env: { NODE_EXTRA_CA_CERTS: "/path/to/cfokit/.local/tls/ca/ca.pem" },
+function configuration(mcpUrl: string): string {
+  return JSON.stringify(
+    {
+      mcpServers: {
+        cfokit: {
+          command: "npx",
+          args: [
+            "-y",
+            "mcp-remote@0.14.3",
+            mcpUrl,
+            String(CALLBACK_PORT),
+            "--static-oauth-client-info",
+            '{"client_id":"CLIENT_ID","client_secret":"CLIENT_SECRET"}',
+          ],
+          env: { NODE_EXTRA_CA_CERTS: "/path/to/cfokit/.local/tls/ca/ca.pem" },
+        },
       },
     },
-  },
-  null,
-  2,
-);
+    null,
+    2,
+  );
+}
 
 const SKILL = "cd skills && zip -r ~/Downloads/bookkeeper.zip bookkeeper";
 
@@ -78,6 +102,7 @@ const SKILL = "cd skills && zip -r ~/Downloads/bookkeeper.zip bookkeeper";
 export function ConnectPage({ entityId }: { entityId: string }) {
   const navigate = useNavigate();
   const endpoint = useRegistrationEndpoint();
+  const mcpUrl = useMcpUrl();
   return (
     <StartFrame step={3} title="Connect Claude">
       <p className="text-body text-ink">
@@ -102,7 +127,18 @@ export function ConnectPage({ entityId }: { entityId: string }) {
           In <code>~/Library/Application Support/Claude/claude_desktop_config.json</code>, with the
           client from step 1 and the full path to your CFOKit folder:
         </p>
-        <CopyBlock label="Configuration" text={CONFIGURATION} />
+        {mcpUrl === null ? (
+          <Notice tone="neutral" label="Finding your CFOKit">
+            Reading where Claude connects to…
+          </Notice>
+        ) : mcpUrl === undefined ? (
+          <Notice tone="warning" label="Address not configured">
+            This CFOKit does not say where Claude connects. Its operator sets{" "}
+            <code>MCP_PUBLIC_BASE_URL</code> on the REST service.
+          </Notice>
+        ) : (
+          <CopyBlock label="Configuration" text={configuration(mcpUrl)} />
+        )}
         <p className="text-body text-ink">
           Quit Claude Desktop fully and open it again. The first time it connects, a browser window
           opens: sign in as yourself.

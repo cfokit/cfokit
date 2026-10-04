@@ -674,6 +674,27 @@
         "title": "ComparativeProfitAndLossResponse",
         "type": "object"
       },
+      "ConnectionResponse": {
+        "properties": {
+          "mcp_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where an agent connects to this deployment's MCP surface, or null when the REST service is not told (MCP_PUBLIC_BASE_URL).",
+            "title": "Mcp Url"
+          }
+        },
+        "required": [
+          "mcp_url"
+        ],
+        "title": "ConnectionResponse",
+        "type": "object"
+      },
       "CreateAccountRequest": {
         "description": "Add an account to the entity's chart (LED-01, LED-02).",
         "properties": {
@@ -2695,6 +2716,96 @@
           }
         },
         "summary": "Which issuer guards this API (RFC 9728)",
+        "tags": [
+          "operations"
+        ]
+      }
+    },
+    "/connection": {
+      "get": {
+        "description": "The MCP surface's address, from configuration, for the web client to show a person\nconnecting their agent. Configured rather than derived: the REST service cannot know\nwhere another service is reachable, and request headers lie behind a proxy\n(ADR-0004).",
+        "operationId": "connection_connection_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Where an agent connects to this deployment",
         "tags": [
           "operations"
         ]

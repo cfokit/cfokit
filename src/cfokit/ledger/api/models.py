@@ -129,6 +129,13 @@ class ErrorResponse(BaseModel):
     message: str
 
 
+class ConnectionResponse(BaseModel):
+    mcp_url: str | None = Field(
+        description="Where an agent connects to this deployment's MCP surface, or null when "
+        "the REST service is not told (MCP_PUBLIC_BASE_URL)."
+    )
+
+
 class CreateEntityRequest(BaseModel):
     """Everything an entity declares at creation, all of it required.
 
