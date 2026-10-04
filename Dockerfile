@@ -38,6 +38,23 @@ COPY web/ ./
 RUN corepack pnpm build
 
 # ---------------------------------------------------------------------------
+# The issuer's sign-in theme (ADR-0054 § 1), built by Keycloakify from the same project into a
+# JAR. That needs Maven and a JDK beside Node, taken from the Maven image into the client's stage.
+# The `issuer` target below puts the JAR into Keycloak's image.
+FROM maven:3.9.16-eclipse-temurin-21@sha256:99e61abcff91a9b1333463bd8451fb18495d6eba9250ac66a338b518f8278320 AS maven
+
+FROM web AS sign-in-theme
+COPY --from=maven /opt/java/openjdk /opt/java/openjdk
+COPY --from=maven /usr/share/maven /usr/share/maven
+ENV JAVA_HOME=/opt/java/openjdk \
+    MAVEN_HOME=/usr/share/maven \
+    PATH=/opt/java/openjdk/bin:/usr/share/maven/bin:$PATH
+RUN --mount=type=cache,target=/root/.m2 corepack pnpm exec keycloakify build
+
+FROM quay.io/keycloak/keycloak:26.7.4@sha256:82a77884f3af238beab1e7afd63b5f530e1b5c0590bd7aa60b40a40463e29b2c AS issuer
+COPY --from=sign-in-theme /web/dist_keycloak/cfokit-theme.jar /opt/keycloak/providers/
+
+# ---------------------------------------------------------------------------
 FROM python:3.14.7-slim@sha256:51dafde81dbdb6ebde285137a295cf18a47ca95234fe388a343719cb97305b3d AS builder
 
 COPY --from=ghcr.io/astral-sh/uv:0.11.33@sha256:77280f2f771df71f90786c314fe1bbc1e023feac652969bbf139c280babf2eb7 /uv /usr/local/bin/uv

@@ -10,6 +10,8 @@ dist/
 node_modules/
 dist_keycloak/
 dist-design-system/
+# Keycloak's own login resources, copied in by the Keycloakify plugin for `pnpm dev`.
+web/public/keycloakify-dev-resources/
 
 # uv / virtualenvs
 .venv/

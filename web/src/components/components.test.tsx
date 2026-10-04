@@ -13,6 +13,7 @@ import {
   Progress,
   StepIndicator,
   TextField,
+  TextLink,
 } from ".";
 import { accepts } from "./DropZone";
 
@@ -121,6 +122,15 @@ describe("Card", () => {
   test("titles its section", () => {
     render(<Card title="What will be imported">Details</Card>);
     expect(screen.getByRole("heading", { name: "What will be imported" })).toBeTruthy();
+  });
+});
+
+describe("TextLink", () => {
+  test("is a link to where it goes", () => {
+    render(<TextLink href="/register">Create an account</TextLink>);
+    expect(screen.getByRole("link", { name: "Create an account" }).getAttribute("href")).toBe(
+      "/register",
+    );
   });
 });
 

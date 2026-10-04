@@ -12,6 +12,7 @@ import {
   Progress,
   StepIndicator,
   TextField,
+  TextLink,
 } from "../components";
 
 // Every component in its states, for looking at in a browser (`pnpm dev`, then /app/gallery.html)
@@ -60,6 +61,10 @@ export function Gallery() {
               Create company
             </Button>
           </div>
+        </Section>
+
+        <Section title="Links">
+          <TextLink href="#">Create an account</TextLink>
         </Section>
 
         <Section title="Text fields">

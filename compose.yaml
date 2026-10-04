@@ -74,7 +74,12 @@ services:
   # deployment to be usable as it stands — so the issuer has to bring its own user store and
   # login pages, or a self-hoster is left to supply the one thing we may not write.
   keycloak:
-    image: quay.io/keycloak/keycloak:26.7.4@sha256:82a77884f3af238beab1e7afd63b5f530e1b5c0590bd7aa60b40a40463e29b2c
+    # Keycloak with CFOKit's sign-in theme added, built from web/ (ADR-0054 § 1); the Dockerfile
+    # pins the Keycloak image.
+    build:
+      context: .
+      target: issuer
+      secrets: [build_ca]
     restart: unless-stopped
     # HTTPS only, with the certificate from the `tls` step above. Cross-device access requires
     # a tunnel and KC_HOSTNAME set to the public hostname (ADR-0018), the same condition

@@ -13,3 +13,4 @@ export { Notice } from "./Notice";
 export { Progress } from "./Progress";
 export { StepIndicator } from "./StepIndicator";
 export { TextField } from "./TextField";
+export { TextLink } from "./TextLink";

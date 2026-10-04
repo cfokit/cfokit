@@ -4,7 +4,7 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist", "dist_keycloak", "dist-design-system"] },
+  { ignores: ["dist", "dist_keycloak", "dist-design-system", "public/keycloakify-dev-resources"] },
   js.configs.recommended,
   tseslint.configs.strict,
   reactHooks.configs.flat["recommended-latest"],

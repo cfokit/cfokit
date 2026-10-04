@@ -633,6 +633,7 @@
       }
     }
   ],
+  "loginTheme": "cfokit",
   "registrationAllowed": true,
   "resetPasswordAllowed": true,
   "loginWithEmailAllowed": true,

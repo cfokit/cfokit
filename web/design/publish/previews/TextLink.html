@@ -1,0 +1,18 @@
+<!-- @dsCard group="Actions" height=80 -->
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>TextLink — preview</title>
+  </head>
+  <body>
+    <div id="root" style="padding: 24px"></div>
+    <script>
+      var C = window.CFOKit,
+        h = React.createElement;
+      ReactDOM.createRoot(document.getElementById("root")).render(
+        h(C.TextLink, { href: "#" }, "Create an account"),
+      );
+    </script>
+  </body>
+</html>

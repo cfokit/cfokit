@@ -4,9 +4,9 @@ interface TextFieldProps extends Omit<ComponentProps<"input">, "id" | "className
   /** What the field is, above it, in sentence case. */
   label: string;
   /** Help text below the input: the one-line explanation of an accounting term goes here. */
-  help?: string;
+  help?: string | undefined;
   /** What is wrong and what to do, shown below the input and announced with it. */
-  error?: string;
+  error?: string | undefined;
 }
 
 /**
