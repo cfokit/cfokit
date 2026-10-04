@@ -72,9 +72,8 @@ def test_the_ledger_alone_serves_none_of_them() -> None:
 
 
 def test_the_import_routes_need_no_configuration() -> None:
-    """They took a path once, so they existed only where `IMPORT_ROOT` named a directory — which
-    made the published contract depend on how a deployment was configured. They take a body now,
-    so there is nothing to withhold and a caller can bind to the contract."""
+    """The published contract must not depend on how a deployment is configured, so a caller can
+    bind to it."""
     assert routes(rest_app(settings())) == routes(rest_app(settings()))
 
 

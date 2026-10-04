@@ -158,7 +158,7 @@ otherwise get wrong, because absence isn't visible in a manifest:
   extra, declared because we call into it). Those six pull **36** packages in total — `uv export
   --no-dev --no-emit-project --no-hashes | grep -c '^[a-z]'` — and the MCP SDK is most of it,
   accepted knowingly (ADR-0024). Accounting exports are parsed in the person's browser, never
-  by the server, so no spreadsheet library is a dependency of any kind (ADR-0041, ADR-0058).
+  by the server, so no spreadsheet library is a dependency of any kind (ADR-0058).
 - **Python 3.14**, `ruff`, `mypy --strict`, `import-linter`, and the image and CI run it.
 
 ## Money and correctness
