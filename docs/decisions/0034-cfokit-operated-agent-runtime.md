@@ -153,10 +153,11 @@ ADR-0035 gives CFOKit, and capturing the evidence `SOC1-06` and `SOC1-35` requir
 **So a capability is built once, as skills, tools and panels**, and runs in both hosts: an
 organization's own agent with the hosted backend, and CFOKit's runtime with managed bookkeeping.
 Nothing is built as a page only the runtime can show. The exception is getting started — the
-lead, the plan, the subscription and registration — which happens on web pages before any agent
-is involved.
+lead, the plan, the subscription, registration and the first import — which happens on web
+pages before any agent is involved (ADR-0058).
 
-**The runtime is the web app**, served by CFOKit. Mobile apps follow, and a desktop app if one is
+**The runtime is the web app**, served by CFOKit — the web client of ADR-0049, which cleared
+ADR-0012's gate. Mobile apps follow, and a desktop app if one is
 warranted; each is the same host, not a second product.
 
 ### Consequences
@@ -286,8 +287,7 @@ it distinguishable in the data.
 
 **Follow-on obligations.**
 
-* The product-surface decision — desktop, mobile, or otherwise — clears ADR-0012's gate on its own
-  terms and is recorded there when it passes, as ADR-0021 was.
+* A mobile or desktop app is the same host on another platform, and is recorded when it is built.
 * A separate record on inference credential ownership (§ 3).
 * The first-party runtime consumes the published tool surface and no other.
 * Coverage is legible to an operator, not only to an examiner (§ 2).

@@ -14,8 +14,8 @@ application in TypeScript, built by Vite into static files that the REST service
 pnpm, ESLint, Vitest and Playwright as its tooling. It also gives the bundled issuer a sign-in
 theme written with Keycloakify from the client's own components, a `tokens.json` exported from
 Claude Design that generates the client's Tailwind theme, and — through
-[ADR-0058](0058-onboarding-with-your-own-agent-is-one-path-inside-its-conversation.md) — the
-onboarding panel the MCP server serves, with its export reader in TypeScript.
+[ADR-0058](0058-getting-started-is-one-path-on-the-web.md) — the
+getting-started pages, with their export reader in TypeScript.
 
 None of these has a place in the repository. [ADR-0020](0020-repository-layout-artifact-kinds.md)
 organizes directories by artifact kind, and its directories hold Python source (`src/`), skill
@@ -241,8 +241,8 @@ CI job and the Dependabot entry. Splitting it into a workspace later is an inter
 
 Related: [ADR-0020](0020-repository-layout-artifact-kinds.md) (the layout this extends),
 [ADR-0049](0049-cfokit-has-a-web-client.md) (the client),
-[ADR-0058](0058-onboarding-with-your-own-agent-is-one-path-inside-its-conversation.md) (the
-onboarding panel and its export reader),
+[ADR-0058](0058-getting-started-is-one-path-on-the-web.md) (the
+getting-started pages and their export reader),
 [ADR-0023](0023-one-image-many-entrypoints.md) (one image), and the Keycloakify Vite integration at
 docs.keycloakify.dev.
 

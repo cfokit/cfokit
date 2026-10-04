@@ -163,14 +163,14 @@ token (RFC 9449) leaves its key beside it. A token exchanged for the agent (RFC 
 ([ADR-0042](0042-person-only-acts-are-a-capability.md)). CFOKit issues no credentials (`IAM-10`),
 so it mints no import token either.
 
-The import therefore runs through a client whose credential stays outside the agent: the MCP
-connection, whose token the host holds and the server alone accepts. The onboarding panel calls
-the import tools through it, and they are visible to the panel only
-([ADR-0058](0058-onboarding-with-your-own-agent-is-one-path-inside-its-conversation.md)).
+The import therefore runs through a client whose credential stays outside the agent: the web
+client, signed in on the issuer's page in the person's browser. The getting-started pages call
+the import API with the person's own token, and nothing passes through an agent
+([ADR-0058](0058-getting-started-is-one-path-on-the-web.md)).
 
 ### 6. A sandboxed runtime imports over MCP, and the model is the bridge
 
-**Superseded by [ADR-0058](0058-onboarding-with-your-own-agent-is-one-path-inside-its-conversation.md).** Sections 1–5 stand.
+**Superseded by [ADR-0058](0058-getting-started-is-one-path-on-the-web.md).** Sections 1–5 stand.
 
 Where the runtime cannot reach CFOKit, the same neutral shape arrives as MCP tool arguments. The
 sandbox parses the archive and hands the model a compact rendering; the model calls the tool.

@@ -1,7 +1,7 @@
 # Customer journey
 
 From first click to books worth talking about, and on into the work CFOKit exists for. One
-journey for both offerings; where they differ, the row says so. **Draft.**
+journey for both offerings; where they differ, the row says so.
 
 Getting started (stages 1–7) happens on web pages, before any agent is involved. Everything after
 is built as skills, MCP tools and MCP App panels, so it runs wherever the agent does: Claude
@@ -33,8 +33,8 @@ business doing?". The drafted prompt asks both:
 
 ## After that — the product
 
-Not yet mapped. Each needs the same treatment as the stages above: what the person does, what
-CFOKit does for them, and where — the web app, the chat, or a panel in the chat.
+Each is mapped the way getting started is: what the person does, what CFOKit does for them, and
+where — the chat, or a panel in it.
 
 * Keeping current: bank and card activity arriving, categorized by stored rules, exceptions asked about
 * Statements: reconciling an account against what the bank says
@@ -54,5 +54,3 @@ CFOKit does for them, and where — the web app, the chat, or a panel in the cha
   email only.
 * `claude://claude.ai/new?q=` opens Claude Desktop with a drafted prompt (documented); confirm it
   from a web page, with the "Open Claude?" prompt a browser shows the first time.
-* Stages 5–7 on the web reverse ADR-0058, which put them in a panel in the chat. Panels remain for
-  the work after.

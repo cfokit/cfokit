@@ -441,9 +441,9 @@ These are decided, and they bound what the positioning may promise:
   the owner-operator does. Where that person wants help with the judgment rather than with the
   books, the guidance skill answers a bounded set of questions and states its limits.
 - **Not a dashboard you run the business from.** The agent is how the books are kept and
-  questioned, and onboarding happens where it runs: the account, the company and landing its
-  books, inside the agent's own conversation — the organization's agent with the hosted backend,
-  CFOKit's runtime with managed bookkeeping. Each screen CFOKit draws in that conversation is
+  questioned. Getting started — the account, the company and landing its books — is a few web
+  pages, and everything after happens where the agent runs: the organization's agent with the
+  hosted backend, CFOKit's runtime with managed bookkeeping. Each screen CFOKit draws is
   a deliberate decision, not a drift, and an admin console is not one of them. Rendered report
   output has not been decided either way.
 - **Not a bank.** It reads financial data and keeps books; it does not move money.

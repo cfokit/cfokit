@@ -121,7 +121,7 @@ storage or a server-held session, and that is decided when a page is used daily.
 
 ### 3. Onboarding is three steps, and each is someone else's act
 
-**Superseded by [ADR-0058](0058-onboarding-with-your-own-agent-is-one-path-inside-its-conversation.md).** The other sections stand.
+**Superseded by [ADR-0058](0058-getting-started-is-one-path-on-the-web.md).** The other sections stand.
 
 * **Create an account** is the issuer's registration page in CFOKit's theme (§ 1), reached from the
   sign-in redirect, or a Google or Microsoft account (`IAM-22`, `IAM-25`, `IAM-26`). Whether a
