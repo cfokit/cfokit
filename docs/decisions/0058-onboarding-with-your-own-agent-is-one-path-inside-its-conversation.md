@@ -47,9 +47,11 @@ The constraints that shape any route:
   by the host in a sandbox whose default CSP is `default-src 'none'` with inline script and style
   only. It calls the server's tools through the host — over the connection the host already
   signed in — and a tool declared `visibility: ["app"]` is hidden from the model, and the host
-  must refuse it to anything but the app. The panel can post a message into the conversation
-  (`ui/message`) and update what the model knows (`ui/update-model-context`). Claude renders MCP
-  Apps for locally configured servers, including through `mcp-remote`.
+  must refuse it to anything but the app. The panel can update what the model knows
+  (`ui/update-model-context`), silently. A message it sends (`ui/message`) is the person's, not
+  the app's: Claude Desktop puts it in the person's message box, under a warning to use caution
+  before running it, for the person to send. Claude renders MCP Apps for locally configured
+  servers, including through `mcp-remote`.
 * **What the specification leaves to the host**: file inputs and drag-and-drop in the panel. It
   has no provision for either.
 * Contributors run CFOKit on a laptop and self-hosters on their own machines; both should
@@ -113,11 +115,14 @@ network domains, so the parsed books go nowhere but to CFOKit's tools through th
 **The reconciliation is recorded with the import**, append-only in the imports module, and a
 read-only tool returns it, so a later conversation can explain it without the file.
 
-### 3. The result is posted into the conversation
+### 3. The panel shows the result, and the model is told
 
-When the import ends, the panel posts what happened into the chat — "Imported 5,553
-transactions. 25 of 27 accounts match QuickBooks exactly." — and updates the model's context with
-the entity and the reconciliation. The person goes on talking about their books in the same chat.
+When the import ends, the panel shows what happened, in the conversation where it sits —
+"Imported 5,553 transactions. 25 of 27 accounts match QuickBooks exactly." — and updates the
+model's context with the entity and the reconciliation. The panel writes nothing into the
+person's message box: a prompt the person did not write, arriving with a warning to use caution,
+is the wrong answer to an import that finished. Whatever the person says next, the model already
+knows the books have landed and how they reconciled.
 
 ### 4. Retired
 
@@ -163,6 +168,24 @@ the entity and the reconciliation. The person goes on talking about their books 
   file can be chosen and dropped in it, app-only tools are absent from the model's tool list, and
   Register on the connection's sign-in returns the person to the chat — are probed in Claude
   Desktop and the results recorded in this record, as ADR-0041 records its sandbox probe.
+
+A probe server, run in Claude Desktop through `mcp-remote` 0.14.3 on 2026-10-04, with a panel
+built on the MCP Apps SDK 2.0.1:
+
+| Probe | Result |
+|---|---|
+| The panel renders through `mcp-remote` | Rendered, after the person allowed it |
+| A file chosen in the panel | Read in the panel: name, size and contents |
+| A file dropped on the panel | Read in the panel, the same |
+| An app-only tool, called by the panel | Answered |
+| The same tool, asked for by the model | Not in the model's tool list: "I searched for it and nothing matches" |
+| `ui/update-model-context` | Accepted, with nothing shown |
+| `ui/message` | Placed in the person's message box, under a warning, for them to send |
+| The client's own components, with their stylesheet and fonts inlined | Rendered as designed: the field, drop zone, progress, notices, money table and buttons |
+| Public Sans and Archivo Narrow, inlined as `data:` URIs | Loaded |
+| The host's theme, applied as `data-theme` | Followed, light and dark |
+| A file `accept` does not allow, dropped on the drop zone | Refused |
+| The panel's width | 399 px when it loads, widening after, to the tablet layout |
 * Not gated: that no other onboarding route is built. That is review.
 
 ## Pros and Cons of the Options
@@ -243,5 +266,7 @@ which stand), ADR-0029 (derived idempotency keys), ADR-0042 (importing is a pers
 * The probe finds a file cannot be chosen or dropped in the panel.
 * The specification gives the server a way to tell an app's call from the model's, which would
   let CFOKit enforce what it now trusts the host to.
+* A host lets an app reply in the conversation as itself, rather than through the person's
+  message box, which would let the result appear as a turn of the chat.
 * An agent runtime can return a browser tab to a specific chat, which removes the web client's main
   disadvantage.
