@@ -327,6 +327,23 @@ describe("connecting Claude and the first question", () => {
     );
   });
 
+  test("the configuration sends the secret the way the client is registered to", async () => {
+    answers["/connection"] = { mcp_url: "https://mcp.example.test/mcp" };
+    answers["/.well-known/openid-configuration"] = {
+      registration_endpoint: "https://issuer.test/realms/cfokit/register-here",
+    };
+    withExport(<ConnectPage entityId="ent-1" />);
+    const registration = (await screen.findByText(/register-here/)).closest("figure");
+    const configuration = await screen.findByRole("figure", { name: "Configuration" });
+    const method = /"token_endpoint_auth_method":\s*"(\w+)"/;
+    const registered = method.exec(registration?.querySelector("pre")?.textContent ?? "")?.[1];
+    expect(registered).toBe("client_secret_post");
+    const config = JSON.parse(configuration.querySelector("pre")?.textContent ?? "") as {
+      mcpServers: { cfokit: { args: string[] } };
+    };
+    expect(method.exec(config.mcpServers.cfokit.args.at(-1) ?? "")?.[1]).toBe(registered);
+  });
+
   test("a deployment that does not say where Claude connects is told so, not guessed", async () => {
     answers["/connection"] = { mcp_url: null };
     const { container } = withExport(<ConnectPage entityId="ent-1" />);

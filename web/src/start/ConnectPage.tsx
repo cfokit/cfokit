@@ -85,7 +85,7 @@ function configuration(mcpUrl: string): string {
             mcpUrl,
             String(CALLBACK_PORT),
             "--static-oauth-client-info",
-            '{"client_id":"CLIENT_ID","client_secret":"CLIENT_SECRET"}',
+            '{"client_id":"CLIENT_ID","client_secret":"CLIENT_SECRET","token_endpoint_auth_method":"client_secret_post"}',
           ],
           env: { NODE_EXTRA_CA_CERTS: "/path/to/cfokit/.local/tls/ca/ca.pem" },
         },

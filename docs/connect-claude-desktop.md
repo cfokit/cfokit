@@ -86,14 +86,16 @@ Keep the `client_id` and `client_secret` it returns. Then in
       "command": "npx",
       "args": ["-y", "mcp-remote@0.14.3", "https://localhost:8081/mcp", "44196",
                "--static-oauth-client-info",
-               "{\"client_id\":\"…\",\"client_secret\":\"…\"}"],
+               "{\"client_id\":\"…\",\"client_secret\":\"…\",\"token_endpoint_auth_method\":\"client_secret_post\"}"],
       "env": {"NODE_EXTRA_CA_CERTS": "/path/to/cfokit/.local/tls/ca/ca.pem"}
     }
   }
 }
 ```
 
-`44196` is the callback port the client above was registered with.
+`44196` is the callback port the client above was registered with. `token_endpoint_auth_method` must
+match the registration: without it `mcp-remote` sends the secret in a header, and Keycloak refuses
+the sign-in with `unauthorized_client`.
 
 `mcp-remote` is pinned. Without a version, `npx` fetches the newest release on every launch,
 and a release that changes behavior changes your setup without anything in this repository
