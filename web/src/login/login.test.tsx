@@ -97,8 +97,14 @@ const pages = [
   "logout-confirm.ftl",
 ] as const;
 
-test.each(pages)("%s has no accessibility violations axe can find", async (pageId) => {
-  const { container } = render(<KcPage kcContext={getKcContextMock({ pageId })} />);
-  const result = await axe.run(container, { rules: { "color-contrast": { enabled: false } } });
-  expect(result.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
-});
+// axe walks every node in jsdom, and on a shared CI runner one page has taken past the default
+// five seconds; the limit is for a hang, not for a slow machine.
+test.each(pages)(
+  "%s has no accessibility violations axe can find",
+  async (pageId) => {
+    const { container } = render(<KcPage kcContext={getKcContextMock({ pageId })} />);
+    const result = await axe.run(container, { rules: { "color-contrast": { enabled: false } } });
+    expect(result.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
+  },
+  20_000,
+);
