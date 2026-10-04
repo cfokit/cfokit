@@ -1,4 +1,4 @@
-"""US English everywhere (CLAUDE.md, Documentation).
+"""US English everywhere.
 
 A British spelling in any tracked text file fails here. The list is the spellings that have
 actually appeared in this repository and their closest relatives, not a dictionary: a new one
@@ -61,7 +61,7 @@ def test_no_british_spellings() -> None:
         for number, line in enumerate(path.read_text(errors="ignore").splitlines(), 1)
         for match in BRITISH.finditer(line)
     ]
-    assert not found, "British spellings (CLAUDE.md asks for US English):\n" + "\n".join(found)
+    assert not found, "British spellings (use US English):\n" + "\n".join(found)
 
 
 def test_the_check_catches_what_it_is_for() -> None:
