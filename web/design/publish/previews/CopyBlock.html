@@ -1,0 +1,21 @@
+<!-- @dsCard group="Content" height=220 -->
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>CopyBlock — preview</title>
+  </head>
+  <body>
+    <div id="root" style="padding: 24px"></div>
+    <script>
+      var C = window.CFOKit,
+        h = React.createElement;
+      ReactDOM.createRoot(document.getElementById("root")).render(
+        h(C.CopyBlock, {
+          label: "Your first question",
+          text: "My books are imported into CFOKit. Confirm they match QuickBooks and explain any differences, then summarize this year's profit and loss and my cash position.",
+        }),
+      );
+    </script>
+  </body>
+</html>

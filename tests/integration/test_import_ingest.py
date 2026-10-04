@@ -3,9 +3,9 @@
 Driven through FastAPI's `TestClient`, so request validation, dependency resolution and the
 error mapping all run — the same path a client takes.
 
-**The archive never appears here**, which is the point. The reader runs in the agent's own
-runtime and ships with the skill (`tests/test_reader_script.py` drives it); what crosses this
-boundary is the neutral shape, and these tests are written against that shape directly.
+**The archive never appears here**, which is the point. The reader runs in the person's
+browser, in the web client (`web/src/quickbooks/` and its tests); what crosses this boundary is
+the neutral shape, and these tests are written against that shape directly.
 """
 
 from __future__ import annotations

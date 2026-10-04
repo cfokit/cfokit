@@ -59,9 +59,8 @@ script run in a Desktop chat on 2026-09-29:
 | `https://example.com` | the proxy refused the tunnel: 403 |
 | `https://www.google.com` | the proxy refused the tunnel: 403 |
 
-Anthropic documents 3.11 for the API's code-execution tool, which agrees.
-`tests/test_reader_script.py` runs the reader on 3.11, and ruff holds `skills/` to it. Re-run the
-probe before relying on any of this for a new decision.
+Anthropic documents 3.11 for the API's code-execution tool, which agrees. Re-run the probe before
+relying on any of this for a new decision.
 
 So the transport is not one question but two, and they have different answers:
 

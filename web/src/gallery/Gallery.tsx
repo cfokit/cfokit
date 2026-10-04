@@ -4,6 +4,7 @@ import {
   AppFrame,
   Button,
   Card,
+  CopyBlock,
   Dialog,
   DropZone,
   Money,
@@ -131,6 +132,15 @@ export function Gallery() {
             You can close this page. Choose the same file again and the import picks up where it
             stopped.
           </Notice>
+        </Section>
+
+        <Section title="Copy block">
+          <CopyBlock
+            label="Your first question"
+            text={
+              "My books are imported into CFOKit. Confirm they match QuickBooks and explain any differences, then summarize this year's profit and loss and my cash position."
+            }
+          />
         </Section>
 
         <Section title="Money">

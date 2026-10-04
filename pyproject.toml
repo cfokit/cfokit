@@ -56,15 +56,6 @@ packages = ["src/cfokit"]
 [dependency-groups]
 dev = [
     "ruff>=0.14",
-    # Writes the synthetic .xlsx the reader tests are built from. **Dev, not runtime.** It was
-    # runtime while the server parsed exports; it stopped being so when parsing moved to the
-    # agent's runtime, where the reader is standard-library only and installs nothing (ADR-0041).
-    # Reading an .xlsx by hand concentrates its risk in shared strings, styles deciding
-    # date-from-number, and the 1900 leap-year bug — real risks, which is why the reader is
-    # tested against the export this builds and was proven field-for-field against the openpyxl
-    # reader it replaces before that one was deleted. MIT, pulls only et-xmlfile, also MIT
-    # (verified 2026-09-05 from the installed artifacts' metadata, not from memory).
-    "openpyxl>=3.1",
     "mypy>=1.18",
     "pytest>=8.4",
     "import-linter>=2.3",
@@ -86,10 +77,6 @@ dev = [
     # `mcp` transitive; declared here so the suite depends on something stated rather than
     # borrowed. BSD-3-Clause (verified 2026-09-02 from the installed artifact's metadata).
     "httpx2>=0.29",
-    # Stubs for openpyxl, which is a runtime dependency above. Only the stubs are dev: the
-    # reader type-checks under `mypy --strict` like everything else rather than earning an
-    # exemption, and typeshed stubs ship to nobody. Apache-2.0.
-    "types-openpyxl>=3.1",
 ]
 
 # ---------------------------------------------------------------------------
@@ -110,9 +97,6 @@ dev = { cmd = "docker compose -f compose.yaml -f compose.dev.yaml up", help = "L
 [tool.ruff]
 line-length = 96
 target-version = "py314"
-# Skill scripts run on the agent's own interpreter — Claude Desktop's sandbox, 3.11 (ADR-0041) —
-# and import nothing from the package, so they alone are held to it.
-per-file-target-version = { "skills/**" = "py311" }
 extend-exclude = []
 
 [tool.ruff.lint]
@@ -133,12 +117,6 @@ select = [
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101"]              # assert is the point of a test
 "scripts/**" = ["T201"]            # CI scripts report to stdout
-# An operator command, read by a person at a terminal. Its whole output is the report.
-"src/cfokit/imports/__main__.py" = ["T201"]
-# Shipped with the skill and run in the agent's runtime, where stdout is the contract (ADR-0041).
-# Linted and formatted here because it is ours; not type-checked with the package, because it
-# imports nothing from it and must run on a bare interpreter.
-"skills/**" = ["T201"]
 # A one-shot compose step; its output is the container log.
 "infra/tls/**" = ["T201"]
 

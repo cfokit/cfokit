@@ -84,8 +84,6 @@ jobs:
           enable-cache: true
           version: ${{ env.UV_VERSION }}
       - run: uv python install ${{ env.PYTHON_VERSION }}
-      # The skill script's tests run it on the interpreter Claude Desktop's sandbox has (ADR-0041).
-      - run: uv python install 3.11
       - run: uv sync --locked
       - run: uv run task test
 
@@ -148,8 +146,6 @@ jobs:
           enable-cache: true
           version: ${{ env.UV_VERSION }}
       - run: uv python install ${{ env.PYTHON_VERSION }}
-      # The skill script's tests run it on the interpreter Claude Desktop's sandbox has (ADR-0041).
-      - run: uv python install 3.11
       - run: uv sync --locked
 
       - name: Full suite against the local stack

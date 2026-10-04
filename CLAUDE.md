@@ -116,8 +116,8 @@ The web client has its own commands, run from `web/`; `web/CLAUDE.md` lists them
 it, so `test` runs the previous copy after an edit and `migrate` reports "no migrations to apply"
 for a migration that is on disk. Both have cost real debugging time.
 
-**Cloud sessions are provisioned by `.claude/hooks/session-start.sh`** — CI's uv, Python 3.14 and
-3.11, `uv sync --locked`, and a running Docker daemon. The commands above are unchanged there.
+**Cloud sessions are provisioned by `.claude/hooks/session-start.sh`** — CI's uv, Python 3.14,
+`uv sync --locked`, and a running Docker daemon. The commands above are unchanged there.
 
 **`uv run task test` is not the whole suite.** Every test of row-level security, the entity lock
 and the write path needs a database and an issuer, and skips without them — which is most of the
@@ -157,12 +157,9 @@ otherwise get wrong, because absence isn't visible in a manifest:
   validation), `cryptography` (Web Push encryption, ADR-0057; already installed as PyJWT's
   extra, declared because we call into it). Those six pull **36** packages in total — `uv export
   --no-dev --no-emit-project --no-hashes | grep -c '^[a-z]'` — and the MCP SDK is most of it,
-  accepted knowingly (ADR-0024). `openpyxl` was once runtime, while the server parsed accounting
-  exports, and became a dev dependency when parsing moved to the agent's runtime (ADR-0041).
-- **Python 3.14**, `ruff`, `mypy --strict`, `import-linter`, and the image and CI run it. The
-  exception is `skills/`: its scripts run on the agent's own interpreter, which is 3.11 in
-  Claude Desktop (ADR-0041). ruff holds that directory to 3.11, and the reader tests run the
-  script on 3.11.
+  accepted knowingly (ADR-0024). Accounting exports are parsed in the person's browser, never
+  by the server, so no spreadsheet library is a dependency of any kind (ADR-0041, ADR-0058).
+- **Python 3.14**, `ruff`, `mypy --strict`, `import-linter`, and the image and CI run it.
 
 ## Money and correctness
 

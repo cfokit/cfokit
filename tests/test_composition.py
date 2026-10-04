@@ -41,8 +41,8 @@ def routes(app: object) -> set[str]:
 
 
 def test_the_composed_app_serves_the_import_routes() -> None:
-    """Import's surface is REST because its caller is a script in the agent's own runtime, which
-    posts the neutral shape rather than naming a file for the server to read (ADR-0041)."""
+    """Import's surface is REST because its caller is the getting-started pages, which read the
+    export in the person's browser and post the neutral shape with their token (ADR-0058)."""
     served = routes(rest_app(settings()))
 
     assert "/entities/{entity_id}/imports" in served
@@ -78,17 +78,12 @@ def test_the_import_routes_need_no_configuration() -> None:
     assert routes(rest_app(settings())) == routes(rest_app(settings()))
 
 
-def test_the_import_tools_take_a_shape_and_need_no_configuration() -> None:
-    """They took a path once, so they existed only where `IMPORT_ROOT` named a
-    directory — a tool taking a path is a file-read primitive. These take the parsed
-    shape, so there is nothing to withhold and the contract no longer depends on how a
-    deployment is configured (ADR-0041 § 6)."""
-    served = sorted(tool.name for tool in asyncio.run(mcp_server(settings()).list_tools()))
+def test_import_contributes_no_tools() -> None:
+    """Books are imported on the getting-started pages, never through a model: a tool taking the
+    parsed shape would make the model retype every figure (ADR-0058 § 3)."""
+    served = {tool.name for tool in asyncio.run(mcp_server(settings()).list_tools())}
 
-    assert {"open_import", "import_entries", "reconcile_import"} <= set(served)
-    assert served == sorted(
-        tool.name for tool in asyncio.run(mcp_server(settings()).list_tools())
-    )
+    assert not {"open_import", "import_entries", "reconcile_import"} & served
 
 
 # --- what a deployment serves, against what is published ------------------------------------
