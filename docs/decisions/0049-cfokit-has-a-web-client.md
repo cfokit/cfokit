@@ -16,7 +16,7 @@ The agent keeps and questions the books, and most of what an operator does happe
 conversation. Some work goes badly there, and onboarding is the clearest case. Creating an
 account, creating the company, and landing its history from the system it already runs are
 deterministic steps with one right answer each. A model adds nothing to them, and the last one it
-pays heavily for ([ADR-0051](0051-books-are-imported-through-the-web-client.md)). An operator
+pays heavily for ([ADR-0041](0041-import-is-parsed-where-the-file-is.md) § 6). An operator
 needs a place to do them signed in as themselves (`PLT-24`), before a conversation has anything
 to talk about.
 
@@ -171,8 +171,7 @@ gives on one machine.
 
 Every page is designed at phone, tablet and desktop widths, and the layout follows the design
 system's breakpoints. Nothing depends on hover or on dragging: choosing a file is a button that
-opens the device's picker, and dropping one on a desktop is a shortcut beside it. Import works
-from a phone as from a desktop, because the export is read wherever the page runs (ADR-0051).
+opens the device's picker, and dropping one on a desktop is a shortcut beside it.
 
 ### 8. Installable, and nothing about the books is kept on the device
 
@@ -189,7 +188,7 @@ desktop and open it like an application.
   offline. No write is attempted or queued for later: a change to the books needs the server,
   where the idempotency keys, the lock and the audit record are.
 * **An update is offered, never forced.** A new build waits until the operator chooses "Reload to
-  update", because a reload in the middle of an import costs them the parsed file (ADR-0051).
+  update", because a reload interrupts whatever the operator is in the middle of.
 
 ### 9. The stack
 
@@ -212,7 +211,7 @@ The build is a stage of the one image; nothing is served from a Node process.
 | Sign-in screens | Keycloakify | The issuer's pages written as React components on the client's theme (§ 1) |
 | Auth | `oidc-client-ts` + `react-oidc-context` | Maintained PKCE, refresh and redirect handling. Configured with an in-memory user store; only its sign-in state uses `sessionStorage`, as § 2 requires |
 | Money | `big.js` | Amounts arrive as decimal strings and are displayed without ever becoming a JavaScript `number` |
-| Parsing | A Web Worker, called through Comlink | A large export does not block the page (ADR-0051) |
+| Parsing | A Web Worker, called through Comlink | A large export does not block the onboarding panel's page (ADR-0058) |
 | Tests | Vitest, Testing Library, MSW; Playwright end to end; axe for accessibility | Component, contract-mocked and cross-browser layers |
 | Fonts | Public Sans (interface and money) and Archivo Narrow (display), bundled from their upstream releases | The design system's faces, served from the client's own origin, content-hashed like the rest of the build, with their license texts in the same build; the system interface font is every stack's fallback |
 | Tooling | pnpm with a pinned lockfile; ESLint with typescript-eslint; Prettier | Pinned and updated by Dependabot, like every other dependency |
@@ -357,7 +356,8 @@ does.
 **Reversal cost.** Low while the web client is one page; rising with every page added.
 
 Related: ADR-0012 (the gate), ADR-0019 (the issuer), ADR-0023 (one image), ADR-0042 (acts reserved
-to a person), ADR-0051 (the first page).
+to a person), ADR-0058 (onboarding, which this client does not carry for an organization's own
+agent).
 
 ## Revisit when
 
@@ -367,5 +367,7 @@ to a person), ADR-0051 (the first page).
   customer rather than a test.
 * React Server Components or a server-rendered framework become necessary for something this
   client needs, which would reopen the static, same-origin shape.
-* A host renders MCP Apps well enough that pages could live inside the conversation instead.
+* Managed bookkeeping is built. This client, with mobile and tablet apps, becomes the container
+  in which CFOKit chooses the model for each part of the experience (ADR-0058), and the context
+  this record argues from — onboarding — is rewritten for that offering.
 * Operators ask to record or review the books without a connection, which reopens offline-first.
