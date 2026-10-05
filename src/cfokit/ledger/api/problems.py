@@ -35,6 +35,7 @@ from cfokit.ledger.errors import (
     NotAuthorized,
     NothingToClose,
     NotificationNotFound,
+    ObligationNotCarried,
     ObligationNotFound,
     OpeningBalanceAccountUnset,
     PeriodClosed,
@@ -83,6 +84,7 @@ STATUS_FOR_CODE: dict[str, int] = {
     UnbalancedTransaction.code: HTTPStatus.UNPROCESSABLE_ENTITY,
     CommodityNotPermitted.code: HTTPStatus.UNPROCESSABLE_ENTITY,
     TransactionIncomplete.code: HTTPStatus.UNPROCESSABLE_ENTITY,
+    ObligationNotCarried.code: HTTPStatus.UNPROCESSABLE_ENTITY,
     AllocationInvalid.code: HTTPStatus.UNPROCESSABLE_ENTITY,
 }
 

@@ -177,6 +177,7 @@ def _obligation(found: Obligation) -> ObligationModel:
         obligation_id=found.obligation_id,
         transaction_id=found.transaction_id,
         transaction_date=found.transaction_date,
+        account_id=found.account_id,
         amount=str(found.amount),
         settled=str(found.settled),
         outstanding=str(found.outstanding),

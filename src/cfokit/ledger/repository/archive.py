@@ -80,14 +80,24 @@ TABLES: tuple[tuple[str, str], ...] = (
         " supersedes_decision_id, candidate_payee, candidate_payee_raw,"
         " candidate_description, candidate_amount, candidate_commodity,"
         " candidate_source_account_id, candidate_transaction_date, candidate_source_kind,"
-        " candidate_fingerprint, candidate_source_ref FROM assignment_decision"
-        " WHERE entity_id = %(entity_id)s ORDER BY decided_at, id",
+        " candidate_source_ref, counterpart_digest, chosen_by, decided_with_decision_id"
+        " FROM assignment_decision WHERE entity_id = %(entity_id)s"
+        # The earlier side of a transfer is decided in the same moment as the line that
+        # decided it, and names it, so it comes second.
+        " ORDER BY decided_at, decided_with_decision_id NULLS FIRST, id",
     ),
     (
         "assignment_decision_match",
         "SELECT id, decision_id, rule_version_id, rank, order_key"
         " FROM assignment_decision_match"
         " WHERE entity_id = %(entity_id)s ORDER BY decision_id, rank",
+    ),
+    (
+        # ADR-0059 § 5: what each decision's search found, which replay rebuilds and compares.
+        "assignment_decision_counterpart",
+        "SELECT id, decision_id, position, kind, counterpart_id, account_id, amount,"
+        " commodity, counterpart_date FROM assignment_decision_counterpart"
+        " WHERE entity_id = %(entity_id)s ORDER BY decision_id, position",
     ),
     (
         # `BKP-19`: a transaction derived from a statement names its line, and an export that
@@ -107,7 +117,7 @@ TABLES: tuple[tuple[str, str], ...] = (
     ),
     (
         "obligation",
-        "SELECT id, transaction_id, amount, commodity, created_at FROM obligation"
+        "SELECT id, transaction_id, account_id, amount, commodity, created_at FROM obligation"
         " WHERE entity_id = %(entity_id)s ORDER BY created_at, id",
     ),
     (

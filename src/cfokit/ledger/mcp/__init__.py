@@ -195,6 +195,7 @@ def _obligation(found: Obligation) -> dict[str, Any]:
         "obligation_id": found.obligation_id,
         "transaction_id": found.transaction_id,
         "transaction_date": found.transaction_date.isoformat(),
+        "account_id": found.account_id,
         "amount": str(found.amount),
         "settled": str(found.settled),
         "outstanding": str(found.outstanding),
@@ -452,8 +453,9 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
             "Record a transaction in an entity's books, as a draft or posted straight "
             "through. Postings must sum to zero per commodity to post. Requires an "
             "idempotency key; replaying one books nothing further. Pass raises_obligation to "
-            "record it as an invoice or anything else owed, and settles to apply it against "
-            "obligations — both need post."
+            "record it as an invoice or anything else owed — signed as its posting on the one "
+            "account that carries it, positive for a receivable — and settles to apply it "
+            "against obligations; both need post."
         ),
     )
     def record(
