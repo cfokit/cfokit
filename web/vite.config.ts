@@ -1,7 +1,7 @@
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { keycloakify } from "keycloakify/vite-plugin";
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 
 // The client is served at /app/ on the API's origin — by the REST service, or on GCP by a CDN at
 // the same path (ADR-0049 § 5, ADR-0055). The same project builds the issuer's sign-in theme
@@ -27,6 +27,8 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["src/test-setup.ts"],
+    // The end-to-end test drives a browser against a running stack, through Playwright.
+    exclude: [...configDefaults.exclude, "e2e/**"],
     // Vitest blanks CSS by default; the theme test reads the generated theme as text.
     css: { include: [/design\/theme\.css/] },
   },

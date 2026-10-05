@@ -4,7 +4,16 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist", "dist_keycloak", "dist-design-system", "public/keycloakify-dev-resources"] },
+  {
+    ignores: [
+      "dist",
+      "dist_keycloak",
+      "dist-design-system",
+      "public/keycloakify-dev-resources",
+      "test-results",
+      "playwright-report",
+    ],
+  },
   js.configs.recommended,
   tseslint.configs.strict,
   reactHooks.configs.flat["recommended-latest"],
@@ -25,6 +34,11 @@ export default tseslint.config(
   // The design system's producer runs in Node, and its previews in the design system's frame.
   {
     files: ["design/publish/*.mjs"],
+    languageOptions: { globals: globals.node },
+  },
+  // The end-to-end test and its sample export run in Node, driving a browser.
+  {
+    files: ["e2e/**", "playwright.config.ts"],
     languageOptions: { globals: globals.node },
   },
 );
