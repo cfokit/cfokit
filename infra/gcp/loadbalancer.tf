@@ -156,10 +156,18 @@ resource "google_compute_managed_ssl_certificate" "this" {
   }
 }
 
+# TLS 1.2 and later, with modern ciphers only: customer data is encrypted in transit (SOC2-14).
+resource "google_compute_ssl_policy" "this" {
+  name            = "cfokit"
+  profile         = "MODERN"
+  min_tls_version = "TLS_1_2"
+}
+
 resource "google_compute_target_https_proxy" "this" {
   name             = "cfokit"
   url_map          = google_compute_url_map.https.id
   ssl_certificates = [google_compute_managed_ssl_certificate.this.id]
+  ssl_policy       = google_compute_ssl_policy.this.id
 }
 
 resource "google_compute_global_forwarding_rule" "https" {

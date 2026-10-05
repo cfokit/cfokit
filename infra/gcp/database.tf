@@ -46,6 +46,17 @@ resource "google_sql_database_instance" "this" {
     insights_config {
       query_insights_enabled = true
     }
+
+    # Who connected and when, kept with the project's other logs (SOC2-24). Statement text is
+    # not logged: a role's password is set as a verifier, but a statement can still carry data.
+    database_flags {
+      name  = "log_connections"
+      value = "on"
+    }
+    database_flags {
+      name  = "log_disconnections"
+      value = "on"
+    }
   }
 
   deletion_protection = true

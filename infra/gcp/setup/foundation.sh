@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Everything the database step needs, and nothing that reads a secret yet: Cloud Run refuses to
-# create a revision naming a secret with no value, so the services wait for apply.sh.
+# create a revision naming a secret with no value, so the services wait for apply.sh. The load
+# balancer's address is reserved here too, so DNS can propagate while the rest is built.
 # shellcheck source=env.sh
 . "$(dirname "$0")/env.sh"
 
@@ -11,5 +12,6 @@ tf apply -input=false -auto-approve \
   -target=google_sql_database.keycloak \
   -target=google_compute_subnetwork.run \
   -target=google_artifact_registry_repository.images \
-  -target=google_secret_manager_secret_iam_member.reader
+  -target=google_secret_manager_secret_iam_member.reader \
+  -target=google_compute_global_address.lb
 done_ "foundation applied"

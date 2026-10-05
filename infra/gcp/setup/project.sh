@@ -32,6 +32,6 @@ if [ "$(gcloud billing projects describe "$CFOKIT_PROJECT" --format='value(billi
 fi
 done_ "linked"
 
-step "APIs for state"
-gcloud services enable cloudkms.googleapis.com storage.googleapis.com --quiet
+step "APIs OpenTofu needs before it can enable the rest"
+gcloud services enable cloudresourcemanager.googleapis.com serviceusage.googleapis.com cloudkms.googleapis.com storage.googleapis.com --quiet
 done_ "enabled"

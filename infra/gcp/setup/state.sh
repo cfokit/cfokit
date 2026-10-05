@@ -21,6 +21,10 @@ fi
 if ! gcloud kms keys describe state --keyring tofu --location "$CFOKIT_REGION" >/dev/null 2>&1; then
   gcloud kms keys create state --keyring tofu --location "$CFOKIT_REGION" --purpose encryption
 fi
+# Rotated every 90 days; older versions stay to decrypt what they encrypted (SOC2-14).
+next=$(python3 -c 'import datetime as d; print((d.datetime.now(d.timezone.utc) + d.timedelta(days=90)).strftime("%Y-%m-%dT%H:%M:%SZ"))')
+gcloud kms keys update state --keyring tofu --location "$CFOKIT_REGION" \
+  --rotation-period 90d --next-rotation-time "$next" --quiet >/dev/null
 # Owner does not include encrypting and decrypting with a key.
 gcloud kms keys add-iam-policy-binding state --keyring tofu --location "$CFOKIT_REGION" \
   --member "user:$(gcloud config get account)" \
