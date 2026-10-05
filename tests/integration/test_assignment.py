@@ -20,8 +20,9 @@ from cfokit.assignment import Field, Operator, Outcome, Predicate
 from cfokit.assignment.candidate import Candidate, SourceKind
 from cfokit.assignment.errors import PrecedenceTaken
 from cfokit.assignment.service import apply_rules, approve, propose, replay
+from cfokit.ledger.errors import NotAuthorized
 from cfokit.ledger.repository.unit_of_work import Database
-from cfokit.ledger.service.administration import create_account
+from cfokit.ledger.service.administration import create_account, create_entity
 from cfokit.ledger.service.principal import ActorClass, Principal
 
 pytestmark = pytest.mark.integration
@@ -439,7 +440,7 @@ def test_replaying_an_unchanged_rule_set_reproduces_every_assignment(
     """
     arrange(database, entity, chart)
 
-    report = replay(database, entity_id=entity)
+    report = replay(database, entity_id=entity, principal=OWNER)
 
     assert report.total == len(busy(chart))
     assert report.compared == report.total
@@ -476,7 +477,7 @@ def test_a_rule_edit_leaves_every_earlier_decision_reproducing(
         rule_id=rule_id,
     )
 
-    report = replay(database, entity_id=entity)
+    report = replay(database, entity_id=entity, principal=OWNER)
 
     assert report.reproduced == report.compared == report.total
     assert report.diverged == ()
@@ -498,7 +499,7 @@ def test_replay_writes_nothing(
         return tuple(counts)
 
     before = snapshot()
-    replay(database, entity_id=entity)
+    replay(database, entity_id=entity, principal=OWNER)
 
     assert snapshot() == before
 
@@ -685,3 +686,90 @@ def test_an_uploaded_line_a_rule_resolves_is_a_complete_draft(
         status, legs = cur.fetchone() or (None, None)
     assert status == "draft"
     assert legs == 2
+
+
+def test_replay_needs_a_grant_in_the_entity(
+    database: Database, entity: str, chart: dict[str, str]
+) -> None:
+    """`IAM-01`: a principal holding no role "can do nothing with it", and reading which
+    decisions an entity took — and which diverged — is something."""
+    arrange(database, entity, chart)
+    stranger = Principal(id="user:stranger", actor_class=ActorClass.PERSON)
+
+    with pytest.raises(NotAuthorized):
+        replay(database, entity_id=entity, principal=stranger)
+
+
+def test_an_owner_of_other_books_cannot_replay_these(
+    database: Database, entity: str, chart: dict[str, str]
+) -> None:
+    """The case the check exists for: authenticated, and an owner — of somebody else's
+    entity. Owning one set of books confers nothing in another (`LED-13`)."""
+    arrange(database, entity, chart)
+    elsewhere = Principal(id="user:elsewhere", actor_class=ActorClass.PERSON)
+    create_entity(
+        database,
+        principal=elsewhere,
+        request_id="replay-test",
+        slug=f"elsewhere-{uuid.uuid4().hex[:12]}",
+        name="Other books",
+        accounting_basis="accrual",
+        fiscal_year_end_month=12,
+        fiscal_year_end_day=31,
+        functional_currency="USD",
+        time_zone="UTC",
+    )
+
+    with pytest.raises(NotAuthorized):
+        replay(database, entity_id=entity, principal=elsewhere)
+
+
+def test_proposing_needs_a_grant_in_the_entity(
+    database: Database, entity: str, chart: dict[str, str]
+) -> None:
+    """A proposal names the live rules a candidate would contend with, which is these books'
+    rule set — a read like any other (`IAM-01`)."""
+    arrange(database, entity, chart)
+    stranger = Principal(id="user:stranger", actor_class=ActorClass.PERSON)
+
+    with pytest.raises(NotAuthorized):
+        propose(
+            database,
+            entity_id=entity,
+            principal=stranger,
+            label="Probe",
+            precedence=99,
+            account_id=chart["Insurance"],
+            predicates=payee_rule(),
+            candidates=[acme(chart, "-1.00")],
+        )
+
+
+def test_a_stranger_running_a_coded_line_learns_nothing(
+    database: Database, entity: str, chart: dict[str, str]
+) -> None:
+    """A line already coded is reported without reaching the write path, so the grant is
+    checked before that report rather than left to the write it skips."""
+    approve(
+        database,
+        entity_id=entity,
+        principal=OWNER,
+        label="ACME to insurance",
+        precedence=10,
+        account_id=chart["Insurance"],
+        predicates=payee_rule(),
+    )
+    coded = acme(chart, "-240.00", ref="line-coded")
+    apply_rules(
+        database, entity_id=entity, principal=OWNER, request_id="run-1", candidates=[coded]
+    )
+    stranger = Principal(id="user:stranger", actor_class=ActorClass.PERSON)
+
+    with pytest.raises(NotAuthorized):
+        apply_rules(
+            database,
+            entity_id=entity,
+            principal=stranger,
+            request_id="run-2",
+            candidates=[coded],
+        )

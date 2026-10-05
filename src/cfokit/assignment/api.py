@@ -244,7 +244,7 @@ def assignment_replay(
     Published because a control an auditor can run is worth more than one only CI runs
     (ADR-0033 § 3). It writes nothing.
     """
-    report = replay(database, entity_id=entity_id)
+    report = replay(database, entity_id=entity_id, principal=principal)
     return {
         "total": report.total,
         "compared": report.compared,
