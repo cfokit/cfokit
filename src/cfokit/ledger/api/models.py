@@ -27,6 +27,7 @@ from cfokit.ledger.service.reports import Comparative
 __all__ = [
     "CreateEntityRequest",
     "EntityCreatedResponse",
+    "EntityResponse",
     "GrantResponse",
     "GrantRoleRequest",
     "Money",
@@ -166,6 +167,19 @@ class CreateEntityRequest(BaseModel):
 class EntityCreatedResponse(BaseModel):
     entity_id: str
     owner_grant_id: str
+
+
+class EntityResponse(BaseModel):
+    """What the entity declared at creation, as it stands."""
+
+    id: str
+    slug: str
+    name: str
+    accounting_basis: str = Field(description="'cash' or 'accrual' (LED-14).")
+    fiscal_year_end_month: int
+    fiscal_year_end_day: int
+    functional_currency: str
+    time_zone: str
 
 
 class CreateAccountRequest(BaseModel):

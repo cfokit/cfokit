@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import axe from "axe-core";
 import { StartedProvider } from "../start/state";
 import { claudeLink } from "../start/FirstQuestion";
@@ -54,6 +54,17 @@ const NOTIFICATION = {
   raised_at: "2026-03-14T10:00:00Z",
 };
 
+const COMPANY = {
+  id: ENTITY,
+  slug: "harbor-lane",
+  name: "Harbor Lane Bakery",
+  accounting_basis: "accrual",
+  fiscal_year_end_month: 12,
+  fiscal_year_end_day: 31,
+  functional_currency: "USD",
+  time_zone: "America/New_York",
+};
+
 interface Sent {
   path: string;
   method: string;
@@ -67,6 +78,7 @@ let answers: Record<string, { status: number; body: unknown }>;
 beforeEach(() => {
   requests = [];
   answers = {
+    [`/entities/${ENTITY}`]: { status: 200, body: COMPANY },
     "/unresolved-transactions": { status: 200, body: { unresolved: LINES } },
     "/notifications": { status: 200, body: { notifications: [NOTIFICATION] } },
     "/dismissal": { status: 201, body: { notification_id: "n-1", replayed: false } },
@@ -90,7 +102,10 @@ beforeEach(() => {
   );
 });
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
 
 function page() {
   return render(
@@ -109,9 +124,10 @@ describe("questions for you", () => {
   test("lists the lines no rule resolved, as the API gave them, with the person's token", async () => {
     const { container } = page();
     const table = await screen.findByRole("table", { name: "Transactions waiting for a rule" });
-    expect(requests.map((r) => r.path)).toEqual([
-      `/entities/${ENTITY}/unresolved-transactions`,
+    expect(requests.map((r) => r.path).sort()).toEqual([
+      `/entities/${ENTITY}`,
       `/entities/${ENTITY}/notifications`,
+      `/entities/${ENTITY}/unresolved-transactions`,
     ]);
     expect(requests.every((r) => r.authorization === "Bearer a-token")).toBe(true);
 
@@ -132,14 +148,75 @@ describe("questions for you", () => {
     vi.stubGlobal("location", { ...window.location, assign });
     page();
     await screen.findByRole("table");
+    // The name comes from the books, so a reload or a notification's link still has it.
+    expect(await screen.findByText(COMPANY.name)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Continue in Claude" }));
-    const prompt = unresolvedQuestion("", ENTITY);
-    expect(prompt).toContain(`entity ${ENTITY}`);
+    const prompt = unresolvedQuestion(COMPANY.name, ENTITY);
+    expect(prompt).toContain(`"${COMPANY.name}" (entity ${ENTITY})`);
     expect(prompt).toContain("couldn't categorize");
     expect(assign).toHaveBeenCalledWith(claudeLink(prompt));
     expect(screen.getByRole("link", { name: "Connect Claude" }).getAttribute("href")).toBe(
       `/app/companies/${ENTITY}/connect`,
     );
+  });
+
+  test("without the company's name, the questions still show and the prompt names the entity", async () => {
+    answers[`/entities/${ENTITY}`] = {
+      status: 403,
+      body: { code: "not_authorized", message: "No grant in this entity" },
+    };
+    const assign = vi.fn();
+    vi.stubGlobal("location", { ...window.location, assign });
+    page();
+    await screen.findByRole("table");
+    fireEvent.click(screen.getByRole("button", { name: "Continue in Claude" }));
+    expect(assign).toHaveBeenCalledWith(claudeLink(unresolvedQuestion("", ENTITY)));
+    expect(unresolvedQuestion("", ENTITY)).toContain(`entity ${ENTITY}`);
+  });
+
+  test("coming back to the tab reads the questions again", async () => {
+    let visibility: DocumentVisibilityState = "visible";
+    vi.spyOn(document, "visibilityState", "get").mockImplementation(() => visibility);
+    page();
+    await screen.findByRole("table");
+    const reads = () => requests.filter((r) => r.path.endsWith("/unresolved-transactions")).length;
+    expect(reads()).toBe(1);
+
+    // Leaving the tab reads nothing.
+    visibility = "hidden";
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    expect(reads()).toBe(1);
+
+    // Answered in Claude meanwhile: nothing is waiting any more.
+    answers["/unresolved-transactions"] = { status: 200, body: { unresolved: [] } };
+    answers["/notifications"] = { status: 200, body: { notifications: [] } };
+    visibility = "visible";
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    expect(await screen.findByText("Nothing waiting")).toBeTruthy();
+    expect(reads()).toBe(2);
+    expect(screen.queryByRole("table")).toBeNull();
+  });
+
+  test("a failed re-read keeps what was shown", async () => {
+    vi.spyOn(document, "visibilityState", "get").mockImplementation(() => "visible");
+    page();
+    await screen.findByRole("table");
+    answers["/unresolved-transactions"] = {
+      status: 503,
+      body: { code: "unavailable", message: "Try later" },
+    };
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    await waitFor(() =>
+      expect(requests.filter((r) => r.path.endsWith("/unresolved-transactions"))).toHaveLength(2),
+    );
+    expect(screen.getByRole("table")).toBeTruthy();
+    expect(screen.queryByText("Couldn't read your questions")).toBeNull();
   });
 
   test("a line with a notification can be dismissed, with an idempotency key", async () => {

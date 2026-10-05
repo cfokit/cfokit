@@ -798,6 +798,23 @@
     "name": "propose_assignment_rule"
   },
   {
+    "description": "What a set of books declared when it was created: the company's name, its accounting basis, its fiscal year end, its functional currency and its time zone. Every report is computed against these, and the name is how to refer to the company when speaking to the person.",
+    "inputSchema": {
+      "properties": {
+        "entity_id": {
+          "title": "Entity Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity_id"
+      ],
+      "title": "read_the_entityArguments",
+      "type": "object"
+    },
+    "name": "read_entity"
+  },
+  {
     "description": "Read a transaction and its postings, including what wrote it.",
     "inputSchema": {
       "properties": {
