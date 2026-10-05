@@ -16,14 +16,24 @@ from typing import Any
 import psycopg
 import pytest
 
-from cfokit.assignment import Field, Operator, Outcome, Predicate
+from cfokit.assignment import Counterpart, CounterpartKind, Field, Operator, Outcome, Predicate
 from cfokit.assignment.candidate import Candidate, SourceKind
-from cfokit.assignment.errors import PrecedenceTaken
-from cfokit.assignment.service import apply_rules, approve, propose, replay
-from cfokit.ledger.errors import NotAuthorized
+from cfokit.assignment.errors import NotACounterpart, NothingToDecline, PrecedenceTaken
+from cfokit.assignment.service import (
+    answer_question,
+    apply_rules,
+    approve,
+    open_questions,
+    propose,
+    replay,
+)
+from cfokit.ledger.engine import Entry, Posting
+from cfokit.ledger.errors import NotAPerson, NotAuthorized
 from cfokit.ledger.repository.unit_of_work import Database
-from cfokit.ledger.service.administration import create_account, create_entity
+from cfokit.ledger.service.administration import create_account, create_entity, grant_role
 from cfokit.ledger.service.principal import ActorClass, Principal
+from cfokit.ledger.service.receivables import obligation_detail, outstanding_obligations
+from cfokit.ledger.service.write import WriteContext, record_transaction
 
 pytestmark = pytest.mark.integration
 
@@ -885,3 +895,669 @@ def test_a_stranger_running_a_coded_line_learns_nothing(
             request_id="run-2",
             candidates=[coded],
         )
+
+
+# --- A line is matched to what the books hold before any rule codes it (ADR-0059) ---------
+#
+# Each expected value is ADR-0059's stated confirmation or a requirement's acceptance: an
+# expected payment settles its obligation and books no income (`AR-13`, `LED-17`), an entry
+# made ahead of the feed is not booked twice (`BKP-13`), a transfer leaves total income and
+# total expense unchanged (`BKP-14`), equal counterparts are a question rather than a choice
+# (`BKP-12`), and a leg is claimed once.
+
+ISSUED = date(2026, 3, 2)
+PAID = date(2026, 3, 10)
+
+
+@pytest.fixture
+def books(database: Database, owned_books: tuple[str, str, str]) -> dict[str, str]:
+    """A bank and a savings account, receivables, revenue, and an expense to code to."""
+    entity_id, cash, revenue = owned_books
+    accounts = {"Bank": cash, "Revenue": revenue}
+    for name, code, kind in (
+        ("Savings", "1010", "asset"),
+        ("Receivable", "1200", "asset"),
+        ("Insurance", "6200", "expense"),
+    ):
+        accounts[name] = create_account(
+            database,
+            entity_id=entity_id,
+            principal=OWNER,
+            request_id="matching-test",
+            code=code,
+            name=name,
+            account_type=kind,
+        )
+    return accounts
+
+
+def by_hand(
+    database: Database,
+    entity: str,
+    legs: tuple[tuple[str, str], ...],
+    when: date,
+    *,
+    raises: str | None = None,
+) -> str:
+    """A transaction a person recorded, posted, the way anyone enters one."""
+    return record_transaction(
+        database,
+        WriteContext(
+            entity_id=entity,
+            principal=OWNER,
+            request_id=f"by-hand-{uuid.uuid4().hex[:8]}",
+            idempotency_key=uuid.uuid4().hex,
+        ),
+        entry=Entry(
+            transaction_date=when,
+            postings=tuple(
+                Posting(account, Decimal(amount), "USD") for account, amount in legs
+            ),
+            description="Entered by hand",
+        ),
+        post=True,
+        raises_obligation=Decimal(raises) if raises is not None else None,
+    ).transaction_id
+
+
+def invoice(database: Database, entity: str, books: dict[str, str], amount: str) -> str:
+    """An issued invoice: receivables debited, revenue credited, the obligation raised."""
+    by_hand(
+        database,
+        entity,
+        ((books["Receivable"], amount), (books["Revenue"], f"-{amount}")),
+        ISSUED,
+        raises=amount,
+    )
+    [owed] = outstanding_obligations(database, entity_id=entity, principal=OWNER)
+    return owed.obligation_id
+
+
+def arriving(
+    books: dict[str, str],
+    amount: str,
+    *,
+    ref: str,
+    account: str = "Bank",
+    on: date = PAID,
+    payee: str = "Client A",
+    kind: SourceKind = SourceKind.FEED,
+) -> Candidate:
+    return Candidate(
+        payee=payee,
+        amount=Decimal(amount),
+        commodity="USD",
+        source_account_id=books[account],
+        transaction_date=on,
+        source_kind=kind,
+        source_ref=ref,
+    )
+
+
+def run(database: Database, entity: str, *lines: Candidate) -> Any:
+    return apply_rules(
+        database,
+        entity_id=entity,
+        principal=OWNER,
+        request_id=f"run-{uuid.uuid4().hex[:8]}",
+        candidates=list(lines),
+    )
+
+
+def posted_by_type(
+    app_conn: psycopg.Connection[Any], entity: str, account_type: str
+) -> Decimal:
+    """What every posted posting on accounts of one type sums to."""
+    with app_conn.cursor() as cur:
+        cur.execute("SELECT set_config('cfokit.entity_id', %s, false)", (entity,))
+        cur.execute(
+            "SELECT COALESCE(SUM(p.amount), 0) FROM posting p"
+            "  JOIN ledger_transaction t ON t.id = p.transaction_id"
+            "  JOIN account a ON a.id = p.account_id"
+            " WHERE p.entity_id = %s AND t.status = 'posted' AND a.type = %s",
+            (entity, account_type),
+        )
+        return Decimal((cur.fetchone() or [0])[0])
+
+
+def rows(app_conn: psycopg.Connection[Any], entity: str, sql: str, *args: Any) -> list[Any]:
+    with app_conn.cursor() as cur:
+        cur.execute("SELECT set_config('cfokit.entity_id', %s, false)", (entity,))
+        cur.execute(sql, args)
+        return cur.fetchall()
+
+
+def client_receipts(database: Database, entity: str, books: dict[str, str]) -> None:
+    """The rule that would book a client's deposit as income — and so book it twice."""
+    approve(
+        database,
+        entity_id=entity,
+        principal=OWNER,
+        label="Client receipts are revenue",
+        precedence=10,
+        account_id=books["Revenue"],
+        predicates=(Predicate(1, Field.PAYEE, Operator.CONTAINS, "client"),),
+    )
+
+
+def test_a_deposit_equal_to_an_open_obligation_settles_it_and_books_no_income(
+    database: Database, entity: str, books: dict[str, str], app_conn: psycopg.Connection[Any]
+) -> None:
+    """`AR-13`: the deposit is applied to the invoice it settles, by a stored link (ADR-0037
+    § 3). A rule that would code it to revenue is not consulted, so revenue is the invoice's
+    1,200.00 credit and nothing more."""
+    obligation = invoice(database, entity, books, "1200.00")
+    client_receipts(database, entity, books)
+
+    applied = run(database, entity, arriving(books, "1200.00", ref="deposit-1"))
+
+    [booked] = applied.booked
+    assert booked.outcome is Outcome.MATCHED
+    assert booked.rule_label is None
+    assert [(c.kind, c.id) for c in booked.counterparts] == [
+        (CounterpartKind.OBLIGATION, obligation)
+    ]
+    assert outstanding_obligations(database, entity_id=entity, principal=OWNER) == ()
+    [settlement] = obligation_detail(
+        database, entity_id=entity, principal=OWNER, obligation_id=obligation
+    ).settlements
+    assert settlement.transaction_id == booked.transaction_id
+    assert posted_by_type(app_conn, entity, "income") == Decimal("-1200.00")
+    # Posted, against the account that carries the obligation, and attributed to no rule.
+    assert sorted(
+        (str(account), Decimal(amount), assigned)
+        for account, amount, assigned in rows(
+            app_conn,
+            entity,
+            "SELECT account_id, amount, assigned_by_rule_version_id FROM posting"
+            " WHERE transaction_id = %s",
+            booked.transaction_id,
+        )
+    ) == sorted(
+        [(books["Bank"], Decimal("1200"), None), (books["Receivable"], Decimal("-1200"), None)]
+    )
+    assert rows(
+        app_conn,
+        entity,
+        "SELECT status, actor_class FROM ledger_transaction WHERE id = %s",
+        booked.transaction_id,
+    ) == [("posted", "rule")]
+
+
+def test_a_line_equal_to_a_hand_entered_entry_writes_no_transaction(
+    database: Database, entity: str, books: dict[str, str], app_conn: psycopg.Connection[Any]
+) -> None:
+    """`BKP-13`: matched to the record "rather than creating a duplicate". The entry is not
+    altered — not even where it says it came from — and the decision is the link."""
+    entry = by_hand(
+        database, entity, ((books["Insurance"], "240.00"), (books["Bank"], "-240.00")), ISSUED
+    )
+    approve_insurance(database, entity, books)
+
+    applied = run(database, entity, arriving(books, "-240.00", ref="card-1", payee="ACME"))
+
+    [booked] = applied.booked
+    assert booked.outcome is Outcome.MATCHED
+    assert booked.transaction_id == entry
+    assert counts(app_conn, entity) == (1, 1)
+    assert rows(
+        app_conn, entity, "SELECT derived_from FROM ledger_transaction WHERE id = %s", entry
+    ) == [(None,)]
+
+
+def approve_insurance(database: Database, entity: str, books: dict[str, str]) -> None:
+    approve(
+        database,
+        entity_id=entity,
+        principal=OWNER,
+        label="ACME to insurance",
+        precedence=20,
+        account_id=books["Insurance"],
+        predicates=payee_rule(),
+    )
+
+
+def test_two_mirrored_feed_lines_are_one_transfer(
+    database: Database,
+    entity: str,
+    books: dict[str, str],
+    app_conn: psycopg.Connection[Any],
+    owner_conn: psycopg.Connection[Any],
+) -> None:
+    """**`BKP-14`'s acceptance, executed**: a transfer arriving as two lines is one transfer,
+    and total income and total expense are unchanged. The first line's question — nothing
+    explained it when it arrived — is closed by the second arriving."""
+    income, expense = (
+        posted_by_type(app_conn, entity, "income"),
+        posted_by_type(app_conn, entity, "expense"),
+    )
+
+    first = run(database, entity, arriving(books, "-500.00", ref="out-1", payee="To savings"))
+    assert [b.outcome for b in first.unresolved] == [Outcome.UNMATCHED]
+    second = run(
+        database,
+        entity,
+        arriving(
+            books, "500.00", ref="in-1", account="Savings", on=date(2026, 3, 12), payee="From"
+        ),
+    )
+
+    [booked] = second.booked
+    assert booked.outcome is Outcome.MATCHED
+    assert [c.kind for c in booked.counterparts] == [CounterpartKind.TRANSFER]
+    assert posted_by_type(app_conn, entity, "income") == income
+    assert posted_by_type(app_conn, entity, "expense") == expense
+    assert sorted(
+        (str(account), Decimal(amount))
+        for account, amount in rows(
+            app_conn,
+            entity,
+            "SELECT account_id, amount FROM posting WHERE transaction_id = %s",
+            booked.transaction_id,
+        )
+    ) == sorted([(books["Bank"], Decimal("-500")), (books["Savings"], Decimal("500"))])
+    # Both lines now name the one transfer, and the first line's question is answered.
+    assert sorted(
+        str(ref)
+        for (ref,) in rows(
+            app_conn,
+            entity,
+            "SELECT candidate_source_ref FROM assignment_decision"
+            " WHERE transaction_id = %s AND outcome = 'matched'",
+            booked.transaction_id,
+        )
+    ) == ["in-1", "out-1"]
+    assert open_questions(database, entity_id=entity, principal=OWNER) == ()
+    assert _open_notifications(owner_conn, entity) == 0
+
+
+def _open_notifications(owner_conn: psycopg.Connection[Any], entity: str) -> int:
+    with owner_conn.cursor() as cur:
+        cur.execute(
+            "SELECT count(*) FROM notification n WHERE n.entity_id = %s AND NOT EXISTS"
+            " (SELECT 1 FROM notification_closing c WHERE c.notification_id = n.id)",
+            (entity,),
+        )
+        return int((cur.fetchone() or [0])[0])
+
+
+def test_two_equal_counterparts_raise_one_question_per_holder_and_post_nothing(
+    database: Database,
+    entity: str,
+    books: dict[str, str],
+    app_conn: psycopg.Connection[Any],
+    owner_conn: psycopg.Connection[Any],
+) -> None:
+    """`BKP-12` and ADR-0059 § 4: no order among equals is stated, so the line is asked about,
+    with every candidate — and a rule that would code it is not reached."""
+    grant_role(
+        database,
+        entity_id=entity,
+        principal=OWNER,
+        request_id="matching-test",
+        to_principal="user:partner",
+        role="owner",
+    )
+    one = by_hand(
+        database, entity, ((books["Insurance"], "240.00"), (books["Bank"], "-240.00")), ISSUED
+    )
+    two = by_hand(
+        database, entity, ((books["Insurance"], "240.00"), (books["Bank"], "-240.00")), PAID
+    )
+    approve_insurance(database, entity, books)
+    posted = (
+        "SELECT count(*) FROM ledger_transaction WHERE entity_id = %s AND status = 'posted'"
+    )
+    posted_before = rows(app_conn, entity, posted, entity)
+
+    applied = run(database, entity, arriving(books, "-240.00", ref="card-1", payee="ACME"))
+
+    [asked] = applied.unresolved
+    assert asked.outcome is Outcome.AMBIGUOUS
+    assert {c.id for c in asked.counterparts} == {one, two}
+    assert rows(app_conn, entity, posted, entity) == posted_before
+    with owner_conn.cursor() as cur:
+        cur.execute(
+            "SELECT recipient, subject_ref, notification_class FROM notification"
+            " WHERE entity_id = %s ORDER BY recipient",
+            (entity,),
+        )
+        raised = cur.fetchall()
+    assert raised == [
+        ("user:geoff", "card-1", "unresolved_transaction"),
+        ("user:partner", "card-1", "unresolved_transaction"),
+    ]
+    [question] = open_questions(database, entity_id=entity, principal=OWNER)
+    assert question.outcome is Outcome.AMBIGUOUS
+    assert {c.id for c in question.counterparts} == {one, two}
+
+
+def test_a_second_line_cannot_claim_a_claimed_leg(
+    database: Database,
+    entity: str,
+    books: dict[str, str],
+    owner_conn: psycopg.Connection[Any],
+) -> None:
+    """ADR-0059 § 1: a leg is claimed by at most one line. Two coffees on one statement are two
+    lines; the first finds the entry, and the second does not find it again."""
+    entry = by_hand(
+        database, entity, ((books["Insurance"], "4.50"), (books["Bank"], "-4.50")), ISSUED
+    )
+
+    first = run(database, entity, arriving(books, "-4.50", ref="coffee-1"))
+    second = run(database, entity, arriving(books, "-4.50", ref="coffee-2"))
+
+    assert first.booked[0].transaction_id == entry
+    assert [b.outcome for b in second.unresolved] == [Outcome.UNMATCHED]
+
+    # And the schema's half: a second decision naming the same leg is refused outright.
+    with owner_conn.cursor() as cur, pytest.raises(psycopg.errors.UniqueViolation):
+        cur.execute(
+            "INSERT INTO assignment_decision"
+            " (entity_id, transaction_id, outcome, match_count, rule_set_digest,"
+            "  counterpart_digest, evaluator_version, candidate_payee, candidate_payee_raw,"
+            "  candidate_amount, candidate_commodity, candidate_source_account_id,"
+            "  candidate_transaction_date, candidate_source_kind, candidate_source_ref)"
+            " VALUES (%s, %s, 'matched', 0, %s, %s, 2, 'x', 'x', -4.50, 'USD', %s, %s,"
+            "         'feed', 'coffee-3')",
+            (entity, entry, "0" * 64, "0" * 64, books["Bank"], PAID),
+        )
+
+
+def test_an_entry_outside_the_window_is_not_found(
+    database: Database, entity: str, books: dict[str, str]
+) -> None:
+    """Thirty-one days before the line is outside § 2's thirty: the line is asked about."""
+    by_hand(
+        database,
+        entity,
+        ((books["Insurance"], "240.00"), (books["Bank"], "-240.00")),
+        date(2026, 2, 7),  # March 10 less 31 days
+    )
+
+    applied = run(database, entity, arriving(books, "-240.00", ref="card-1", payee="ACME"))
+
+    assert [b.outcome for b in applied.unresolved] == [Outcome.UNMATCHED]
+
+
+def test_replay_re_decides_matched_lines(
+    database: Database, entity: str, books: dict[str, str]
+) -> None:
+    """`BKP-06` over the search as well as the rules: every match reproduces."""
+    invoice(database, entity, books, "1200.00")
+    by_hand(
+        database, entity, ((books["Insurance"], "240.00"), (books["Bank"], "-240.00")), PAID
+    )
+    client_receipts(database, entity, books)
+    run(
+        database,
+        entity,
+        arriving(books, "1200.00", ref="deposit-1"),
+        arriving(books, "-240.00", ref="card-1", payee="ACME"),
+        arriving(books, "-500.00", ref="out-1", payee="To savings"),
+        arriving(books, "500.00", ref="in-1", account="Savings", payee="From checking"),
+        arriving(books, "75.00", ref="client-2"),
+    )
+
+    report = replay(database, entity_id=entity, principal=OWNER)
+
+    # out-1 asked, then answered by in-1: six decisions for five lines.
+    assert report.total == 6
+    assert report.compared == report.reproduced == 6
+    assert (report.books_changed, report.rule_set_changed, report.chosen) == (0, 0, 0)
+    assert report.diverged == ()
+
+
+def test_replay_reports_a_divergence_when_a_counterpart_is_hidden_from_the_search(
+    database: Database,
+    entity: str,
+    books: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The failure ADR-0059 exists for, made visible: if the search does not see a
+    counterpart that sat in the books, the line it explained no longer reproduces."""
+    obligation = invoice(database, entity, books, "1200.00")
+    applied = run(database, entity, arriving(books, "1200.00", ref="deposit-1"))
+
+    hidden = monkeypatch_pool(monkeypatch, obligation)
+    report = replay(database, entity_id=entity, principal=OWNER)
+
+    assert hidden == [obligation]
+    assert report.diverged == (applied.booked[0].decision_id,)
+
+
+def test_replay_catches_a_line_a_rule_booked_while_a_counterpart_sat_in_the_books(
+    database: Database,
+    entity: str,
+    books: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The other direction: a run whose search missed the obligation let the rule book the
+    deposit as revenue a second time. Replay, seeing the books as they stood, diverges."""
+    obligation = invoice(database, entity, books, "1200.00")
+    client_receipts(database, entity, books)
+    with monkeypatch.context() as patched:
+        monkeypatch_pool(patched, obligation)
+        applied = run(database, entity, arriving(books, "1200.00", ref="deposit-1"))
+    assert [b.outcome for b in applied.booked] == [Outcome.ASSIGNED]
+
+    report = replay(database, entity_id=entity, principal=OWNER)
+
+    assert report.diverged == (applied.booked[0].decision_id,)
+
+
+def monkeypatch_pool(patched: pytest.MonkeyPatch, obligation: str) -> list[str]:
+    """Hide one obligation from what the search sees, and nothing else. Returns a list that
+    records each time it was hidden, so a test can tell the patch was reached."""
+    from cfokit.assignment import service
+
+    real = service.counterpart_pool
+    hidden: list[str] = []
+
+    def without(*args: Any, **kwargs: Any) -> tuple[Counterpart, ...]:
+        pool = real(*args, **kwargs)
+        kept = tuple(c for c in pool if c.id != obligation)
+        if len(kept) != len(pool):
+            hidden.append(obligation)
+        return kept
+
+    patched.setattr(service, "counterpart_pool", without)
+    return hidden
+
+
+# --- A person answers (ADR-0059 § 4, ADR-0042) --------------------------------------------
+
+
+def answering(entity: str, who: Principal = OWNER) -> WriteContext:
+    return WriteContext(
+        entity_id=entity,
+        principal=who,
+        request_id=f"answer-{uuid.uuid4().hex[:8]}",
+        idempotency_key=uuid.uuid4().hex,
+    )
+
+
+def ambiguous_card(database: Database, entity: str, books: dict[str, str]) -> tuple[str, str]:
+    one = by_hand(
+        database, entity, ((books["Insurance"], "240.00"), (books["Bank"], "-240.00")), ISSUED
+    )
+    two = by_hand(
+        database, entity, ((books["Insurance"], "240.00"), (books["Bank"], "-240.00")), PAID
+    )
+    run(database, entity, arriving(books, "-240.00", ref="card-1", payee="ACME"))
+    return one, two
+
+
+def test_a_person_names_one_of_two_counterparts(
+    database: Database,
+    entity: str,
+    books: dict[str, str],
+    owner_conn: psycopg.Connection[Any],
+) -> None:
+    """The person's choice closes the question, and replay counts it rather than re-deciding
+    it: a choice is not a function of the inputs (§ 5)."""
+    one, _ = ambiguous_card(database, entity, books)
+
+    answered = answer_question(
+        database,
+        answering(entity),
+        source_ref="card-1",
+        counterpart=(CounterpartKind.TRANSACTION, one),
+    )
+
+    assert answered.outcome is Outcome.MATCHED
+    assert answered.transaction_id == one
+    assert open_questions(database, entity_id=entity, principal=OWNER) == ()
+    assert _open_notifications(owner_conn, entity) == 0
+    report = replay(database, entity_id=entity, principal=OWNER)
+    assert (report.chosen, report.reproduced, report.diverged) == (1, 1, ())
+
+
+def test_a_person_answers_none_and_the_rules_decide(
+    database: Database, entity: str, books: dict[str, str], app_conn: psycopg.Connection[Any]
+) -> None:
+    """A third charge of the same amount: neither entry. The rules code it, posted, and the
+    line is not asked about again."""
+    ambiguous_card(database, entity, books)
+    approve_insurance(database, entity, books)
+
+    answered = answer_question(
+        database, answering(entity), source_ref="card-1", counterpart=None
+    )
+
+    assert answered.outcome is Outcome.ASSIGNED
+    assert rows(
+        app_conn,
+        entity,
+        "SELECT status FROM ledger_transaction WHERE id = %s",
+        answered.transaction_id,
+    ) == [("posted",)]
+    again = run(database, entity, arriving(books, "-240.00", ref="card-1", payee="ACME"))
+    assert [b.decision_id for b in again.booked] == [answered.decision_id]
+
+
+def test_a_person_answering_none_with_no_rule_leaves_one_question(
+    database: Database, entity: str, books: dict[str, str], owner_conn: psycopg.Connection[Any]
+) -> None:
+    ambiguous_card(database, entity, books)
+
+    answered = answer_question(
+        database, answering(entity), source_ref="card-1", counterpart=None
+    )
+
+    assert answered.outcome is Outcome.UNMATCHED
+    [question] = open_questions(database, entity_id=entity, principal=OWNER)
+    assert (question.outcome, question.counterparts) == (Outcome.UNMATCHED, ())
+    assert _open_notifications(owner_conn, entity) == 1
+    # Run again, it is still that one question: the search is not run for it again.
+    again = run(database, entity, arriving(books, "-240.00", ref="card-1", payee="ACME"))
+    assert [b.decision_id for b in again.unresolved] == [answered.decision_id]
+
+
+def test_a_check_that_cleared_late_is_answered_by_choosing_the_entry(
+    database: Database, entity: str, books: dict[str, str]
+) -> None:
+    """§ 4: held to the facts, not the windows. Forty-two days is outside the search's 30."""
+    check = by_hand(
+        database,
+        entity,
+        ((books["Insurance"], "240.00"), (books["Bank"], "-240.00")),
+        date(2026, 1, 27),
+    )
+    run(database, entity, arriving(books, "-240.00", ref="check-1012", payee="Check 1012"))
+
+    answered = answer_question(
+        database,
+        answering(entity),
+        source_ref="check-1012",
+        counterpart=(CounterpartKind.TRANSACTION, check),
+    )
+
+    assert (answered.outcome, answered.transaction_id) == (Outcome.MATCHED, check)
+
+
+def test_a_record_that_is_not_a_counterpart_is_refused(
+    database: Database, entity: str, books: dict[str, str]
+) -> None:
+    """A different amount is not the line, whoever says so."""
+    other = by_hand(
+        database, entity, ((books["Insurance"], "250.00"), (books["Bank"], "-250.00")), PAID
+    )
+    run(database, entity, arriving(books, "-240.00", ref="card-1", payee="ACME"))
+
+    with pytest.raises(NotACounterpart):
+        answer_question(
+            database,
+            answering(entity),
+            source_ref="card-1",
+            counterpart=(CounterpartKind.TRANSACTION, other),
+        )
+
+
+def test_none_is_not_an_answer_to_a_line_with_no_candidates(
+    database: Database, entity: str, books: dict[str, str]
+) -> None:
+    run(database, entity, arriving(books, "-240.00", ref="card-1", payee="ACME"))
+
+    with pytest.raises(NothingToDecline):
+        answer_question(database, answering(entity), source_ref="card-1", counterpart=None)
+
+
+def test_an_agent_cannot_answer_for_the_person(
+    database: Database, entity: str, books: dict[str, str]
+) -> None:
+    """ADR-0042: the person's own act, whatever the agent's grants."""
+    one, _ = ambiguous_card(database, entity, books)
+    agent = Principal(id="skill:bookkeeper", actor_class=ActorClass.AGENT, acting_for=OWNER.id)
+
+    with pytest.raises(NotAPerson):
+        answer_question(
+            database,
+            answering(entity, agent),
+            source_ref="card-1",
+            counterpart=(CounterpartKind.TRANSACTION, one),
+        )
+
+
+def test_confirming_a_proposed_payment_settles_it_in_one_commit(
+    database: Database,
+    entity: str,
+    books: dict[str, str],
+    owner_conn: psycopg.Connection[Any],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The settling transaction, its settlement and the decision land together or not at all:
+    a failure after the entry is written leaves the obligation open and nothing posted."""
+    obligation = invoice(database, entity, books, "1200.00")
+    [asked] = run(
+        database, entity, arriving(books, "1200.00", ref="upload-1", kind=SourceKind.UPLOAD)
+    ).unresolved
+    assert asked.outcome is Outcome.PROPOSED
+    before = persisted(owner_conn, entity)
+
+    def interrupted(*_: object, **__: object) -> None:
+        raise Interrupted
+
+    with monkeypatch.context() as patched:
+        patched.setattr("cfokit.assignment.service.answer", interrupted)
+        with pytest.raises(Interrupted):
+            answer_question(
+                database,
+                answering(entity),
+                source_ref="upload-1",
+                counterpart=(CounterpartKind.OBLIGATION, obligation),
+            )
+
+    assert persisted(owner_conn, entity) == before
+    [still] = outstanding_obligations(database, entity_id=entity, principal=OWNER)
+    assert still.outstanding == Decimal("1200")
+
+    answered = answer_question(
+        database,
+        answering(entity),
+        source_ref="upload-1",
+        counterpart=(CounterpartKind.OBLIGATION, obligation),
+    )
+
+    assert answered.outcome is Outcome.MATCHED
+    assert outstanding_obligations(database, entity_id=entity, principal=OWNER) == ()

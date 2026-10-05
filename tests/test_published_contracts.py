@@ -131,6 +131,7 @@ def test_the_mcp_tool_surface_is_published() -> None:
     assert [tool["name"] for tool in published] == [
         "account_detail",
         "account_statement_agreement",
+        "answer_unresolved_transaction",
         "approve_assignment_rule",
         "balance_sheet",
         "comparative_profit_and_loss",

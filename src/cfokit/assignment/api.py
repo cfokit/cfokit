@@ -19,15 +19,67 @@ from fastapi import APIRouter, Depends, Header, Path, status
 from pydantic import BaseModel
 from pydantic import Field as Body
 
-from cfokit.assignment import Field, Operator, Predicate
+from cfokit.assignment import Counterpart, CounterpartKind, Field, Operator, Predicate
 from cfokit.assignment.candidate import Candidate, SourceKind
-from cfokit.assignment.service import apply_rules, approve, open_questions, propose, replay
-from cfokit.ledger.api import ERRORS, get_database, get_principal
+from cfokit.assignment.repository import StoredDecision
+from cfokit.assignment.service import (
+    Booked,
+    answer_question,
+    apply_rules,
+    approve,
+    open_questions,
+    propose,
+    replay,
+)
+from cfokit.ledger.api import ERRORS, get_database, get_principal, get_write_context
 from cfokit.ledger.api.models import Money
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.principal import Principal
+from cfokit.ledger.service.write import WriteContext
 
 router = APIRouter(tags=["assignment"])
+
+
+def _counterpart(found: Counterpart) -> dict[str, str]:
+    """A counterpart as a person is shown it: what kind of record, which, and its figures."""
+    return {
+        "kind": str(found.kind),
+        "id": found.id,
+        "account_id": found.account_id,
+        "amount": str(found.amount),
+        "commodity": found.commodity,
+        "date": found.on.isoformat(),
+    }
+
+
+def _booked(booked: Booked) -> dict[str, Any]:
+    return {
+        "source_ref": booked.candidate.source_ref,
+        "transaction_id": booked.transaction_id,
+        "decision_id": booked.decision_id,
+        "outcome": str(booked.outcome),
+        "rule": booked.rule_label,
+        "payee": booked.candidate.payee,
+        "counterparts": [_counterpart(c) for c in booked.counterparts],
+    }
+
+
+def _question(question: StoredDecision) -> dict[str, Any]:
+    line = question.candidate
+    return {
+        "source_ref": line.source_ref,
+        "transaction_id": question.transaction_id,
+        "decision_id": question.id,
+        "outcome": str(question.outcome),
+        "payee": line.payee,
+        "description": line.description,
+        "amount": str(line.amount),
+        "commodity": line.commodity,
+        "source_account_id": line.source_account_id,
+        "transaction_date": line.transaction_date.isoformat(),
+        "source_kind": str(line.source_kind),
+        "counterparts": [_counterpart(c) for c in question.counterparts],
+    }
 
 
 class PredicateModel(BaseModel):
@@ -84,6 +136,26 @@ class ApproveRequest(BaseModel):
 
 class ApplyRequest(BaseModel):
     candidates: list[CandidateModel]
+
+
+class CounterpartChoice(BaseModel):
+    """A record the books hold, named by kind and id, as a question lists it."""
+
+    kind: CounterpartKind
+    id: str = Body(
+        description="An obligation's id, a transaction's id, or — for the other side of a "
+        "transfer — the other line's decision_id."
+    )
+
+
+class AnswerRequest(BaseModel):
+    """A person's answer to a line's question. Their own act (ADR-0042)."""
+
+    source_ref: str = Body(description="The line the question is about.")
+    counterpart: CounterpartChoice | None = Body(
+        description="The record this line is. Null for none of those it was asked about, "
+        "after which the rules decide it; only an ambiguous or proposed line has those."
+    )
 
 
 def _predicates(models: list[PredicateModel]) -> tuple[Predicate, ...]:
@@ -188,7 +260,7 @@ def approve_rule(
 
 @router.post(
     "/entities/{entity_id}/assignment-runs",
-    summary="Book what the rules resolve, and report what they do not",
+    summary="Match each line to the books, book what the rules resolve, and report the rest",
     responses=ERRORS,
 )
 def run_assignment(
@@ -198,7 +270,11 @@ def run_assignment(
     database: Annotated[Database, Depends(get_database)],
     request_id: Annotated[str | None, Header(alias="X-Request-Id")] = None,
 ) -> dict[str, Any]:
-    """`BKP-06` and `BKP-12`. `unresolved` is the operator's worklist, and nothing in it was
+    """`BKP-06`, `BKP-12`, `BKP-13` and `BKP-14`. Each line is first searched against the books:
+    one counterpart and it is `matched` — an open invoice settled, an entry already recorded,
+    or the other side of a transfer — with no rule consulted. Two or more and it is
+    `ambiguous`, an uploaded payment of an open invoice is `proposed`, and both are in
+    `unresolved` with their `counterparts`, as is a line no rule resolves. Nothing there was
     guessed at or parked in a holding account. An uploaded candidate is drafted even where a
     rule resolves it: a person posts it (ADR-0047)."""
     applied = apply_rules(
@@ -209,23 +285,40 @@ def run_assignment(
         candidates=_candidates(body.candidates),
     )
     return {
-        "booked": [
-            {
-                "source_ref": b.candidate.source_ref,
-                "transaction_id": b.transaction_id,
-                "rule": b.rule_label,
-                "payee": b.candidate.payee,
-            }
-            for b in applied.booked
-        ],
-        "unresolved": [
-            {
-                "source_ref": b.candidate.source_ref,
-                "transaction_id": b.transaction_id,
-                "payee": b.candidate.payee,
-            }
-            for b in applied.unresolved
-        ],
+        "booked": [_booked(b) for b in applied.booked],
+        "unresolved": [_booked(b) for b in applied.unresolved],
+    }
+
+
+@router.post(
+    "/entities/{entity_id}/unresolved-transactions/answers",
+    status_code=status.HTTP_201_CREATED,
+    summary="Answer a line's question: the record it is, or none of those it was asked about",
+    responses=ERRORS,
+)
+def answer_unresolved_transaction(
+    body: AnswerRequest,
+    context: Annotated[WriteContext, Depends(get_write_context)],
+    database: Annotated[Database, Depends(get_database)],
+) -> dict[str, Any]:
+    """A person's own act, refused for a delegated session with `not_a_person` (ADR-0042,
+    ADR-0059 § 4). Naming an open obligation posts its settlement; naming a recorded
+    transaction writes nothing new; naming another line's question pairs them as a transfer.
+    Held to the same exact facts as the search, but not to its dates. Requires an
+    `Idempotency-Key` header."""
+    answered = answer_question(
+        database,
+        context,
+        source_ref=body.source_ref,
+        counterpart=(
+            None if body.counterpart is None else (body.counterpart.kind, body.counterpart.id)
+        ),
+    )
+    return {
+        "decision_id": answered.decision_id,
+        "outcome": str(answered.outcome),
+        "transaction_id": answered.transaction_id,
+        "replayed": answered.replayed,
     }
 
 
@@ -251,13 +344,15 @@ def assignment_replay(
         "reproduced": report.reproduced,
         "rule_set_changed": report.rule_set_changed,
         "semantics_changed": report.semantics_changed,
+        "books_changed": report.books_changed,
+        "chosen": report.chosen,
         "diverged": list(report.diverged),
     }
 
 
 @router.get(
     "/entities/{entity_id}/unresolved-transactions",
-    summary="Every line no rule resolved and nothing has answered since",
+    summary="Every line waiting on a person, with what it is asked about",
     responses=ERRORS,
 )
 def unresolved_transactions(
@@ -265,23 +360,15 @@ def unresolved_transactions(
     principal: Annotated[Principal, Depends(get_principal)],
     database: Annotated[Database, Depends(get_database)],
 ) -> dict[str, Any]:
-    """`BKP-12`'s worklist, in the order the activity happened. Each line is answered by
-    approving a rule that covers it and running assignment again (`BKP-09`); `source_ref` is
-    what the run takes, and what its `unresolved_transaction` notification is about."""
+    """`BKP-12`'s worklist, in the order the activity happened. `outcome` says what is asked:
+    `unmatched`, no rule covers the line — answered by approving one and running assignment
+    again (`BKP-09`), or by naming the record it is; `ambiguous`, every record it could be is in
+    `counterparts`; `proposed`, an uploaded payment of the open obligation in `counterparts`,
+    waiting for a person to confirm. `source_ref` is what its `unresolved_transaction`
+    notification is about."""
     return {
         "unresolved": [
-            {
-                "source_ref": q.candidate.source_ref,
-                "transaction_id": q.transaction_id,
-                "decision_id": q.decision_id,
-                "payee": q.candidate.payee,
-                "description": q.candidate.description,
-                "amount": str(q.candidate.amount),
-                "commodity": q.candidate.commodity,
-                "source_account_id": q.candidate.source_account_id,
-                "transaction_date": q.candidate.transaction_date.isoformat(),
-                "source_kind": str(q.candidate.source_kind),
-            }
+            _question(q)
             for q in open_questions(database, entity_id=entity_id, principal=principal)
         ]
     }

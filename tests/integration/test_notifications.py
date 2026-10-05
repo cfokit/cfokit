@@ -32,12 +32,13 @@ from cfokit.assignment.service import (
     open_questions,
 )
 from cfokit.ledger.config import Settings
+from cfokit.ledger.engine import Entry, Posting
 from cfokit.ledger.errors import NotAPerson, NotificationNotFound, RecipientHoldsNoRole
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.administration import create_account, grant_role
 from cfokit.ledger.service.notifications import dismiss, notify, open_notifications
 from cfokit.ledger.service.principal import ActorClass, Principal
-from cfokit.ledger.service.write import WriteContext
+from cfokit.ledger.service.write import WriteContext, record_transaction
 from cfokit.server import mcp_server, rest_app
 
 pytestmark = pytest.mark.integration
@@ -491,6 +492,85 @@ def test_rest_refuses_an_agents_dismissal(
 
     assert refused.status_code == 403
     assert refused.json()["code"] == "not_a_person"
+
+
+def entered(database: Database, entity: str, chart: dict[str, str], when: date) -> str:
+    """A charge a person recorded by hand before the bank's line arrived."""
+    return record_transaction(
+        database,
+        WriteContext(
+            entity_id=entity,
+            principal=OWNER,
+            request_id="notifications-test",
+            idempotency_key=uuid.uuid4().hex,
+        ),
+        entry=Entry(
+            transaction_date=when,
+            postings=(
+                Posting(chart["Insurance"], Decimal("240.00"), "USD"),
+                Posting(chart["Bank"], Decimal("-240.00"), "USD"),
+            ),
+        ),
+        post=True,
+    ).transaction_id
+
+
+def test_rest_lists_the_candidates_and_the_person_answers(
+    app_dsn: str, entity: str, chart: dict[str, str]
+) -> None:
+    """ADR-0059 § 4 over REST: two entries fit the line, the worklist lists both, the agent
+    cannot choose, and the person's choice closes the question for everyone it went to."""
+    database = Database(app_dsn)
+    first = entered(database, entity, chart, date(2026, 2, 27))
+    second = entered(database, entity, chart, date(2026, 3, 2))
+    run(database, entity, line(chart, "line-1"))
+    owner = rest(app_dsn, OWNER)
+
+    [question] = owner.get(f"/entities/{entity}/unresolved-transactions").json()["unresolved"]
+    assert question["outcome"] == "ambiguous"
+    assert sorted(c["id"] for c in question["counterparts"]) == sorted([first, second])
+    assert {c["kind"] for c in question["counterparts"]} == {"transaction"}
+
+    choice = {"source_ref": "line-1", "counterpart": {"kind": "transaction", "id": first}}
+    refused = rest(app_dsn, AGENT).post(
+        f"/entities/{entity}/unresolved-transactions/answers",
+        json=choice,
+        headers={"Idempotency-Key": uuid.uuid4().hex},
+    )
+    assert (refused.status_code, refused.json()["code"]) == (403, "not_a_person")
+
+    key = uuid.uuid4().hex
+    answered = owner.post(
+        f"/entities/{entity}/unresolved-transactions/answers",
+        json=choice,
+        headers={"Idempotency-Key": key},
+    )
+    assert answered.status_code == 201
+    assert (answered.json()["outcome"], answered.json()["transaction_id"]) == ("matched", first)
+    again = owner.post(
+        f"/entities/{entity}/unresolved-transactions/answers",
+        json=choice,
+        headers={"Idempotency-Key": key},
+    )
+    assert again.json()["replayed"] is True
+    assert again.json()["decision_id"] == answered.json()["decision_id"]
+    assert owner.get(f"/entities/{entity}/unresolved-transactions").json()["unresolved"] == []
+    assert opened(database, entity, OWNER) == opened(database, entity, CO_OWNER) == []
+
+
+def test_rest_refuses_a_record_that_is_not_the_line(
+    app_dsn: str, entity: str, chart: dict[str, str]
+) -> None:
+    database = Database(app_dsn)
+    run(database, entity, line(chart, "line-1"))
+
+    refused = rest(app_dsn, OWNER).post(
+        f"/entities/{entity}/unresolved-transactions/answers",
+        json={"source_ref": "line-1", "counterpart": {"kind": "obligation", "id": "nope"}},
+        headers={"Idempotency-Key": uuid.uuid4().hex},
+    )
+
+    assert (refused.status_code, refused.json()["code"]) == (422, "not_a_counterpart")
 
 
 @pytest.mark.anyio

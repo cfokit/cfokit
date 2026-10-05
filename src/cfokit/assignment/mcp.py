@@ -20,14 +20,66 @@ from typing import Any
 from mcp.server import MCPServer
 from pydantic import BaseModel
 
-from cfokit.assignment import Field, Operator, Predicate
+from cfokit.assignment import Counterpart, CounterpartKind, Field, Operator, Predicate
 from cfokit.assignment.candidate import Candidate, SourceKind
-from cfokit.assignment.service import apply_rules, approve, open_questions, propose, replay
+from cfokit.assignment.errors import NotACounterpart
+from cfokit.assignment.repository import StoredDecision
+from cfokit.assignment.service import (
+    Booked,
+    answer_question,
+    apply_rules,
+    approve,
+    open_questions,
+    propose,
+    replay,
+)
 from cfokit.ledger.errors import LedgerError
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.principal import Principal
+from cfokit.ledger.service.write import WriteContext
 
 __all__ = ["register"]
+
+
+def _counterpart(found: Counterpart) -> dict[str, str]:
+    return {
+        "kind": str(found.kind),
+        "id": found.id,
+        "account_id": found.account_id,
+        "amount": str(found.amount),
+        "commodity": found.commodity,
+        "date": found.on.isoformat(),
+    }
+
+
+def _booked(booked: Booked) -> dict[str, Any]:
+    return {
+        "source_ref": booked.candidate.source_ref,
+        "transaction_id": booked.transaction_id,
+        "decision_id": booked.decision_id,
+        "outcome": str(booked.outcome),
+        "rule": booked.rule_label,
+        "payee": booked.candidate.payee,
+        "counterparts": [_counterpart(c) for c in booked.counterparts],
+    }
+
+
+def _question(question: StoredDecision) -> dict[str, Any]:
+    line = question.candidate
+    return {
+        "source_ref": line.source_ref,
+        "transaction_id": question.transaction_id,
+        "decision_id": question.id,
+        "outcome": str(question.outcome),
+        "payee": line.payee,
+        "description": line.description,
+        "amount": str(line.amount),
+        "commodity": line.commodity,
+        "source_account_id": line.source_account_id,
+        "transaction_date": line.transaction_date.isoformat(),
+        "source_kind": str(line.source_kind),
+        "counterparts": [_counterpart(c) for c in question.counterparts],
+    }
 
 
 class PredicateArgument(BaseModel):
@@ -178,11 +230,17 @@ def register(server: MCPServer, database: Database, *, acting: Callable[[], Prin
     @server.tool(
         name="run_assignment",
         description=(
-            "Book the supplied transactions against the approved rules. Anything no rule "
-            "resolves is returned unresolved and nothing is posted for it — never guessed, "
-            "never parked in a holding account. An uploaded transaction is only ever "
-            "drafted, even where a rule resolves it: a person posts it. source_ref is the "
-            "source's own name for the line; running a line again never books it twice."
+            "Book the supplied transactions. Each is first matched to what the books already "
+            "hold: exactly one counterpart — an open invoice it pays, an entry already "
+            "recorded, or the other side of a transfer — and it comes back booked with "
+            "outcome matched and no rule consulted. Two or more and it is ambiguous; an "
+            "uploaded payment of an open invoice is proposed for a person to confirm; both "
+            "come back unresolved with their counterparts. Otherwise the approved rules "
+            "decide, and anything no rule resolves is returned unresolved and nothing is "
+            "posted for it — never guessed, never parked in a holding account. An uploaded "
+            "transaction is only ever drafted, even where a rule resolves it: a person posts "
+            "it. source_ref is the source's own name for the line; running a line again never "
+            "books it twice."
         ),
     )
     def run_tool(entity_id: str, candidates: list[CandidateArgument]) -> dict[str, Any]:
@@ -196,22 +254,60 @@ def register(server: MCPServer, database: Database, *, acting: Callable[[], Prin
             )
             return {
                 "ok": True,
-                "booked": [
-                    {
-                        "source_ref": b.candidate.source_ref,
-                        "transaction_id": b.transaction_id,
-                        "rule": b.rule_label,
-                    }
-                    for b in applied.booked
-                ],
-                "unresolved": [
-                    {
-                        "source_ref": b.candidate.source_ref,
-                        "transaction_id": b.transaction_id,
-                        "payee": b.candidate.payee,
-                    }
-                    for b in applied.unresolved
-                ],
+                "booked": [_booked(b) for b in applied.booked],
+                "unresolved": [_booked(b) for b in applied.unresolved],
+            }
+
+        return _refusals(work)
+
+    @server.tool(
+        name="answer_unresolved_transaction",
+        description=(
+            "Answer a line's question with what the person said it is: counterpart_kind and "
+            "counterpart_id naming one record — an obligation, a transaction, or for a "
+            "transfer the other line's decision_id — or none=true for none of those an "
+            "ambiguous or proposed line was asked about, after which the rules decide. The "
+            "person's own act: a delegated session is refused with not_a_person, so ask the "
+            "person and have them answer. Naming an open obligation posts its settlement. "
+            "Requires an idempotency key."
+        ),
+    )
+    def answer_tool(
+        entity_id: str,
+        source_ref: str,
+        idempotency_key: str,
+        counterpart_kind: CounterpartKind | None = None,
+        counterpart_id: str | None = None,
+        none: bool = False,
+    ) -> dict[str, Any]:
+        def work() -> dict[str, Any]:
+            named = counterpart_kind is not None and counterpart_id is not None
+            if named == none:
+                raise NotACounterpart(
+                    "name one counterpart with counterpart_kind and counterpart_id, or answer "
+                    "none=true — exactly one of the two"
+                )
+            answered = answer_question(
+                database,
+                WriteContext(
+                    entity_id=entity_id,
+                    principal=acting(),
+                    request_id=f"mcp-{uuid.uuid4().hex}",
+                    idempotency_key=idempotency_key,
+                ),
+                source_ref=source_ref,
+                counterpart=(
+                    (counterpart_kind, counterpart_id)
+                    if counterpart_kind is not None and counterpart_id is not None
+                    else None
+                ),
+            )
+            return {
+                "ok": True,
+                "decision_id": answered.decision_id,
+                "outcome": str(answered.outcome),
+                "transaction_id": answered.transaction_id,
+                "replayed": answered.replayed,
             }
 
         return _refusals(work)
@@ -219,9 +315,10 @@ def register(server: MCPServer, database: Database, *, acting: Callable[[], Prin
     @server.tool(
         name="replay_assignments",
         description=(
-            "Re-decide every recorded assignment against the rule set that was in force "
-            "when it was taken. Reports how many reproduced, and how many are not "
-            "comparable because a rule changed since. Writes nothing."
+            "Re-decide every recorded assignment — the search of the books, then the rules — "
+            "as the books and the rule set stood when it was taken. Reports how many "
+            "reproduced, how many are not comparable because a rule or the books changed "
+            "since, and how many were a person's choice. Writes nothing."
         ),
     )
     def replay_tool(entity_id: str) -> dict[str, Any]:
@@ -234,6 +331,8 @@ def register(server: MCPServer, database: Database, *, acting: Callable[[], Prin
                 "reproduced": report.reproduced,
                 "rule_set_changed": report.rule_set_changed,
                 "semantics_changed": report.semantics_changed,
+                "books_changed": report.books_changed,
+                "chosen": report.chosen,
                 "diverged": list(report.diverged),
             }
 
@@ -242,10 +341,13 @@ def register(server: MCPServer, database: Database, *, acting: Callable[[], Prin
     @server.tool(
         name="unresolved_transactions",
         description=(
-            "Every line no rule resolved and nothing has answered since, oldest first: what to "
-            "ask the person about. Each is answered by proposing a rule that covers it, the "
-            "person approving it, and running assignment again with the same source_ref — "
-            "which books it and closes its notification. Writes nothing."
+            "Every line waiting on the person, oldest first: what to ask them about. outcome "
+            "says what is asked. unmatched: no rule covers it — answered by proposing a rule, "
+            "the person approving it, and running assignment again with the same source_ref, "
+            "or by the person naming the record it is. ambiguous: every record it could be is "
+            "in counterparts. proposed: an uploaded payment of the open obligation in "
+            "counterparts, waiting for the person to confirm. The person answers those with "
+            "answer_unresolved_transaction. Writes nothing."
         ),
     )
     def unresolved_tool(entity_id: str) -> dict[str, Any]:
@@ -253,18 +355,7 @@ def register(server: MCPServer, database: Database, *, acting: Callable[[], Prin
             return {
                 "ok": True,
                 "unresolved": [
-                    {
-                        "source_ref": q.candidate.source_ref,
-                        "transaction_id": q.transaction_id,
-                        "decision_id": q.decision_id,
-                        "payee": q.candidate.payee,
-                        "description": q.candidate.description,
-                        "amount": str(q.candidate.amount),
-                        "commodity": q.candidate.commodity,
-                        "source_account_id": q.candidate.source_account_id,
-                        "transaction_date": q.candidate.transaction_date.isoformat(),
-                        "source_kind": str(q.candidate.source_kind),
-                    }
+                    _question(q)
                     for q in open_questions(database, entity_id=entity_id, principal=acting())
                 ],
             }

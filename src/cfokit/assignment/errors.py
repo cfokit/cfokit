@@ -9,7 +9,44 @@ from __future__ import annotations
 
 from cfokit.ledger.errors import LedgerError
 
-__all__ = ["PrecedenceTaken", "RuleNotFound"]
+__all__ = [
+    "NotACounterpart",
+    "NothingToDecline",
+    "PrecedenceTaken",
+    "QuestionNotFound",
+    "RuleNotFound",
+]
+
+
+class QuestionNotFound(LedgerError):
+    """No open question about this line: it was never asked, or it is already answered."""
+
+    code = "question_not_found"
+    status = 404
+
+
+class NotACounterpart(LedgerError):
+    """The record a person named is not one this line could be (ADR-0059 § 4).
+
+    Held to the same exact facts as the search — the amount, signed as a posting, and the
+    commodity; the line's own account for a recorded transaction, another for a transfer — but
+    not to its windows. A record no line has claimed, still open, and not reversed. A match with
+    a difference has to put the difference somewhere, which is what `BKP-12` rules out.
+    """
+
+    code = "not_a_counterpart"
+    status = 422
+
+
+class NothingToDecline(LedgerError):
+    """A line with candidates — an ambiguous or proposed one — is what "none" answers.
+
+    A line no counterpart was found for is answered by approving a rule that covers it, or by
+    naming the record it is.
+    """
+
+    code = "nothing_to_decline"
+    status = 409
 
 
 class RuleNotFound(LedgerError):

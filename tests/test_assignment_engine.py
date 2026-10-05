@@ -12,13 +12,15 @@ built from an integer and a scale, so no float is ever near it (ADR-0005).
 from __future__ import annotations
 
 import random
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
 from hypothesis import given
 from hypothesis import strategies as st
 
 from cfokit.assignment import (
+    Counterpart,
+    CounterpartKind,
     Field,
     Operator,
     Outcome,
@@ -29,10 +31,14 @@ from cfokit.assignment import (
 )
 from cfokit.assignment.candidate import Candidate, SourceKind, normalize
 from cfokit.assignment.engine import (
+    counterpart_digest,
+    decide,
     digest,
     evaluate,
+    fits,
     render_order_key,
     rule_set_as_of,
+    search,
 )
 
 EPOCH = datetime(2026, 1, 1, tzinfo=UTC)
@@ -375,3 +381,245 @@ def test_a_rule_with_no_conditions_matches_nothing() -> None:
     assert (
         evaluate(acme("100"), rule_set_as_of([catch_all], LATER)).outcome is Outcome.UNMATCHED
     )
+
+
+# --- The search before the rules (ADR-0059) -----------------------------------------------
+#
+# Every expected value below is read off ADR-0059 § 2's table — the kinds, the exact facts, and
+# the windows: an obligation the line is not dated before, a recorded transaction within 30
+# days either side, the other side of a transfer within 7 — and dates are counted by hand on a
+# calendar, never read off a run (ADR-0036 § 5).
+
+BANK = ACCOUNT
+SAVINGS = "33333333-3333-3333-3333-333333333333"
+RECEIVABLE = "44444444-4444-4444-4444-444444444444"
+MARCH_10 = date(2026, 3, 10)
+
+
+def line(
+    amount: str,
+    *,
+    on: date = MARCH_10,
+    account: str = BANK,
+    kind: SourceKind = SourceKind.FEED,
+    commodity: str = "USD",
+) -> Candidate:
+    return Candidate(
+        payee="Client A",
+        amount=Decimal(amount),
+        commodity=commodity,
+        source_account_id=account,
+        transaction_date=on,
+        source_kind=kind,
+        source_ref="statement:1:1",
+    )
+
+
+def owed(amount: str, *, arose: date, ident: str = "o-1") -> Counterpart:
+    """An obligation outstanding for `amount`, carried by receivables."""
+    return Counterpart(
+        CounterpartKind.OBLIGATION, ident, RECEIVABLE, Decimal(amount), "USD", arose
+    )
+
+
+def entered(amount: str, *, on: date, ident: str = "t-1", account: str = BANK) -> Counterpart:
+    """A transaction recorded ahead of the line, moving `amount` on `account`."""
+    return Counterpart(CounterpartKind.TRANSACTION, ident, account, Decimal(amount), "USD", on)
+
+
+def side(amount: str, *, on: date, ident: str = "d-1", account: str = SAVINGS) -> Counterpart:
+    """Another line's open question, on `account`."""
+    return Counterpart(CounterpartKind.TRANSFER, ident, account, Decimal(amount), "USD", on)
+
+
+NO_RULES = rule_set_as_of([], LATER)
+
+
+def test_a_deposit_equal_to_an_open_receivable_is_matched_to_it() -> None:
+    """§ 2's own example: a deposit of 1,200.00 meets a receivable of 1,200.00, signed as
+    postings are — a debit to the bank and an obligation carried as a debit."""
+    invoice = owed("1200.00", arose=date(2026, 3, 1))
+
+    fate = decide(line("1200.00"), search(line("1200.00"), [invoice]), NO_RULES)
+
+    assert fate.outcome is Outcome.MATCHED
+    assert fate.counterparts == (invoice,)
+
+
+def test_a_sole_counterpart_consults_no_rule() -> None:
+    """A rule would code the deposit to income and book the revenue twice; the counterpart is
+    better evidence than a pattern, so no rule is consulted (§ 1)."""
+    income = rule(
+        index=1,
+        precedence=10,
+        day=0,
+        predicates=(Predicate(1, Field.PAYEE, Operator.CONTAINS, "client"),),
+    )
+    invoice = owed("1200.00", arose=date(2026, 3, 1))
+
+    fate = decide(
+        line("1200.00"), search(line("1200.00"), [invoice]), rule_set_as_of([income], LATER)
+    )
+
+    assert fate.outcome is Outcome.MATCHED
+    assert fate.resolution.winner is None
+    assert fate.resolution.matches == ()
+
+
+def test_two_counterparts_are_ambiguous_and_both_are_listed() -> None:
+    """§ 4: no order among equals is stated, so choosing one is choosing whichever was found
+    first. Of any kinds together."""
+    invoice = owed("1200.00", arose=date(2026, 3, 1))
+    deposit = entered("1200.00", on=date(2026, 3, 9))
+
+    fate = decide(line("1200.00"), search(line("1200.00"), [invoice, deposit]), NO_RULES)
+
+    assert fate.outcome is Outcome.AMBIGUOUS
+    assert set(fate.counterparts) == {invoice, deposit}
+
+
+def test_no_counterpart_falls_through_to_the_rules() -> None:
+    income = rule(
+        index=1,
+        precedence=10,
+        day=0,
+        predicates=(Predicate(1, Field.PAYEE, Operator.CONTAINS, "client"),),
+    )
+
+    assigned = decide(line("1200.00"), (), rule_set_as_of([income], LATER))
+    unmatched = decide(line("1200.00"), (), NO_RULES)
+
+    assert assigned.outcome is Outcome.ASSIGNED
+    assert assigned.resolution.winner == income
+    assert unmatched.outcome is Outcome.UNMATCHED
+    assert assigned.counterparts == unmatched.counterparts == ()
+
+
+def test_an_uploaded_payment_of_an_obligation_is_proposed_not_matched() -> None:
+    """§ 3: a settlement needs its transaction posted, and ADR-0047 forbids posting what the
+    session that read the document asked for."""
+    invoice = owed("1200.00", arose=date(2026, 3, 1))
+    uploaded = line("1200.00", kind=SourceKind.UPLOAD)
+
+    assert decide(uploaded, search(uploaded, [invoice]), NO_RULES).outcome is Outcome.PROPOSED
+
+
+def test_an_uploaded_line_equal_to_a_recorded_entry_is_matched() -> None:
+    """Nothing is written to the books, so there is nothing for a person to authorize (§ 3)."""
+    uploaded = line("-45.50", kind=SourceKind.UPLOAD)
+    bill = entered("-45.50", on=date(2026, 3, 8))
+
+    assert decide(uploaded, search(uploaded, [bill]), NO_RULES).outcome is Outcome.MATCHED
+
+
+@given(st.randoms())
+def test_the_order_counterparts_arrive_in_changes_nothing(rng: random.Random) -> None:
+    """The outcome — and the counterparts listed — are invariant to the order the books
+    returned them in, so an ambiguous line lists the same candidates on every run."""
+    pool = [
+        owed("1200.00", arose=date(2026, 3, 1)),
+        owed("1200.00", arose=date(2026, 3, 2), ident="o-2"),
+        entered("1200.00", on=date(2026, 3, 9)),
+        side("-1200.00", on=date(2026, 3, 11)),
+        entered("99.00", on=date(2026, 3, 9), ident="t-noise"),
+    ]
+    shuffled = list(pool)
+    rng.shuffle(shuffled)
+
+    first = decide(line("1200.00"), search(line("1200.00"), pool), NO_RULES)
+    again = decide(line("1200.00"), search(line("1200.00"), shuffled), NO_RULES)
+
+    assert again == first
+    assert counterpart_digest(again.counterparts) == counterpart_digest(first.counterparts)
+
+
+# Each window's boundary, inclusive, counted on the calendar.
+
+
+def test_an_obligation_counts_from_the_day_it_arose() -> None:
+    """ "The line is not dated before the obligation arose": the same day is not before."""
+    assert fits(line("1200.00"), owed("1200.00", arose=date(2026, 3, 10)))
+    assert not fits(line("1200.00"), owed("1200.00", arose=date(2026, 3, 11)))
+
+
+def test_a_recorded_transaction_counts_within_thirty_days_either_side() -> None:
+    """March 10 less 30 days is February 8: ten days back reach February 28, and twenty more
+    the 8th. Plus 30 is April 9: 21 days reach March 31, and nine more April 9."""
+    payment = line("-500.00")
+
+    assert fits(payment, entered("-500.00", on=date(2026, 2, 8)))
+    assert not fits(payment, entered("-500.00", on=date(2026, 2, 7)))
+    assert fits(payment, entered("-500.00", on=date(2026, 4, 9)))
+    assert not fits(payment, entered("-500.00", on=date(2026, 4, 10)))
+
+
+def test_the_other_side_of_a_transfer_counts_within_seven_days_either_side() -> None:
+    """March 10 less 7 is March 3; plus 7 is March 17."""
+    out = line("-500.00")
+
+    assert fits(out, side("500.00", on=date(2026, 3, 3)))
+    assert not fits(out, side("500.00", on=date(2026, 3, 2)))
+    assert fits(out, side("500.00", on=date(2026, 3, 17)))
+    assert not fits(out, side("500.00", on=date(2026, 3, 18)))
+
+
+def test_a_person_is_held_to_the_facts_but_not_the_windows() -> None:
+    """§ 4: a check that cleared after six weeks is answered by choosing the entry."""
+    cleared = line("-500.00")
+    check = entered("-500.00", on=date(2026, 1, 27))  # 42 days before March 10
+
+    assert not fits(cleared, check)
+    assert fits(cleared, check, windowed=False)
+    assert not fits(cleared, entered("-500.01", on=date(2026, 1, 27)), windowed=False)
+
+
+# The exact facts: no tolerance, and each kind compared where § 2 says.
+
+
+def test_a_difference_of_a_cent_is_not_a_counterpart() -> None:
+    """A match with a difference has to put the difference somewhere, and a holding account is
+    what `BKP-12` rules out."""
+    assert not fits(line("1200.00"), owed("1199.99", arose=date(2026, 3, 1)))
+    assert not fits(line("-500.00"), entered("-500.01", on=MARCH_10))
+    assert not fits(line("-500.00"), side("500.01", on=MARCH_10))
+
+
+def test_the_same_amount_at_another_scale_is_the_same_amount() -> None:
+    """`1200` and `1200.0000000000` are one number (ADR-0005)."""
+    assert fits(line("1200"), owed("1200.0000000000", arose=date(2026, 3, 1)))
+
+
+def test_another_commodity_is_not_a_counterpart() -> None:
+    assert not fits(line("1200.00", commodity="EUR"), owed("1200.00", arose=date(2026, 3, 1)))
+
+
+def test_a_recorded_transaction_is_on_the_line_s_own_account() -> None:
+    assert not fits(line("-500.00"), entered("-500.00", on=MARCH_10, account=SAVINGS))
+
+
+def test_a_transfer_s_other_side_is_on_another_account_for_the_negated_amount() -> None:
+    """Out of checking, into savings: -500.00 on one meets +500.00 on the other."""
+    assert fits(line("-500.00"), side("500.00", on=MARCH_10))
+    assert not fits(line("-500.00"), side("-500.00", on=MARCH_10))
+    assert not fits(line("-500.00"), side("500.00", on=MARCH_10, account=BANK))
+
+
+def test_a_payment_is_not_matched_to_a_receivable_of_the_opposite_sign() -> None:
+    """Signed as postings are: money out of the bank does not pay a customer's invoice."""
+    assert not fits(line("-1200.00"), owed("1200.00", arose=date(2026, 3, 1)))
+
+
+def test_nothing_found_has_a_digest_of_its_own() -> None:
+    """None found is a fact replay checks too. sha256 of the empty rendering is the published
+    digest of the empty string."""
+    assert counterpart_digest(()) == (
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    )
+
+
+def test_a_different_counterpart_is_a_different_digest() -> None:
+    first = counterpart_digest((owed("1200.00", arose=date(2026, 3, 1)),))
+
+    assert first != counterpart_digest((owed("1200.00", arose=date(2026, 3, 1), ident="o-2"),))
+    assert first != counterpart_digest((owed("1200.01", arose=date(2026, 3, 1)),))
+    assert first == counterpart_digest((owed("1200.0000000000", arose=date(2026, 3, 1)),))
