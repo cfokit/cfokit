@@ -48,7 +48,18 @@ class StoredDecision:
     candidate: Candidate
 
 
+@dataclass(frozen=True, slots=True)
+class OpenQuestion:
+    """A line no rule resolved and nothing has answered since: what the operator is asked."""
+
+    decision_id: str
+    transaction_id: str
+    decided_at: datetime
+    candidate: Candidate
+
+
 __all__ = [
+    "OpenQuestion",
     "answered_decision",
     "decision_for_transaction",
     "insert_decision",
@@ -56,6 +67,7 @@ __all__ = [
     "load_decisions",
     "load_versions",
     "next_version",
+    "open_questions",
     "precedence_taken",
     "rule_for_posting",
     "unanswered_decision",
@@ -417,3 +429,49 @@ def rule_for_posting(
         )
         row = cur.fetchone()
     return (str(row[0]), str(row[1]), int(row[2])) if row else None
+
+
+def open_questions(
+    conn: psycopg.Connection[Any], *, entity_id: str
+) -> tuple[OpenQuestion, ...]:
+    """`BKP-12`'s worklist: every unmatched decision no later decision for its line answered.
+
+    In the order the activity happened, so the person works through it as the account did. The
+    candidate comes back as it arrived — the payee as the bank sent it rather than as matching
+    normalized it, because that is what a person recognizes.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT d.id, d.transaction_id, d.decided_at, d.candidate_payee_raw,"
+            "       d.candidate_description, d.candidate_amount, d.candidate_commodity,"
+            "       d.candidate_source_account_id, d.candidate_transaction_date,"
+            "       d.candidate_source_kind, d.candidate_source_ref"
+            "  FROM assignment_decision d"
+            " WHERE d.entity_id = %s AND d.outcome = 'unmatched'"
+            "   AND NOT EXISTS (SELECT 1 FROM assignment_decision a"
+            "                    WHERE a.entity_id = d.entity_id"
+            "                      AND a.candidate_source_ref = d.candidate_source_ref"
+            "                      AND a.outcome = 'assigned')"
+            " ORDER BY d.candidate_transaction_date, d.decided_at, d.id",
+            (entity_id,),
+        )
+        rows = cur.fetchall()
+
+    return tuple(
+        OpenQuestion(
+            decision_id=str(row[0]),
+            transaction_id=str(row[1]),
+            decided_at=row[2],
+            candidate=Candidate(
+                payee=row[3],
+                description=row[4],
+                amount=row[5],
+                commodity=row[6],
+                source_account_id=str(row[7]),
+                transaction_date=row[8],
+                source_kind=SourceKind(row[9]),
+                source_ref=row[10],
+            ),
+        )
+        for row in rows
+    )

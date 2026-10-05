@@ -577,3 +577,29 @@ class GrantRoleRequest(BaseModel):
 
 class GrantResponse(BaseModel):
     grant_id: str
+
+
+class NotificationModel(BaseModel):
+    """An open notification: identifiers and where it is answered, never a figure (ADR-0052)."""
+
+    notification_id: str
+    entity_id: str
+    notification_class: str = Field(
+        description="What kind of question it is, such as `unresolved_transaction`."
+    )
+    subject_ref: str = Field(description="What it is about, in the raising module's terms.")
+    link: str = Field(
+        description="Where it is answered: a path under this deployment's address."
+    )
+    raised_at: datetime
+
+
+class NotificationsResponse(BaseModel):
+    """The caller's open notifications. Closed ones stay in the entity's records and export."""
+
+    notifications: list[NotificationModel]
+
+
+class DismissalResponse(BaseModel):
+    notification_id: str
+    replayed: bool = False

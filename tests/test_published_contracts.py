@@ -140,6 +140,7 @@ def test_the_mcp_tool_surface_is_published() -> None:
         "issued_statements",
         "obligation_detail",
         "open_balances",
+        "open_notifications",
         "outstanding_obligations",
         "post_transaction",
         "profit_and_loss",
@@ -152,6 +153,7 @@ def test_the_mcp_tool_surface_is_published() -> None:
         "reverse_transaction",
         "run_assignment",
         "trial_balance",
+        "unresolved_transactions",
     ]
     assert all(tool["description"] for tool in published), "every tool describes itself"
 

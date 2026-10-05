@@ -178,6 +178,18 @@ TABLES: tuple[tuple[str, str], ...] = (
         " WHERE l.entity_id = %(entity_id)s ORDER BY l.comparison_id, l.account_code, l.id",
     ),
     (
+        # ADR-0052 § 7: notifications are the entity's data and go with its complete export,
+        # with what closed each of them after the notification it closed.
+        "notification",
+        "SELECT id, recipient, notification_class, subject_ref, link, raised_at"
+        " FROM notification WHERE entity_id = %(entity_id)s ORDER BY raised_at, id",
+    ),
+    (
+        "notification_closing",
+        "SELECT id, notification_id, kind, closed_by, act_ref, closed_at"
+        " FROM notification_closing WHERE entity_id = %(entity_id)s ORDER BY closed_at, id",
+    ),
+    (
         "audit_log",
         "SELECT id, request_id, actor, action, subject_type, subject_id, occurred_at, detail"
         " FROM audit_log WHERE entity_id = %(entity_id)s ORDER BY occurred_at, id",

@@ -21,7 +21,7 @@ from pydantic import Field as Body
 
 from cfokit.assignment import Field, Operator, Predicate
 from cfokit.assignment.candidate import Candidate, SourceKind
-from cfokit.assignment.service import apply_rules, approve, propose, replay
+from cfokit.assignment.service import apply_rules, approve, open_questions, propose, replay
 from cfokit.ledger.api import ERRORS, get_database, get_principal
 from cfokit.ledger.api.models import Money
 from cfokit.ledger.repository.unit_of_work import Database
@@ -252,4 +252,36 @@ def assignment_replay(
         "rule_set_changed": report.rule_set_changed,
         "semantics_changed": report.semantics_changed,
         "diverged": list(report.diverged),
+    }
+
+
+@router.get(
+    "/entities/{entity_id}/unresolved-transactions",
+    summary="Every line no rule resolved and nothing has answered since",
+    responses=ERRORS,
+)
+def unresolved_transactions(
+    entity_id: Annotated[str, Path()],
+    principal: Annotated[Principal, Depends(get_principal)],
+    database: Annotated[Database, Depends(get_database)],
+) -> dict[str, Any]:
+    """`BKP-12`'s worklist, in the order the activity happened. Each line is answered by
+    approving a rule that covers it and running assignment again (`BKP-09`); `source_ref` is
+    what the run takes, and what its `unresolved_transaction` notification is about."""
+    return {
+        "unresolved": [
+            {
+                "source_ref": q.candidate.source_ref,
+                "transaction_id": q.transaction_id,
+                "decision_id": q.decision_id,
+                "payee": q.candidate.payee,
+                "description": q.candidate.description,
+                "amount": str(q.candidate.amount),
+                "commodity": q.candidate.commodity,
+                "source_account_id": q.candidate.source_account_id,
+                "transaction_date": q.candidate.transaction_date.isoformat(),
+                "source_kind": str(q.candidate.source_kind),
+            }
+            for q in open_questions(database, entity_id=entity_id, principal=principal)
+        ]
     }

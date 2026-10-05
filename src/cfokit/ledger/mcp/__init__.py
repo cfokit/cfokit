@@ -79,6 +79,7 @@ from cfokit.ledger.service.authentication import (
     principal_from_claims,
 )
 from cfokit.ledger.service.issuance import Issued, issue_statement, issued
+from cfokit.ledger.service.notifications import open_notifications
 from cfokit.ledger.service.opening import CarriedBalance, open_balances
 from cfokit.ledger.service.principal import Principal
 from cfokit.ledger.service.read import read_transaction
@@ -1029,6 +1030,36 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
                         "commodity": p.commodity,
                     }
                     for p in stored.postings
+                ],
+            }
+
+        return _refusals(work)
+
+    @server.tool(
+        name="open_notifications",
+        description=(
+            "The notifications still open for the person you act for in this entity: what "
+            "CFOKit asked them and nobody has answered. Each names its class, what it is about "
+            "and where it is answered, never a figure. An unresolved_transaction is answered "
+            "by approving a rule that codes the line and running assignment again; it then "
+            "closes for everyone it was sent to. You cannot dismiss one; only the person can."
+        ),
+    )
+    def notifications(entity_id: str) -> dict[str, Any]:
+        def work() -> dict[str, Any]:
+            found = open_notifications(database, entity_id=entity_id, principal=acting())
+            return {
+                "ok": True,
+                "notifications": [
+                    {
+                        "notification_id": n.id,
+                        "entity_id": n.entity_id,
+                        "notification_class": n.notification_class,
+                        "subject_ref": n.subject_ref,
+                        "link": n.link,
+                        "raised_at": n.raised_at.isoformat(),
+                    }
+                    for n in found
                 ],
             }
 

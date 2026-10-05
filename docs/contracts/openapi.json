@@ -821,6 +821,24 @@
         "title": "CreateEntityRequest",
         "type": "object"
       },
+      "DismissalResponse": {
+        "properties": {
+          "notification_id": {
+            "title": "Notification Id",
+            "type": "string"
+          },
+          "replayed": {
+            "default": false,
+            "title": "Replayed",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "notification_id"
+        ],
+        "title": "DismissalResponse",
+        "type": "object"
+      },
       "DivergenceModel": {
         "properties": {
           "account_code": {
@@ -1110,6 +1128,66 @@
           "statements"
         ],
         "title": "IssuedStatementsResponse",
+        "type": "object"
+      },
+      "NotificationModel": {
+        "description": "An open notification: identifiers and where it is answered, never a figure (ADR-0052).",
+        "properties": {
+          "entity_id": {
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "link": {
+            "description": "Where it is answered: a path under this deployment's address.",
+            "title": "Link",
+            "type": "string"
+          },
+          "notification_class": {
+            "description": "What kind of question it is, such as `unresolved_transaction`.",
+            "title": "Notification Class",
+            "type": "string"
+          },
+          "notification_id": {
+            "title": "Notification Id",
+            "type": "string"
+          },
+          "raised_at": {
+            "format": "date-time",
+            "title": "Raised At",
+            "type": "string"
+          },
+          "subject_ref": {
+            "description": "What it is about, in the raising module's terms.",
+            "title": "Subject Ref",
+            "type": "string"
+          }
+        },
+        "required": [
+          "notification_id",
+          "entity_id",
+          "notification_class",
+          "subject_ref",
+          "link",
+          "raised_at"
+        ],
+        "title": "NotificationModel",
+        "type": "object"
+      },
+      "NotificationsResponse": {
+        "description": "The caller's open notifications. Closed ones stay in the entity's records and export.",
+        "properties": {
+          "notifications": {
+            "items": {
+              "$ref": "#/components/schemas/NotificationModel"
+            },
+            "title": "Notifications",
+            "type": "array"
+          }
+        },
+        "required": [
+          "notifications"
+        ],
+        "title": "NotificationsResponse",
         "type": "object"
       },
       "ObligationDetailResponse": {
@@ -5282,6 +5360,239 @@
         ]
       }
     },
+    "/entities/{entity_id}/notifications": {
+      "get": {
+        "description": "Open until the act that answers it closes it, or the caller dismisses it. Only the\ncaller's own: a co-owner's are not listed (ADR-0056).",
+        "operationId": "notifications_entities__entity_id__notifications_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "The caller's open notifications in this entity",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/entities/{entity_id}/notifications/{notification_id}/dismissal": {
+      "post": {
+        "description": "The recipient's own act, for them alone. An agent is refused with `not_a_person`,\nso it cannot make a question it raised look resolved (ADR-0056 § 2).",
+        "operationId": "dismissal_entities__entity_id__notifications__notification_id__dismissal_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "notification_id",
+            "required": true,
+            "schema": {
+              "title": "Notification Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Request-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DismissalResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Dismiss one of the caller's own notifications",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
     "/entities/{entity_id}/obligations": {
       "get": {
         "description": "What is still owed, and what has been applied against it (`LED-17`).",
@@ -6952,6 +7263,107 @@
         "summary": "Trial balance as of a date",
         "tags": [
           "reports"
+        ]
+      }
+    },
+    "/entities/{entity_id}/unresolved-transactions": {
+      "get": {
+        "description": "`BKP-12`'s worklist, in the order the activity happened. Each line is answered by\napproving a rule that covers it and running assignment again (`BKP-09`); `source_ref` is\nwhat the run takes, and what its `unresolved_transaction` notification is about.",
+        "operationId": "unresolved_transactions_entities__entity_id__unresolved_transactions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Unresolved Transactions Entities  Entity Id  Unresolved Transactions Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Every line no rule resolved and nothing has answered since",
+        "tags": [
+          "assignment"
         ]
       }
     },
