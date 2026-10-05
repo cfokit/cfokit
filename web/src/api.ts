@@ -14,7 +14,8 @@ export class ApiError extends Error {
 
 export interface Api {
   get<T>(path: string): Promise<T>;
-  post<T>(path: string, body: unknown): Promise<T>;
+  /** `headers` carries what a write needs besides its body, such as its `Idempotency-Key`. */
+  post<T>(path: string, body: unknown, headers?: Record<string, string>): Promise<T>;
 }
 
 async function answer<T>(response: Response): Promise<T> {
@@ -43,11 +44,11 @@ export function useApi(): Api {
       async get<T>(path: string): Promise<T> {
         return answer<T>(await fetch(path, { headers: authorization }));
       },
-      async post<T>(path: string, body: unknown): Promise<T> {
+      async post<T>(path: string, body: unknown, headers: Record<string, string> = {}): Promise<T> {
         return answer<T>(
           await fetch(path, {
             method: "POST",
-            headers: { "content-type": "application/json", ...authorization },
+            headers: { "content-type": "application/json", ...headers, ...authorization },
             body: JSON.stringify(body),
           }),
         );

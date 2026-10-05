@@ -196,6 +196,23 @@ export function Gallery() {
               },
             ]}
           />
+          <MoneyTable
+            caption="Transactions waiting for a rule"
+            currency="USD"
+            columns={[
+              { key: "payee", header: "Payee", kind: "text" },
+              { key: "date", header: "Date", kind: "text" },
+              { key: "amount", header: "Amount", kind: "money" },
+            ]}
+            rows={[
+              {
+                id: "a",
+                cells: { payee: "[PAYEE]", date: "2026-03-14", amount: "-240.00" },
+                action: <Button variant="link">Dismiss</Button>,
+              },
+              { id: "b", cells: { payee: "[PAYEE]", date: "2026-03-15", amount: "-18.50" } },
+            ]}
+          />
         </Section>
 
         <Section title="Dialog">

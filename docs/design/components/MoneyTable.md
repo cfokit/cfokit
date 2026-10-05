@@ -11,9 +11,21 @@ line, its other text in `caption`, and its figures beside it or labeled beneath.
 its columns and scrolls sideways within its own frame, first column fixed; the page never scrolls
 sideways.
 
+A row may carry an `action`, such as a `link` button that dismisses something about it. It sits
+in a last column, headed for screen readers only, and beneath the row in the list. A table with
+no actions has no such column.
+
 Props: `caption`, `currency`, `columns` (`{key, header, kind: "text" | "money"}`), `rows`
-(`{id, cells: {key: string}, flagged?}`), `totals` (by money column key), `scale`.
+(`{id, cells: {key: string}, flagged?, action?}`), `totals` (by money column key), `scale`,
+`actionHeader` (the action column's screen-reader heading, "Actions" by default).
 
 ```html
-<x-import component-from-global-scope="CFOKit.MoneyTable" caption="Balances" currency="USD" columns="{{columns}}" rows="{{rows}}" totals="{{totals}}"></x-import>
+<x-import
+  component-from-global-scope="CFOKit.MoneyTable"
+  caption="Balances"
+  currency="USD"
+  columns="{{columns}}"
+  rows="{{rows}}"
+  totals="{{totals}}"
+></x-import>
 ```

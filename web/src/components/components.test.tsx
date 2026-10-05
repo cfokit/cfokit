@@ -290,6 +290,33 @@ describe("MoneyTable", () => {
     expect(cells[1]?.textContent).toBe("");
   });
 
+  test("a row's action sits at its end in the table, and beneath it in the list", () => {
+    const acting = [
+      {
+        id: "1",
+        cells: { account: "Checking", ours: "1200.00", theirs: "1200.00" },
+        action: <Button variant="link">Dismiss</Button>,
+      },
+      { id: "2", cells: { account: "Undeposited Funds", ours: "-50", theirs: "0" } },
+    ];
+    render(<MoneyTable caption="Balances" columns={columns} rows={acting} currency="USD" />);
+    const table = screen.getByRole("table", { name: "Balances" });
+    const headers = within(table).getAllByRole("columnheader");
+    expect(headers.at(-1)?.textContent).toBe("Actions");
+    const [, first, second] = within(table).getAllByRole("row");
+    if (first === undefined || second === undefined) throw new Error("expected two rows");
+    expect(within(first).getByRole("button", { name: "Dismiss" })).toBeTruthy();
+    expect(within(second).queryByRole("button")).toBeNull();
+    const list = screen.getByRole("list", { name: "Balances" });
+    expect(within(list).getAllByRole("button", { name: "Dismiss" })).toHaveLength(1);
+  });
+
+  test("a table with no actions has no action column", () => {
+    render(<MoneyTable caption="Balances" columns={columns} rows={rows} currency="USD" />);
+    const table = screen.getByRole("table", { name: "Balances" });
+    expect(within(table).getAllByRole("columnheader")).toHaveLength(3);
+  });
+
   test("a wider table keeps its columns and scrolls in its own frame", () => {
     const wide = [...columns, { key: "difference", header: "Difference", kind: "money" as const }];
     render(<MoneyTable caption="Balances" columns={wide} rows={rows} currency="USD" />);
