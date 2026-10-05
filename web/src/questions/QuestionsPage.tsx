@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "react-oidc-context";
 import { useApi, type Api } from "../api";
 import {
@@ -93,44 +93,100 @@ export function dismissalKey(notificationId: string): string {
   return `dismissal:${notificationId}`;
 }
 
+/** What the company declared when it was created, as `GET /entities/{entity_id}` returns it. */
+export interface Entity {
+  id: string;
+  slug: string;
+  name: string;
+  accounting_basis: string;
+  fiscal_year_end_month: number;
+  fiscal_year_end_day: number;
+  functional_currency: string;
+  time_zone: string;
+}
+
 type Loaded =
   | { state: "loading" }
   | { state: "failed"; message: string }
   | { state: "ready"; unresolved: Unresolved[]; notifications: Notification[] };
 
+/**
+ * The two lists, read on arrival and again whenever the tab becomes visible: the person answers
+ * in Claude, then comes back here, and should see what is still waiting rather than what was.
+ * A re-read keeps what is shown until it has something newer, and a failed one keeps it too.
+ */
 function useQuestions(api: Api, entityId: string) {
   const [loaded, setLoaded] = useState<Loaded>({ state: "loading" });
+  const latest = useRef(0);
   useEffect(() => {
     let current = true;
     const at = `/entities/${encodeURIComponent(entityId)}`;
-    Promise.all([
-      api.get<{ unresolved: Unresolved[] }>(`${at}/unresolved-transactions`),
-      api.get<{ notifications: Notification[] }>(`${at}/notifications`),
-    ])
-      .then(([lines, open]) => {
-        if (current) {
-          setLoaded({
-            state: "ready",
-            unresolved: lines.unresolved,
-            notifications: open.notifications.filter(
-              (n) => n.notification_class === "unresolved_transaction",
-            ),
-          });
-        }
+    function read() {
+      const reading = ++latest.current;
+      const answered = () => current && reading === latest.current;
+      Promise.all([
+        api.get<{ unresolved: Unresolved[] }>(`${at}/unresolved-transactions`),
+        api.get<{ notifications: Notification[] }>(`${at}/notifications`),
+      ])
+        .then(([lines, open]) => {
+          if (answered()) {
+            setLoaded({
+              state: "ready",
+              unresolved: lines.unresolved,
+              notifications: open.notifications.filter(
+                (n) => n.notification_class === "unresolved_transaction",
+              ),
+            });
+          }
+        })
+        .catch((error: unknown) => {
+          if (answered()) {
+            setLoaded((was) =>
+              was.state === "ready"
+                ? was
+                : {
+                    state: "failed",
+                    message: error instanceof Error ? error.message : String(error),
+                  },
+            );
+          }
+        });
+    }
+    function returned() {
+      if (document.visibilityState === "visible") read();
+    }
+    read();
+    document.addEventListener("visibilitychange", returned);
+    return () => {
+      current = false;
+      document.removeEventListener("visibilitychange", returned);
+    };
+  }, [api, entityId]);
+  return [loaded, setLoaded] as const;
+}
+
+/**
+ * The company's name, from the books rather than from getting started's memory, so a reload or
+ * a link from a notification still names it. Until it arrives, or if it cannot be read, whatever
+ * getting started knew stands in, which may be nothing.
+ */
+function useCompanyName(api: Api, entityId: string, known: string): string {
+  const [name, setName] = useState<string | null>(null);
+  useEffect(() => {
+    let current = true;
+    api
+      .get<Entity>(`/entities/${encodeURIComponent(entityId)}`)
+      .then((entity) => {
+        if (current) setName(entity.name);
       })
-      .catch((error: unknown) => {
-        if (current) {
-          setLoaded({
-            state: "failed",
-            message: error instanceof Error ? error.message : String(error),
-          });
-        }
+      .catch(() => {
+        // The questions are still worth showing without the company's name.
       });
     return () => {
       current = false;
     };
   }, [api, entityId]);
-  return [loaded, setLoaded] as const;
+  return name ?? known;
 }
 
 const COLUMNS: Column[] = [
@@ -163,7 +219,8 @@ function transactions(count: number): string {
 export function QuestionsPage({ entityId }: { entityId: string }) {
   const auth = useAuth();
   const api = useApi();
-  const { company } = useStarted();
+  const started = useStarted();
+  const company = useCompanyName(api, entityId, started.company);
   const [loaded, setLoaded] = useQuestions(api, entityId);
   const [dismissing, setDismissing] = useState<string | null>(null);
   const [refused, setRefused] = useState<string | null>(null);

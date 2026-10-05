@@ -43,6 +43,7 @@ from cfokit.ledger.api.models import (
     CreateEntityRequest,
     DismissalResponse,
     EntityCreatedResponse,
+    EntityResponse,
     ErrorResponse,
     GrantResponse,
     GrantRoleRequest,
@@ -111,7 +112,7 @@ from cfokit.ledger.service.notifications import dismiss, open_notifications
 from cfokit.ledger.service.opening import CarriedBalance, open_balances
 from cfokit.ledger.service.periods import close_period, reopen_period
 from cfokit.ledger.service.principal import Principal
-from cfokit.ledger.service.read import read_transaction
+from cfokit.ledger.service.read import read_entity, read_transaction
 from cfokit.ledger.service.readiness import check_readiness
 from cfokit.ledger.service.receivables import obligation_detail, outstanding_obligations
 from cfokit.ledger.service.reports import (
@@ -402,6 +403,33 @@ def create_app(settings: Settings, authenticator: Authenticator | None = None) -
         return EntityCreatedResponse(
             entity_id=created.entity_id,
             owner_grant_id=created.owner_grant_id,
+        )
+
+    @app.get(
+        "/entities/{entity_id}",
+        tags=["administration"],
+        summary="Read what an entity declared",
+        responses=ERRORS,
+    )
+    def entity(
+        entity_id: Annotated[str, Path()],
+        acting: Annotated[Principal, Depends(get_principal)],
+        database: Annotated[Database, Depends(get_database)],
+    ) -> EntityResponse:
+        """Its name, accounting basis, fiscal year end, functional currency and time zone.
+
+        Needs a role in the entity, like reading its books (`IAM-01`).
+        """
+        found = read_entity(database, entity_id=entity_id, principal=acting)
+        return EntityResponse(
+            id=found.id,
+            slug=found.slug,
+            name=found.name,
+            accounting_basis=found.accounting_basis,
+            fiscal_year_end_month=found.fiscal_year_end_month,
+            fiscal_year_end_day=found.fiscal_year_end_day,
+            functional_currency=found.functional_currency,
+            time_zone=found.time_zone,
         )
 
     @app.post(

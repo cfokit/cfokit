@@ -146,6 +146,7 @@ def test_the_mcp_tool_surface_is_published() -> None:
         "post_transaction",
         "profit_and_loss",
         "propose_assignment_rule",
+        "read_entity",
         "read_transaction",
         "reconcile",
         "record_account_statement",

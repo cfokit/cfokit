@@ -120,6 +120,11 @@ class EntityWrite:
         """The entity's declared currency (`LED-15`)."""
         return self._settings.functional_currency
 
+    def declarations(self) -> administration.Entity | None:
+        """What this entity declared at creation: its name, basis, fiscal year end, currency
+        and time zone."""
+        return administration.entity(self._conn, entity_id=self._entity_id)
+
     # --- idempotency (ADR-0029) ----------------------------------------------------------
 
     def claim_idempotency(self, key: str, request_hash: str) -> dict[str, Any] | None:
