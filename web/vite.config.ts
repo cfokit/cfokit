@@ -17,6 +17,15 @@ export default defineConfig({
       keycloakVersionTargets: { "22-to-25": false, "all-other-versions": "cfokit-theme.jar" },
     }),
   ],
+  experimental: {
+    // A file a script loads is found relative to that script, not at /app/. The same build is
+    // also the sign-in theme, served from the issuer's origin under another path, and Keycloakify's
+    // rewrite of /app/ in Vite's preload helper does not match the helper Vite 8 emits — so every
+    // page the theme loads on demand, the security-key pages among them, failed to load its CSS
+    // and rendered blank. Relative to the script, the URL is right on both origins.
+    renderBuiltUrl: (_filename, { hostType }) =>
+      hostType === "js" ? { relative: true } : undefined,
+  },
   build: {
     outDir: "dist",
     // Never inline a file as a data: URI. The CSP is default-src 'self' (ADR-0049 § 6), which

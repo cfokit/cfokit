@@ -323,7 +323,7 @@ Who may reach an entity, what they may do there, and how that is evidenced.
 | **IAM-20** | The read paths that require no identity are enumerable, and the system can state them. Each reaches exactly one artifact and nothing else about the entity, uses a link that cannot be guessed or arrived at by enumeration, and can be revoked. A path that exposes more than one artifact, or that cannot be revoked, is not one of them. | Must | Approved |
 | **IAM-21** | An entity is held by one or more owners, and an owner holds every capability in the entity, administering included. Two are an owner's alone: granting or revoking ownership, and deleting the entity. An administrator cannot revoke an owner. Ownership cannot be granted for a stated period — it ends only when an owner revokes it, so an entity is never left unheld by the passage of time. | Must | Approved |
 | **IAM-22** | A person can create an account, sign in with a password, and reset a forgotten password, with no administrator involved. | Must | Approved |
-| **IAM-23** | A person can protect their sign-in with a second factor — an authenticator app or a security key. | Should | Approved |
+| **IAM-23** | A person signs in with a second factor of their choice — an authenticator app or a security key. | Should | Approved |
 | **IAM-24** | A person can sign in with a passkey instead of a password. | Should | Approved |
 | **IAM-25** | A person can sign in with a Google account. | Should | Approved |
 | **IAM-26** | A person can sign in with a Microsoft account. | Could | Approved |
@@ -735,8 +735,8 @@ continuously over one that a person assembles at examination time.
 
 Section 8.10 holds the shared control map.
 
-> **Everything in this section but 8.1 is `Proposed` and unreviewed**, on the same basis as
-> section 7.
+> **Everything in this section but 8.1 and `SOC2-19` is `Proposed` and unreviewed**, on the same
+> basis as section 7.
 > 8.2 in particular describes controls for a problem no established audit practice covers, so it
 > is the part most likely to be the wrong shape.
 
@@ -829,7 +829,7 @@ Carried by IAM-01 through IAM-21 and SOC1-24 through SOC1-27. Additional SOC 2 o
 
 | | Requirement | Priority | Status |
 |---|---|---|---|
-| **SOC2-19** | Multi-factor authentication is required for every human identity. CFOKit does not implement it — IAM-10 delegates identity — so the requirement is that the system demands the issuer assert it, and refuses a session where it is absent. | Must | Proposed |
+| **SOC2-19** | Multi-factor authentication is required for every human identity. CFOKit does not implement it — IAM-10 delegates identity — so the requirement is that the system demands the issuer assert it, and refuses a session where it is absent. | Must | Approved |
 | **SOC2-20** | Sessions have a bounded lifetime and can be revoked centrally, taking effect everywhere including for skills acting under IAM-11. | Must | Proposed |
 | **SOC2-21** | Programmatic credentials and tokens have a defined lifecycle — issuance, scope, expiry, rotation, and revocation — and a token's scope is never broader than the role of the identity it was issued to. | Must | Proposed |
 | **SOC2-22** | The access review of IAM-14 produces its evidence automatically, on a defined cadence, as a persisted artifact. A review that requires someone to assemble screenshots is sampled at every examination and costs money forever. | Must | Proposed |

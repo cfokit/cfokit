@@ -1,6 +1,6 @@
 /**
  * Getting started, end to end (ADR-0058; ADR-0049's confirmation): a new person creates an account
- * on the issuer's page, chooses the sample export, confirms the company, imports, and reaches the
+ * on the issuer's page, sets up an authenticator app, chooses the sample export, confirms the company, imports, and reaches the
  * first question — in a real browser, against the compose stack, as the person would.
  *
  * Every expected figure is one the synthetic export states for itself (`synthetic.ts`): two
@@ -12,6 +12,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import Big from "big.js";
 import { syntheticExport } from "../src/quickbooks/synthetic.ts";
+import { totp } from "./totp.ts";
 
 // A pause on each screen so a person watching the recording can read it, and typing a person can
 // see; neither in a gate run.
@@ -54,6 +55,17 @@ test("a new person goes from creating an account to their first question", async
   await type(page.getByLabel("Confirm password"), `Sample-${stamp}-password`);
   await settle(page);
   await page.getByRole("button", { name: "Create account" }).click();
+
+  // A second factor before the first sign-in completes (SOC2-19): the key an authenticator app
+  // would hold, entered by hand, and the code it would show.
+  await expect(page.getByRole("heading", { name: "Set up two-step sign-in" })).toBeVisible();
+  await settle(page);
+  await page.getByRole("link", { name: "Can't scan it? Enter a key instead" }).click();
+  const key = await page.locator("li code").innerText();
+  await type(page.getByLabel("Device name"), "Phone");
+  await type(page.getByLabel("Code", { exact: true }), totp(key));
+  await settle(page);
+  await page.getByRole("button", { name: "Turn on" }).click();
 
   // Back in CFOKit, signed in: choose the export.
   await expect(page.getByRole("heading", { name: "Bring in your books" })).toBeVisible();

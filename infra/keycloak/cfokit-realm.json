@@ -639,6 +639,254 @@
   "loginWithEmailAllowed": true,
   "registrationEmailAsUsername": true,
   "verifyEmail": false,
+  "authenticationFlows": [
+    {
+      "alias": "cfokit browser",
+      "description": "Signing in in a browser: a password and a second factor, or a session that already holds both.",
+      "providerId": "basic-flow",
+      "topLevel": true,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "auth-cookie",
+          "requirement": "ALTERNATIVE",
+          "priority": 10,
+          "authenticatorFlow": false,
+          "userSetupAllowed": false
+        },
+        {
+          "authenticator": "identity-provider-redirector",
+          "requirement": "ALTERNATIVE",
+          "priority": 25,
+          "authenticatorFlow": false,
+          "userSetupAllowed": false
+        },
+        {
+          "flowAlias": "cfokit sign-in forms",
+          "requirement": "ALTERNATIVE",
+          "priority": 30,
+          "authenticatorFlow": true,
+          "userSetupAllowed": false
+        }
+      ]
+    },
+    {
+      "alias": "cfokit sign-in forms",
+      "description": "A password, then the second factor the person has set up, or setting one up if they have none.",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "auth-username-password-form",
+          "requirement": "REQUIRED",
+          "priority": 10,
+          "authenticatorFlow": false,
+          "userSetupAllowed": false
+        },
+        {
+          "flowAlias": "cfokit second factor",
+          "requirement": "CONDITIONAL",
+          "priority": 20,
+          "authenticatorFlow": true,
+          "userSetupAllowed": false
+        },
+        {
+          "flowAlias": "cfokit second factor setup",
+          "requirement": "CONDITIONAL",
+          "priority": 30,
+          "authenticatorFlow": true,
+          "userSetupAllowed": false
+        }
+      ]
+    },
+    {
+      "alias": "cfokit second factor",
+      "description": "Whichever second factor the person has set up: an authenticator app or a security key.",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "conditional-user-configured",
+          "requirement": "REQUIRED",
+          "priority": 10,
+          "authenticatorFlow": false,
+          "userSetupAllowed": false
+        },
+        {
+          "authenticator": "conditional-credential",
+          "authenticatorConfig": "cfokit no passkey used",
+          "requirement": "REQUIRED",
+          "priority": 20,
+          "authenticatorFlow": false,
+          "userSetupAllowed": false
+        },
+        {
+          "authenticator": "auth-otp-form",
+          "requirement": "ALTERNATIVE",
+          "priority": 30,
+          "authenticatorFlow": false,
+          "userSetupAllowed": false
+        },
+        {
+          "authenticator": "webauthn-authenticator",
+          "requirement": "ALTERNATIVE",
+          "priority": 40,
+          "authenticatorFlow": false,
+          "userSetupAllowed": false
+        }
+      ]
+    },
+    {
+      "alias": "cfokit second factor setup",
+      "description": "A person with no second factor sets up an authenticator app before the sign-in completes.",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "conditional-sub-flow-executed",
+          "authenticatorConfig": "cfokit no second factor used",
+          "requirement": "REQUIRED",
+          "priority": 10,
+          "authenticatorFlow": false,
+          "userSetupAllowed": false
+        },
+        {
+          "authenticator": "conditional-credential",
+          "authenticatorConfig": "cfokit no passkey used at setup",
+          "requirement": "REQUIRED",
+          "priority": 20,
+          "authenticatorFlow": false,
+          "userSetupAllowed": false
+        },
+        {
+          "authenticator": "auth-otp-form",
+          "requirement": "REQUIRED",
+          "priority": 30,
+          "authenticatorFlow": false,
+          "userSetupAllowed": true
+        }
+      ]
+    },
+    {
+      "alias": "cfokit direct grant",
+      "description": "The password grant, for a client registered to use it: refused without a code from the person's authenticator app.",
+      "providerId": "basic-flow",
+      "topLevel": true,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "direct-grant-validate-username",
+          "requirement": "REQUIRED",
+          "priority": 10,
+          "authenticatorFlow": false,
+          "userSetupAllowed": false
+        },
+        {
+          "authenticator": "direct-grant-validate-password",
+          "requirement": "REQUIRED",
+          "priority": 20,
+          "authenticatorFlow": false,
+          "userSetupAllowed": false
+        },
+        {
+          "flowAlias": "cfokit direct grant code",
+          "requirement": "CONDITIONAL",
+          "priority": 30,
+          "authenticatorFlow": true,
+          "userSetupAllowed": false
+        },
+        {
+          "flowAlias": "cfokit direct grant refusal",
+          "requirement": "CONDITIONAL",
+          "priority": 40,
+          "authenticatorFlow": true,
+          "userSetupAllowed": false
+        }
+      ]
+    },
+    {
+      "alias": "cfokit direct grant code",
+      "description": "The code from the person's authenticator app, sent with the password.",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "conditional-user-configured",
+          "requirement": "REQUIRED",
+          "priority": 10,
+          "authenticatorFlow": false,
+          "userSetupAllowed": false
+        },
+        {
+          "authenticator": "direct-grant-validate-otp",
+          "requirement": "REQUIRED",
+          "priority": 20,
+          "authenticatorFlow": false,
+          "userSetupAllowed": false
+        }
+      ]
+    },
+    {
+      "alias": "cfokit direct grant refusal",
+      "description": "A person with no authenticator app has no second factor the password grant can check, so the grant is refused.",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "conditional-sub-flow-executed",
+          "authenticatorConfig": "cfokit no code sent",
+          "requirement": "REQUIRED",
+          "priority": 10,
+          "authenticatorFlow": false,
+          "userSetupAllowed": false
+        },
+        {
+          "authenticator": "deny-access-authenticator",
+          "requirement": "REQUIRED",
+          "priority": 20,
+          "authenticatorFlow": false,
+          "userSetupAllowed": false
+        }
+      ]
+    }
+  ],
+  "authenticatorConfig": [
+    {
+      "alias": "cfokit no passkey used",
+      "config": {
+        "credentials": "webauthn-passwordless",
+        "included": "false"
+      }
+    },
+    {
+      "alias": "cfokit no passkey used at setup",
+      "config": {
+        "credentials": "webauthn-passwordless",
+        "included": "false"
+      }
+    },
+    {
+      "alias": "cfokit no second factor used",
+      "config": {
+        "flow_to_check": "cfokit second factor",
+        "check_result": "not-executed"
+      }
+    },
+    {
+      "alias": "cfokit no code sent",
+      "config": {
+        "flow_to_check": "cfokit direct grant code",
+        "check_result": "not-executed"
+      }
+    }
+  ],
+  "browserFlow": "cfokit browser",
+  "directGrantFlow": "cfokit direct grant",
   "requiredActions": [
     {
       "alias": "TERMS_AND_CONDITIONS",
@@ -669,7 +917,7 @@
       "name": "Configure OTP",
       "providerId": "CONFIGURE_TOTP",
       "enabled": true,
-      "defaultAction": false,
+      "defaultAction": true,
       "priority": 54
     },
     {

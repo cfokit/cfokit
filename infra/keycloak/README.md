@@ -101,10 +101,49 @@ it, call the token endpoint.
 **People sign themselves up**, by email, and reset their own passwords (`IAM-22`, ADR-0049 § 3).
 No mail relay ships, so an address is not verified; a deployment with one turns `verifyEmail` on.
 
-**A second factor is the person's choice** (`IAM-23`): an account that adds an authenticator app
-is asked for a code at each sign-in after, and one that does not is not asked. `requiredActions`
-is restated in full for the same reason `clientScopes` is: declaring it replaces Keycloak's list,
-and setting `CONFIGURE_TOTP`'s `defaultAction` to `true` would make the second factor required.
+**Every person signs in with a second factor** (`SOC2-19`), an authenticator app or a security
+key, whichever they have set up (`IAM-23`). No session is issued on a password alone. Three parts
+do it, and each closes a different way in:
+
+- **`CONFIGURE_TOTP` is a default required action**, so an account created on the sign-up page
+  sets up an authenticator app before its first session exists. Registration does not run the
+  browser flow, so this is the only part that reaches a new account.
+- **`cfokit browser` is the browser flow.** After the password, `cfokit second factor` asks for
+  whichever factor the person has — a code, or their security key — and a person with both can
+  switch on the page. If they have neither, because an administrator created the account or
+  they removed their last factor, `cfokit second factor setup` runs instead and makes them set up
+  an authenticator app before the sign-in completes. This is the shape Keycloak's documentation
+  gives as "Conditional 2FA sub-flow with OTP default".
+- **`cfokit direct grant` is the password grant's flow.** The password grant is off for
+  `cfokit-web`, but a client registering itself can ask for it, and Keycloak's own flow skips
+  the code for a person with no authenticator app. Here the code is required, and a person
+  without an app — one who signs in with a security key alone — is refused, since a key cannot
+  be presented to a token endpoint.
+
+The choice between the two is made after the first sign-in, not at it: Keycloak has one required
+action per credential type and no built-in step that offers both, so a new account sets up an
+app, and adds a security key from the account console if they prefer one. Both remain enough on
+their own afterwards. A sign-in with a passkey, if a deployment turns passkeys on, already proves
+two factors, and both second-factor sub-flows skip themselves for it, as Keycloak's own browser
+flow does.
+
+Only the flows that differ from Keycloak's are declared. `authenticationFlows` does not replace
+the built-in set the way `clientScopes` does — Keycloak adds whichever built-in flows a realm
+lacks at import — so registration, password reset and the rest stay Keycloak's own.
+`requiredActions` is restated in full for the same reason `clientScopes` is: declaring it
+replaces Keycloak's list.
+
+**Two ways in this does not cover.** Neither is open in the realm as it ships:
+
+- **A sign-in through another identity provider** — a Google or Microsoft account — does not run
+  the browser flow. The first one creates the account, which takes the default required action
+  and so sets up an app; later ones do not ask for it. Keycloak cannot see whether the other
+  provider asked for a second factor. A deployment that adds one decides between setting that
+  provider's post-login flow to ask for the second factor here, and trusting the provider's own.
+  No provider ships with the realm.
+- **A password reset by email** replaces the authenticator app rather than asking for it, so it
+  rests on the mailbox alone. No mail relay ships, so the reset email is never sent; a deployment
+  that adds one makes this a way in.
 
 ## What it deliberately does not contain
 

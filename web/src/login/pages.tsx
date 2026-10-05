@@ -256,6 +256,14 @@ export function Otp({ kcContext: kc }: { kcContext: Page<"login-otp.ftl"> }) {
           Sign in
         </Button>
       </form>
+      {kc.auth?.showTryAnotherWayLink === true && (
+        <form method="post" action={kc.url.loginAction}>
+          <input type="hidden" name="tryAnotherWay" value="on" />
+          <Button type="submit" variant="link">
+            Try another way
+          </Button>
+        </form>
+      )}
     </SignInPage>
   );
 }
