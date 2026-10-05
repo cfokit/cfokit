@@ -138,6 +138,7 @@ def propose(
     creating it rather than discovering it in the books afterwards.
     """
     with database.entity_write(entity_id) as write:
+        authorize(write, Capability.READ, principal)
         in_force = rule_set_as_of(load_versions(write.connection, entity_id=entity_id), _now())
 
     candidate_rule = _draft_version(label, precedence, account_id, predicates)
@@ -255,6 +256,10 @@ def apply_rules(
 
     for index, candidate in enumerate(candidates):
         with database.entity_write(entity_id) as write:
+            # Before anything is read. A line already coded is reported from this
+            # transaction without reaching the write path, whose own check would otherwise
+            # be the first: its transaction and rule are the entity's data (`IAM-01`).
+            authorize(write, Capability.RECORD, principal)
             in_force = rule_set_as_of(
                 load_versions(write.connection, entity_id=entity_id), _now()
             )
@@ -510,13 +515,15 @@ class Replay:
     diverged: tuple[str, ...]
 
 
-def replay(database: Database, *, entity_id: str) -> Replay:
+def replay(database: Database, *, entity_id: str, principal: Principal) -> Replay:
     """Re-decide every recorded decision against the rule set that was in force.
 
     **`BKP-06`'s acceptance, executable**: "replaying an entity's full transaction history
     against an unchanged rule set reproduces every assignment identically".
 
     Writes nothing — a read and a pure function — so it is safe to run against real books.
+    It is still a read of the entity's decisions, so it needs a grant like any other read
+    (`IAM-01`).
 
     A decision whose stored digest no longer matches the reconstructed set is *not* a
     failure: `BKP-11` permits a rule to change, and the digest is exactly what tells the two
@@ -524,6 +531,7 @@ def replay(database: Database, *, entity_id: str) -> Replay:
     the honest limit of this check and the reason bumping `EVALUATOR_VERSION` needs a record.
     """
     with database.entity_write(entity_id) as write:
+        authorize(write, Capability.READ, principal)
         versions = load_versions(write.connection, entity_id=entity_id)
         decisions = load_decisions(write.connection, entity_id=entity_id)
 

@@ -226,7 +226,7 @@ def register(server: MCPServer, database: Database, *, acting: Callable[[], Prin
     )
     def replay_tool(entity_id: str) -> dict[str, Any]:
         def work() -> dict[str, Any]:
-            report = replay(database, entity_id=entity_id)
+            report = replay(database, entity_id=entity_id, principal=acting())
             return {
                 "ok": True,
                 "total": report.total,
