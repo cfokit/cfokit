@@ -11,28 +11,12 @@
 . "$(dirname "$0")/env.sh"
 
 sha="${1:-$(git -C "$CFOKIT_ROOT" rev-parse HEAD)}"
-registry="${CFOKIT_REGION}-docker.pkg.dev"
-repository="${registry}/${CFOKIT_PROJECT}/cfokit"
+repository="${CFOKIT_REGION}-docker.pkg.dev/${CFOKIT_PROJECT}/cfokit"
 bucket="gs://${CFOKIT_PROJECT}-web"
 app="${repository}/app:${sha}"
 issuer="${repository}/issuer:${sha}"
 
-step "Images for ${sha:0:12}"
-gcloud auth configure-docker "$registry" --quiet >/dev/null 2>&1
-for target in runtime issuer; do
-  image=$([ "$target" = runtime ] && echo "$app" || echo "$issuer")
-  if gcloud artifacts docker images describe "$image" >/dev/null 2>&1; then
-    done_ "$image exists"
-    continue
-  fi
-  # Cloud Run runs linux/amd64 whatever builds it. The empty CA file satisfies the Dockerfile's
-  # optional build secret.
-  ca=$(mktemp)
-  docker buildx build --platform linux/amd64 --target "$target" \
-    --secret "id=build_ca,src=$ca" --tag "$image" --push "$CFOKIT_ROOT"
-  rm -f "$ca"
-  done_ "$image pushed"
-done
+"$(dirname "$0")/images.sh" "$sha"
 
 # Before any revision that needs it serves traffic, never by a service at startup (ADR-0004).
 step "Migrate"

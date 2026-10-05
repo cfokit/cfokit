@@ -1,10 +1,13 @@
 # The services and the migration job (ADR-0023: one image, two shapes; ADR-0060).
 #
 # Every service's ingress is internal and Cloud Load Balancing only, so the load balancer's
-# hostnames are the only public addresses (ADR-0060 § 2). Each is created with a placeholder
-# image; the deploy workflow owns the image from then on, which is why OpenTofu ignores it.
+# hostnames are the only public addresses (ADR-0060 § 2). Each is created from the `latest` image
+# setup/images.sh pushes; the deploy owns the image from then on, which is why OpenTofu ignores it.
 
 locals {
+  images    = "${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.images.repository_id}"
+  app_image = "${local.images}/app:latest"
+
   vpc_egress = {
     network    = google_compute_network.this.id
     subnetwork = google_compute_subnetwork.run.id
@@ -47,7 +50,7 @@ resource "google_cloud_run_v2_service" "api" {
     }
 
     containers {
-      image   = var.bootstrap_image
+      image   = local.app_image
       command = ["python", "-m", "cfokit.server", each.key]
 
       ports {
@@ -136,7 +139,7 @@ resource "google_cloud_run_v2_service" "issuer" {
     }
 
     containers {
-      image = var.bootstrap_image
+      image = "${local.images}/issuer:latest"
       args  = ["start", "--import-realm"]
 
       ports {
@@ -255,7 +258,7 @@ resource "google_cloud_run_v2_job" "migrate" {
       }
 
       containers {
-        image   = var.bootstrap_image
+        image   = local.app_image
         command = ["python", "-m", "cfokit.ledger.migrations"]
 
         env {

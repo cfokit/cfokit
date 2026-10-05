@@ -44,11 +44,3 @@ variable "admin_members" {
   type        = list(string)
 }
 
-variable "bootstrap_image" {
-  description = <<-EOT
-    The image a service or job is created with, before the first deploy replaces it. OpenTofu
-    ignores the image afterwards: the deploy workflow owns it.
-  EOT
-  type        = string
-  default     = "us-docker.pkg.dev/cloudrun/container/hello"
-}

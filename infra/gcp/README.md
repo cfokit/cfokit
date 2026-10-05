@@ -40,6 +40,7 @@ The tutorial runs the scripts in [`setup/`](setup/), in order, and they run the 
 | `state.sh` | The state bucket and its KMS key, then `tofu init` |
 | `foundation.sh` | Network, database, secret containers, identities |
 | `database.sh` | Database roles and every secret's value, none of them ever printed |
+| `images.sh [COMMIT]` | Build and push both images, tagged with the commit and `latest` |
 | `apply.sh` | Services, the migration job, the web bucket, the load balancer |
 | `dns.sh [--wait]` | The three A records to set; waits for them and the certificate |
 | `deploy.sh [COMMIT]` | Build, migrate, publish the web build, roll out, check |

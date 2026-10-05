@@ -8,9 +8,9 @@ resource "google_project_iam_audit_config" "this" {
   for_each = toset([
     "secretmanager.googleapis.com",
     "cloudkms.googleapis.com",
-    "sqladmin.googleapis.com",
+    # The audit-log name for Cloud SQL, not its API's.
+    "cloudsql.googleapis.com",
     "iam.googleapis.com",
-    "iamcredentials.googleapis.com",
     "sts.googleapis.com",
   ])
   project = var.project_id

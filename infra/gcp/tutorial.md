@@ -89,10 +89,19 @@ account with a named one; this prints it to your terminal only:
 gcloud secrets versions access latest --secret keycloak-admin-password; echo
 ```
 
+## Build the images
+
+Builds the application and issuer images from this checkout and pushes them. **Around ten
+minutes**; set your DNS records (next step but one) while it runs, in a second terminal tab.
+
+```sh
+infra/gcp/setup/images.sh
+```
+
 ## Services and the load balancer
 
-The REST, MCP and issuer services (on a placeholder image until the first deploy), the migration
-job, the web bucket behind Cloud CDN, and the load balancer with its certificate.
+The REST, MCP and issuer services, the migration job, the web bucket behind Cloud CDN, and the
+load balancer with its certificate.
 
 ```sh
 infra/gcp/setup/apply.sh
@@ -116,8 +125,8 @@ infra/gcp/setup/dns.sh --wait
 
 ## First deploy
 
-Builds both images from this checkout, runs the migrations, publishes the web client, rolls out
-the services, and checks every hostname from the outside. Building takes around ten minutes.
+Runs the migrations, publishes the web client, rolls out the services on the images you built,
+and checks every hostname from the outside.
 
 ```sh
 infra/gcp/setup/deploy.sh
