@@ -1,0 +1,127 @@
+# Production deploy: every merge to main, once CI has passed on it (ADR-0060 § 5).
+#
+# Authenticates by Workload Identity Federation: GCP admits this repository's main branch and
+# nothing else, so no key exists to store. The deploy identity can push images, run the migration
+# job, write the web bucket and roll out revisions; it cannot change infrastructure, which a
+# person applies from infra/gcp/ (ADR-0060 § 6).
+#
+# Skipped until the repository variables infra/gcp/README.md sets exist, so main stays green on
+# a fork or before the first apply.
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  REGION: us-central1
+  APP_HOST: app.cfokit.ai
+  MCP_HOST: mcp.cfokit.ai
+  AUTH_HOST: auth.cfokit.ai
+
+jobs:
+  deploy:
+    if: >-
+      vars.GCP_DEPLOY_SERVICE_ACCOUNT != '' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push'))
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+      REPOSITORY: ${{ vars.GCP_IMAGE_REPOSITORY }}
+      BUCKET: ${{ vars.GCP_WEB_BUCKET }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.SHA }}
+
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+
+      - name: Build and push the application and issuer images
+        run: |
+          gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+          echo -n > build_ca.pem
+          for target in runtime issuer; do
+            name=$([ "$target" = runtime ] && echo app || echo issuer)
+            docker buildx build --target "$target" \
+              --secret id=build_ca,src=build_ca.pem \
+              --tag "${REPOSITORY}/${name}:${SHA}" --push .
+          done
+
+      # Before any revision that needs it serves traffic, and never by a service at startup
+      # (ADR-0004). A failure stops the deploy here.
+      - name: Migrate
+        run: |
+          gcloud run jobs update cfokit-migrate --region "$REGION" --image "${REPOSITORY}/app:${SHA}"
+          gcloud run jobs execute cfokit-migrate --region "$REGION" --wait
+
+      # ADR-0055 § 3: the files built into this image, new files first and index.html last; the
+      # previous build's files stay so an open tab can still load its chunks.
+      - name: Publish the web build
+        run: |
+          container=$(docker create "${REPOSITORY}/app:${SHA}")
+          docker cp "${container}:/app/web" web-build
+          docker rm "$container" >/dev/null
+          b="gs://${BUCKET}"
+          cd web-build
+          gcloud storage cp --recursive --cache-control="public, max-age=31536000, immutable" \
+            assets "${b}/app/"
+          find . -type f ! -path './assets/*' ! -name index.html | sed 's|^\./||' | while read -r f; do
+            gcloud storage cp --cache-control="no-cache" "$f" "${b}/app/${f}"
+          done
+          gcloud storage cp --cache-control="no-cache" index.html "${b}/app/index.html"
+
+          find . -type f | sed 's|^\./|app/|' | sort > ../current.txt
+          gcloud storage cp "${b}/builds/current.txt" ../previous.txt 2>/dev/null || : > ../previous.txt
+          gcloud storage cp ../current.txt "${b}/builds/current.txt"
+          gcloud storage cp ../previous.txt "${b}/builds/previous.txt"
+          sort -u ../current.txt ../previous.txt > ../keep.txt
+          gcloud storage ls --recursive "${b}/app/**" | sed "s|^${b}/||" | sort > ../present.txt
+          comm -23 ../present.txt ../keep.txt | sed "s|^|${b}/|" | xargs -r gcloud storage rm
+
+      - name: Roll out
+        run: |
+          gcloud run services update cfokit-rest --region "$REGION" --image "${REPOSITORY}/app:${SHA}"
+          gcloud run services update cfokit-mcp --region "$REGION" --image "${REPOSITORY}/app:${SHA}"
+          gcloud run services update cfokit-issuer --region "$REGION" --image "${REPOSITORY}/issuer:${SHA}"
+
+      # Through the public addresses, so the load balancer's routing is what is checked
+      # (ADR-0055, ADR-0060 Confirmation).
+      - name: Deployment check
+        run: |
+          set -euo pipefail
+          curl -fsS "https://${APP_HOST}/readyz" >/dev/null
+          curl -fsS "https://${MCP_HOST}/readyz" >/dev/null
+          curl -fsS "https://${AUTH_HOST}/realms/cfokit/.well-known/openid-configuration" >/dev/null
+
+          headers=$(curl -fsS -D - -o /dev/null "https://${APP_HOST}/app/")
+          grep -qi '^content-security-policy:' <<<"$headers"
+          grep -qi '^cache-control: no-cache' <<<"$headers"
+
+          # A deep link names no object; the client's page answers it with 200.
+          curl -fsS -o /dev/null "https://${APP_HOST}/app/companies/check/questions"
+
+          asset=$(cd web-build && find assets -name '*.js' | head -1)
+          headers=$(curl -fsS -D - -o /dev/null "https://${APP_HOST}/app/${asset}")
+          grep -qi '^cache-control: public, max-age=31536000, immutable' <<<"$headers"
+
+          # A REST 404 stays a 404: the client's fallback is scoped to /app/.
+          test "$(curl -s -o /dev/null -w '%{http_code}' "https://${APP_HOST}/no-such-route")" = 404
