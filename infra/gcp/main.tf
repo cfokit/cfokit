@@ -1,7 +1,11 @@
 locals {
+  app_host  = "app.${var.domain}"
+  mcp_host  = "mcp.${var.domain}"
+  auth_host = "auth.${var.domain}"
+
   # What the issuer calls itself, and so what every token's `iss` is (ADR-0019).
-  issuer_url    = "https://${var.auth_host}/realms/cfokit"
-  issuer_origin = "https://${var.auth_host}"
+  issuer_url    = "https://${local.auth_host}/realms/cfokit"
+  issuer_origin = "https://${local.auth_host}"
   audience      = "cfokit-ledger"
 
   services = toset([

@@ -21,8 +21,8 @@ locals {
 
 resource "google_cloud_run_v2_service" "api" {
   for_each = {
-    rest = { host = var.app_host, extra = { MCP_PUBLIC_BASE_URL = "https://${var.mcp_host}" } }
-    mcp  = { host = var.mcp_host, extra = {} }
+    rest = { host = local.app_host, extra = { MCP_PUBLIC_BASE_URL = "https://${local.mcp_host}" } }
+    mcp  = { host = local.mcp_host, extra = {} }
   }
 
   name                = "cfokit-${each.key}"
@@ -155,7 +155,7 @@ resource "google_cloud_run_v2_service" "issuer" {
           KC_HEALTH_ENABLED = "true"
           KC_CACHE          = "local"
           # The realm's web client redirects to the web client and nowhere else.
-          PUBLIC_BASE_URL             = "https://${var.app_host}"
+          PUBLIC_BASE_URL             = "https://${local.app_host}"
           KC_BOOTSTRAP_ADMIN_USERNAME = "admin"
         }
         content {

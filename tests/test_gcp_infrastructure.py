@@ -30,7 +30,7 @@ def test_the_bucket_sends_the_headers_the_rest_service_sends() -> None:
     """ADR-0055 § 2: one set of security headers, from `security_headers()`, in two serving
     paths. The OpenTofu writes the issuer's origin as a reference; resolved, every header the
     REST service sends for /app/ must be configured on the backend bucket verbatim."""
-    issuer_origin = f"https://{_default('auth_host')}"
+    issuer_origin = f"https://auth.{_default('domain')}"
     configured = _terraform().replace("${local.issuer_origin}", issuer_origin)
 
     for name, value in security_headers(f"{issuer_origin}/realms/cfokit").items():

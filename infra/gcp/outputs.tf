@@ -6,7 +6,7 @@ output "load_balancer_ip" {
 output "dns_records" {
   description = "The records to set at the DNS provider."
   value = {
-    for host in [var.app_host, var.mcp_host, var.auth_host] :
+    for host in [local.app_host, local.mcp_host, local.auth_host] :
     host => "A ${google_compute_global_address.lb.address} (DNS only, not proxied)"
   }
 }

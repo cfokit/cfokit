@@ -90,15 +90,15 @@ resource "google_compute_url_map" "https" {
   default_service = google_compute_backend_service.run["rest"].id
 
   host_rule {
-    hosts        = [var.app_host]
+    hosts        = [local.app_host]
     path_matcher = "app"
   }
   host_rule {
-    hosts        = [var.mcp_host]
+    hosts        = [local.mcp_host]
     path_matcher = "mcp"
   }
   host_rule {
-    hosts        = [var.auth_host]
+    hosts        = [local.auth_host]
     path_matcher = "auth"
   }
 
@@ -152,7 +152,7 @@ resource "google_compute_global_address" "lb" {
 resource "google_compute_managed_ssl_certificate" "this" {
   name = "cfokit"
   managed {
-    domains = [var.app_host, var.mcp_host, var.auth_host]
+    domains = [local.app_host, local.mcp_host, local.auth_host]
   }
 }
 

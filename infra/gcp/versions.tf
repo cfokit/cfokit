@@ -1,8 +1,7 @@
 # Production on GCP (ADR-0017, ADR-0055, ADR-0060). Applied by a person, never by the deploy
 # pipeline: the identity that changes networks, databases and IAM does not run on every merge.
 #
-# The state bucket and its KMS key exist before `tofu init` can, so they are created once by
-# hand; README.md has the commands.
+# The state bucket and its KMS key exist before `tofu init` can, so setup/state.sh creates them.
 
 terraform {
   required_version = ">= 1.10"
@@ -14,16 +13,18 @@ terraform {
     }
   }
 
+  # Named from the project, so a fork deploying to its own project needs no edit here. OpenTofu
+  # evaluates variables this early; Terraform would not.
   backend "gcs" {
-    bucket = "cfokit-prod-tofu-state"
-    prefix = "prod"
+    bucket = "${var.project_id}-tofu-state"
+    prefix = "production"
   }
 
   # State holds every resource's attributes, including some that are sensitive. Encrypted with a
   # KMS key, a reader of the bucket alone reads nothing (ADR-0016, ADR-0060 § 6).
   encryption {
     key_provider "gcp_kms" "state" {
-      kms_encryption_key = "projects/cfokit-prod/locations/us-central1/keyRings/tofu/cryptoKeys/state"
+      kms_encryption_key = "projects/${var.project_id}/locations/${var.region}/keyRings/tofu/cryptoKeys/state"
       key_length         = 32
     }
     method "aes_gcm" "state" {

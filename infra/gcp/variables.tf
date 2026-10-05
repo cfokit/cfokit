@@ -1,5 +1,6 @@
-# Production's values are the defaults: every one is a name, not a secret. Secrets are
-# containers in secrets.tf, populated out of band (ADR-0016).
+# CFOKit's own production values are the defaults; a self-hosted deployment sets its own through
+# TF_VAR_* (setup/env.sh does). Every value is a name, not a secret. Secrets are containers in
+# secrets.tf, populated out of band (ADR-0016).
 
 variable "project_id" {
   description = "The GCP project production runs in."
@@ -19,26 +20,17 @@ variable "zone" {
   default     = "us-central1-a"
 }
 
-variable "app_host" {
-  description = "The REST API and the web client, on one origin (ADR-0049, ADR-0055)."
+variable "domain" {
+  description = <<-EOT
+    The deployment's domain. The API and web client are app.<domain>, MCP is mcp.<domain>, and
+    the issuer is auth.<domain> (ADR-0060 § 2).
+  EOT
   type        = string
-  default     = "app.cfokit.ai"
-}
-
-variable "mcp_host" {
-  description = "The MCP service's own origin."
-  type        = string
-  default     = "mcp.cfokit.ai"
-}
-
-variable "auth_host" {
-  description = "The issuer's origin. Every party must reach it by this one name (ADR-0019)."
-  type        = string
-  default     = "auth.cfokit.ai"
+  default     = "cfokit.ai"
 }
 
 variable "github_repository" {
-  description = "owner/name of the repository whose main branch may deploy (ADR-0060 § 5)."
+  description = "owner/name of the repository whose main branch may deploy: yours, if a fork (ADR-0060 § 5)."
   type        = string
   default     = "cfokit/cfokit"
 }
