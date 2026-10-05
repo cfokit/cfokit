@@ -51,6 +51,7 @@ __all__ = [
     "WriteContext",
     "WrittenTransaction",
     "post_transaction",
+    "record_in",
     "record_transaction",
     "reverse_transaction",
 ]
@@ -152,7 +153,47 @@ def record_transaction(
     derived_from: dict[str, Any] | None = None,
     assigned: tuple[Assigned, ...] = (),
 ) -> WrittenTransaction:
+    """Record a transaction in a transaction of its own. See `record_in` for what it does.
+
+    The ordinary entry point: it opens the entity's locked transaction, records, and commits.
+    """
+    with database.entity_write(context.entity_id) as write:
+        return record_in(
+            write,
+            context,
+            entry=entry,
+            post=post,
+            entry_kind=entry_kind,
+            raises_obligation=raises_obligation,
+            settles=settles,
+            derived_from=derived_from,
+            assigned=assigned,
+        )
+
+
+def record_in(
+    write: EntityWrite,
+    context: WriteContext,
+    *,
+    entry: Entry,
+    post: bool,
+    entry_kind: str = "ordinary",
+    raises_obligation: Decimal | None = None,
+    settles: tuple[Applied, ...] = (),
+    derived_from: dict[str, Any] | None = None,
+    assigned: tuple[Assigned, ...] = (),
+) -> WrittenTransaction:
     """Record a transaction, as a draft or posted straight through.
+
+    **Inside a transaction the caller already holds**, so a module can commit its own record
+    of why the entry was made in the same COMMIT as the entry (ADR-0022 § 3, ADR-0045 § 1).
+    The caller's `EntityWrite` has already scoped row-level security and taken the entity's
+    lock; everything else — the idempotency claim, the grant check, the one audit row, none on
+    a replay — happens here exactly as it does for `record_transaction`. Whatever the caller
+    does afterwards in the same transaction commits or rolls back with the entry, including
+    the idempotency claim, so a failure there leaves a retry free to do the whole thing again.
+    The ledger learns nothing about what the caller writes: it hands over nothing but the
+    result.
 
     `post=False` writes a draft, which may be unbalanced and is freely editable (`LED-07`).
     `post=True` writes it and posts it in the same transaction, which is the ordinary path for
@@ -196,6 +237,10 @@ def record_transaction(
     same operation, and a caller reusing a key across two sources should be told so.
     """
     _require_key(context)
+    if write.entity_id != context.entity_id:
+        # A programming error, not a request error: the lock and the scope held are another
+        # entity's, so nothing here would be written where the context says it is.
+        raise ValueError("the write is scoped to a different entity than the context names")
 
     digest = _request_hash(
         "record_transaction",
@@ -209,88 +254,85 @@ def record_transaction(
         [(a.posting_index, a.rule_version_id) for a in assigned],
     )
 
-    with database.entity_write(context.entity_id) as write:
-        replay = write.claim_idempotency(context.idempotency_key, digest)
-        if replay is not None:
-            # No work, and deliberately no audit row: a replay is not a state change.
-            return WrittenTransaction(
-                transaction_id=str(replay["transaction_id"]),
-                status=str(replay["status"]),
-                replayed=True,
-            )
-
-        authorize(write, Capability.POST if post else Capability.RECORD, context.principal)
-
-        if (raises_obligation is not None or settles) and not post:
-            raise TransactionIncomplete(
-                "an obligation or a settlement needs the transaction posted; a draft is not "
-                "in the books"
-            )
-
-        if post:
-            _require_open(write, entry.transaction_date)
-            # The ergonomic check, so the caller gets a stable code and a readable message
-            # before the deferred trigger produces a blunt one at COMMIT (ADR-0006). Inside
-            # the transaction because the functional currency it checks against is read from
-            # the entity, and a refused write rolls back leaving nothing behind.
-            check_postable(entry, functional_currency=write.functional_currency)
-
-        transaction_id = write.insert_draft(
-            transaction_date=entry.transaction_date,
-            description=entry.description,
-            reverses_id=entry.reverses_id,
-            entry_kind=entry_kind,
-            actor_principal_id=context.principal.id,
-            # `rule` when a rule chose a coding, and the caller's own class otherwise. It
-            # records why the posting was made rather than who may make it (ADR-0042 § 3),
-            # so this narrows nothing and widens nothing.
-            actor_class=(
-                ActorClass.RULE.value if assigned else context.principal.actor_class.value
-            ),
-            acting_for_principal_id=context.principal.acting_for,
-            derived_from=derived_from,
-        )
-        write.add_postings(
-            transaction_id,
-            entry.postings,
-            assigned_by={a.posting_index: a.rule_version_id for a in assigned},
+    replay = write.claim_idempotency(context.idempotency_key, digest)
+    if replay is not None:
+        # No work, and deliberately no audit row: a replay is not a state change.
+        return WrittenTransaction(
+            transaction_id=str(replay["transaction_id"]),
+            status=str(replay["status"]),
+            replayed=True,
         )
 
-        if raises_obligation is not None:
-            write.raise_obligation(
-                transaction_id=transaction_id,
-                amount=raises_obligation,
-                commodity=write.functional_currency,
-            )
-        for applied in settles:
-            if write.outstanding(obligation_id=applied.obligation_id) == []:
-                raise ObligationNotFound(
-                    f"no obligation {applied.obligation_id} in this entity"
-                )
-            write.apply_settlement(
-                obligation_id=applied.obligation_id,
-                transaction_id=transaction_id,
-                amount=applied.amount,
-                commodity=write.functional_currency,
-            )
+    authorize(write, Capability.POST if post else Capability.RECORD, context.principal)
 
-        status = "draft"
-        if post:
-            write.mark_posted(transaction_id)
-            status = "posted"
+    if (raises_obligation is not None or settles) and not post:
+        raise TransactionIncomplete(
+            "an obligation or a settlement needs the transaction posted; a draft is not "
+            "in the books"
+        )
 
-        write.record_audit(
-            request_id=context.request_id,
-            actor=context.principal.audit_actor,
-            action="record_transaction",
-            subject_type="ledger_transaction",
-            subject_id=transaction_id,
-            # Identifiers and counts. Never amounts, accounts or payees.
-            detail={"postings": len(entry.postings), "posted": post, "kind": entry_kind},
+    if post:
+        _require_open(write, entry.transaction_date)
+        # The ergonomic check, so the caller gets a stable code and a readable message
+        # before the deferred trigger produces a blunt one at COMMIT (ADR-0006). Inside
+        # the transaction because the functional currency it checks against is read from
+        # the entity, and a refused write rolls back leaving nothing behind.
+        check_postable(entry, functional_currency=write.functional_currency)
+
+    transaction_id = write.insert_draft(
+        transaction_date=entry.transaction_date,
+        description=entry.description,
+        reverses_id=entry.reverses_id,
+        entry_kind=entry_kind,
+        actor_principal_id=context.principal.id,
+        # `rule` when a rule chose a coding, and the caller's own class otherwise. It
+        # records why the posting was made rather than who may make it (ADR-0042 § 3),
+        # so this narrows nothing and widens nothing.
+        actor_class=(
+            ActorClass.RULE.value if assigned else context.principal.actor_class.value
+        ),
+        acting_for_principal_id=context.principal.acting_for,
+        derived_from=derived_from,
+    )
+    write.add_postings(
+        transaction_id,
+        entry.postings,
+        assigned_by={a.posting_index: a.rule_version_id for a in assigned},
+    )
+
+    if raises_obligation is not None:
+        write.raise_obligation(
+            transaction_id=transaction_id,
+            amount=raises_obligation,
+            commodity=write.functional_currency,
         )
-        write.store_idempotency_result(
-            context.idempotency_key, {"transaction_id": transaction_id, "status": status}
+    for applied in settles:
+        if write.outstanding(obligation_id=applied.obligation_id) == []:
+            raise ObligationNotFound(f"no obligation {applied.obligation_id} in this entity")
+        write.apply_settlement(
+            obligation_id=applied.obligation_id,
+            transaction_id=transaction_id,
+            amount=applied.amount,
+            commodity=write.functional_currency,
         )
+
+    status = "draft"
+    if post:
+        write.mark_posted(transaction_id)
+        status = "posted"
+
+    write.record_audit(
+        request_id=context.request_id,
+        actor=context.principal.audit_actor,
+        action="record_transaction",
+        subject_type="ledger_transaction",
+        subject_id=transaction_id,
+        # Identifiers and counts. Never amounts, accounts or payees.
+        detail={"postings": len(entry.postings), "posted": post, "kind": entry_kind},
+    )
+    write.store_idempotency_result(
+        context.idempotency_key, {"transaction_id": transaction_id, "status": status}
+    )
 
     return WrittenTransaction(transaction_id=transaction_id, status=status)
 

@@ -518,6 +518,118 @@ def counts(app_conn: psycopg.Connection[Any], entity: str) -> tuple[int, int]:
     return transactions, decisions
 
 
+def persisted(owner_conn: psycopg.Connection[Any], entity: str) -> tuple[int, int, int, int]:
+    """(transactions, decisions, notifications, `record_transaction` audit rows), read as the
+    schema owner so nothing a scope or policy hides could make a leftover row look absent."""
+    counted = []
+    with owner_conn.cursor() as cur:
+        for sql in (
+            "SELECT count(*) FROM ledger_transaction WHERE entity_id = %s",
+            "SELECT count(*) FROM assignment_decision WHERE entity_id = %s",
+            "SELECT count(*) FROM notification WHERE entity_id = %s",
+            "SELECT count(*) FROM audit_log WHERE entity_id = %s"
+            " AND action = 'record_transaction'",
+        ):
+            cur.execute(sql, (entity,))
+            counted.append(int((cur.fetchone() or [0])[0]))
+    return counted[0], counted[1], counted[2], counted[3]
+
+
+class Interrupted(Exception):
+    """A failure after the entry is written and before its decision's work is done."""
+
+
+def test_an_unresolved_line_writes_its_draft_decision_and_question(
+    database: Database, entity: str, chart: dict[str, str], owner_conn: psycopg.Connection[Any]
+) -> None:
+    """The ordinary path, as the control for the one below: one draft, the decision that
+    explains it, the owner told (ADR-0052), and the write path's one audit row."""
+    apply_rules(
+        database,
+        entity_id=entity,
+        principal=OWNER,
+        request_id="run-1",
+        candidates=[acme(chart, "-240.00", ref="line-1")],
+    )
+
+    assert persisted(owner_conn, entity) == (1, 1, 1, 1)
+
+
+def test_a_failure_after_the_entry_leaves_no_entry_decision_or_question(
+    database: Database,
+    entity: str,
+    chart: dict[str, str],
+    owner_conn: psycopg.Connection[Any],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """ADR-0045 § 1 and ADR-0022 § 3: a decision and the draft it coded reach one `COMMIT`.
+
+    The failure is raised after the entry and its decision are written, so the only thing
+    that can make all of them absent is that they shared the transaction that rolled back.
+    A draft left behind would be a coding no record explains — the gap `RPT-08` closes.
+    """
+
+    def interrupted(*_: object, **__: object) -> None:
+        raise Interrupted
+
+    line = acme(chart, "-240.00", ref="line-1")
+    with monkeypatch.context() as patched:
+        patched.setattr("cfokit.assignment.service.notify_holders", interrupted)
+        with pytest.raises(Interrupted):
+            apply_rules(
+                database,
+                entity_id=entity,
+                principal=OWNER,
+                request_id="run-1",
+                candidates=[line],
+            )
+
+    assert persisted(owner_conn, entity) == (0, 0, 0, 0)
+
+    # The idempotency claim rolled back with the rest, so running the line again is a first
+    # write rather than a replay of one that never committed.
+    again = apply_rules(
+        database, entity_id=entity, principal=OWNER, request_id="run-2", candidates=[line]
+    )
+    assert len(again.unresolved) == 1
+    assert persisted(owner_conn, entity) == (1, 1, 1, 1)
+
+
+def test_a_failure_answering_a_coded_line_leaves_nothing_posted(
+    database: Database,
+    entity: str,
+    chart: dict[str, str],
+    owner_conn: psycopg.Connection[Any],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The resolved path: the entry posts straight through, so a posting with no decision
+    would be in the books. It must not survive its decision failing to land."""
+    approve(
+        database,
+        entity_id=entity,
+        principal=OWNER,
+        label="ACME to insurance",
+        precedence=10,
+        account_id=chart["Insurance"],
+        predicates=payee_rule(),
+    )
+
+    def interrupted(*_: object, **__: object) -> None:
+        raise Interrupted
+
+    monkeypatch.setattr("cfokit.assignment.service.answer", interrupted)
+    with pytest.raises(Interrupted):
+        apply_rules(
+            database,
+            entity_id=entity,
+            principal=OWNER,
+            request_id="run-1",
+            candidates=[acme(chart, "-240.00", ref="line-1")],
+        )
+
+    assert persisted(owner_conn, entity) == (0, 0, 0, 0)
+
+
 def test_two_identical_lines_are_two_transactions(
     database: Database, entity: str, chart: dict[str, str], app_conn: psycopg.Connection[Any]
 ) -> None:
