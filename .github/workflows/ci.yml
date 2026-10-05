@@ -88,7 +88,7 @@ jobs:
       - run: uv run task test
 
   # The web client: lint, typecheck, test and build, from web/ only (ADR-0054). No Python here,
-  # and no Node in any other job.
+  # and no Node in any other job but the end-to-end one, which drives a browser at the stack.
   web:
     name: web client
     runs-on: ubuntu-latest
@@ -175,6 +175,105 @@ jobs:
         if: always()
         run: docker compose -f compose.yaml down -v
 
+  # Getting started, end to end: a new person registers on the issuer's page, imports the sample
+  # export and reaches the first question, in a real browser against compose.yaml without the dev
+  # overlay and with no cloud credentials, as Gate 2 runs (ADR-0049's confirmation, ADR-0058).
+  #
+  # Its video is the onboarding screencast. The run is paced for a person to follow, which costs
+  # about fifteen seconds and saves running the test twice; it is kept as an artifact on every run
+  # and published from main for the README.
+  e2e:
+    name: getting started, end to end
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Bring up compose.yaml WITHOUT the dev overlay
+        run: docker compose -f compose.yaml up -d --wait --wait-timeout 240
+      - name: Create the schema
+        run: docker compose -f compose.yaml --profile migrate run --rm migrate
+
+      # The browser trusts the stack's CA the way a person's does after the README's one-time
+      # step: in the system store Chromium reads on Linux, NSS. No certificate check is skipped.
+      - name: Trust the stack's CA in the browser's certificate store
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq libnss3-tools ffmpeg
+          mkdir -p "$HOME/.pki/nssdb"
+          certutil -d "sql:$HOME/.pki/nssdb" -N --empty-password
+          certutil -d "sql:$HOME/.pki/nssdb" -A -t "C,," -n "CFOKit local CA" -i .local/tls/ca/ca.pem
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: web/.nvmrc
+      - run: corepack pnpm install --frozen-lockfile
+        working-directory: web
+      - run: corepack pnpm exec playwright install --with-deps chromium
+        working-directory: web
+
+      - name: Getting started, in Chromium
+        working-directory: web
+        env:
+          E2E_PACE: "1200"
+          # The test reads the books back over REST from Node, which trusts the same CA.
+          NODE_EXTRA_CA_CERTS: ${{ github.workspace }}/.local/tls/ca/ca.pem
+        run: corepack pnpm e2e
+
+      # The screencast: an MP4 to watch, and a GIF small enough for a README to show inline.
+      - name: Make the recording
+        working-directory: web
+        run: |
+          mkdir -p recording
+          video=$(find test-results -name video.webm | head -1)
+          ffmpeg -loglevel error -i "$video" -c:v libx264 -pix_fmt yuv420p -movflags +faststart \
+            recording/onboarding.mp4
+          ffmpeg -loglevel error -i "$video" \
+            -vf "fps=8,scale=800:-1:flags=lanczos,split[a][b];[a]palettegen[p];[b][p]paletteuse" \
+            recording/onboarding.gif
+          ls -la recording
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: onboarding-recording
+          path: web/recording/
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: failure()
+        with:
+          name: e2e-report
+          path: |
+            web/playwright-report/
+            web/test-results/
+
+      - name: Stack diagnostics
+        if: failure()
+        run: docker compose -f compose.yaml ps && docker compose -f compose.yaml logs --tail 200
+      - name: Tear down
+        if: always()
+        run: docker compose -f compose.yaml down -v
+
+  # The recording from main, at a fixed address the README links to: the assets of one prerelease,
+  # replaced on every push to main. GITHUB_TOKEN is the only credential, and only this job writes.
+  recording:
+    name: publish the getting-started recording
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [e2e]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: onboarding-recording
+          path: recording
+      - name: Replace the release's assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release view onboarding-recording >/dev/null 2>&1 ||
+            gh release create onboarding-recording --prerelease --target main \
+              --title "Getting started, recorded" \
+              --notes "The getting-started flow, recorded by CI from main on every push. Not a release of CFOKit."
+          gh release upload onboarding-recording recording/onboarding.mp4 recording/onboarding.gif --clobber
+
   # Gate 3 — differential test against the Beancount oracle, every divergence documented
   # (ADR-0010). Beancount is a CI-only dependency and never ships in the artifact.
   #
@@ -211,7 +310,7 @@ jobs:
   gates:
     name: All gates
     if: always()
-    needs: [lint, money, decisions, test, web, portability, contracts]
+    needs: [lint, money, decisions, test, web, portability, e2e, contracts]
     runs-on: ubuntu-latest
     steps:
       - name: Fail if any gate failed

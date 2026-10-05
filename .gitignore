@@ -12,6 +12,9 @@ dist_keycloak/
 dist-design-system/
 # Keycloak's own login resources, copied in by the Keycloakify plugin for `pnpm dev`.
 web/public/keycloakify-dev-resources/
+# What an end-to-end run leaves: its video, trace and report.
+web/test-results/
+web/playwright-report/
 
 # uv / virtualenvs
 .venv/

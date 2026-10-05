@@ -11,6 +11,7 @@ file *says*, because that is what a client is handed and what an operator copies
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -44,13 +45,14 @@ def setting(name: str) -> str:
 
 
 def published(service_port: str) -> str:
-    """The host side of a `"host:container"` port mapping, found by its container side."""
+    """The host side of a `"host:container"` port mapping, found by its container side, with
+    each side's `${NAME:-default}` read as its default."""
     for line in lines():
-        stripped = line.strip().strip('"- ')
-        if stripped.endswith(f":{service_port}") and ":" in stripped:
+        if not line.strip().startswith('- "'):  # a port mapping is a quoted list item
+            continue
+        stripped = re.sub(r"\$\{[A-Z_]+:-([^}]*)\}", r"\1", line.strip().strip('"- '))
+        if stripped.endswith(f":{service_port}"):
             host, _, _ = stripped.rpartition(":")
-            if host.startswith("${") and ":-" in host:
-                return host.split(":-", 1)[1].rstrip("}")
             return host
     pytest.fail(f"nothing is published to container port {service_port}")
 

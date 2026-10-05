@@ -121,7 +121,7 @@ services:
       # advertised address wrong for exactly one of the two — and on this network 8080 is the
       # ledger, so a browser following the chain to `keycloak:8080` would reach the ledger and
       # be answered.
-      KC_HTTPS_PORT: "8443"
+      KC_HTTPS_PORT: ${KEYCLOAK_PORT:-8443}
       KC_HTTPS_CERTIFICATE_FILE: /opt/keycloak/conf/tls/cert.pem
       KC_HTTPS_CERTIFICATE_KEY_FILE: /opt/keycloak/conf/tls/key.pem
       KC_HOSTNAME: ${KC_HOSTNAME:-https://keycloak.localhost:8443}
@@ -150,7 +150,9 @@ services:
       - ./infra/keycloak/cfokit-realm.json:/opt/keycloak/data/import/cfokit-realm.json:ro
       - ./.local/tls/keycloak:/opt/keycloak/conf/tls:ro
     ports:
-      - "${KEYCLOAK_PORT:-8443}:8443"
+      # The same port on both sides, for the reason above; KEYCLOAK_PORT moves both, so a second
+      # stack on one machine (the end-to-end test's) sets it with KC_HOSTNAME and AUTH_ISSUER_URL.
+      - "${KEYCLOAK_PORT:-8443}:${KEYCLOAK_PORT:-8443}"
     healthcheck:
       # The management port, which is where Keycloak serves health from. Readiness rather than
       # liveness here, because everything else waits on this one being able to issue tokens.

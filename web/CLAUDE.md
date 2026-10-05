@@ -26,6 +26,10 @@ corepack pnpm install --frozen-lockfile   # install exactly what the lockfile sa
 corepack pnpm dev                         # Vite dev server with live reload
 corepack pnpm lint                        # eslint + prettier --check
 corepack pnpm test                        # vitest
+corepack pnpm e2e                         # Playwright: getting started, end to end, against a
+                                          # running stack (E2E_BASE_URL; NODE_EXTRA_CA_CERTS
+                                          # naming ../.local/tls/ca/ca.pem)
+corepack pnpm sample-export [path]        # the synthetic QuickBooks export, as a .zip to import
 corepack pnpm build                       # tsc, then the static build into dist/
 corepack pnpm theme                       # regenerate design/theme*.css from design/tokens.json
 corepack pnpm design-system               # build the Design System artifact's files, then

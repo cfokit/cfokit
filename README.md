@@ -31,7 +31,16 @@ it once, so your browser opens the pages without a warning (macOS; it asks for y
 security add-trusted-cert -r trustRoot -k ~/Library/Keychains/login.keychain-db .local/tls/ca/ca.pem
 ```
 
-Then open **https://localhost:8080/app/** and create your account.
+Then open **https://localhost:8080/app/** and create your account. Getting started takes you from
+there to your books in Claude: choose your QuickBooks export, confirm the company, import, and
+connect Claude Desktop.
+
+[![Getting started, from creating an account to the first question](https://github.com/cfokit/cfokit/releases/download/onboarding-recording/onboarding.gif)](https://github.com/cfokit/cfokit/releases/download/onboarding-recording/onboarding.mp4)
+
+<sub>Recorded by CI from `main`, against this stack, on every push.</sub>
+
+No QuickBooks export to hand? `cd web && corepack pnpm install && corepack pnpm sample-export`
+writes a small one to `.local/quickbooks-sample.zip` (it needs the Node version in `web/.nvmrc`).
 
 The web client and REST API listen on `:8080`, the MCP endpoint on `:8081`, and the identity
 provider on `keycloak.localhost:8443`. This is the real thing, not a demo: data lives in a named
