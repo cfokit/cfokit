@@ -30,7 +30,70 @@ A decision that future work should be bound by belongs in a decision record rath
 code comment. [`docs/decisions/README.md`](docs/decisions/README.md) explains the format and
 [`adr-template.md`](docs/decisions/adr-template.md) is the starting point.
 
+## Getting started
+
+Four steps. You do the ones that involve credentials or installing software yourself, in your
+own terminal, and Claude Code never sees your GitHub credentials. Claude Code does the rest, and
+the app walks you through getting started.
+
+1. **Fork** [`cfokit/cfokit`](https://github.com/cfokit/cfokit) and clone your fork. This needs
+   `git` and the [`gh`](https://cli.github.com/) CLI, signed in:
+
+   ```bash
+   gh auth login                              # once, if you have not already
+   gh repo fork cfokit/cfokit --clone --remote
+   cd cfokit
+   ```
+
+2. **Install the dependencies:**
+   - [`uv`](https://docs.astral.sh/uv/) (not pip, not poetry)
+   - Docker, with the daemon running
+   - [Claude Code](https://claude.com/claude-code)
+   - [Claude Desktop](https://claude.com/download), if you want to talk to your books
+
+   A cloud Claude Code session provisions `uv` and Docker for you
+   ([Setting up](#setting-up)). Anything that needs your credentials or a login, such as `gh`,
+   Claude Code and Claude Desktop, is yours to do either way.
+
+3. **Run Claude Code** in the clone.
+4. **Paste this prompt:**
+
+````text
+Set me up to contribute to CFOKit. Do not use any GitHub credentials, and do not commit, push or
+open pull requests. Go one step at a time, and wait for me where a step needs me.
+
+1. Read CLAUDE.md and CONTRIBUTING.md.
+2. Verify the prerequisites (uv, Docker with a running daemon). Tell me exactly what is
+   missing; do not work around it. Then run `uv sync --locked`.
+3. Build and run the stack as CONTRIBUTING.md describes: run the migrations, bring the
+   stack up, and confirm /healthz and /readyz respond.
+4. Run `uv run task lint` and `uv run task test`.
+5. Trust the local certificate authority as the README says, then tell me to open
+   https://localhost:8080/app/ and go through getting started. Wait until I say I am done.
+6. Report each step's result, and anything you could not do, with the error output.
+````
+
+### Getting started in the app
+
+Open <https://localhost:8080/app/>, create your account, and follow the pages: export your books
+from QuickBooks, confirm your company, import, and connect Claude Desktop. The last page opens a
+chat in Claude with a first question about your books already drafted
+([ADR-0058](docs/decisions/0058-getting-started-is-one-path-on-the-web.md)). Then go back to
+Claude Code and say you're done.
+
+When you have a change ready, ask Claude Code to commit it on a branch, then push and open the
+pull request yourself from your terminal
+([Opening a pull request](#opening-a-pull-request)):
+
+```bash
+git push -u origin <branch>
+gh pr create --repo cfokit/cfokit
+```
+
 ## Setting up
+
+The prompt above does this for you. This is the reference for what it installs and why, and for
+doing it by hand.
 
 You need [`uv`](https://docs.astral.sh/uv/) (not pip, not poetry) and Docker. The code targets
 Python 3.14, which `uv` installs for you.
@@ -41,8 +104,8 @@ uv run task --list   # every command, and what it does
 ```
 
 **Using Claude Code?** Any Claude Code environment with outbound network access works, cloud or
-local, and the agent can run everything below for you. A cloud session is provisioned
-automatically by `.claude/hooks/session-start.sh` (`uv`, Python 3.14, Node 24 and pnpm
+local, and the agent can run everything below except the steps that need your GitHub
+credentials. A cloud session is provisioned automatically by `.claude/hooks/session-start.sh` (`uv`, Python 3.14, Node 24 and pnpm
 for the web client, the locked dependencies and a Docker daemon). That hook does nothing locally, so a local session needs `uv`
 and Docker installed first. A stack in a cloud session lives inside its container, so you can
 exercise it from the session but not from your own machine.
@@ -82,13 +145,23 @@ names above alone. If a pull or build fails, the blocked host is in the error.
 ### Running the stack
 
 ```bash
-uv run task dev                                    # compose.yaml plus compose.dev.yaml
-docker compose --profile migrate run --rm migrate  # create the schema
+docker compose --profile migrate run --rm migrate  # 1. create the schema (starts Postgres)
+uv run task dev                                    # 2. compose.yaml plus compose.dev.yaml
 ```
 
-`uv run task dev` applies the development overlay: Postgres is published on `:5432` and logs
+Migrate first. `uv run task dev` stays in the foreground, so run it last or in a second shell.
+It applies the development overlay: Postgres is published on `:5432` and logs
 every statement. Plain `docker compose up` runs the same stack without it, which is what a
 user gets and what CI proves. Migrations are an explicit command and never run on startup.
+
+`docker compose build` does not build the `migrate` image, because that service sits behind a
+profile. `migrate run` builds it on first use, or build it explicitly with
+`docker compose --profile migrate build migrate`.
+
+**Behind a TLS-intercepting proxy?** Image builds need the proxy's CA certificate. Set
+`BUILD_CA_FILE` to the path of the CA bundle before building. Cloud sessions set it for you.
+
+Once it is up, `/healthz` and `/readyz` should both respond.
 
 **Every service copies the source into its image rather than mounting it.** After editing code,
 rebuild before you run, or you are running the previous copy:
@@ -121,7 +194,8 @@ docker compose --profile test run --rm test
 
 ## Opening a pull request
 
-- Work on a branch. Never commit to `main`.
+- Work on a branch of your fork. Never commit to `main`.
+- Open the pull request from your fork against `cfokit/cfokit`.
 - One logical change per commit, with an imperative subject line.
 - Cite the requirement or `ADR-` id when a change implements or follows one. Requirement ids
   are defined in [`requirements.md`](docs/product/requirements.md).
