@@ -43,6 +43,8 @@ TOOLS = {
     "issued_statements",
     "obligation_detail",
     "open_balances",
+    # What CFOKit asked the person and nobody has answered (ADR-0056 § 4).
+    "open_notifications",
     "outstanding_obligations",
     "post_transaction",
     "profit_and_loss",

@@ -22,7 +22,7 @@ from pydantic import BaseModel
 
 from cfokit.assignment import Field, Operator, Predicate
 from cfokit.assignment.candidate import Candidate, SourceKind
-from cfokit.assignment.service import apply_rules, approve, propose, replay
+from cfokit.assignment.service import apply_rules, approve, open_questions, propose, replay
 from cfokit.ledger.errors import LedgerError
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.principal import Principal
@@ -235,6 +235,38 @@ def register(server: MCPServer, database: Database, *, acting: Callable[[], Prin
                 "rule_set_changed": report.rule_set_changed,
                 "semantics_changed": report.semantics_changed,
                 "diverged": list(report.diverged),
+            }
+
+        return _refusals(work)
+
+    @server.tool(
+        name="unresolved_transactions",
+        description=(
+            "Every line no rule resolved and nothing has answered since, oldest first: what to "
+            "ask the person about. Each is answered by proposing a rule that covers it, the "
+            "person approving it, and running assignment again with the same source_ref — "
+            "which books it and closes its notification. Writes nothing."
+        ),
+    )
+    def unresolved_tool(entity_id: str) -> dict[str, Any]:
+        def work() -> dict[str, Any]:
+            return {
+                "ok": True,
+                "unresolved": [
+                    {
+                        "source_ref": q.candidate.source_ref,
+                        "transaction_id": q.transaction_id,
+                        "decision_id": q.decision_id,
+                        "payee": q.candidate.payee,
+                        "description": q.candidate.description,
+                        "amount": str(q.candidate.amount),
+                        "commodity": q.candidate.commodity,
+                        "source_account_id": q.candidate.source_account_id,
+                        "transaction_date": q.candidate.transaction_date.isoformat(),
+                        "source_kind": str(q.candidate.source_kind),
+                    }
+                    for q in open_questions(database, entity_id=entity_id, principal=acting())
+                ],
             }
 
         return _refusals(work)

@@ -273,3 +273,23 @@ class AllocationInvalid(LedgerError):
     """
 
     code = "allocation_invalid"
+
+
+class NotificationNotFound(LedgerError):
+    """No notification with that id is addressed to this caller in this entity (ADR-0056).
+
+    Another person's notification is the same answer as none at all: a caller sees only what is
+    addressed to them, and telling the two apart would say what a co-owner was asked.
+    """
+
+    code = "notification_not_found"
+
+
+class RecipientHoldsNoRole(LedgerError):
+    """A notification was addressed to a principal holding no role in its entity (ADR-0052 § 1).
+
+    Checked before the row is written, under the same grant check as any other act, so a
+    question about one entity's books never reaches somebody outside it (`NFR-04`).
+    """
+
+    code = "recipient_holds_no_role"

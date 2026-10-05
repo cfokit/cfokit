@@ -84,6 +84,10 @@
     "error": "NothingToClose"
   },
   {
+    "code": "notification_not_found",
+    "error": "NotificationNotFound"
+  },
+  {
     "code": "obligation_not_found",
     "error": "ObligationNotFound"
   },
@@ -102,6 +106,10 @@
   {
     "code": "precedence_taken",
     "error": "PrecedenceTaken"
+  },
+  {
+    "code": "recipient_holds_no_role",
+    "error": "RecipientHoldsNoRole"
   },
   {
     "code": "retained_earnings_unset",

@@ -18,6 +18,11 @@ holding account, so the caller asks the operator.
 organization did not author, by a model, in the session that is now asking to post them
 (`PLT-23`, ADR-0047). A rule decides where it belongs; a person decides that it happened.
 
+**An unresolved line is a question, and the person is told** (`PLT-07`, ADR-0052). The decision
+that records it raises a notification to everyone who could answer it — whoever may approve a
+rule — and the decision that later codes the line closes it, in the same transaction each time
+(ADR-0056 § 1). The notification carries the line's reference and nothing from the statement.
+
 **Nothing here stores a candidate.** The caller supplies them; a decision and the draft it
 coded are what persist. Letting this module hold a queue of unassigned activity is how
 `connectors` would have gone wrong (ADR-0031).
@@ -49,6 +54,7 @@ from cfokit.assignment.engine import (
 )
 from cfokit.assignment.errors import PrecedenceTaken, RuleNotFound
 from cfokit.assignment.repository import (
+    OpenQuestion,
     answered_decision,
     decision_for_transaction,
     insert_decision,
@@ -59,22 +65,30 @@ from cfokit.assignment.repository import (
     precedence_taken,
     unanswered_decision,
 )
+from cfokit.assignment.repository import open_questions as stored_questions
 from cfokit.ledger.engine import Entry, Posting
 from cfokit.ledger.repository.unit_of_work import Database
-from cfokit.ledger.service.authorization import authorize_own_act
+from cfokit.ledger.service.authorization import Capability, authorize, authorize_own_act
+from cfokit.ledger.service.notifications import answer, notify_holders
 from cfokit.ledger.service.principal import Principal
 from cfokit.ledger.service.write import Assigned, WriteContext, record_transaction
 
 __all__ = [
+    "UNRESOLVED_TRANSACTION",
     "Applied",
     "Booked",
     "Proposal",
     "Replay",
     "apply_rules",
     "approve",
+    "open_questions",
     "propose",
     "replay",
 ]
+
+
+# The notification class for a line no rule resolved. Answered by the decision that codes it.
+UNRESOLVED_TRANSACTION = "unresolved_transaction"
 
 
 @dataclass(frozen=True, slots=True)
@@ -378,6 +392,24 @@ def _book(
                 else None
             ),
         )
+        if resolved:
+            # Closes the question if one was asked; a line coded first time closes nothing.
+            answer(
+                write,
+                notification_class=UNRESOLVED_TRANSACTION,
+                subject_ref=candidate.source_ref,
+                principal=principal,
+                act_ref=decision_id,
+            )
+        else:
+            # Whoever may approve a rule is whoever can answer it (`BKP-09`, ADR-0042).
+            notify_holders(
+                write,
+                Capability.ACT_AS_PRINCIPAL,
+                notification_class=UNRESOLVED_TRANSACTION,
+                subject_ref=candidate.source_ref,
+                link=f"/app/companies/{entity_id}/questions",
+            )
 
     return Booked(
         candidate=candidate,
@@ -386,6 +418,19 @@ def _book(
         outcome=resolution.outcome,
         rule_label=resolution.winner.label if resolution.winner else None,
     )
+
+
+def open_questions(
+    database: Database, *, entity_id: str, principal: Principal
+) -> tuple[OpenQuestion, ...]:
+    """Every line no rule has resolved and nothing has answered since (`BKP-12`).
+
+    A read, so a delegated agent may do it: this is what it shows the person before asking.
+    Answering one is approving a rule that covers it and running the line again (`BKP-09`).
+    """
+    with database.entity_write(entity_id) as write:
+        authorize(write, Capability.READ, principal)
+        return stored_questions(write.connection, entity_id=entity_id)
 
 
 def fingerprint(candidate: Candidate) -> str:

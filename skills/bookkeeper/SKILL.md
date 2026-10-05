@@ -147,6 +147,15 @@ answer is a rule — `propose_assignment_rule` to show what it would book, then 
 it with `approve_assignment_rule` — and `run_assignment` again with the same candidates. What was
 already coded is reported as it was and not coded again; what the new rule resolves is drafted.
 
+Each unresolved line also raises a notification to whoever may approve a rule, and that
+notification stays open until the line is coded, for everyone it went to.
+
+**Questions left open.** When the user comes back, or a notification opens the conversation,
+call `open_notifications` for what they were asked and `unresolved_transactions` for the lines.
+Each of those lines carries every field `run_assignment` takes; once the user approves a rule,
+send them back unchanged. Only the user can dismiss a notification. You cannot, and you never
+answer a question any other way than by coding its line.
+
 **6. The user posts.** Show what is drafted — counts, and the lines by the account they were
 coded to. Posting is the user's decision; `post_transaction` each draft only once they have said
 so, with a key of your own per draft.

@@ -14,7 +14,7 @@ from typing import Any
 
 import psycopg
 
-__all__ = ["RoleDefinition", "privileges_in_force", "role_definition"]
+__all__ = ["RoleDefinition", "holders_of", "privileges_in_force", "role_definition"]
 
 # One query rather than roles-then-privileges: `IAM-01` makes authority the union over every
 # role held, and the union is what the join produces. Resolving the catalog here also means
@@ -42,6 +42,30 @@ def privileges_in_force(
     with conn.cursor() as cur:
         cur.execute(IN_FORCE, (entity_id, principal_id, at, at, at))
         return frozenset(str(row[0]) for row in cur.fetchall())
+
+
+def holders_of(
+    conn: psycopg.Connection[Any], entity_id: str, privilege: str, at: datetime
+) -> tuple[str, ...]:
+    """Every principal holding `privilege` in this entity at `at`, in a stable order.
+
+    Who a question goes to is who could answer it. The same three conditions as
+    `privileges_in_force`, so a lapsed or revoked grant reaches nobody (`IAM-09`, `IAM-15`).
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT DISTINCT g.principal_id"
+            "  FROM entity_grant g"
+            "  JOIN role_privilege rp ON rp.role_name = g.role"
+            " WHERE g.entity_id = %s"
+            "   AND rp.privilege = %s"
+            "   AND g.granted_at <= %s"
+            "   AND (g.lapses_at IS NULL OR g.lapses_at > %s)"
+            "   AND (g.revoked_at IS NULL OR g.revoked_at > %s)"
+            " ORDER BY g.principal_id",
+            (entity_id, privilege, at, at, at),
+        )
+        return tuple(str(row[0]) for row in cur.fetchall())
 
 
 @dataclass(frozen=True, slots=True)

@@ -41,6 +41,7 @@ from cfokit.ledger.api.models import (
     ConnectionResponse,
     CreateAccountRequest,
     CreateEntityRequest,
+    DismissalResponse,
     EntityCreatedResponse,
     ErrorResponse,
     GrantResponse,
@@ -48,6 +49,8 @@ from cfokit.ledger.api.models import (
     IssuedStatementModel,
     IssuedStatementsResponse,
     IssueStatementRequest,
+    NotificationModel,
+    NotificationsResponse,
     ObligationDetailResponse,
     ObligationModel,
     OpenBalancesRequest,
@@ -104,6 +107,7 @@ from cfokit.ledger.service.interchange import (
     export_interchange,
 )
 from cfokit.ledger.service.issuance import Issued, issue_statement, issued, supersession
+from cfokit.ledger.service.notifications import dismiss, open_notifications
 from cfokit.ledger.service.opening import CarriedBalance, open_balances
 from cfokit.ledger.service.periods import close_period, reopen_period
 from cfokit.ledger.service.principal import Principal
@@ -1240,6 +1244,55 @@ def create_app(settings: Settings, authenticator: Authenticator | None = None) -
                 PostingModel(account_id=p.account_id, amount=p.amount, commodity=p.commodity)
                 for p in stored.postings
             ],
+        )
+
+    # --- notifications (PLT-07, ADR-0052, ADR-0056) ---------------------------------------
+
+    @app.get(
+        "/entities/{entity_id}/notifications",
+        tags=["notifications"],
+        summary="The caller's open notifications in this entity",
+        responses=ERRORS,
+    )
+    def notifications(
+        entity_id: Annotated[str, Path()],
+        acting: Annotated[Principal, Depends(get_principal)],
+        database: Annotated[Database, Depends(get_database)],
+    ) -> NotificationsResponse:
+        """Open until the act that answers it closes it, or the caller dismisses it. Only the
+        caller's own: a co-owner's are not listed (ADR-0056)."""
+        found = open_notifications(database, entity_id=entity_id, principal=acting)
+        return NotificationsResponse(
+            notifications=[
+                NotificationModel(
+                    notification_id=n.id,
+                    entity_id=n.entity_id,
+                    notification_class=n.notification_class,
+                    subject_ref=n.subject_ref,
+                    link=n.link,
+                    raised_at=n.raised_at,
+                )
+                for n in found
+            ]
+        )
+
+    @app.post(
+        "/entities/{entity_id}/notifications/{notification_id}/dismissal",
+        tags=["notifications"],
+        summary="Dismiss one of the caller's own notifications",
+        status_code=status.HTTP_201_CREATED,
+        responses=ERRORS,
+    )
+    def dismissal(
+        context: Annotated[WriteContext, Depends(get_write_context)],
+        notification_id: Annotated[str, Path()],
+        database: Annotated[Database, Depends(get_database)],
+    ) -> DismissalResponse:
+        """The recipient's own act, for them alone. An agent is refused with `not_a_person`,
+        so it cannot make a question it raised look resolved (ADR-0056 § 2)."""
+        dismissed = dismiss(database, context, notification_id=notification_id)
+        return DismissalResponse(
+            notification_id=dismissed.notification_id, replayed=dismissed.replayed
         )
 
     return app

@@ -38,12 +38,14 @@ from cfokit.ledger.repository import (
     grants,
     idempotency,
     issuance,
+    notifications,
     obligations,
     periods,
     reports,
     transactions,
 )
 from cfokit.ledger.repository.connection import connect
+from cfokit.ledger.repository.notifications import Notification
 from cfokit.ledger.repository.transactions import StoredTransaction
 
 __all__ = ["Database", "EntitySettings", "EntityWrite", "UnscopedWrite"]
@@ -171,6 +173,54 @@ class EntityWrite:
         """
         return administration.would_remove_last_owner(
             self._conn, entity_id=self._entity_id, grant_id=grant_id, at=at
+        )
+
+    def holders_of(self, privilege: str, at: datetime) -> tuple[str, ...]:
+        """Every principal holding `privilege` here at `at`: who a question can go to."""
+        return grants.holders_of(self._conn, self._entity_id, privilege, at)
+
+    # --- notifications (PLT-07, ADR-0052, ADR-0056) --------------------------------------
+
+    def insert_notification(
+        self, *, recipient: str, notification_class: str, subject_ref: str, link: str
+    ) -> str:
+        return notifications.insert_notification(
+            self._conn,
+            entity_id=self._entity_id,
+            recipient=recipient,
+            notification_class=notification_class,
+            subject_ref=subject_ref,
+            link=link,
+        )
+
+    def answer_notifications(
+        self, *, notification_class: str, subject_ref: str, closed_by: str, act_ref: str
+    ) -> int:
+        return notifications.answer(
+            self._conn,
+            entity_id=self._entity_id,
+            notification_class=notification_class,
+            subject_ref=subject_ref,
+            closed_by=closed_by,
+            act_ref=act_ref,
+        )
+
+    def dismiss_notification(self, notification_id: str, *, dismissed_by: str) -> None:
+        notifications.dismiss(
+            self._conn,
+            entity_id=self._entity_id,
+            notification_id=notification_id,
+            dismissed_by=dismissed_by,
+        )
+
+    def notification(self, notification_id: str) -> Notification | None:
+        return notifications.notification(
+            self._conn, entity_id=self._entity_id, notification_id=notification_id
+        )
+
+    def open_notifications(self, recipient: str) -> list[Notification]:
+        return notifications.open_for(
+            self._conn, entity_id=self._entity_id, recipient=recipient
         )
 
     # --- periods (LED-11, ADR-0030) ------------------------------------------------------

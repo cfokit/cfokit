@@ -501,6 +501,23 @@
     "name": "open_balances"
   },
   {
+    "description": "The notifications still open for the person you act for in this entity: what CFOKit asked them and nobody has answered. Each names its class, what it is about and where it is answered, never a figure. An unresolved_transaction is answered by approving a rule that codes the line and running assignment again; it then closes for everyone it was sent to. You cannot dismiss one; only the person can.",
+    "inputSchema": {
+      "properties": {
+        "entity_id": {
+          "title": "Entity Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity_id"
+      ],
+      "title": "notificationsArguments",
+      "type": "object"
+    },
+    "name": "open_notifications"
+  },
+  {
     "description": "What is still owed, and how much has been applied against each. Outstanding is derived from the obligation less its settlements, never stored. Pass unsettled_only=false for the full history including what has been paid.",
     "inputSchema": {
       "properties": {
@@ -1285,5 +1302,22 @@
       "type": "object"
     },
     "name": "trial_balance"
+  },
+  {
+    "description": "Every line no rule resolved and nothing has answered since, oldest first: what to ask the person about. Each is answered by proposing a rule that covers it, the person approving it, and running assignment again with the same source_ref — which books it and closes its notification. Writes nothing.",
+    "inputSchema": {
+      "properties": {
+        "entity_id": {
+          "title": "Entity Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity_id"
+      ],
+      "title": "unresolved_toolArguments",
+      "type": "object"
+    },
+    "name": "unresolved_transactions"
   }
 ]
