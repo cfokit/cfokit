@@ -149,6 +149,7 @@ resource "google_cloud_run_v2_service" "issuer" {
           KC_DB_URL         = "jdbc:postgresql://${google_sql_database_instance.this.private_ip_address}:5432/keycloak?sslmode=require"
           KC_DB_USERNAME    = "keycloak"
           KC_HOSTNAME       = local.issuer_origin
+          KC_HOSTNAME_ADMIN = "https://${local.admin_host}"
           KC_HTTP_ENABLED   = "true"
           KC_HTTP_PORT      = "8080"
           KC_PROXY_HEADERS  = "xforwarded"

@@ -35,6 +35,15 @@ variable "github_repository" {
   default     = "cfokit/cfokit"
 }
 
+variable "admin_members" {
+  description = <<-EOF2
+    Who may reach the issuer's admin console through Identity-Aware Proxy, as IAM members
+    ("user:someone@example.com"). setup/env.sh sets it to whoever runs the setup; no address is
+    kept in the repository.
+  EOF2
+  type        = list(string)
+}
+
 variable "bootstrap_image" {
   description = <<-EOT
     The image a service or job is created with, before the first deploy replaces it. OpenTofu

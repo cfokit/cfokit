@@ -4,12 +4,41 @@
 # secret containers, never values (ADR-0016). The owner, `cfokit_app` and the issuer's role are
 # created once by a person; README.md has the steps.
 
-resource "google_sql_database_instance" "this" {
-  name             = "cfokit"
-  database_version = "POSTGRES_18" # what compose.yaml runs
-  region           = var.region
+# The database is encrypted with a key CFOKit holds, not only Google's: its rotation is ours, every
+# use of it is in the audit log, and disabling it makes the data unreadable (SOC2-14). Cloud SQL
+# takes a customer-managed key only when an instance is created.
+resource "google_kms_key_ring" "data" {
+  name       = "cfokit"
+  location   = var.region
+  depends_on = [google_project_service.this]
+}
 
-  depends_on = [google_service_networking_connection.sql]
+resource "google_kms_crypto_key" "database" {
+  name            = "database"
+  key_ring        = google_kms_key_ring.data.id
+  rotation_period = "7776000s" # 90 days; older versions stay to decrypt what they encrypted
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+data "google_project" "this" {}
+
+# Cloud SQL's service agent encrypts and decrypts with it, and nothing else does.
+resource "google_kms_crypto_key_iam_member" "sql" {
+  crypto_key_id = google_kms_crypto_key.database.id
+  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+  member        = "serviceAccount:service-${data.google_project.this.number}@gcp-sa-cloud-sql.iam.gserviceaccount.com"
+}
+
+resource "google_sql_database_instance" "this" {
+  name                = "cfokit-pg"
+  database_version    = "POSTGRES_18" # what compose.yaml runs
+  region              = var.region
+  encryption_key_name = google_kms_crypto_key.database.id
+
+  depends_on = [google_service_networking_connection.sql, google_kms_crypto_key_iam_member.sql]
 
   settings {
     # PostgreSQL 16 and later default to Enterprise Plus, which has no small machine. The

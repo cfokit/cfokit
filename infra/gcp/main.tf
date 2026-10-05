@@ -2,6 +2,8 @@ locals {
   app_host  = "app.${var.domain}"
   mcp_host  = "mcp.${var.domain}"
   auth_host = "auth.${var.domain}"
+  # The issuer's admin console, reachable only through Identity-Aware Proxy (ADR-0060).
+  admin_host = "admin.${var.domain}"
 
   # What the issuer calls itself, and so what every token's `iss` is (ADR-0019).
   issuer_url    = "https://${local.auth_host}/realms/cfokit"
@@ -15,6 +17,7 @@ locals {
     "compute.googleapis.com",
     "iam.googleapis.com",
     "iamcredentials.googleapis.com",
+    "iap.googleapis.com",
     "run.googleapis.com",
     "secretmanager.googleapis.com",
     "servicenetworking.googleapis.com",

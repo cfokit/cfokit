@@ -23,6 +23,12 @@ export TF_VAR_region="$CFOKIT_REGION"
 export TF_VAR_zone="$CFOKIT_ZONE"
 export TF_VAR_domain="$CFOKIT_DOMAIN"
 export TF_VAR_github_repository="$CFOKIT_REPOSITORY"
+# Who may open the issuer's admin console through IAP: whoever runs the setup, unless set. Read
+# at run time so no address is kept in the repository.
+if [ -z "${TF_VAR_admin_members:-}" ]; then
+  TF_VAR_admin_members=$(printf '["user:%s"]' "$(gcloud config get account 2>/dev/null)")
+fi
+export TF_VAR_admin_members
 
 export CLOUDSDK_CORE_PROJECT="$CFOKIT_PROJECT"
 # Application-default credentials carry a quota project of their own, often some other project.

@@ -3,7 +3,8 @@
 #   app  — /app/* from the web bucket behind Cloud CDN; / redirects to /app/; everything else,
 #          /.well-known/ included, to the REST service.
 #   mcp  — everything to the MCP service.
-#   auth — everything to the issuer.
+#   auth — everything to the issuer, except its admin console, which redirects to admin.
+#   admin — the issuer, behind Identity-Aware Proxy: named Google accounts only.
 
 # ---------------------------------------------------------------------------------------------
 # The web client's bucket. Objects are stored under app/, so the request path is the object name.
@@ -48,6 +49,8 @@ resource "google_compute_backend_bucket" "web" {
 # Each Cloud Run service, as a serverless network endpoint group and a backend.
 # ---------------------------------------------------------------------------------------------
 locals {
+  cert_domains = [local.app_host, local.mcp_host, local.auth_host, local.admin_host]
+
   run_backends = {
     rest   = google_cloud_run_v2_service.api["rest"].name
     mcp    = google_cloud_run_v2_service.api["mcp"].name
@@ -82,6 +85,35 @@ resource "google_compute_backend_service" "run" {
   }
 }
 
+# The admin console: the same issuer, through a backend that Identity-Aware Proxy guards. Only
+# the accounts in var.admin_members get through, with their Google sign-in and its second
+# factor, and every request is in the audit log (SOC2-19, SOC2-23).
+resource "google_compute_backend_service" "issuer_admin" {
+  name                  = "cfokit-issuer-admin"
+  load_balancing_scheme = "EXTERNAL_MANAGED"
+  protocol              = "HTTPS"
+
+  backend {
+    group = google_compute_region_network_endpoint_group.run["issuer"].id
+  }
+
+  iap {
+    enabled = true
+  }
+
+  log_config {
+    enable      = true
+    sample_rate = 1.0
+  }
+}
+
+resource "google_iap_web_backend_service_iam_member" "admin" {
+  for_each            = toset(var.admin_members)
+  web_backend_service = google_compute_backend_service.issuer_admin.name
+  role                = "roles/iap.httpsResourceAccessor"
+  member              = each.value
+}
+
 # ---------------------------------------------------------------------------------------------
 # Routing.
 # ---------------------------------------------------------------------------------------------
@@ -100,6 +132,10 @@ resource "google_compute_url_map" "https" {
   host_rule {
     hosts        = [local.auth_host]
     path_matcher = "auth"
+  }
+  host_rule {
+    hosts        = [local.admin_host]
+    path_matcher = "admin"
   }
 
   path_matcher {
@@ -141,6 +177,21 @@ resource "google_compute_url_map" "https" {
   path_matcher {
     name            = "auth"
     default_service = google_compute_backend_service.run["issuer"].id
+
+    # The public sign-in host never serves the admin console.
+    path_rule {
+      paths = ["/admin", "/admin/*"]
+      url_redirect {
+        host_redirect          = local.admin_host
+        redirect_response_code = "FOUND"
+        strip_query            = true
+      }
+    }
+  }
+
+  path_matcher {
+    name            = "admin"
+    default_service = google_compute_backend_service.issuer_admin.id
   }
 }
 
@@ -149,10 +200,15 @@ resource "google_compute_global_address" "lb" {
   depends_on = [google_project_service.this]
 }
 
+# Named from its domains, and replaced before it is removed: a managed certificate cannot change
+# its domains in place, and the proxy must never be left without one.
 resource "google_compute_managed_ssl_certificate" "this" {
-  name = "cfokit"
+  name = "cfokit-${substr(sha256(join(",", local.cert_domains)), 0, 8)}"
+  lifecycle {
+    create_before_destroy = true
+  }
   managed {
-    domains = [local.app_host, local.mcp_host, local.auth_host]
+    domains = local.cert_domains
   }
 }
 

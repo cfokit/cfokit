@@ -34,6 +34,14 @@ if [ -n "${CFOKIT_ASSET:-}" ]; then
   grep -qi '^cache-control: public, max-age=31536000, immutable' <<<"$headers" && ok
 fi
 
+check "The admin console is behind IAP: https://admin.$CFOKIT_DOMAIN"
+location=$(curl -s -o /dev/null -w '%{redirect_url}' "https://admin.$CFOKIT_DOMAIN/admin/")
+grep -q '^https://accounts.google.com/' <<<"$location" && ok
+
+check "The sign-in host does not serve it"
+location=$(curl -s -o /dev/null -w '%{redirect_url}' "https://auth.$CFOKIT_DOMAIN/admin/")
+grep -q "^https://admin.$CFOKIT_DOMAIN/" <<<"$location" && ok
+
 check "A REST 404 stays a 404"
 test "$(curl -s -o /dev/null -w '%{http_code}' "$app/no-such-route")" = 404 && ok
 

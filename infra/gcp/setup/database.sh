@@ -27,7 +27,7 @@ sqladmin() {
   response=$(curl -fsS -X "$method" \
     -H @<(printf 'Authorization: Bearer %s\n' "$(gcloud auth print-access-token)") \
     -H 'Content-Type: application/json' --data-binary @- \
-    "https://sqladmin.googleapis.com/v1/projects/${CFOKIT_PROJECT}/instances/cfokit/${path}")
+    "https://sqladmin.googleapis.com/v1/projects/${CFOKIT_PROJECT}/instances/${instance}/${path}")
   operation=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["name"])' <<<"$response")
   gcloud sql operations wait "$operation" --timeout=300 --quiet >/dev/null
 }
@@ -37,7 +37,7 @@ sqladmin() {
 sql_user() {
   local name=$1 body
   body=$(python3 -c 'import json,sys; print(json.dumps({"name": sys.argv[1], "password": sys.stdin.read()}))' "$name")
-  if gcloud sql users list --instance cfokit --format='value(name)' | grep -qx "$name"; then
+  if gcloud sql users list --instance "$instance" --format='value(name)' | grep -qx "$name"; then
     printf '%s' "$body" | sqladmin PUT "users?name=${name}"
   else
     printf '%s' "$body" | sqladmin POST users
@@ -59,6 +59,7 @@ print(f"SCRAM-SHA-256$4096:{b64(salt)}${b64(hashlib.sha256(client).digest())}:{b
 }
 
 host=$(tf output -raw database_private_ip)
+instance=$(tf output -raw database_instance)
 
 step "Owner role, and the migration job's DATABASE_URL"
 if has_value database-url-owner; then

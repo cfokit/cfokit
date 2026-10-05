@@ -6,9 +6,14 @@ output "load_balancer_ip" {
 output "dns_records" {
   description = "The records to set at the DNS provider."
   value = {
-    for host in [local.app_host, local.mcp_host, local.auth_host] :
+    for host in [local.app_host, local.mcp_host, local.auth_host, local.admin_host] :
     host => "A ${google_compute_global_address.lb.address} (DNS only, not proxied)"
   }
+}
+
+output "database_instance" {
+  description = "The Cloud SQL instance's name."
+  value       = google_sql_database_instance.this.name
 }
 
 output "database_private_ip" {

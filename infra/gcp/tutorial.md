@@ -100,7 +100,7 @@ infra/gcp/setup/apply.sh
 
 ## DNS
 
-Prints three A records. Add them at your DNS provider **with any proxy turned off** — at
+Prints four A records: `app`, `mcp`, `auth`, and `admin`, the issuer's admin console, which only accounts you name can reach. Add them at your DNS provider **with any proxy turned off** — at
 Cloudflare, "DNS only", the grey cloud — so Google's certificate can validate each name.
 
 ```sh
