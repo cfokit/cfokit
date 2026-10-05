@@ -220,6 +220,33 @@
         "title": "AccountEntryModel",
         "type": "object"
       },
+      "AnswerRequest": {
+        "description": "A person's answer to a line's question. Their own act (ADR-0042).",
+        "properties": {
+          "counterpart": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CounterpartChoice"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The record this line is. Null for none of those it was asked about, after which the rules decide it; only an ambiguous or proposed line has those."
+          },
+          "source_ref": {
+            "description": "The line the question is about.",
+            "title": "Source Ref",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_ref",
+          "counterpart"
+        ],
+        "title": "AnswerRequest",
+        "type": "object"
+      },
       "AppliedModel": {
         "description": "How much of a settlement goes against one obligation (AR-12).",
         "properties": {
@@ -694,6 +721,35 @@
         ],
         "title": "ConnectionResponse",
         "type": "object"
+      },
+      "CounterpartChoice": {
+        "description": "A record the books hold, named by kind and id, as a question lists it.",
+        "properties": {
+          "id": {
+            "description": "An obligation's id, a transaction's id, or — for the other side of a transfer — the other line's decision_id.",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/CounterpartKind"
+          }
+        },
+        "required": [
+          "kind",
+          "id"
+        ],
+        "title": "CounterpartChoice",
+        "type": "object"
+      },
+      "CounterpartKind": {
+        "description": "What a line can turn out to be, in the books already (ADR-0059 § 2).",
+        "enum": [
+          "obligation",
+          "transaction",
+          "transfer"
+        ],
+        "title": "CounterpartKind",
+        "type": "string"
       },
       "CreateAccountRequest": {
         "description": "Add an account to the entity's chart (LED-01, LED-02).",
@@ -1214,6 +1270,11 @@
       "ObligationModel": {
         "description": "A commitment to receive or pay, with what has been applied to it (LED-17).",
         "properties": {
+          "account_id": {
+            "description": "The account that carries it. The amount is signed as its posting there: positive for a receivable, negative for a payable.",
+            "title": "Account Id",
+            "type": "string"
+          },
           "amount": {
             "title": "Amount",
             "type": "string"
@@ -1249,6 +1310,7 @@
           "obligation_id",
           "transaction_id",
           "transaction_date",
+          "account_id",
           "amount",
           "settled",
           "outstanding",
@@ -1968,7 +2030,7 @@
                 "type": "null"
               }
             ],
-            "description": "Record this transaction as raising an obligation of this amount (LED-17) — an invoice, or anything else owed. Requires post: a draft is not in the books.",
+            "description": "Record this transaction as raising an obligation of this amount (LED-17) — an invoice, or anything else owed. Signed as its posting on the account that carries it, which must be the only account whose postings here sum to it: positive for a receivable, negative for a payable. Requires post: a draft is not in the books.",
             "title": "Raises Obligation"
           },
           "settles": {
@@ -3907,7 +3969,7 @@
     },
     "/entities/{entity_id}/assignment-runs": {
       "post": {
-        "description": "`BKP-06` and `BKP-12`. `unresolved` is the operator's worklist, and nothing in it was\nguessed at or parked in a holding account. An uploaded candidate is drafted even where a\nrule resolves it: a person posts it (ADR-0047).",
+        "description": "`BKP-06`, `BKP-12`, `BKP-13` and `BKP-14`. Each line is first searched against the books:\none counterpart and it is `matched` — an open invoice settled, an entry already recorded,\nor the other side of a transfer — with no rule consulted. Two or more and it is\n`ambiguous`, an uploaded payment of an open invoice is `proposed`, and both are in\n`unresolved` with their `counterparts`, as is a line no rule resolves. Nothing there was\nguessed at or parked in a holding account. An uploaded candidate is drafted even where a\nrule resolves it: a person posts it (ADR-0047).",
         "operationId": "run_assignment_entities__entity_id__assignment_runs_post",
         "parameters": [
           {
@@ -4026,7 +4088,7 @@
             "description": "Unprocessable Content"
           }
         },
-        "summary": "Book what the rules resolve, and report what they do not",
+        "summary": "Match each line to the books, book what the rules resolve, and report the rest",
         "tags": [
           "assignment"
         ]
@@ -7268,7 +7330,7 @@
     },
     "/entities/{entity_id}/unresolved-transactions": {
       "get": {
-        "description": "`BKP-12`'s worklist, in the order the activity happened. Each line is answered by\napproving a rule that covers it and running assignment again (`BKP-09`); `source_ref` is\nwhat the run takes, and what its `unresolved_transaction` notification is about.",
+        "description": "`BKP-12`'s worklist, in the order the activity happened. `outcome` says what is asked:\n`unmatched`, no rule covers the line — answered by approving one and running assignment\nagain (`BKP-09`), or by naming the record it is; `ambiguous`, every record it could be is in\n`counterparts`; `proposed`, an uploaded payment of the open obligation in `counterparts`,\nwaiting for a person to confirm. `source_ref` is what its `unresolved_transaction`\nnotification is about.",
         "operationId": "unresolved_transactions_entities__entity_id__unresolved_transactions_get",
         "parameters": [
           {
@@ -7361,7 +7423,144 @@
             "description": "Unprocessable Content"
           }
         },
-        "summary": "Every line no rule resolved and nothing has answered since",
+        "summary": "Every line waiting on a person, with what it is asked about",
+        "tags": [
+          "assignment"
+        ]
+      }
+    },
+    "/entities/{entity_id}/unresolved-transactions/answers": {
+      "post": {
+        "description": "A person's own act, refused for a delegated session with `not_a_person` (ADR-0042,\nADR-0059 § 4). Naming an open obligation posts its settlement; naming a recorded\ntransaction writes nothing new; naming another line's question pairs them as a transfer.\nHeld to the same exact facts as the search, but not to its dates. Requires an\n`Idempotency-Key` header.",
+        "operationId": "answer_unresolved_transaction_entities__entity_id__unresolved_transactions_answers_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Request-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Request-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnswerRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Answer Unresolved Transaction Entities  Entity Id  Unresolved Transactions Answers Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Answer a line's question: the record it is, or none of those it was asked about",
         "tags": [
           "assignment"
         ]
