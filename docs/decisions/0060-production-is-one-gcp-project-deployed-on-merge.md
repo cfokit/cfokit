@@ -1,5 +1,5 @@
 ---
-status: "proposed"
+status: "accepted"
 kind: "substrate"
 date: 2026-10-05
 decision-makers: [Geoff]
