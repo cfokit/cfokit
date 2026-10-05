@@ -1,5 +1,6 @@
 import { createRootRoute, createRoute, createRouter, Outlet } from "@tanstack/react-router";
 import { SignedIn } from "./auth/SignedIn";
+import { QuestionsPage } from "./questions/QuestionsPage";
 import { ConnectPage } from "./start/ConnectPage";
 import { FirstQuestion } from "./start/FirstQuestion";
 import { GettingStarted } from "./start/GettingStarted";
@@ -68,6 +69,21 @@ const ask = createRoute({
   },
 });
 
+// What CFOKit is asking the person about this company. Every `unresolved_transaction`
+// notification links here, so the path is part of what the server stores.
+const questions = createRoute({
+  getParentRoute: () => root,
+  path: "/companies/$entityId/questions",
+  component: function Questions() {
+    const { entityId } = questions.useParams();
+    return (
+      <SignedIn>
+        <QuestionsPage entityId={entityId} />
+      </SignedIn>
+    );
+  },
+});
+
 // The issuer sends the person back here with a code; the sign-in provider exchanges it and
 // returns them to the page they started from. Nothing to show meanwhile.
 const signedIn = createRoute({
@@ -77,7 +93,7 @@ const signedIn = createRoute({
 });
 
 export const router = createRouter({
-  routeTree: root.addChildren([start, importing, connect, ask, signedIn]),
+  routeTree: root.addChildren([start, importing, connect, ask, questions, signedIn]),
   basepath: "/app",
 });
 

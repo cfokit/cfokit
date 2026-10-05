@@ -13,6 +13,8 @@ export interface Row {
   cells: Record<string, string>;
   /** Marks the row the reader should look at next, such as one that differs, with an `ochre` tick. */
   flagged?: boolean;
+  /** What the reader can do about this row, such as a `link` button, at its end. */
+  action?: ReactNode;
 }
 
 interface MoneyTableProps {
@@ -26,6 +28,8 @@ interface MoneyTableProps {
   totals?: Record<string, string>;
   /** The commodity's display scale (ADR-0025). */
   scale?: number;
+  /** The heading of the column the rows' actions sit in, read by screen readers only. */
+  actionHeader?: string;
 }
 
 function Flag() {
@@ -40,6 +44,8 @@ function Flag() {
  * line, its other text in `caption`, and its figures beside it or labeled beneath. A wider table
  * keeps its columns and scrolls sideways within its own frame, its first column fixed; the page
  * never scrolls sideways.
+ *
+ * A row's `action` sits in a last column, or beneath the row in the list.
  */
 export function MoneyTable({
   caption,
@@ -48,11 +54,13 @@ export function MoneyTable({
   currency,
   totals,
   scale = 2,
+  actionHeader = "Actions",
 }: MoneyTableProps) {
   const [first, ...rest] = columns;
   if (first === undefined) throw new Error("MoneyTable needs at least one column");
   const money = columns.filter((c) => c.kind === "money");
   const stacks = money.length <= 2;
+  const acts = rows.some((row) => row.action !== undefined);
   const header = (c: Column) => (c.kind === "money" ? `${c.header} ${currency}` : c.header);
   const cell = (c: Column, row: Row): ReactNode => {
     // A row with no figure for a column shows an empty cell, not a zero it was never given.
@@ -83,6 +91,11 @@ export function MoneyTable({
                   {header(c)}
                 </th>
               ))}
+              {acts && (
+                <th scope="col" className="bg-sunken px-4 py-2">
+                  <span className="sr-only">{actionHeader}</span>
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -108,6 +121,9 @@ export function MoneyTable({
                     {cell(c, row)}
                   </td>
                 ))}
+                {acts && (
+                  <td className="border-b border-rule px-4 py-1 text-right">{row.action}</td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -127,6 +143,7 @@ export function MoneyTable({
                     )}
                   </td>
                 ))}
+                {acts && <td />}
               </tr>
             </tfoot>
           )}
@@ -166,6 +183,7 @@ export function MoneyTable({
                   ))}
                 </dl>
               )}
+              {row.action !== undefined && <div className="-ml-3">{row.action}</div>}
             </li>
           ))}
           {totals !== undefined && (
