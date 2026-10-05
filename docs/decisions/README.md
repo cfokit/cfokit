@@ -102,6 +102,7 @@ nothing cites these but this repository. They are added when something breaks wi
 | [0056](0056-a-notification-is-open-until-answered-or-dismissed.md) | A notification is open until its question is answered or its recipient dismisses it, and open notifications are read through the published interface | Proposed |
 | [0057](0057-push-is-web-push-sent-by-cfokit.md) | Push notifications are Web Push to the installed web client, sent by CFOKit's own process | Proposed |
 | [0058](0058-getting-started-is-one-path-on-the-web.md) | Getting started is one path, on web pages, for both offerings | Proposed |
+| [0059](0059-a-line-is-matched-before-it-is-coded.md) | An incoming transaction is matched to what the books already hold before any rule codes it, and only a sole exact counterpart is acted on | Accepted |
 | [0060](0060-production-is-one-gcp-project-deployed-on-merge.md) | Production is one GCP project behind one load balancer, deployed on every merge | Accepted |
 
 ## Deferred — decided in principle, waiting on a need
