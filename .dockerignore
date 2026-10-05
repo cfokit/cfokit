@@ -11,6 +11,8 @@ web/dist_keycloak
 docs
 skills
 infra
+# The realm the issuer image carries, because Cloud Run mounts nothing (ADR-0060 § 3).
+!infra/keycloak/cfokit-realm.json
 .claude
 .github
 compose*.yaml
