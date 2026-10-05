@@ -71,7 +71,7 @@ from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.authorization import Capability, authorize, authorize_own_act
 from cfokit.ledger.service.notifications import answer, notify_holders
 from cfokit.ledger.service.principal import Principal
-from cfokit.ledger.service.write import Assigned, WriteContext, record_transaction
+from cfokit.ledger.service.write import Assigned, WriteContext, record_in
 
 __all__ = [
     "UNRESOLVED_TRANSACTION",
@@ -304,7 +304,9 @@ def _book(
 
     That they land together is the whole reason assignment is in-process rather than a
     separate component (ADR-0022 § 3): a decision naming a transaction that rolled back, or
-    a coding no record explains, is the gap `RPT-08` exists to close.
+    a coding no record explains, is the gap `RPT-08` exists to close. So the entry, the
+    decision and the notification it raises or answers are one transaction: the ledger's
+    write path runs inside it (`record_in`), and a failure anywhere rolls back all three.
 
     A replayed write gets no second decision. The first one already explains the
     transaction, and a decision per retry would make a replay's count of decisions a count
@@ -329,35 +331,35 @@ def _book(
         *(() if assigned_leg is None else (assigned_leg,)),
     )
 
-    written = record_transaction(
-        database,
-        WriteContext(
-            entity_id=entity_id,
-            principal=principal,
-            request_id=request_id,
-            idempotency_key=_key(candidate, resolved=resolved),
-        ),
-        entry=Entry(
-            transaction_date=candidate.transaction_date,
-            postings=postings,
-            description=candidate.description or candidate.payee,
-        ),
-        post=resolved and candidate.source_kind is not SourceKind.UPLOAD,
-        derived_from={
-            "source_kind": str(candidate.source_kind),
-            "source_ref": candidate.source_ref,
-            "payee": candidate.payee,
-        },
-        assigned=(
-            ()
-            if resolution.winner is None
-            # Index 1: the coded leg. The source leg is the account the candidate arrived
-            # on, and no rule chose it.
-            else (Assigned(posting_index=1, rule_version_id=resolution.winner.id),)
-        ),
-    )
-
     with database.entity_write(entity_id) as write:
+        written = record_in(
+            write,
+            WriteContext(
+                entity_id=entity_id,
+                principal=principal,
+                request_id=request_id,
+                idempotency_key=_key(candidate, resolved=resolved),
+            ),
+            entry=Entry(
+                transaction_date=candidate.transaction_date,
+                postings=postings,
+                description=candidate.description or candidate.payee,
+            ),
+            post=resolved and candidate.source_kind is not SourceKind.UPLOAD,
+            derived_from={
+                "source_kind": str(candidate.source_kind),
+                "source_ref": candidate.source_ref,
+                "payee": candidate.payee,
+            },
+            assigned=(
+                ()
+                if resolution.winner is None
+                # Index 1: the coded leg. The source leg is the account the candidate arrived
+                # on, and no rule chose it.
+                else (Assigned(posting_index=1, rule_version_id=resolution.winner.id),)
+            ),
+        )
+
         if written.replayed:
             existing = decision_for_transaction(
                 write.connection, entity_id=entity_id, transaction_id=written.transaction_id
