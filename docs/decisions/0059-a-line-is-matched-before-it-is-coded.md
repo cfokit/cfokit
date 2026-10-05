@@ -1,5 +1,5 @@
 ---
-status: "proposed"
+status: "accepted"
 kind: "requirement-driven"
 date: 2026-10-05
 decision-makers: [Geoff Scott]
@@ -65,7 +65,8 @@ because a line's fate is one decision and the counterpart is what decides it.
 
 > Every line `apply_rules` receives is first searched against the books for a counterpart, in the
 > same transaction as the write. Exactly one counterpart: the line is matched to it and no rule is
-> consulted. Two or more: the line is a question. None: the rules decide, as they do now. The
+> consulted — unless the line was uploaded and the counterpart is an obligation, which a person
+> confirms. Two or more: the line is a question. None: the rules decide, as they do now. The
 > facts compared are exact, the windows are constants of the pure engine, and what the search saw
 > is stored on the decision.
 
@@ -122,33 +123,43 @@ was stored for this question, is not what answers it. It is removed.
   transaction, which is the line's link to it; `derived_from` stays as the entry was written,
   because the entry was not derived from the line and is never altered. `RPT-08`'s trail runs from
   the posting through the decision to the line. A matched draft stays a draft for whoever owns it.
+  An uploaded line is matched this way too: nothing is written to the books, so there is nothing
+  for a person to authorize.
 * **The other side of a transfer** — one new transaction with both lines' legs, and two decisions:
   the arriving line's, and the earlier line's, superseding its unanswered one and closing its
   question. The earlier one-legged draft stays unposted, as every answered question's draft does.
-  If either line was uploaded, the transfer is a draft.
+  If either line was uploaded, the transfer is a draft a person posts, as ADR-0047 makes every
+  uploaded line's transaction — a two-legged draft needs nothing the ledger lacks, so it takes no
+  rule of its own.
 
 A transaction a match writes carries `actor_class` `rule` — deterministic and re-derivable, which is
 what that class records (ADR-0033 § 3) — and its legs name no rule version, because none chose them.
 
-**An uploaded line is still only drafted.** ADR-0047 governs every transaction a match writes: posted
-for a feed, drafted for an upload. A settlement recorded with a draft takes effect when the draft is
-posted — what is outstanding counts posted settlements only — and until then holds that amount out
-of matching, so a second line cannot claim it. A match to a recorded transaction writes nothing to the
-books, so there is nothing for a person to authorize.
+**An uploaded line never settles an obligation by itself.** A settlement needs its transaction
+posted, and ADR-0047 forbids posting what the session that read the document asked for. So an
+uploaded line whose sole counterpart is an open obligation is a question, recorded as `proposed`
+with the obligation named: the same `unresolved_transaction` notification and questions page as
+any other (§ 4). A person confirming it is their own act
+([ADR-0042](0042-person-only-acts-are-a-capability.md)), and writes the settling transaction
+posted, with its settlement, in one transaction. That satisfies `PLT-23`, because a person — not the
+session that read the document — decided the payment happened. A feed line matching an obligation
+settles it automatically, posted.
 
 ### 4. Ambiguity is a question, answered by a person
 
-Two or more counterparts, of any kinds together, and the line is a question: a one-legged draft the
+Two or more counterparts, of any kinds together, and the line is a question, recorded as
+`ambiguous`: a one-legged draft the
 ledger cannot post, as an unresolved line is, and a decision recording every counterpart found. It
 raises the same notification an unresolved line does — class `unresolved_transaction`, subject the
 line's reference, linked to the questions page — because to the person it is the same question:
-what is this line?
+what is this line? A `proposed` line is the same question with one candidate answer.
 
-A person answers any question about a line by naming one counterpart, or, for an ambiguous one,
-none, after which the rules decide. The choice is held to the same exact facts as the search but
-not to its windows, so a check that cleared after six weeks is answered by choosing the entry. It
-is a person's own act ([ADR-0042](0042-person-only-acts-are-a-capability.md)), as approving a rule
-is, because nothing but the person stands behind it. The decision it writes supersedes the question
+A person answers any question about a line by naming one counterpart, or, for an ambiguous or
+proposed one, none, after which the rules decide. The choice is held to the same exact facts as the
+search but not to its windows, so a check that cleared after six weeks is answered by choosing the
+entry. It is a person's own act (ADR-0042), as approving a rule is, because nothing but the person
+stands behind it. A transaction it writes is posted, unless it pairs a transfer with an uploaded
+line, which § 3 drafts. The decision it writes supersedes the question
 and closes the notification (ADR-0056 § 1), as does a later run that finds exactly one counterpart.
 
 `BKP-09` is not engaged by an automatic match. What it asks a person to approve is a coding pattern,
@@ -156,9 +167,9 @@ and a counterpart is not a pattern: it is a record somebody with authority alrea
 
 ### 5. Replay covers the search
 
-The decision's `outcome` gains `matched` and `ambiguous` beside `assigned` and `unmatched`. Every
-decision stores the counterparts found — one for `matched`, all of them for `ambiguous`, none
-otherwise — and a sha256 over them, beside the rule-set digest it already stores.
+The decision's `outcome` gains `matched`, `proposed` and `ambiguous` beside `assigned` and
+`unmatched`. Every decision stores the counterparts found — one for `matched` and `proposed`, all of
+them for `ambiguous`, none otherwise — and a sha256 over them, beside the rule-set digest it already stores.
 
 Everything the search reads is append-only and timestamped — obligations, settlements, postings,
 reversals, and the decisions that claim legs — so the counterparts as they stood at `decided_at`
@@ -185,11 +196,10 @@ is not a function of the inputs. Replay counts those separately.
   § 6) reports the difference; nothing prevents it.
 * Bad, because two unrelated lines of mirrored amounts on two accounts within a week are booked as a
   transfer, unasked. Total income and expense are still right; the gross figures are not.
-* Bad, because a draft that settles an obligation and is never posted holds that obligation out of
-  matching for as long as it exists.
-* Bad, because the ledger changes twice: an obligation records its account, and a settlement may be
-  written with a draft. Both are changes to the write path, which `CLAUDE.md` reserves for human
-  review.
+* Bad, because every uploaded payment of an invoice is a question, even when it has exactly one
+  counterpart. That is ADR-0047's cost, paid once per payment rather than once per line.
+* Bad, because the ledger changes: an obligation records the account that carries it. It is a
+  change to the write path, which `CLAUDE.md` reserves for human review.
 * Neutral, because one movement delivered through two sources, under two references, is two lines;
   a claimed leg is never a counterpart.
 
@@ -208,8 +218,10 @@ acceptance executed — and close the first line's question; two equal counterpa
 claimed leg; and replay re-decides matched lines and reports a divergence when a counterpart is
 removed from what the search sees.
 
-`tests/integration/test_account_statements.py` asserts, over MCP, that an uploaded line matching an
-obligation is a draft, and that the obligation is outstanding until a person posts it.
+`tests/integration/test_account_statements.py` asserts, over MCP, that an uploaded line equal to an
+open obligation raises an `unresolved_transaction` question naming the obligation and writes no
+settlement; that a delegated agent cannot confirm it; and that a person confirming it posts the
+settling transaction and settles the obligation in one commit.
 
 The unique index on a decision's transaction and the line's account is the schema's half of "a leg
 is claimed once". Not gated: nothing stops a change to either window except `EVALUATOR_VERSION`,
@@ -253,8 +265,9 @@ What the incumbents do, and familiar to every bookkeeper.
 * Good, because no match ever happens unseen.
 * Bad, because a sole exact counterpart on the line's own account leaves the person nothing to
   decide, and asking per transaction is the recurring cost `BKP-09` exists to remove.
-* Bad, because an uploaded line already reaches a person through ADR-0047's draft, so the safety it
-  adds is where safety is already present.
+* Bad, because an uploaded line already reaches a person — through ADR-0047's draft, or as a
+  question where it would settle an obligation — so the safety it adds is where safety is already
+  present.
 
 ### Matching in the ledger
 
@@ -265,8 +278,7 @@ What the incumbents do, and familiar to every bookkeeper.
 ## More Information
 
 **Reversal cost.** Medium. The search and the new outcomes are additive in assignment and could be
-removed, but settlements written by matches, the obligation's account and the draft settlement are
-in the ledger, and books matched under this decision would carry its links for life.
+removed, but settlements written by matches and the obligation's account are in the ledger, and books matched under this decision would carry its links for life.
 
 Related: [ADR-0045](0045-assignment-is-stored-rules.md), which reserved the outcome set for this;
 [ADR-0046](0046-a-statement-proves-itself.md) § 4, which left the line printed twice to this
