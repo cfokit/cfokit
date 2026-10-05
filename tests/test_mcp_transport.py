@@ -49,6 +49,7 @@ TOOLS = {
     "post_transaction",
     "profit_and_loss",
     "reconcile",
+    "read_entity",
     "read_transaction",
     "record_transaction",
     "reverse_transaction",

@@ -1,4 +1,4 @@
-<!-- @dsCard group="Data" height=320 -->
+<!-- @dsCard group="Data" height=640 -->
 <!doctype html>
 <html>
   <head>
@@ -11,28 +11,52 @@
       var C = window.CFOKit,
         h = React.createElement;
       ReactDOM.createRoot(document.getElementById("root")).render(
-        h(C.MoneyTable, {
-          caption: "Balances compared with QuickBooks",
-          currency: "USD",
-          columns: [
-            { key: "account", header: "Account", kind: "text" },
-            { key: "ours", header: "CFOKit", kind: "money" },
-            { key: "theirs", header: "QuickBooks", kind: "money" },
-          ],
-          rows: [
-            {
-              id: "a",
-              cells: { account: "Business Checking", ours: "12000.00", theirs: "12000.00" },
-            },
-            {
-              id: "b",
-              cells: { account: "Undeposited Funds", ours: "-1250.00", theirs: "-1000.00" },
-              flagged: true,
-            },
-            { id: "c", cells: { account: "Ask My Accountant", ours: "412.50", theirs: "412.50" } },
-          ],
-          totals: { ours: "11162.50", theirs: "11412.50" },
-        }),
+        h(
+          "div",
+          { className: "flex flex-col gap-8" },
+          h(C.MoneyTable, {
+            caption: "Balances compared with QuickBooks",
+            currency: "USD",
+            columns: [
+              { key: "account", header: "Account", kind: "text" },
+              { key: "ours", header: "CFOKit", kind: "money" },
+              { key: "theirs", header: "QuickBooks", kind: "money" },
+            ],
+            rows: [
+              {
+                id: "a",
+                cells: { account: "Business Checking", ours: "12000.00", theirs: "12000.00" },
+              },
+              {
+                id: "b",
+                cells: { account: "Undeposited Funds", ours: "-1250.00", theirs: "-1000.00" },
+                flagged: true,
+              },
+              {
+                id: "c",
+                cells: { account: "Ask My Accountant", ours: "412.50", theirs: "412.50" },
+              },
+            ],
+            totals: { ours: "11162.50", theirs: "11412.50" },
+          }),
+          h(C.MoneyTable, {
+            caption: "Transactions waiting for a rule",
+            currency: "USD",
+            columns: [
+              { key: "payee", header: "Payee", kind: "text" },
+              { key: "date", header: "Date", kind: "text" },
+              { key: "amount", header: "Amount", kind: "money" },
+            ],
+            rows: [
+              {
+                id: "a",
+                cells: { payee: "Blue Bottle", date: "2026-03-14", amount: "-240.00" },
+                action: h(C.Button, { variant: "link" }, "Dismiss"),
+              },
+              { id: "b", cells: { payee: "Transfer in", date: "2026-03-15", amount: "1250.51" } },
+            ],
+          }),
+        ),
       );
     </script>
   </body>

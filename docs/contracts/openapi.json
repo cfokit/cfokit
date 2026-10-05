@@ -888,6 +888,56 @@
         "title": "EntityCreatedResponse",
         "type": "object"
       },
+      "EntityResponse": {
+        "description": "What the entity declared at creation, as it stands.",
+        "properties": {
+          "accounting_basis": {
+            "description": "'cash' or 'accrual' (LED-14).",
+            "title": "Accounting Basis",
+            "type": "string"
+          },
+          "fiscal_year_end_day": {
+            "title": "Fiscal Year End Day",
+            "type": "integer"
+          },
+          "fiscal_year_end_month": {
+            "title": "Fiscal Year End Month",
+            "type": "integer"
+          },
+          "functional_currency": {
+            "title": "Functional Currency",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "time_zone": {
+            "title": "Time Zone",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "accounting_basis",
+          "fiscal_year_end_month",
+          "fiscal_year_end_day",
+          "functional_currency",
+          "time_zone"
+        ],
+        "title": "EntityResponse",
+        "type": "object"
+      },
       "ErrorResponse": {
         "description": "Every error, on both adapters, in this shape.\n\n`code` is the contract; `message` is not and may be reworded at will (ADR-0015).",
         "properties": {
@@ -3061,6 +3111,105 @@
           }
         },
         "summary": "Create an entity and assign its first owner",
+        "tags": [
+          "administration"
+        ]
+      }
+    },
+    "/entities/{entity_id}": {
+      "get": {
+        "description": "Its name, accounting basis, fiscal year end, functional currency and time zone.\n\nNeeds a role in the entity, like reading its books (`IAM-01`).",
+        "operationId": "entity_entities__entity_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Read what an entity declared",
         "tags": [
           "administration"
         ]

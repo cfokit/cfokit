@@ -82,7 +82,7 @@ from cfokit.ledger.service.issuance import Issued, issue_statement, issued
 from cfokit.ledger.service.notifications import open_notifications
 from cfokit.ledger.service.opening import CarriedBalance, open_balances
 from cfokit.ledger.service.principal import Principal
-from cfokit.ledger.service.read import read_transaction
+from cfokit.ledger.service.read import read_entity, read_transaction
 from cfokit.ledger.service.readiness import check_readiness
 from cfokit.ledger.service.receivables import obligation_detail, outstanding_obligations
 from cfokit.ledger.service.reports import (
@@ -442,6 +442,32 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
                 "ok": True,
                 "entity_id": created.entity_id,
                 "owner_grant_id": created.owner_grant_id,
+            }
+
+        return _refusals(work)
+
+    @server.tool(
+        name="read_entity",
+        description=(
+            "What a set of books declared when it was created: the company's name, its "
+            "accounting basis, its fiscal year end, its functional currency and its time zone. "
+            "Every report is computed against these, and the name is how to refer to the "
+            "company when speaking to the person."
+        ),
+    )
+    def read_the_entity(entity_id: str) -> dict[str, Any]:
+        def work() -> dict[str, Any]:
+            found = read_entity(database, entity_id=entity_id, principal=acting())
+            return {
+                "ok": True,
+                "id": found.id,
+                "slug": found.slug,
+                "name": found.name,
+                "accounting_basis": found.accounting_basis,
+                "fiscal_year_end_month": found.fiscal_year_end_month,
+                "fiscal_year_end_day": found.fiscal_year_end_day,
+                "functional_currency": found.functional_currency,
+                "time_zone": found.time_zone,
             }
 
         return _refusals(work)

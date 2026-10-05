@@ -1,4 +1,5 @@
-"""Writes that create entities and move grants around. Hand-written SQL (ADR-0028).
+"""Creating entities, reading what one declared, and moving grants around. Hand-written SQL
+(ADR-0028).
 
 Separate from `unit_of_work` because creating an entity is not an entity-scoped write: it
 happens before there is an entity to scope to or lock on.
@@ -6,12 +7,15 @@ happens before there is an entity to scope to or lock on.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
 import psycopg
 
 __all__ = [
+    "Entity",
+    "entity",
     "grant_entity_role",
     "insert_entity",
     "revoke_entity_grant",
@@ -55,6 +59,48 @@ def insert_entity(
     if row is None:  # pragma: no cover
         raise RuntimeError("insert returned no id")
     return str(row[0])
+
+
+@dataclass(frozen=True, slots=True)
+class Entity:
+    """What an entity declared at creation (`LED-14`, `LED-15`, `PLT-08`)."""
+
+    id: str
+    slug: str
+    name: str
+    accounting_basis: str
+    fiscal_year_end_month: int
+    fiscal_year_end_day: int
+    functional_currency: str
+    time_zone: str
+
+
+def entity(conn: psycopg.Connection[Any], *, entity_id: str) -> Entity | None:
+    """One entity's declarations, or None if there is no such entity.
+
+    `entity` carries no row-level security policy — it is the table the scope is keyed on — so
+    the filter on `id` is the only thing keeping this to one entity, and it is explicit.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT id, slug, name, accounting_basis, fiscal_year_end_month,"
+            "       fiscal_year_end_day, functional_currency, time_zone"
+            "  FROM entity WHERE id = %s",
+            (entity_id,),
+        )
+        row = cur.fetchone()
+    if row is None:
+        return None
+    return Entity(
+        id=str(row[0]),
+        slug=str(row[1]),
+        name=str(row[2]),
+        accounting_basis=str(row[3]),
+        fiscal_year_end_month=int(row[4]),
+        fiscal_year_end_day=int(row[5]),
+        functional_currency=str(row[6]),
+        time_zone=str(row[7]),
+    )
 
 
 def grant_entity_role(
