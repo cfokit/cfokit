@@ -105,9 +105,10 @@ uv run task --list   # every command, and what it does
 
 **Using Claude Code?** Any Claude Code environment with outbound network access works, cloud or
 local, and the agent can run everything below except the steps that need your GitHub
-credentials. A cloud session is provisioned automatically by `.claude/hooks/session-start.sh` (`uv`, Python 3.14, Node 24 and pnpm
-for the web client, the locked dependencies and a Docker daemon). That hook does nothing locally, so a local session needs `uv`
-and Docker installed first. A stack in a cloud session lives inside its container, so you can
+credentials. A cloud session is provisioned automatically by `.claude/hooks/session-start.sh`
+(`uv`, Python 3.14, Node 24 and pnpm for the web client, the locked dependencies and a Docker
+daemon). That hook does nothing locally, so a local session needs `uv` and Docker installed
+first. A stack in a cloud session lives inside its container, so you can
 exercise it from the session but not from your own machine.
 
 **Hosts it needs to reach** (from the `Dockerfile`, `compose.yaml` and the session hook):
@@ -121,6 +122,7 @@ exercise it from the session but not from your own machine.
 | the `uv` image used in builds | `ghcr.io` |
 | the Keycloak image | `quay.io` and its CDN hosts (`*.quay.io`) |
 | pnpm (fetched by corepack), the web client's packages, and `mcp-remote` in the Claude Desktop guide (`npx`) | `registry.npmjs.org` |
+| Chromium for the end-to-end test (`playwright install`) | `cdn.playwright.dev`, `playwright.download.prss.microsoft.com` |
 
 To paste into a cloud environment's allowed domains, one per line:
 
@@ -137,6 +139,8 @@ ghcr.io
 quay.io
 *.quay.io
 registry.npmjs.org
+cdn.playwright.dev
+playwright.download.prss.microsoft.com
 ```
 
 Registries redirect image layers to CDN hosts, so allow-list by domain rather than by the
