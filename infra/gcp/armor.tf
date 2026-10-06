@@ -50,7 +50,8 @@ resource "google_compute_security_policy" "issuer" {
     description = "Token and registration endpoints: 300 a minute per address."
     match {
       expr {
-        expression = "request.path.matches('^/realms/[^/]+/(protocol/openid-connect/token|clients-registrations/)')"
+        # Two expressions, because Cloud Armor refuses a capture group in a regular expression.
+        expression = "request.path.matches('^/realms/[^/]+/protocol/openid-connect/token') || request.path.matches('^/realms/[^/]+/clients-registrations/')"
       }
     }
     rate_limit_options {
