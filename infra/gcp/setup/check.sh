@@ -21,6 +21,8 @@ check() {
 }
 redirects_to() { curl -s -o /dev/null -w '%{redirect_url}' "$1" | grep -q "^$2"; }
 has_header() { curl -fsS -D - -o /dev/null "$1" | grep -qi "^$2"; }
+# The client's page, with its body: a 200 with the right headers and nothing in it is a blank page.
+is_client_page() { curl -fsS "$1" | grep -q '<div id="root">'; }
 
 step "Deployment check"
 
@@ -30,7 +32,8 @@ check "Issuer discovery: https://auth.$CFOKIT_DOMAIN/realms/cfokit" \
   curl -fsS "https://auth.$CFOKIT_DOMAIN/realms/cfokit/.well-known/openid-configuration"
 check "Web client carries its CSP: $app/app/" has_header "$app/app/" "content-security-policy:"
 check "Web client is revalidated" has_header "$app/app/" "cache-control: no-cache"
-check "A deep link answers with the client's page" curl -fsS "$app/app/companies/check/questions"
+check "The client's root answers with its page" is_client_page "$app/app/"
+check "A deep link answers with the client's page" is_client_page "$app/app/companies/check/questions"
 if [ -n "${CFOKIT_ASSET:-}" ]; then
   check "A hashed asset is immutable" \
     has_header "$app/app/$CFOKIT_ASSET" "cache-control: public, max-age=31536000, immutable"

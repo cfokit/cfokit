@@ -160,6 +160,18 @@ resource "google_compute_url_map" "https" {
       }
     }
 
+    # The client's root names no object either, and the error policy below answers it with
+    # index.html's headers and an empty body: a blank page. So it is rewritten to the page itself.
+    path_rule {
+      paths   = ["/app/"]
+      service = google_compute_backend_bucket.web.id
+      route_action {
+        url_rewrite {
+          path_prefix_rewrite = "/app/index.html"
+        }
+      }
+    }
+
     path_rule {
       paths   = ["/app/*"]
       service = google_compute_backend_bucket.web.id
