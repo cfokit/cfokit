@@ -41,6 +41,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          # The whole history, so the commit production runs can be compared with this one.
+          fetch-depth: 0
 
       - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
         with:
@@ -50,6 +52,14 @@ jobs:
       - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
 
       # The same script the Cloud Shell tutorial runs for the first deploy: build, migrate,
-      # publish the web build, roll out, check (infra/gcp/setup/deploy.sh).
+      # publish the web build, roll out, check (infra/gcp/setup/deploy.sh). On a merge, only when
+      # something that goes into an image changed; run by hand, always.
       - name: Deploy
-        run: infra/gcp/setup/deploy.sh "$(git rev-parse HEAD)"
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" = workflow_run ]; then
+            infra/gcp/setup/deploy.sh --if-changed "$(git rev-parse HEAD)"
+          else
+            infra/gcp/setup/deploy.sh "$(git rev-parse HEAD)"
+          fi

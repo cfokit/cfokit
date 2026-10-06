@@ -114,6 +114,34 @@ resource "google_cloud_run_v2_service" "api" {
 # ---------------------------------------------------------------------------------------------
 # The issuer: Keycloak, one instance, never scaled to zero (ADR-0060 § 3).
 # ---------------------------------------------------------------------------------------------
+locals {
+  # One definition, read by the service and by the realm import job below, so the two can never
+  # disagree about which database or which settings the realm is built from.
+  issuer_env = {
+    KC_DB             = "postgres"
+    KC_DB_URL         = "jdbc:postgresql://${google_sql_database_instance.this.private_ip_address}:5432/keycloak?sslmode=require"
+    KC_DB_USERNAME    = "keycloak"
+    KC_HOSTNAME       = local.issuer_origin
+    KC_HOSTNAME_ADMIN = "https://${local.admin_host}"
+    KC_HTTP_ENABLED   = "true"
+    KC_HTTP_PORT      = "8080"
+    KC_PROXY_HEADERS  = "xforwarded"
+    KC_HEALTH_ENABLED = "true"
+    KC_CACHE          = "local"
+    # The realm's web client redirects to the web client and nowhere else.
+    PUBLIC_BASE_URL             = "https://${local.app_host}"
+    KC_BOOTSTRAP_ADMIN_USERNAME = "admin"
+    # The hosted service is a service organization: every person signs in with a second
+    # factor (SOC2-19). Read when the realm is first imported; a self-hosted install
+    # leaves it unset and the factor optional (IAM-23).
+    CFOKIT_REQUIRE_SECOND_FACTOR = "true"
+  }
+
+  issuer_secrets = {
+    KC_DB_PASSWORD              = "keycloak-db-password"
+    KC_BOOTSTRAP_ADMIN_PASSWORD = "keycloak-admin-password"
+  }
+}
 resource "google_cloud_run_v2_service" "issuer" {
   name                = "cfokit-issuer"
   location            = var.region
@@ -147,25 +175,7 @@ resource "google_cloud_run_v2_service" "issuer" {
       }
 
       dynamic "env" {
-        for_each = {
-          KC_DB             = "postgres"
-          KC_DB_URL         = "jdbc:postgresql://${google_sql_database_instance.this.private_ip_address}:5432/keycloak?sslmode=require"
-          KC_DB_USERNAME    = "keycloak"
-          KC_HOSTNAME       = local.issuer_origin
-          KC_HOSTNAME_ADMIN = "https://${local.admin_host}"
-          KC_HTTP_ENABLED   = "true"
-          KC_HTTP_PORT      = "8080"
-          KC_PROXY_HEADERS  = "xforwarded"
-          KC_HEALTH_ENABLED = "true"
-          KC_CACHE          = "local"
-          # The realm's web client redirects to the web client and nowhere else.
-          PUBLIC_BASE_URL             = "https://${local.app_host}"
-          KC_BOOTSTRAP_ADMIN_USERNAME = "admin"
-          # The hosted service is a service organization: every person signs in with a second
-          # factor (SOC2-19). Read when the realm is first imported; a self-hosted install
-          # leaves it unset and the factor optional (IAM-23).
-          CFOKIT_REQUIRE_SECOND_FACTOR = "true"
-        }
+        for_each = local.issuer_env
         content {
           name  = env.key
           value = env.value
@@ -173,10 +183,7 @@ resource "google_cloud_run_v2_service" "issuer" {
       }
 
       dynamic "env" {
-        for_each = {
-          KC_DB_PASSWORD              = "keycloak-db-password"
-          KC_BOOTSTRAP_ADMIN_PASSWORD = "keycloak-admin-password"
-        }
+        for_each = local.issuer_secrets
         content {
           name = env.key
           value_source {
@@ -214,6 +221,76 @@ resource "google_cloud_run_v2_service" "issuer" {
   lifecycle {
     ignore_changes = [
       template[0].containers[0].image,
+      template[0].revision,
+      client,
+      client_version,
+    ]
+  }
+
+  depends_on = [google_secret_manager_secret_iam_member.reader]
+}
+
+# Replaces the realm with the one in the issuer image (setup/realm.sh). Keycloak imports a realm
+# only when it does not exist, so a change to infra/keycloak/cfokit-realm.json reaches a running
+# deployment only through this, and it removes the realm's accounts.
+resource "google_cloud_run_v2_job" "issuer_import" {
+  name                = "cfokit-issuer-import"
+  location            = var.region
+  deletion_protection = false
+
+  template {
+    task_count = 1
+    template {
+      service_account = google_service_account.issuer.email
+      max_retries     = 0
+      timeout         = "900s"
+
+      vpc_access {
+        network_interfaces {
+          network    = local.vpc_egress.network
+          subnetwork = local.vpc_egress.subnetwork
+        }
+        egress = "PRIVATE_RANGES_ONLY"
+      }
+
+      containers {
+        image = "${local.images}/issuer:latest"
+        args  = ["import", "--dir", "/opt/keycloak/data/import", "--override", "true"]
+
+        dynamic "env" {
+          for_each = local.issuer_env
+          content {
+            name  = env.key
+            value = env.value
+          }
+        }
+
+        dynamic "env" {
+          for_each = local.issuer_secrets
+          content {
+            name = env.key
+            value_source {
+              secret_key_ref {
+                secret  = google_secret_manager_secret.this[env.value].secret_id
+                version = "latest"
+              }
+            }
+          }
+        }
+
+        resources {
+          limits = {
+            cpu    = "1"
+            memory = "2Gi"
+          }
+        }
+      }
+    }
+  }
+
+  lifecycle {
+    ignore_changes = [
+      template[0].template[0].containers[0].image,
       client,
       client_version,
     ]

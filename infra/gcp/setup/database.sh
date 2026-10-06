@@ -99,6 +99,10 @@ step "The application role, cfokit_app"
 if has_value database-url-app; then
   done_ "already set"
 else
+  # Whatever an interrupted run left behind.
+  gcloud run jobs delete cfokit-bootstrap-role --region "$CFOKIT_REGION" --quiet >/dev/null 2>&1 || true
+  gcloud secrets delete cfokit-app-verifier --quiet >/dev/null 2>&1 || true
+
   pw=$(password)
   printf '%s' "$pw" | scram | gcloud secrets create cfokit-app-verifier --data-file=- --quiet >/dev/null
   gcloud secrets add-iam-policy-binding cfokit-app-verifier --quiet >/dev/null \

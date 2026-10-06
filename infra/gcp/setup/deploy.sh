@@ -6,11 +6,38 @@
 # cannot read: every name it needs is derived from the project and region by the convention
 # infra/gcp/ declares them under.
 #
-#   deploy.sh [COMMIT]     default: the checkout's HEAD
+#   deploy.sh [--if-changed] [COMMIT]     default: the checkout's HEAD
+#
+# --if-changed skips the deploy when nothing that goes into an image changed between the commit
+# production is running and this one — read from the running service, not from the last merge,
+# so a batch of merges or a skipped deploy is never missed. Most merges change only records and
+# docs, and rebuilding an identical image costs ten minutes and buys nothing.
 # shellcheck source=env.sh
 . "$(dirname "$0")/env.sh"
 
+if_changed=false
+if [ "${1:-}" = "--if-changed" ]; then
+  if_changed=true
+  shift
+fi
 sha="${1:-$(git -C "$CFOKIT_ROOT" rev-parse HEAD)}"
+
+# What goes into the images: the application, the web client, the issuer's realm and theme, and
+# how they are built. Everything else is records, docs, CI and infrastructure.
+image_paths=(src web Dockerfile .dockerignore pyproject.toml uv.lock infra/keycloak)
+
+if $if_changed; then
+  # A failure here stops the deploy rather than falling through to one: not knowing what runs is
+  # not evidence that something changed.
+  image=$(gcloud run services describe cfokit-rest --region "$CFOKIT_REGION" \
+    --format='value(spec.template.spec.containers[0].image)')
+  running=${image##*:}
+  if [ -n "$running" ] && git -C "$CFOKIT_ROOT" cat-file -e "${running}^{commit}" 2>/dev/null \
+    && git -C "$CFOKIT_ROOT" diff --quiet "$running" "$sha" -- "${image_paths[@]}"; then
+    done_ "Production runs ${running:0:12}; nothing shipped changed since. Not deploying."
+    exit 0
+  fi
+fi
 repository="${CFOKIT_REGION}-docker.pkg.dev/${CFOKIT_PROJECT}/cfokit"
 bucket="gs://${CFOKIT_PROJECT}-web"
 app="${repository}/app:${sha}"

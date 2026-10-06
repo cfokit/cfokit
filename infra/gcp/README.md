@@ -45,6 +45,7 @@ The tutorial runs the scripts in [`setup/`](setup/), in order, and they run the 
 | `dns.sh [--wait]` | The three A records to set; waits for them and the certificate |
 | `deploy.sh [COMMIT]` | Build, migrate, publish the web build, roll out, check |
 | `github.sh` | The deploy workflow's repository variables |
+| `realm.sh --replace [COMMIT]` | Replace the issuer's realm with the image's, removing its accounts |
 
 `deploy.sh` is also what `.github/workflows/deploy.yml` runs on every merge, so the first deploy
 and every later one are the same code.
@@ -55,5 +56,8 @@ and every later one are the same code.
   rule, then `tofu plan` and `tofu apply` by a person.
 * **A secret rotates** by adding a version and redeploying the services that read it; nothing in
   OpenTofu changes.
+* **A realm change** in `infra/keycloak/cfokit-realm.json` reaches a running deployment only
+  through `setup/realm.sh --replace`, because Keycloak imports a realm only when it does not
+  exist. It removes the realm's accounts.
 * **A rollback** is `gcloud run services update-traffic` to the previous revision. A migration is
   not rolled back: migrations are written forward-only.
