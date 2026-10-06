@@ -2,7 +2,8 @@
 #
 # Admin Activity audit logs are always on and kept 400 days by Google. Data Access logs are off by
 # default; these turn them on where a read is itself a security event: who read a secret, who
-# used a key, who touched the database's configuration or an identity's credentials.
+# used a key, who touched the database's configuration or an identity's credentials, and who
+# opened the admin console.
 
 resource "google_project_iam_audit_config" "this" {
   for_each = toset([
@@ -12,6 +13,9 @@ resource "google_project_iam_audit_config" "this" {
     "cloudsql.googleapis.com",
     "iam.googleapis.com",
     "sts.googleapis.com",
+    # Every request through Identity-Aware Proxy: who opened the issuer's admin console, and
+    # when. Admin Activity logs record changes to IAP, not its use.
+    "iap.googleapis.com",
   ])
   project = var.project_id
   service = each.value

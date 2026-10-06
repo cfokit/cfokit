@@ -9,7 +9,7 @@ not know it is on GCP.
 | File | What it declares |
 |---|---|
 | `versions.tf` | The provider, the state backend, and state encryption with Cloud KMS |
-| `variables.tf` | Project, region, zone, domain, and the repository allowed to deploy |
+| `variables.tf` | Project, region, zone, domain, the repository allowed to deploy, and who is let into the admin console and alerted |
 | `main.tf` | APIs, and the image repository |
 | `network.tf` | The VPC, the subnet services egress into, and private services access |
 | `database.tf` | The Cloud SQL instance and its two databases |
@@ -17,6 +17,9 @@ not know it is on GCP.
 | `iam.tf` | One identity per runtime, the deploy identity, and GitHub federation |
 | `run.tf` | The REST, MCP and issuer services, and the migration job |
 | `loadbalancer.tf` | The web bucket and CDN, the load balancer, the certificate |
+| `armor.tf` | Cloud Armor: rate limits on sign-in and the API |
+| `audit.tf` | Which reads are audit-logged, and how long logs are kept |
+| `monitoring.tf` | Alerts per event class, and uptime checks, emailed to `alert_emails` |
 | `outputs.tf` | What the first-time steps and the deploy workflow need |
 
 **A person applies this; the deploy pipeline never does** (ADR-0060 § 6). The pipeline,

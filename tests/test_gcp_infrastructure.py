@@ -45,3 +45,38 @@ def test_no_database_role_is_declared() -> None:
 def test_no_secret_value_is_declared() -> None:
     """ADR-0016: IaC creates secret containers, never values."""
     assert "google_secret_manager_secret_version" not in _terraform()
+
+
+def test_the_master_realm_answers_only_behind_identity_aware_proxy() -> None:
+    """SOC2-23: the realm holding the administrators is privileged access. On the public sign-in
+    host its paths are served by the backend Identity-Aware Proxy guards, as the console is."""
+    auth = re.search(r'path_matcher \{\s*name\s*=\s*"auth".*?\n  \}\n', _terraform(), re.DOTALL)
+    assert auth, "no auth path matcher"
+    rule = re.search(
+        r'paths\s*=\s*\["/realms/master", "/realms/master/\*"\]\s*service\s*=\s*([\w.]+)',
+        auth.group(0),
+    )
+    assert rule and rule.group(1) == "google_compute_backend_service.issuer_admin.id"
+    assert re.search(
+        r'resource "google_compute_backend_service" "issuer_admin" \{'
+        r".*?iap \{\s*enabled\s*=\s*true",
+        _terraform(),
+        re.DOTALL,
+    )
+
+
+def test_production_sets_the_access_token_lifetime() -> None:
+    """SOC2-20: the hosted service does not inherit the eight hours a laptop uses."""
+    match = re.search(r'CFOKIT_ACCESS_TOKEN_LIFESPAN\s*=\s*"(\d+)"', _terraform())
+    assert match and int(match.group(1)) <= 900
+
+
+def test_every_backend_that_runs_code_has_a_security_policy() -> None:
+    """Every backend service carries Cloud Armor; the bucket serves only static files."""
+    terraform = _terraform()
+    backends = re.findall(
+        r'resource "google_compute_backend_service" "(\w+)" \{(.*?)\n\}', terraform, re.DOTALL
+    )
+    assert backends
+    for name, body in backends:
+        assert "security_policy" in body, name
