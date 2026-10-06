@@ -75,8 +75,8 @@ comments in the ledger alone. `assignment` is `BKP-06`'s own word (ADR-0031).
 **The module stores no incoming transactions.** The caller supplies candidates; what
 persists is a decision and the draft it coded. Getting transactions in is a separate
 capability with three producers in three places — a PDF parsed in the agent runtime
-(ADR-0041), a skill that fetches one, and an unattended feed, which ADR-0022 § 3 makes a
-component. Letting this module hold their queue is the boundary-around-a-guess ADR-0031
+(ADR-0041), a skill that fetches one, and an unattended feed, which account activity
+synchronizes in CFOKit's own process ([ADR-0062](0062-a-bank-feed-is-synchronized-by-cfokit-itself.md)). Letting this module hold their queue is the boundary-around-a-guess ADR-0031
 deleted `connectors` for.
 
 ### 2. A rule is a chain of versions, and the set in force is a reconstruction

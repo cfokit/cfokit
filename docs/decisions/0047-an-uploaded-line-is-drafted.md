@@ -54,9 +54,9 @@ a different question, and a person answers it by posting.
 * Good, because the draft is complete, so posting it is one act with nothing left to decide.
 * Bad, because every uploaded line needs a posting act, and a statement of two hundred lines is
   two hundred of them.
-* Bad, because `source_kind` is supplied by the caller. A session describing an upload as a feed
-  would post it; the record then says `feed` falsely, which is a provenance lie rather than a
-  silent one, but it is not prevented.
+* Bad, because `source_kind` is supplied by the caller, so the rule holds only if no caller can
+  describe an upload as a feed. [ADR-0062](0062-a-bank-feed-is-synchronized-by-cfokit-itself.md)
+  § 1 makes that so: no interface accepts `feed`, and only CFOKit's own sync creates such a line.
 
 ### Confirmation
 
@@ -64,7 +64,7 @@ a different question, and a person answers it by posting.
 two-legged draft. `tests/integration/test_account_statements.py` asserts, over MCP, that the
 books do not move until each draft is posted.
 
-Not gated: the caller's choice of `source_kind`, as above.
+The refusal of a caller-supplied `feed` is gated by ADR-0062's tests.
 
 ## Pros and Cons of the Options
 

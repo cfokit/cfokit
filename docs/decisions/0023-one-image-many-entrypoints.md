@@ -35,8 +35,7 @@ the entire queue-and-worker category from consideration without further argument
 * Version skew between a component and the API is a correctness problem, not an efficiency one.
 * The portability gate should exercise the artifact users actually run, and preferably only one.
 * The workload is mostly idle by assumption (ADR-0003), so paying for idle compute is a real cost.
-* Scheduling belongs to infrastructure, not to application behavior that requires a deploy to
-  change.
+* A schedule is never application behavior that requires a deploy to change.
 
 ## Considered Options
 
@@ -75,25 +74,25 @@ artifact rather than several.
 | **Service** | Request-serving, scale-to-zero, HTTP ingress | compose service | Cloud Run service |
 | **Job** | One-shot, invoked explicitly, no request timeout | compose profile, run on demand | Cloud Run job |
 
-A **scheduled** component is a job with a trigger attached — Cloud Scheduler in the cloud, and nothing
-by default locally, because a laptop deployment has no reason to poll on a timer. Scheduling is
-infrastructure, not application behavior; the component itself only knows how to run once.
+Unattended work is one job with a fixed tick attached — Cloud Scheduler in the cloud, a compose
+service running it in a loop locally. What runs when is the entity's stored schedule, drained from a
+queue in Postgres; the tick only starts the drain, and the job only knows how to run once.
+[ADR-0061](0061-unattended-work-is-a-queue-in-postgres.md) holds that decision.
 
-**There are no long-running workers.** That shape requires a queue, and an event bus is a binding
-non-goal (ADR-0012). If work genuinely needs queueing, that is a record against the non-goals list,
-not an implementation detail.
+**There are no long-running workers.** The queue is drained by a job that exits when nothing is due,
+not by a process that waits for work.
 
 ### Consequences
 
 * Good, because a component cannot run against an API version it was not built for.
 * Good, because the portability gate exercises one artifact rather than several.
-* Good, because scheduling lives in infrastructure, so changing a run schedule is not a deploy.
+* Good, because a schedule is data and the tick is infrastructure, so changing either is not a deploy.
 * Bad, because the serving image carries dependencies only some entrypoints use, and that will worsen
   as components are added. A provider SDK needed only by an ingestion component ships in the serving
   image too — mitigated but not eliminated by the rule that provider SDKs are imported inside
   functions rather than at module scope (ADR-0004).
-* Bad, because local scheduled execution is manual. A self-hoster wanting periodic sync configures it
-  themselves, and `infra/README.md` must say so rather than implying it happens automatically.
+* Bad, because a local deployment runs one service more than the API, the tick, so that scheduled
+  work happens there as it does in the cloud (`NFR-17`).
 
 ### Confirmation
 
@@ -171,6 +170,8 @@ Simpler than jobs: one deployment shape, an internal timer, no scheduler to conf
   and a one-shot job runtime with no request timeout.
 - `compose.yaml` defines component entrypoints behind profiles so they never run by default — the same
   discipline applied to seeding in ADR-0018.
+  The tick that drains unattended work is the exception: it runs by default, because scheduled work
+  is a capability every deployment has (ADR-0061).
 - Because the local default ingestion provider requires no cloud account (`BKP-03`), ingestion is
   exercisable locally and in CI without any third-party credential.
 
