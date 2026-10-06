@@ -200,8 +200,12 @@ resource "google_cloud_run_v2_service" "issuer" {
           cpu    = "1"
           memory = "2Gi"
         }
-        # A JVM with a cache does work between requests.
-        cpu_idle          = false
+        # Billed per request, with the one instance kept warm: about $20 a month against $58 with
+        # CPU always allocated (Cloud Billing catalog, us-central1). Between requests the CPU is
+        # throttled, so Keycloak's background work — expiring sessions, cleaning caches — runs
+        # slowly; sessions persist in the database, so nobody is signed out, and a sign-in runs
+        # at full speed. Set false if sign-ins ever stall after an idle spell.
+        cpu_idle          = true
         startup_cpu_boost = true
       }
 
