@@ -68,6 +68,10 @@
     "error": "MigrationError"
   },
   {
+    "code": "not_a_counterpart",
+    "error": "NotACounterpart"
+  },
+  {
     "code": "not_a_person",
     "error": "NotAPerson"
   },
@@ -84,8 +88,16 @@
     "error": "NothingToClose"
   },
   {
+    "code": "nothing_to_decline",
+    "error": "NothingToDecline"
+  },
+  {
     "code": "notification_not_found",
     "error": "NotificationNotFound"
+  },
+  {
+    "code": "obligation_not_carried",
+    "error": "ObligationNotCarried"
   },
   {
     "code": "obligation_not_found",
@@ -106,6 +118,10 @@
   {
     "code": "precedence_taken",
     "error": "PrecedenceTaken"
+  },
+  {
+    "code": "question_not_found",
+    "error": "QuestionNotFound"
   },
   {
     "code": "recipient_holds_no_role",

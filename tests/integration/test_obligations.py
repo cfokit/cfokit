@@ -21,6 +21,7 @@ import pytest
 from cfokit.ledger.engine import Entry, Posting
 from cfokit.ledger.errors import (
     NotAuthorized,
+    ObligationNotCarried,
     ObligationNotFound,
     TransactionIncomplete,
 )
@@ -108,6 +109,32 @@ def test_an_invoice_is_owed_until_it_is_settled(
     assert [(o.amount, o.settled, o.outstanding) for o in owed] == [
         (Decimal("100.0000000000"), Decimal(0), Decimal("100.0000000000"))
     ]
+
+
+def test_an_obligation_records_the_account_that_carries_it(
+    database: Database, chart: tuple[str, str, str, str]
+) -> None:
+    """ADR-0059 § 3: signed as its posting there. A payment matched to it later is settled
+    against this account, and a settling leg cannot be inferred from one that does not say."""
+    entity_id, _, revenue, receivable = chart
+    issue(database, entity_id, receivable, revenue, "100.00")
+
+    [owed] = outstanding_obligations(database, entity_id=entity_id, principal=PERSON)
+
+    assert owed.account_id == receivable
+
+
+def test_an_obligation_no_account_carries_is_refused(
+    database: Database, chart: tuple[str, str, str, str]
+) -> None:
+    """Neither leg of a 100.00 invoice is 90.00, so which account is owed is unstated."""
+    entity_id, _, revenue, receivable = chart
+
+    with pytest.raises(ObligationNotCarried) as caught:
+        write(database, entity_id, receivable, revenue, ISSUED, "100.00", raises="90.00")
+
+    assert caught.value.code == "obligation_not_carried"
+    assert outstanding_obligations(database, entity_id=entity_id, principal=PERSON) == ()
 
 
 def test_a_payment_settles_it(database: Database, chart: tuple[str, str, str, str]) -> None:

@@ -33,10 +33,11 @@ from datetime import date
 from decimal import Decimal
 from typing import Any
 
-from cfokit.ledger.engine import Entry, build_reversal, check_postable
+from cfokit.ledger.engine import Entry, build_reversal, carrying_account, check_postable
 from cfokit.ledger.engine.periods import period_of
 from cfokit.ledger.errors import (
     IdempotencyKeyRequired,
+    ObligationNotCarried,
     ObligationNotFound,
     PeriodClosed,
     TransactionAlreadyPosted,
@@ -182,6 +183,7 @@ def record_in(
     settles: tuple[Applied, ...] = (),
     derived_from: dict[str, Any] | None = None,
     assigned: tuple[Assigned, ...] = (),
+    by_rule: bool = False,
 ) -> WrittenTransaction:
     """Record a transaction, as a draft or posted straight through.
 
@@ -212,6 +214,13 @@ def record_in(
     Both need the transaction posted. A draft is not in the books (`LED-07`), so an obligation
     raised by one would be owed by nobody and a settlement against one would apply to nothing.
 
+    **An obligation records the account that carries it**, signed as its posting there
+    (ADR-0059 § 3): the one account whose postings in this entry sum to `raises_obligation`. A
+    payment matched to the obligation is settled against that account, and a settling leg cannot
+    be inferred from an obligation that does not say. Read from the entry rather than stated
+    beside it, so the two cannot disagree; refused as `obligation_not_carried` when no account,
+    or more than one, carries the figure.
+
     **`assigned` records that a rule chose a coding, and which rule version** (`BKP-10`).
     ADR-0042 § 4 reserved this: "`RULE` arrives when the rules engine does — as a value the
     write path sets on a posting whose coding a rule determined, not as a branch in
@@ -228,6 +237,10 @@ def record_in(
     coding is deterministic and re-derivable, and an auditor tests it cheaply and once"; it
     describes **why a posting was made** and is never an authority check (ADR-0042 § 3), so
     it does not widen what the caller may do. `actor_principal_id` still records who called.
+
+    **`by_rule` sets that class where no posting names a rule.** A line matched to a
+    counterpart the books already held is written deterministically and re-derivably, which
+    is what the class records, but no rule chose either leg (ADR-0059 § 3).
 
     **`derived_from` says what this entry came from outside the books** — the source system and
     the record within it (`IMP-04`, `BKP-19`, `SOC1-14`). It is lineage, not content: it never
@@ -252,6 +265,7 @@ def record_in(
         [(p.account_id, str(p.amount), p.commodity) for p in entry.postings],
         derived_from,
         [(a.posting_index, a.rule_version_id) for a in assigned],
+        by_rule,
     )
 
     replay = write.claim_idempotency(context.idempotency_key, digest)
@@ -270,6 +284,15 @@ def record_in(
             "an obligation or a settlement needs the transaction posted; a draft is not "
             "in the books"
         )
+    carried_by = None
+    if raises_obligation is not None:
+        carried_by = carrying_account(entry, raises_obligation, write.functional_currency)
+        if carried_by is None:
+            raise ObligationNotCarried(
+                "an obligation is carried by the one account whose postings in this "
+                "transaction sum to its amount, signed as a posting; none, or more than one, "
+                "does"
+            )
 
     if post:
         _require_open(write, entry.transaction_date)
@@ -289,7 +312,9 @@ def record_in(
         # records why the posting was made rather than who may make it (ADR-0042 § 3),
         # so this narrows nothing and widens nothing.
         actor_class=(
-            ActorClass.RULE.value if assigned else context.principal.actor_class.value
+            ActorClass.RULE.value
+            if assigned or by_rule
+            else context.principal.actor_class.value
         ),
         acting_for_principal_id=context.principal.acting_for,
         derived_from=derived_from,
@@ -300,9 +325,10 @@ def record_in(
         assigned_by={a.posting_index: a.rule_version_id for a in assigned},
     )
 
-    if raises_obligation is not None:
+    if raises_obligation is not None and carried_by is not None:  # both, or neither
         write.raise_obligation(
             transaction_id=transaction_id,
+            account_id=carried_by,
             amount=raises_obligation,
             commodity=write.functional_currency,
         )

@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -21,7 +21,24 @@ from psycopg.types.json import Jsonb
 
 from cfokit.ledger.engine import Posting
 
-__all__ = ["StoredTransaction", "add_postings", "insert_draft", "load", "mark_posted"]
+__all__ = [
+    "Movement",
+    "StoredTransaction",
+    "add_postings",
+    "insert_draft",
+    "load",
+    "mark_posted",
+    "movements_as_of",
+]
+
+
+@dataclass(frozen=True, slots=True)
+class Movement:
+    """What one transaction moved on one account: its postings there, summed."""
+
+    transaction_id: str
+    transaction_date: date
+    amount: Decimal
 
 
 @dataclass(frozen=True, slots=True)
@@ -201,3 +218,67 @@ def load(conn: psycopg.Connection[Any], transaction_id: str) -> StoredTransactio
         acting_for_principal_id=str(row[8]) if row[8] is not None else None,
         postings=postings,
     )
+
+
+# The books as they stood at a moment (ADR-0013): a transaction recorded before it, and not
+# reversed by one recorded before it. Ordinary entries only — an opening or closing entry states
+# a balance rather than a movement (`LED-10`, `LED-12`). A reversal is not a movement either: it
+# undoes one. `excluding` leaves out one transaction, so a reader rebuilding the moment just
+# before that transaction wrote can do so although its row carries its database transaction's
+# start time.
+MOVEMENTS_AS_OF = """
+    SELECT t.id, t.transaction_date, SUM(p.amount)
+      FROM ledger_transaction t
+      JOIN posting p ON p.transaction_id = t.id
+     WHERE t.entity_id = %(entity_id)s
+       AND t.recorded_at < %(at)s
+       AND t.id IS DISTINCT FROM %(excluding)s::uuid
+       AND t.entry_kind = 'ordinary'
+       AND t.reverses_id IS NULL
+       AND NOT EXISTS (SELECT 1 FROM ledger_transaction r
+                        WHERE r.reverses_id = t.id AND r.recorded_at < %(at)s)
+       AND p.account_id = %(account_id)s
+       AND p.commodity = %(commodity)s
+       AND (%(transaction_id)s::uuid IS NULL OR t.id = %(transaction_id)s::uuid)
+     GROUP BY t.id, t.transaction_date
+    HAVING (%(amount)s::numeric IS NULL OR SUM(p.amount) = %(amount)s::numeric)
+     ORDER BY t.transaction_date, t.id
+"""
+
+
+def movements_as_of(
+    conn: psycopg.Connection[Any],
+    *,
+    entity_id: str,
+    account_id: str,
+    commodity: str,
+    at: datetime,
+    amount: Decimal | None = None,
+    excluding_transaction: str | None = None,
+    transaction_id: str | None = None,
+) -> list[Movement]:
+    """What each transaction moved on one account, as the books stood at `at`.
+
+    Drafts as well as posted entries: a draft is not in the books (`LED-07`), but it is a record
+    somebody made, and whether to count it is the caller's question. `amount`, when given, keeps
+    only the transactions whose postings on the account sum to exactly it.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            MOVEMENTS_AS_OF,
+            {
+                "entity_id": entity_id,
+                "account_id": account_id,
+                "commodity": commodity,
+                "at": at,
+                "amount": amount,
+                "excluding": excluding_transaction,
+                "transaction_id": transaction_id,
+            },
+        )
+        return [
+            Movement(
+                transaction_id=str(row[0]), transaction_date=row[1], amount=Decimal(row[2])
+            )
+            for row in cur.fetchall()
+        ]

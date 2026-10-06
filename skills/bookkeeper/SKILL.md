@@ -136,25 +136,55 @@ missing. Tell the user which dates are not covered.
 
 **4. `run_assignment` with the `candidates` it returned — unchanged.** Copy them exactly; they
 carry each line's reference, which is what stops a line booking twice and what records where the
-transaction came from. Lines the rules resolve come back `booked`; those they do not come back
-`unresolved`, and nothing is guessed for them.
+transaction came from. Each line is first matched against what the books already hold, and only
+then do the rules decide. Read each line's `outcome`:
+
+- `matched` (in `booked`) — the books already held it, named in `counterparts`: an invoice it
+  pays, which is now settled; an entry somebody recorded earlier, so nothing new was written; or
+  the other side of a transfer between two of the entity's accounts, now one transfer. No rule
+  was consulted. Say which record each line was matched to.
+- `assigned` (in `booked`) — a rule coded it.
+- `unmatched`, `ambiguous` or `proposed` (in `unresolved`) — a question for the user; see step 5.
+  Nothing is guessed for any of them.
 
 **Everything from a statement is a draft**, however it was resolved. The figures came from a
-document the organization did not write, and a person decides that they happened.
+document the organization did not write, and a person decides that they happened. A match to an
+entry already recorded writes nothing, so there is nothing to post for it.
 
-**5. Unresolved lines are questions.** Group them by payee and ask where each belongs. The
-answer is a rule — `propose_assignment_rule` to show what it would book, then the user approves
-it with `approve_assignment_rule` — and `run_assignment` again with the same candidates. What was
-already coded is reported as it was and not coded again; what the new rule resolves is drafted.
+**5. Unresolved lines are questions.** Each kind is answered differently:
 
-Each unresolved line also raises a notification to whoever may approve a rule, and that
-notification stays open until the line is coded, for everyone it went to.
+- **`unmatched`** — no record fits and no rule covers it. Group these by payee and ask where each
+  belongs. The answer is usually a rule — `propose_assignment_rule` to show what it would book,
+  then the user approves it with `approve_assignment_rule` — and `run_assignment` again with the
+  same candidates. What was already settled is reported as it was and not coded again; what the
+  new rule resolves is drafted. If the user says the line is a record already in the books that
+  the search did not find — a check that cleared weeks after it was entered — that is answered
+  as below, by naming the record.
+- **`ambiguous`** — two or more records fit it exactly, listed in `counterparts`. Nothing chooses
+  between equals, so show the user every one — what kind of record, its date and amount — and
+  ask which it is, or whether it is none of them.
+- **`proposed`** — an uploaded line that pays the open invoice in `counterparts`. It waits for the
+  user to confirm the payment happened; confirming posts the settlement.
+
+**The user answers an `ambiguous` or `proposed` line, not you.** Once they have said which,
+`answer_unresolved_transaction` records it, with the line's `source_ref`, a key of your own, and
+`counterpart_kind` and `counterpart_id` copied from the counterpart they chose — or `none=true`
+when they say it is none of them, after which the rules decide it. It is the user's own act, like
+approving a rule, so call it only with the answer the user gave you. A session acting for the
+user is refused with `not_a_person`: never retry around that — tell the user the answer is
+theirs to record from their own session, and stop.
+`not_a_counterpart` means the record named is not one the line could be — a different amount or
+account, or one another line already claimed; ask again rather than choosing another yourself.
+
+Every question also raises a notification to whoever may answer it, and that notification stays
+open until the line is answered, for everyone it went to.
 
 **Questions left open.** When the user comes back, or a notification opens the conversation,
-call `open_notifications` for what they were asked and `unresolved_transactions` for the lines.
-Each of those lines carries every field `run_assignment` takes; once the user approves a rule,
-send them back unchanged. Only the user can dismiss a notification. You cannot, and you never
-answer a question any other way than by coding its line.
+call `open_notifications` for what they were asked and `unresolved_transactions` for the lines,
+with each one's `outcome` and `counterparts`. Each of those lines carries every field
+`run_assignment` takes; once the user approves a rule, send them back unchanged. Only the user
+can dismiss a notification. You cannot, and you never answer a question any other way than by
+coding its line or recording the user's own answer.
 
 **6. The user posts.** Show what is drafted — counts, and the lines by the account they were
 coded to. Posting is the user's decision; `post_transaction` each draft only once they have said

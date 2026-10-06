@@ -127,6 +127,19 @@ class ObligationNotFound(LedgerError):
     code = "obligation_not_found"
 
 
+class ObligationNotCarried(LedgerError):
+    """No single account carries the obligation a transaction would raise (`LED-17`).
+
+    An obligation records the account that carries it, signed as its posting there, because a
+    payment matched to it is settled against that account (ADR-0059 § 3). So exactly one of the
+    raising transaction's accounts must have postings summing to the obligation's amount; none,
+    or two, and which account is owed cannot be read from the entry, so it is refused rather
+    than guessed.
+    """
+
+    code = "obligation_not_carried"
+
+
 class RetainedEarningsUnset(LedgerError):
     """No retained earnings account is named, so a year cannot be closed (`LED-12`)."""
 

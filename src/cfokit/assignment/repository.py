@@ -22,6 +22,8 @@ from typing import Any
 import psycopg
 
 from cfokit.assignment import (
+    Counterpart,
+    CounterpartKind,
     Field,
     Match,
     Operator,
@@ -36,42 +38,69 @@ from cfokit.assignment.candidate import Candidate, SourceKind
 
 @dataclass(frozen=True, slots=True)
 class StoredDecision:
-    """A decision as it was recorded, with the facts it was taken on."""
+    """A decision as it was recorded, with the facts it was taken on and what it found."""
 
     id: str
+    transaction_id: str
     decided_at: datetime
     outcome: Outcome
     winner_id: str | None
+    winner_label: str | None
     resolved_by: ResolvedBy | None
     rule_set_digest: str
+    counterpart_digest: str
     evaluator_version: int
+    supersedes: str | None
+    chosen_by: str | None
+    decided_with: str | None
     candidate: Candidate
+    counterparts: tuple[Counterpart, ...]
 
-
-@dataclass(frozen=True, slots=True)
-class OpenQuestion:
-    """A line no rule resolved and nothing has answered since: what the operator is asked."""
-
-    decision_id: str
-    transaction_id: str
-    decided_at: datetime
-    candidate: Candidate
+    @property
+    def declines(self) -> bool:
+        """Whether this is a person answering "none of these": the rules decided after it, and
+        the search is not run for the line again (ADR-0059 § 4)."""
+        return self.chosen_by is not None and self.outcome in (
+            Outcome.ASSIGNED,
+            Outcome.UNMATCHED,
+        )
 
 
 __all__ = [
-    "OpenQuestion",
-    "answered_decision",
+    "StoredDecision",
+    "claimed",
     "decision_for_transaction",
     "insert_decision",
     "insert_rule_version",
+    "latest_decision",
+    "line_declined",
+    "load_decision",
     "load_decisions",
     "load_versions",
+    "moment",
     "next_version",
     "open_questions",
+    "open_side",
+    "open_sides",
     "precedence_taken",
     "rule_for_posting",
-    "unanswered_decision",
 ]
+
+
+def moment(conn: psycopg.Connection[Any]) -> datetime:
+    """The instant a decision is taken at, read after the entity's lock is held.
+
+    Not `now()`, which is when the database transaction began — possibly before another
+    writer to this entity committed and released the lock. Everything visible here committed
+    before this instant, so "the books as they stood at `decided_at`" names exactly what the
+    search saw, and every decision's moment follows the last's (ADR-0011, ADR-0059 § 5).
+    """
+    with conn.cursor() as cur:
+        cur.execute("SELECT clock_timestamp()")
+        row = cur.fetchone()
+    assert row is not None  # noqa: S101 - a SELECT of a function always yields a row
+    at: datetime = row[0]
+    return at
 
 
 def load_versions(conn: psycopg.Connection[Any], *, entity_id: str) -> tuple[RuleVersion, ...]:
@@ -238,43 +267,50 @@ def insert_decision(
     *,
     entity_id: str,
     transaction_id: str,
+    decided_at: datetime,
     candidate: Candidate,
-    fingerprint: str,
     outcome: Outcome,
     winner_id: str | None,
     resolved_by: ResolvedBy | None,
     matches: Iterable[Match],
     rule_set_digest: str,
+    counterparts: Sequence[Counterpart],
+    counterpart_digest: str,
     evaluator_version: int,
     supersedes: str | None = None,
+    chosen_by: str | None = None,
+    decided_with: str | None = None,
 ) -> str:
-    """Record what was decided and the contest behind it, in the caller's transaction.
+    """Record what was decided, the contest behind it and what the search found, in the
+    caller's transaction.
 
-    Written for an unmatched candidate too. `BKP-12` forbids parking one in a holding
-    account, and a decision saying "nothing matched" against a one-legged draft is the
-    honest record of a question rather than the absence of one.
+    Written for a question too. `BKP-12` forbids parking a line in a holding account, and a
+    decision saying what was not settled against a one-legged draft is the honest record of a
+    question rather than the absence of one.
     """
     ranked = list(matches)
     with conn.cursor() as cur:
         cur.execute(
             "INSERT INTO assignment_decision"
-            " (entity_id, transaction_id, outcome, winning_rule_version_id, resolved_by,"
-            "  match_count, rule_set_digest, evaluator_version, candidate_payee,"
-            "  candidate_payee_raw, candidate_description, candidate_amount,"
-            "  candidate_commodity, candidate_source_account_id, candidate_transaction_date,"
-            "  candidate_source_kind, candidate_fingerprint, candidate_source_ref,"
-            "  supersedes_decision_id)"
+            " (entity_id, transaction_id, decided_at, outcome, winning_rule_version_id,"
+            "  resolved_by, match_count, rule_set_digest, counterpart_digest,"
+            "  evaluator_version, candidate_payee, candidate_payee_raw, candidate_description,"
+            "  candidate_amount, candidate_commodity, candidate_source_account_id,"
+            "  candidate_transaction_date, candidate_source_kind, candidate_source_ref,"
+            "  supersedes_decision_id, chosen_by, decided_with_decision_id)"
             " VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,"
-            "         %s, %s)"
+            "         %s, %s, %s, %s, %s)"
             " RETURNING id",
             (
                 entity_id,
                 transaction_id,
+                decided_at,
                 str(outcome),
                 winner_id,
                 str(resolved_by) if resolved_by else None,
                 len(ranked),
                 rule_set_digest,
+                counterpart_digest,
                 evaluator_version,
                 candidate.normalized_payee,
                 candidate.payee,
@@ -284,9 +320,10 @@ def insert_decision(
                 candidate.source_account_id,
                 candidate.transaction_date,
                 str(candidate.source_kind),
-                fingerprint,
                 candidate.source_ref,
                 supersedes,
+                chosen_by,
+                decided_with,
             ),
         )
         row = cur.fetchone()
@@ -300,6 +337,26 @@ def insert_decision(
             [
                 (entity_id, decision_id, match.rule.id, match.rank, match.order_key)
                 for match in ranked
+            ],
+        )
+        cur.executemany(
+            "INSERT INTO assignment_decision_counterpart"
+            " (entity_id, decision_id, position, kind, counterpart_id, account_id, amount,"
+            "  commodity, counterpart_date)"
+            " VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            [
+                (
+                    entity_id,
+                    decision_id,
+                    position,
+                    str(found.kind),
+                    found.id,
+                    found.account_id,
+                    found.amount,
+                    found.commodity,
+                    found.on,
+                )
+                for position, found in enumerate(counterparts, start=1)
             ],
         )
     return decision_id
@@ -323,46 +380,239 @@ def decision_for_transaction(
     return str(row[0]) if row else None
 
 
-def answered_decision(
-    conn: psycopg.Connection[Any], *, entity_id: str, source_ref: str
-) -> tuple[str, str, str] | None:
-    """The decision that coded this source line, as (decision, transaction, rule label).
+# Every column a `StoredDecision` is built from, the rule label joined in. The candidate comes
+# back as it arrived — the payee as the bank sent it rather than as matching normalized it,
+# because that is what a person recognizes and what replay re-normalizes.
+_DECISION = (
+    "SELECT d.id, d.transaction_id, d.decided_at, d.outcome, d.winning_rule_version_id,"
+    "       v.label, d.resolved_by, d.rule_set_digest, d.counterpart_digest,"
+    "       d.evaluator_version, d.supersedes_decision_id, d.chosen_by,"
+    "       d.decided_with_decision_id, d.candidate_payee_raw, d.candidate_description,"
+    "       d.candidate_amount, d.candidate_commodity, d.candidate_source_account_id,"
+    "       d.candidate_transaction_date, d.candidate_source_kind, d.candidate_source_ref"
+    "  FROM assignment_decision d"
+    "  LEFT JOIN assignment_rule_version v ON v.id = d.winning_rule_version_id"
+)
 
-    Once a line is coded it stays coded: a rule changed since affects future assignments
-    only (`BKP-11`), so a re-run reports this rather than deciding again.
+
+def _decisions(
+    conn: psycopg.Connection[Any], where: str, parameters: dict[str, Any]
+) -> tuple[StoredDecision, ...]:
+    """Decisions matching `where`, in the order it states, each with its counterparts."""
+    with conn.cursor() as cur:
+        cur.execute(f"{_DECISION} {where}", parameters)
+        rows = cur.fetchall()
+        cur.execute(
+            "SELECT decision_id, kind, counterpart_id, account_id, amount, commodity,"
+            "       counterpart_date"
+            "  FROM assignment_decision_counterpart"
+            " WHERE entity_id = %s AND decision_id = ANY(%s::uuid[])"
+            " ORDER BY decision_id, position",
+            (parameters["entity_id"], [str(row[0]) for row in rows]),
+        )
+        found: dict[str, list[Counterpart]] = {}
+        for (
+            decision_id,
+            kind,
+            counterpart_id,
+            account_id,
+            amount,
+            commodity,
+            on,
+        ) in cur.fetchall():
+            found.setdefault(str(decision_id), []).append(
+                Counterpart(
+                    kind=CounterpartKind(kind),
+                    id=str(counterpart_id),
+                    account_id=str(account_id),
+                    amount=Decimal(amount),
+                    commodity=str(commodity),
+                    on=on,
+                )
+            )
+
+    return tuple(
+        StoredDecision(
+            id=str(row[0]),
+            transaction_id=str(row[1]),
+            decided_at=row[2],
+            outcome=Outcome(row[3]),
+            winner_id=str(row[4]) if row[4] else None,
+            winner_label=str(row[5]) if row[5] is not None else None,
+            resolved_by=ResolvedBy(row[6]) if row[6] else None,
+            rule_set_digest=str(row[7]),
+            counterpart_digest=str(row[8]),
+            evaluator_version=int(row[9]),
+            supersedes=str(row[10]) if row[10] else None,
+            chosen_by=str(row[11]) if row[11] is not None else None,
+            decided_with=str(row[12]) if row[12] else None,
+            candidate=Candidate(
+                payee=row[13],
+                description=row[14],
+                amount=row[15],
+                commodity=row[16],
+                source_account_id=str(row[17]),
+                transaction_date=row[18],
+                source_kind=SourceKind(row[19]),
+                source_ref=row[20],
+            ),
+            counterparts=tuple(found.get(str(row[0]), ())),
+        )
+        for row in rows
+    )
+
+
+def latest_decision(
+    conn: psycopg.Connection[Any], *, entity_id: str, source_ref: str
+) -> StoredDecision | None:
+    """What most recently became of this source line, or `None` if nothing has.
+
+    A line's decisions follow one another — a question, then the decision that answers it,
+    which names it — so the latest is the line's state: an open question, or how it was
+    settled. Once settled it stays settled: a rule changed since affects future assignments only
+    (`BKP-11`), so a re-run reports this rather than deciding again.
+    """
+    found = _decisions(
+        conn,
+        "WHERE d.entity_id = %(entity_id)s AND d.candidate_source_ref = %(source_ref)s"
+        " ORDER BY d.decided_at DESC, d.id DESC LIMIT 1",
+        {"entity_id": entity_id, "source_ref": source_ref},
+    )
+    return found[0] if found else None
+
+
+def load_decision(
+    conn: psycopg.Connection[Any], *, entity_id: str, decision_id: str
+) -> StoredDecision | None:
+    found = _decisions(
+        conn,
+        "WHERE d.entity_id = %(entity_id)s AND d.id = %(decision_id)s::uuid",
+        {"entity_id": entity_id, "decision_id": decision_id},
+    )
+    return found[0] if found else None
+
+
+def line_declined(
+    conn: psycopg.Connection[Any], *, entity_id: str, source_ref: str, before: datetime
+) -> bool:
+    """Whether a person answered this line "none of these" before `before`.
+
+    After that the rules decide it and the search is not run for it again: the person has
+    said what it is not, and asking them the same question on every run would be a question
+    nobody can close (ADR-0059 § 4).
     """
     with conn.cursor() as cur:
         cur.execute(
-            "SELECT d.id, d.transaction_id, v.label"
-            "  FROM assignment_decision d JOIN assignment_rule_version v"
-            "    ON v.id = d.winning_rule_version_id"
-            " WHERE d.entity_id = %s AND d.candidate_source_ref = %s"
-            "   AND d.outcome = 'assigned'"
-            " ORDER BY d.decided_at LIMIT 1",
-            (entity_id, source_ref),
+            "SELECT EXISTS (SELECT 1 FROM assignment_decision"
+            "  WHERE entity_id = %s AND candidate_source_ref = %s AND decided_at < %s"
+            "    AND chosen_by IS NOT NULL AND outcome IN ('assigned', 'unmatched'))",
+            (entity_id, source_ref, before),
         )
         row = cur.fetchone()
-    return (str(row[0]), str(row[1]), str(row[2])) if row else None
+    return bool(row and row[0])
 
 
-def unanswered_decision(
-    conn: psycopg.Connection[Any], *, entity_id: str, source_ref: str
-) -> str | None:
-    """The unmatched decision for this source line, if it was asked about and not answered.
+def claimed(
+    conn: psycopg.Connection[Any],
+    *,
+    entity_id: str,
+    account_id: str,
+    transaction_ids: Sequence[str],
+    before: datetime,
+) -> frozenset[str]:
+    """Which of these transactions' legs on `account_id` a line had claimed before `before`.
 
-    What a resolved decision supersedes — `supersedes_decision_id` has existed since 0012
-    for this, and the source reference is what makes the earlier decision findable: the
-    fingerprint is the content, and the content is what two identical lines share.
+    **A leg is claimed by at most one line** (ADR-0059 § 1), and a claimed one is never a
+    counterpart: two coffees on one statement are two lines, and the second must not find the
+    first one's entry. The unique index on a decision's transaction and its line's account is
+    the schema's half of the same rule.
     """
+    if not transaction_ids:
+        return frozenset()
     with conn.cursor() as cur:
         cur.execute(
-            "SELECT id FROM assignment_decision"
-            " WHERE entity_id = %s AND candidate_source_ref = %s AND outcome = 'unmatched'"
-            " ORDER BY decided_at DESC LIMIT 1",
-            (entity_id, source_ref),
+            "SELECT transaction_id FROM assignment_decision"
+            " WHERE entity_id = %s AND candidate_source_account_id = %s"
+            "   AND transaction_id = ANY(%s::uuid[]) AND decided_at < %s",
+            (entity_id, account_id, list(transaction_ids), before),
         )
-        row = cur.fetchone()
-    return str(row[0]) if row else None
+        return frozenset(str(row[0]) for row in cur.fetchall())
+
+
+# A line's question still open at a moment: a question decided before it, with no later
+# decision for the same line decided before it either.
+_OPEN_AT = (
+    " d.outcome IN ('unmatched', 'ambiguous', 'proposed') AND d.decided_at < %(at)s"
+    " AND NOT EXISTS (SELECT 1 FROM assignment_decision a"
+    "                  WHERE a.entity_id = d.entity_id"
+    "                    AND a.candidate_source_ref = d.candidate_source_ref"
+    "                    AND a.decided_at > d.decided_at AND a.decided_at < %(at)s)"
+)
+
+
+def _side(decision: StoredDecision) -> Counterpart:
+    candidate = decision.candidate
+    return Counterpart(
+        kind=CounterpartKind.TRANSFER,
+        id=decision.id,
+        account_id=candidate.source_account_id,
+        amount=candidate.amount,
+        commodity=candidate.commodity,
+        on=candidate.transaction_date,
+    )
+
+
+def open_sides(
+    conn: psycopg.Connection[Any], *, entity_id: str, candidate: Candidate, at: datetime
+) -> tuple[Counterpart, ...]:
+    """Other lines' questions open at `at`, on another account, for the negated amount.
+
+    The other side of a transfer, as the books held it (ADR-0059 § 2): the one-legged draft of
+    a line nothing has answered. The window is the engine's to apply.
+    """
+    found = _decisions(
+        conn,
+        "WHERE d.entity_id = %(entity_id)s AND"
+        + _OPEN_AT
+        + " AND d.candidate_source_account_id <> %(account_id)s::uuid"
+        " AND d.candidate_commodity = %(commodity)s"
+        " AND d.candidate_amount = %(negated)s"
+        " AND d.candidate_source_ref <> %(source_ref)s"
+        " ORDER BY d.decided_at, d.id",
+        {
+            "entity_id": entity_id,
+            "at": at,
+            "account_id": candidate.source_account_id,
+            "commodity": candidate.commodity,
+            "negated": -candidate.amount,
+            "source_ref": candidate.source_ref,
+        },
+    )
+    return tuple(_side(decision) for decision in found)
+
+
+def open_side(
+    conn: psycopg.Connection[Any],
+    *,
+    entity_id: str,
+    decision_id: str,
+    source_ref: str,
+    at: datetime,
+) -> Counterpart | None:
+    """One line's question, as the other side of a transfer for the line `source_ref`, if it
+    was still open at `at` and is another line's."""
+    found = _decisions(
+        conn,
+        "WHERE d.entity_id = %(entity_id)s AND d.id = %(decision_id)s::uuid"
+        " AND d.candidate_source_ref <> %(source_ref)s AND" + _OPEN_AT,
+        {
+            "entity_id": entity_id,
+            "decision_id": decision_id,
+            "source_ref": source_ref,
+            "at": at,
+        },
+    )
+    return _side(found[0]) if found else None
 
 
 def load_decisions(
@@ -374,39 +624,11 @@ def load_decisions(
     that reconstructed its inputs from the transaction it produced would be asserting that
     the code agrees with itself.
     """
-    with conn.cursor() as cur:
-        cur.execute(
-            "SELECT id, decided_at, outcome, winning_rule_version_id, resolved_by,"
-            "       rule_set_digest, evaluator_version, candidate_payee_raw,"
-            "       candidate_description, candidate_amount, candidate_commodity,"
-            "       candidate_source_account_id, candidate_transaction_date,"
-            "       candidate_source_kind, candidate_source_ref"
-            "  FROM assignment_decision WHERE entity_id = %s ORDER BY decided_at, id",
-            (entity_id,),
-        )
-        rows = cur.fetchall()
-
-    return tuple(
-        StoredDecision(
-            id=str(row[0]),
-            decided_at=row[1],
-            outcome=Outcome(row[2]),
-            winner_id=str(row[3]) if row[3] else None,
-            resolved_by=ResolvedBy(row[4]) if row[4] else None,
-            rule_set_digest=str(row[5]),
-            evaluator_version=int(row[6]),
-            candidate=Candidate(
-                payee=row[7],
-                description=row[8],
-                amount=row[9],
-                commodity=row[10],
-                source_account_id=str(row[11]),
-                transaction_date=row[12],
-                source_kind=SourceKind(row[13]),
-                source_ref=row[14],
-            ),
-        )
-        for row in rows
+    return _decisions(
+        conn,
+        "WHERE d.entity_id = %(entity_id)s"
+        " ORDER BY d.decided_at, d.decided_with_decision_id NULLS FIRST, d.id",
+        {"entity_id": entity_id},
     )
 
 
@@ -433,45 +655,21 @@ def rule_for_posting(
 
 def open_questions(
     conn: psycopg.Connection[Any], *, entity_id: str
-) -> tuple[OpenQuestion, ...]:
-    """`BKP-12`'s worklist: every unmatched decision no later decision for its line answered.
+) -> tuple[StoredDecision, ...]:
+    """`BKP-12`'s worklist: every line whose latest decision is a question.
 
-    In the order the activity happened, so the person works through it as the account did. The
-    candidate comes back as it arrived — the payee as the bank sent it rather than as matching
-    normalized it, because that is what a person recognizes.
+    Unmatched, ambiguous or proposed, each with what its search found, so the person sees the
+    candidates or the proposal they are being asked about (ADR-0059 § 4). In the order the
+    activity happened, so the person works through it as the account did.
     """
-    with conn.cursor() as cur:
-        cur.execute(
-            "SELECT d.id, d.transaction_id, d.decided_at, d.candidate_payee_raw,"
-            "       d.candidate_description, d.candidate_amount, d.candidate_commodity,"
-            "       d.candidate_source_account_id, d.candidate_transaction_date,"
-            "       d.candidate_source_kind, d.candidate_source_ref"
-            "  FROM assignment_decision d"
-            " WHERE d.entity_id = %s AND d.outcome = 'unmatched'"
-            "   AND NOT EXISTS (SELECT 1 FROM assignment_decision a"
-            "                    WHERE a.entity_id = d.entity_id"
-            "                      AND a.candidate_source_ref = d.candidate_source_ref"
-            "                      AND a.outcome = 'assigned')"
-            " ORDER BY d.candidate_transaction_date, d.decided_at, d.id",
-            (entity_id,),
-        )
-        rows = cur.fetchall()
-
-    return tuple(
-        OpenQuestion(
-            decision_id=str(row[0]),
-            transaction_id=str(row[1]),
-            decided_at=row[2],
-            candidate=Candidate(
-                payee=row[3],
-                description=row[4],
-                amount=row[5],
-                commodity=row[6],
-                source_account_id=str(row[7]),
-                transaction_date=row[8],
-                source_kind=SourceKind(row[9]),
-                source_ref=row[10],
-            ),
-        )
-        for row in rows
+    return _decisions(
+        conn,
+        "WHERE d.entity_id = %(entity_id)s"
+        "  AND d.outcome IN ('unmatched', 'ambiguous', 'proposed')"
+        "  AND NOT EXISTS (SELECT 1 FROM assignment_decision a"
+        "                   WHERE a.entity_id = d.entity_id"
+        "                     AND a.candidate_source_ref = d.candidate_source_ref"
+        "                     AND a.decided_at > d.decided_at)"
+        " ORDER BY d.candidate_transaction_date, d.decided_at, d.id",
+        {"entity_id": entity_id},
     )

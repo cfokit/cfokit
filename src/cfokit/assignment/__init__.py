@@ -14,6 +14,11 @@ have an equal claim to that word — compliance rules (`NFR-12`), alerting thres
 (`PLT-07`), autonomy configuration (`SOC1-04`) — and it already means "invariant" throughout
 this codebase. `assignment` is `BKP-06`'s own word (ADR-0031).
 
+**Deciding a line starts with the books, not the rules** (ADR-0059). A line the books already
+explain — a payment of an open obligation, an entry made ahead of the feed, the other side of a
+transfer — is that record, and deciding so is assigning it, so the search is this module's too.
+The ledger supplies the reads and learns nothing about what a line is.
+
 **What it does not do.** It stores no incoming transactions. The caller supplies candidates
 and assignment returns decisions; what a decision produces is a draft, which the ledger
 already stores and already keeps out of the books (`LED-07`). Letting this module hold a
@@ -23,11 +28,14 @@ queue of unassigned activity is how `connectors` would have gone wrong.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from enum import StrEnum
 
 __all__ = [
+    "Counterpart",
+    "CounterpartKind",
+    "Fate",
     "Field",
     "Match",
     "Operator",
@@ -82,11 +90,59 @@ class Status(StrEnum):
 
 
 class Outcome(StrEnum):
-    """Two, and nothing between. There is no `ambiguous`: `BKP-08` makes overlap a resolved
-    case rather than a question."""
+    """What became of a line (ADR-0045, ADR-0059 § 5).
+
+    The rules give two: `assigned` and `unmatched`. Overlap among rules is never a question,
+    because `BKP-08` makes it a resolved case. The search before them gives three: `matched` to
+    the one counterpart the books hold; `proposed`, an uploaded line whose one counterpart is an
+    open obligation, which a person confirms (ADR-0047); and `ambiguous`, two or more
+    counterparts, which no stated order chooses between.
+    """
 
     ASSIGNED = "assigned"
     UNMATCHED = "unmatched"
+    MATCHED = "matched"
+    PROPOSED = "proposed"
+    AMBIGUOUS = "ambiguous"
+
+    @property
+    def is_question(self) -> bool:
+        """Whether the line waits on a person: a one-legged draft and a notification."""
+        return self in (Outcome.UNMATCHED, Outcome.PROPOSED, Outcome.AMBIGUOUS)
+
+
+class CounterpartKind(StrEnum):
+    """What a line can turn out to be, in the books already (ADR-0059 § 2)."""
+
+    # A payment the books expect: an obligation outstanding for exactly the line's amount.
+    OBLIGATION = "obligation"
+    # A transaction somebody recorded ahead of the line, by hand or by import, or a transfer
+    # coded from its other side.
+    TRANSACTION = "transaction"
+    # Another line's unanswered question, on another of the entity's accounts, for the negated
+    # amount: the other side of a transfer.
+    TRANSFER = "transfer"
+
+
+@dataclass(frozen=True, slots=True)
+class Counterpart:
+    """A record the books hold that a line could be, as it stood when the search ran.
+
+    Signed as a posting is, so a deposit of 1,200.00 meets a receivable of 1,200.00 and the
+    other side of a transfer is the line's amount negated.
+
+    `id` names an obligation, a ledger transaction, or — for the other side of a transfer —
+    the other line's decision. `account_id` is where it sits: the obligation's carrying account,
+    the line's own account for a recorded transaction, the other line's for a transfer. `on` is
+    when the obligation arose, the transaction is dated, or the other line is.
+    """
+
+    kind: CounterpartKind
+    id: str
+    account_id: str
+    amount: Decimal
+    commodity: str
+    on: date
 
 
 class ResolvedBy(StrEnum):
@@ -174,3 +230,17 @@ class RuleSet:
 
     rules: tuple[RuleVersion, ...]
     as_of: datetime
+
+
+@dataclass(frozen=True, slots=True)
+class Fate:
+    """The whole of what was decided about a line: the search, then the rules.
+
+    `counterparts` is what the search found — one for `matched` and `proposed`, every one for
+    `ambiguous`, none otherwise — in canonical order. `resolution` is the rules' answer, and is
+    consulted only when the search found nothing; otherwise it is the empty resolution.
+    """
+
+    outcome: Outcome
+    counterparts: tuple[Counterpart, ...]
+    resolution: Resolution

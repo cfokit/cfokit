@@ -401,13 +401,54 @@ class EntityWrite:
 
     # --- obligations and settlements (LED-17, ADR-0037) ----------------------------------
 
-    def raise_obligation(self, *, transaction_id: str, amount: Decimal, commodity: str) -> str:
+    def raise_obligation(
+        self, *, transaction_id: str, account_id: str, amount: Decimal, commodity: str
+    ) -> str:
         return obligations.insert_obligation(
             self._conn,
             entity_id=self._entity_id,
             transaction_id=transaction_id,
+            account_id=account_id,
             amount=amount,
             commodity=commodity,
+        )
+
+    def obligations_as_of(
+        self,
+        *,
+        at: datetime,
+        excluding_transaction: str | None = None,
+        obligation_id: str | None = None,
+    ) -> list[obligations.Obligation]:
+        """Every obligation as the books stood at `at`, with what had settled it by then."""
+        return obligations.obligations_as_of(
+            self._conn,
+            entity_id=self._entity_id,
+            at=at,
+            excluding_transaction=excluding_transaction,
+            obligation_id=obligation_id,
+        )
+
+    def movements_as_of(
+        self,
+        *,
+        account_id: str,
+        commodity: str,
+        at: datetime,
+        amount: Decimal | None = None,
+        excluding_transaction: str | None = None,
+        transaction_id: str | None = None,
+    ) -> list[transactions.Movement]:
+        """What each unreversed ordinary transaction moved on one account, as at `at`."""
+        return transactions.movements_as_of(
+            self._conn,
+            entity_id=self._entity_id,
+            account_id=account_id,
+            commodity=commodity,
+            at=at,
+            amount=amount,
+            excluding_transaction=excluding_transaction,
+            transaction_id=transaction_id,
         )
 
     def apply_settlement(

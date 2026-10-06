@@ -15,11 +15,26 @@ import { claudeLink } from "../start/FirstQuestion";
 import { personName } from "../start/StartFrame";
 import { useStarted } from "../start/state";
 
-/** A line no rule resolved and nothing has answered since (`BKP-12`), as the API lists it. */
+/** A record already in the books that a line could be (ADR-0059), as the API lists it. */
+export interface Counterpart {
+  kind: "obligation" | "transaction" | "transfer";
+  id: string;
+  account_id: string;
+  amount: string;
+  commodity: string;
+  date: string;
+}
+
+/**
+ * A line waiting on the person (`BKP-12`), as the API lists it: `unmatched` when no rule covers
+ * it, `ambiguous` when more than one record in the books fits it, `proposed` when it pays an open
+ * invoice and waits to be confirmed. The last two carry the records in `counterparts`.
+ */
 export interface Unresolved {
   source_ref: string;
   transaction_id: string;
   decision_id: string;
+  outcome?: "unmatched" | "ambiguous" | "proposed";
   payee: string;
   description: string;
   amount: string;
@@ -27,7 +42,26 @@ export interface Unresolved {
   source_account_id: string;
   transaction_date: string;
   source_kind: string;
+  counterparts?: Counterpart[];
 }
+
+/** What the line waits on, in the person's words. */
+export function waitingOn(line: Unresolved): string {
+  switch (line.outcome) {
+    case "ambiguous":
+      return "Your choice of match";
+    case "proposed":
+      return "Your confirmation";
+    default:
+      return "A rule";
+  }
+}
+
+const RECORD: Record<Counterpart["kind"], string> = {
+  obligation: "Open invoice",
+  transaction: "Entry already recorded",
+  transfer: "Other side of a transfer",
+};
 
 /** One of the signed-in person's open notifications in this company. */
 export interface Notification {
@@ -47,7 +81,7 @@ export function unresolvedQuestion(company: string, entityId: string): string {
   const which = company === "" ? `entity ${entityId}` : `"${company}" (entity ${entityId})`;
   return (
     `I have transactions in ${which} that CFOKit couldn't categorize. Show me the unresolved ` +
-    `ones and help me set up rules for them.`
+    `ones and help me answer them.`
   );
 }
 
@@ -159,6 +193,14 @@ const COLUMNS: Column[] = [
   { key: "payee", header: "Payee", kind: "text" },
   { key: "date", header: "Date", kind: "text" },
   { key: "description", header: "Description", kind: "text" },
+  { key: "waiting", header: "Waiting on", kind: "text" },
+  { key: "amount", header: "Amount", kind: "money" },
+];
+
+const CANDIDATE_COLUMNS: Column[] = [
+  { key: "line", header: "Transaction", kind: "text" },
+  { key: "record", header: "Could be", kind: "text" },
+  { key: "date", header: "Dated", kind: "text" },
   { key: "amount", header: "Amount", kind: "money" },
 ];
 
@@ -167,10 +209,12 @@ function transactions(count: number): string {
 }
 
 /**
- * What CFOKit is asking the signed-in person about this company: the lines no rule resolved
- * (`BKP-12`). Every `unresolved_transaction` notification links here. They are answered in
- * Claude, by approving a rule and running assignment again (`BKP-09`), not on this page; what the
- * page does itself is dismiss a notification, which is the person's own act (ADR-0056 § 2).
+ * What CFOKit is asking the signed-in person about this company: the lines no rule resolved, and
+ * those that fit more than one record in the books or pay an open invoice, with the records they
+ * could be (`BKP-12`, ADR-0059 § 4). Every `unresolved_transaction` notification links here. They
+ * are answered in Claude — by approving a rule (`BKP-09`), or by the person naming the record a
+ * line is — not on this page; what the page does itself is dismiss a notification, which is the
+ * person's own act (ADR-0056 § 2).
  */
 export function QuestionsPage({ entityId }: { entityId: string }) {
   const auth = useAuth();
@@ -237,10 +281,10 @@ export function QuestionsPage({ entityId }: { entityId: string }) {
         {loaded.state === "ready" && loaded.unresolved.length > 0 && (
           <>
             <p className="max-w-reading-max text-body text-ink">
-              CFOKit couldn&apos;t categorize {transactions(loaded.unresolved.length)}: no rule
-              covers {loaded.unresolved.length === 1 ? "it" : "them"} yet. You answer these in
-              Claude, by approving a rule that covers them; Claude then books them. Nothing on this
-              page changes your books.
+              CFOKit couldn&apos;t categorize {transactions(loaded.unresolved.length)}. You answer
+              these in Claude: by approving a rule that covers a transaction, or by saying which
+              record already in your books it is, or that it is none of them. Claude then books
+              them. Nothing on this page changes your books.
             </p>
             <div>
               <Button variant="primary" onClick={() => window.location.assign(claudeLink(prompt))}>
@@ -301,6 +345,7 @@ function Lines({ unresolved, notifications, dismissing, onDismiss }: LinesProps)
                 payee: name,
                 date: line.transaction_date,
                 description: line.payee === "" ? "" : line.description,
+                waiting: waitingOn(line),
                 amount: line.amount,
               },
               action:
@@ -316,18 +361,39 @@ function Lines({ unresolved, notifications, dismissing, onDismiss }: LinesProps)
                 ),
             };
           });
+        // The records each line could be, as the API listed them: the candidates of an ambiguous
+        // line, or the invoice a proposed one pays (ADR-0059 § 4).
+        const candidates: Row[] = unresolved
+          .filter((line) => line.commodity === commodity)
+          .flatMap((line) =>
+            (line.counterparts ?? []).map((counterpart) => ({
+              id: `${line.source_ref}:${counterpart.kind}:${counterpart.id}`,
+              cells: {
+                line: `${line.payee === "" ? line.description : line.payee}, ${line.transaction_date}`,
+                record: RECORD[counterpart.kind],
+                date: counterpart.date,
+                amount: counterpart.amount,
+              },
+            })),
+          );
+        const suffix = commodities.length === 1 ? "" : `, ${commodity}`;
         return (
-          <MoneyTable
-            key={commodity}
-            caption={
-              commodities.length === 1
-                ? "Transactions waiting for a rule"
-                : `Transactions waiting for a rule, ${commodity}`
-            }
-            currency={commodity}
-            columns={COLUMNS}
-            rows={rows}
-          />
+          <div key={commodity} className="flex flex-col gap-6">
+            <MoneyTable
+              caption={`Transactions waiting for you${suffix}`}
+              currency={commodity}
+              columns={COLUMNS}
+              rows={rows}
+            />
+            {candidates.length > 0 && (
+              <MoneyTable
+                caption={`Records already in your books they could be${suffix}`}
+                currency={commodity}
+                columns={CANDIDATE_COLUMNS}
+                rows={candidates}
+              />
+            )}
+          </div>
         );
       })}
     </>

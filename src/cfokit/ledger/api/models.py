@@ -80,7 +80,9 @@ class RecordTransactionRequest(BaseModel):
     raises_obligation: Money | None = Field(
         default=None,
         description="Record this transaction as raising an obligation of this amount (LED-17) "
-        "— an invoice, or anything else owed. Requires post: a draft is not in the books.",
+        "— an invoice, or anything else owed. Signed as its posting on the account that "
+        "carries it, which must be the only account whose postings here sum to it: positive "
+        "for a receivable, negative for a payable. Requires post: a draft is not in the books.",
     )
     settles: list[AppliedModel] = Field(
         default_factory=list,
@@ -495,6 +497,10 @@ class ObligationModel(BaseModel):
     obligation_id: str
     transaction_id: str
     transaction_date: date
+    account_id: str = Field(
+        description="The account that carries it. The amount is signed as its posting there: "
+        "positive for a receivable, negative for a payable."
+    )
     amount: str
     settled: str
     outstanding: str = Field(

@@ -18,6 +18,7 @@ from cfokit.ledger.engine.accounts import (
 from cfokit.ledger.engine.allocation import allocate, allocate_evenly
 from cfokit.ledger.engine.balance import assert_balanced, is_balanced, totals_by_commodity
 from cfokit.ledger.engine.entry import Entry, Posting
+from cfokit.ledger.engine.obligation import carrying_account
 from cfokit.ledger.engine.postability import check_postable, is_postable
 from cfokit.ledger.engine.reversal import build_reversal
 
@@ -31,6 +32,7 @@ __all__ = [
     "allocate_evenly",
     "assert_balanced",
     "build_reversal",
+    "carrying_account",
     "check_postable",
     "increases",
     "is_balanced",

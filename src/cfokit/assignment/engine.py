@@ -18,16 +18,23 @@ a determinism defect from an operator legitimately editing a rule under `BKP-11`
 
 `evaluate` walks the set in order and the first match wins. Ordering is settled when the set
 is built, so there is nowhere for "whichever is found first" to creep back in (`BKP-08`).
+
+Before any rule, `search` finds what the books already hold that the line could be, and
+`decide` turns that and the rules into the line's whole fate (ADR-0059). The facts compared are
+exact and the windows are constants here, so both are covered by `EVALUATOR_VERSION`.
 """
 
 from __future__ import annotations
 
 import hashlib
 from collections.abc import Iterable
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 from cfokit.assignment import (
+    Counterpart,
+    CounterpartKind,
+    Fate,
     Field,
     Match,
     Operator,
@@ -39,14 +46,28 @@ from cfokit.assignment import (
     RuleVersion,
     Status,
 )
-from cfokit.assignment.candidate import Candidate
+from cfokit.assignment.candidate import Candidate, SourceKind
 
 # The semantics these functions implement. Stored on every decision, because determinism has
 # three inputs and not two: the rule set, the candidate's facts, and what the operators mean.
 # A change here makes older decisions non-comparable, and a replay that ignored that would
 # report a semantic change as a determinism failure — or quietly paper over one. Bumping it
 # is a deliberate act and needs a record (ADR-0045).
-EVALUATOR_VERSION = 1
+#
+# 2: a line is searched against the books before any rule is consulted, under the windows
+# below (ADR-0059). A decision taken under 1 consulted the rules alone.
+EVALUATOR_VERSION = 2
+
+# How far either side of a line a recorded transaction may be dated and still be its
+# counterpart, inclusive. A check clears weeks after it was entered, and an exact amount on one
+# account, unclaimed, is strong evidence across a month (ADR-0059 § 2).
+TRANSACTION_WINDOW = timedelta(days=30)
+
+# How far apart the two sides of a transfer may be dated, inclusive. Two unexplained lines on
+# two accounts are weaker evidence, and a transfer between banks settles within days.
+TRANSFER_WINDOW = timedelta(days=7)
+
+_NONE_FOUND = Resolution(outcome=Outcome.UNMATCHED, winner=None, resolved_by=None, matches=())
 
 # The amount is compared at the scale it is stored at, so a rule written as 1000 and a
 # posting of 1000.0000000000 are the same number rather than nearly the same one (ADR-0005).
@@ -248,3 +269,101 @@ def _compares(actual: Decimal, operator: Operator, expected: Decimal) -> bool:
             return actual <= expected
         case _:
             return False
+
+
+# --- The search before the rules (ADR-0059) -------------------------------------------------
+
+
+def fits(candidate: Candidate, counterpart: Counterpart, *, windowed: bool = True) -> bool:
+    """Whether `counterpart` is one this line could be, on exact facts (ADR-0059 § 2).
+
+    Amounts compare as the numbers they are, so `1200.00` and `1200.0000000000` are equal; a
+    difference of any size is not a counterpart, because a match with a difference has to put
+    the difference somewhere and a holding account is what `BKP-12` rules out.
+
+    `windowed=False` is a person's choice (§ 4): held to the same facts, but not to the dates,
+    so a check that cleared after six weeks is answered by choosing the entry.
+    """
+    if counterpart.commodity != candidate.commodity:
+        return False
+    apart = abs(candidate.transaction_date - counterpart.on)
+    match counterpart.kind:
+        case CounterpartKind.OBLIGATION:
+            # Outstanding for exactly the line's amount, and the line not dated before the
+            # obligation arose. The line's account is not compared: the obligation sits on the
+            # account that carries it, and the line on the one the money moved through.
+            return counterpart.amount == candidate.amount and (
+                not windowed or candidate.transaction_date >= counterpart.on
+            )
+        case CounterpartKind.TRANSACTION:
+            return (
+                counterpart.account_id == candidate.source_account_id
+                and counterpart.amount == candidate.amount
+                and (not windowed or apart <= TRANSACTION_WINDOW)
+            )
+        case CounterpartKind.TRANSFER:
+            return (
+                counterpart.account_id != candidate.source_account_id
+                and counterpart.amount == -candidate.amount
+                and (not windowed or apart <= TRANSFER_WINDOW)
+            )
+
+
+def canonical(counterparts: Iterable[Counterpart]) -> tuple[Counterpart, ...]:
+    """Counterparts in the one order they are stored and digested in.
+
+    Total — kind, then date, then id — so what the search found reads the same whatever order
+    the books returned it in. It states nothing about which is better: an order among equal
+    counterparts is exactly what `ambiguous` declines to invent.
+    """
+    return tuple(sorted(counterparts, key=lambda c: (str(c.kind), c.on, c.id)))
+
+
+def search(candidate: Candidate, pool: Iterable[Counterpart]) -> tuple[Counterpart, ...]:
+    """Every counterpart in `pool` this line could be, in canonical order.
+
+    `pool` is what the books held that could be one — the reader leaves out what a line has
+    already claimed — and this applies the exact facts and the windows, which is why they are
+    constants of this module rather than clauses of a query (ADR-0059).
+    """
+    return canonical(c for c in pool if fits(candidate, c))
+
+
+def decide(candidate: Candidate, found: tuple[Counterpart, ...], rule_set: RuleSet) -> Fate:
+    """A line's whole fate: what the search found, and the rules only where it found nothing.
+
+    Exactly one counterpart and the line is matched to it, unless the line was uploaded and the
+    counterpart is an obligation: a settlement needs its transaction posted, and ADR-0047
+    forbids posting what the session that read the document asked for, so that one is
+    `proposed` for a person to confirm. Two or more and it is `ambiguous`, because choosing
+    among equals is choosing whichever was found first (`BKP-08`). None, and the rules decide.
+    """
+    if len(found) > 1:
+        return Fate(outcome=Outcome.AMBIGUOUS, counterparts=found, resolution=_NONE_FOUND)
+    if len(found) == 1:
+        settles_uploaded = (
+            found[0].kind is CounterpartKind.OBLIGATION
+            and candidate.source_kind is SourceKind.UPLOAD
+        )
+        return Fate(
+            outcome=Outcome.PROPOSED if settles_uploaded else Outcome.MATCHED,
+            counterparts=found,
+            resolution=_NONE_FOUND,
+        )
+    resolution = evaluate(candidate, rule_set)
+    return Fate(outcome=resolution.outcome, counterparts=(), resolution=resolution)
+
+
+def counterpart_digest(counterparts: Iterable[Counterpart]) -> str:
+    """A canonical digest of counterparts, and so the definition of "the books unchanged".
+
+    Over every fact the search compared, in canonical order, with amounts at the stored scale
+    so `1200` and `1200.00` render alike. None found digests too: a line booked by a rule while
+    a counterpart sat in the books is exactly what replay has to be able to catch.
+    """
+    lines = [
+        f"{c.kind}|{c.id}|{c.account_id}|{c.amount.quantize(_SCALE)}|{c.commodity}|"
+        f"{c.on.isoformat()}"
+        for c in canonical(counterparts)
+    ]
+    return hashlib.sha256("\n".join(lines).encode("utf-8")).hexdigest()

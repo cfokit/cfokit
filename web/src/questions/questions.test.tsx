@@ -123,7 +123,7 @@ async function noViolations(container: HTMLElement) {
 describe("questions for you", () => {
   test("lists the lines no rule resolved, as the API gave them, with the person's token", async () => {
     const { container } = page();
-    const table = await screen.findByRole("table", { name: "Transactions waiting for a rule" });
+    const table = await screen.findByRole("table", { name: "Transactions waiting for you" });
     expect(requests.map((r) => r.path).sort()).toEqual([
       `/entities/${ENTITY}`,
       `/entities/${ENTITY}/notifications`,
@@ -249,6 +249,70 @@ describe("questions for you", () => {
     expect(await screen.findByText("Not dismissed")).toBeTruthy();
     expect(screen.getByText(/Only a person can dismiss this/)).toBeTruthy();
     expect(within(table).getByRole("button", { name: /Dismiss the notification/ })).toBeTruthy();
+  });
+
+  test("a line that fits records in the books lists them, as the API gave them", async () => {
+    answers["/unresolved-transactions"] = {
+      status: 200,
+      body: {
+        unresolved: [
+          {
+            ...LINES[0],
+            outcome: "ambiguous",
+            counterparts: [
+              {
+                kind: "transaction",
+                id: "t-9",
+                account_id: "a-1",
+                amount: "-240.0000000000",
+                commodity: "USD",
+                date: "2026-03-01",
+              },
+              {
+                kind: "transaction",
+                id: "t-10",
+                account_id: "a-1",
+                amount: "-240.0000000000",
+                commodity: "USD",
+                date: "2026-03-12",
+              },
+            ],
+          },
+          {
+            ...LINES[1],
+            outcome: "proposed",
+            counterparts: [
+              {
+                kind: "obligation",
+                id: "o-1",
+                account_id: "a-2",
+                amount: "1250.5050000000",
+                commodity: "USD",
+                date: "2026-03-01",
+              },
+            ],
+          },
+        ],
+      },
+    };
+    const { container } = page();
+    const lines = await screen.findByRole("table", { name: "Transactions waiting for you" });
+    const [coffee, transfer] = within(lines).getAllByRole("row").slice(1);
+    expect(coffee?.textContent).toContain("Your choice of match");
+    expect(transfer?.textContent).toContain("Your confirmation");
+
+    const records = screen.getByRole("table", {
+      name: "Records already in your books they could be",
+    });
+    const [first, second, invoice] = within(records).getAllByRole("row").slice(1);
+    expect(first?.textContent).toContain("Blue Bottle, 2026-03-14");
+    expect(first?.textContent).toContain("Entry already recorded");
+    expect(first?.textContent).toContain("2026-03-01");
+    expect(second?.textContent).toContain("2026-03-12");
+    expect(invoice?.textContent).toContain("Transfer in, 2026-03-15");
+    expect(invoice?.textContent).toContain("Open invoice");
+    expect(invoice?.textContent).toContain("1,250.51");
+    await noViolations(container);
   });
 
   test("with nothing waiting, it says so", async () => {

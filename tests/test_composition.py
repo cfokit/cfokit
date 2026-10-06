@@ -128,6 +128,7 @@ def test_the_composed_app_serves_the_assignment_routes() -> None:
         "/entities/{entity_id}/assignment-rules/proposals",
         "/entities/{entity_id}/assignment-runs",
         "/entities/{entity_id}/assignment-replay",
+        "/entities/{entity_id}/unresolved-transactions/answers",
     } <= served
 
 
@@ -148,5 +149,6 @@ def test_the_assignment_tools_are_served_and_need_no_configuration() -> None:
         "approve_assignment_rule",
         "run_assignment",
         "replay_assignments",
+        "answer_unresolved_transaction",
     } <= first
     assert first == second

@@ -220,14 +220,18 @@ class StubAuthenticator:
         return CLAIMS
 
 
+# The bookkeeping skill, acting for the owner: RFC 8693's `act` names the person (ADR-0042).
+AGENT_CLAIMS: dict[str, Any] = {**CLAIMS, "sub": "skill:bookkeeper", "act": {"sub": OWNER.id}}
+
+
 @contextmanager
-def authenticated() -> Iterator[None]:
+def authenticated(claims: dict[str, Any] = CLAIMS) -> Iterator[None]:
     token = AccessToken(
         token="stub",  # noqa: S106 — a stand-in, never validated
-        client_id=OWNER.id,
+        client_id=str(claims["sub"]),
         scopes=[],
-        subject=OWNER.id,
-        claims=CLAIMS,
+        subject=str(claims["sub"]),
+        claims=claims,
     )
     reset = auth_context_var.set(AuthenticatedUser(token))
     try:
@@ -261,6 +265,11 @@ def reply(result: CallToolResult) -> dict[str, Any]:
 
 async def call(server: Any, name: str, **arguments: Any) -> dict[str, Any]:
     with authenticated():
+        return reply(await server.call_tool(name, arguments))
+
+
+async def call_as_agent(server: Any, name: str, **arguments: Any) -> dict[str, Any]:
+    with authenticated(AGENT_CLAIMS):
         return reply(await server.call_tool(name, arguments))
 
 
@@ -409,3 +418,126 @@ async def test_a_misread_statement_is_refused_over_mcp(
         "code": "statement_does_not_balance",
         "message": refused["message"],
     }
+
+
+# --- An uploaded payment of an open invoice waits for a person (ADR-0059 § 3) --------------
+
+
+@pytest.mark.anyio
+async def test_an_uploaded_payment_of_an_open_invoice_is_confirmed_by_a_person(
+    server: Any,
+    database: Database,
+    owned_books: tuple[str, str, str],
+    app_conn: psycopg.Connection[Any],
+) -> None:
+    """ADR-0059's Confirmation, over MCP as Claude Desktop drives it.
+
+    The statement's 250.00 deposit equals the open invoice, so it is a question naming the
+    obligation and no settlement is written: a settlement needs its transaction posted, and the
+    session that read the document may not post what it read (ADR-0047). The delegated agent
+    cannot confirm it (ADR-0042). The person confirming it posts the settling transaction and
+    settles the obligation together."""
+    entity, cash, revenue = owned_books
+    receivable = create_account(
+        database,
+        entity_id=entity,
+        principal=OWNER,
+        request_id="fixture",
+        code="1200",
+        name="Accounts receivable",
+        account_type="asset",
+    )
+    issued = await call(
+        server,
+        "record_transaction",
+        entity_id=entity,
+        transaction_date="2026-03-02",
+        postings=[
+            {"account_id": receivable, "amount": "250.00", "commodity": "USD"},
+            {"account_id": revenue, "amount": "-250.00", "commodity": "USD"},
+        ],
+        description="Invoice 1001",
+        idempotency_key="invoice-1001",
+        post=True,
+        raises_obligation="250.00",
+    )
+    assert issued["ok"], issued
+    [owed] = (await call(server, "outstanding_obligations", entity_id=entity))["obligations"]
+    assert owed["account_id"] == receivable
+
+    recorded = await call(
+        server,
+        "record_account_statement",
+        entity_id=entity,
+        account_id=cash,
+        period_start="2026-03-01",
+        period_end="2026-03-31",
+        opening_balance="0.00",
+        closing_balance="250.00",
+        commodity="USD",
+        lines=[{"transaction_date": "2026-03-09", "payee": "Client A", "amount": "250.00"}],
+    )
+    run = await call(
+        server, "run_assignment", entity_id=entity, candidates=recorded["candidates"]
+    )
+
+    assert run["booked"] == []
+    [asked] = run["unresolved"]
+    assert asked["outcome"] == "proposed"
+    assert [(c["kind"], c["id"]) for c in asked["counterparts"]] == [
+        ("obligation", owed["obligation_id"])
+    ]
+    [question] = (await call(server, "unresolved_transactions", entity_id=entity))["unresolved"]
+    assert (question["outcome"], question["counterparts"]) == (
+        "proposed",
+        asked["counterparts"],
+    )
+    [notification] = (await call(server, "open_notifications", entity_id=entity))[
+        "notifications"
+    ]
+    assert notification["notification_class"] == "unresolved_transaction"
+    assert notification["subject_ref"] == asked["source_ref"]
+    # No settlement: the invoice is owed in full.
+    [still] = (await call(server, "outstanding_obligations", entity_id=entity))["obligations"]
+    assert Decimal(still["outstanding"]) == Decimal("250")
+
+    refused = await call_as_agent(
+        server,
+        "answer_unresolved_transaction",
+        entity_id=entity,
+        source_ref=asked["source_ref"],
+        idempotency_key="confirm-by-agent",
+        counterpart_kind="obligation",
+        counterpart_id=owed["obligation_id"],
+    )
+    assert (refused["ok"], refused["code"]) == (False, "not_a_person")
+
+    confirmed = await call(
+        server,
+        "answer_unresolved_transaction",
+        entity_id=entity,
+        source_ref=asked["source_ref"],
+        idempotency_key="confirm-by-person",
+        counterpart_kind="obligation",
+        counterpart_id=owed["obligation_id"],
+    )
+    assert confirmed["ok"], confirmed
+    assert confirmed["outcome"] == "matched"
+
+    detail = await call(
+        server, "obligation_detail", entity_id=entity, obligation_id=owed["obligation_id"]
+    )
+    assert Decimal(detail["obligation"]["outstanding"]) == 0
+    [settlement] = detail["settlements"]
+    assert settlement["transaction_id"] == confirmed["transaction_id"]
+    with app_conn.cursor() as cur:
+        cur.execute("SELECT set_config('cfokit.entity_id', %s, false)", (entity,))
+        cur.execute(
+            "SELECT status, actor_class FROM ledger_transaction WHERE id = %s",
+            (confirmed["transaction_id"],),
+        )
+        # Posted, and the person's: they — not the session that read the document — decided
+        # the payment happened (`PLT-23`).
+        assert cur.fetchone() == ("posted", "person")
+    assert (await call(server, "unresolved_transactions", entity_id=entity))["unresolved"] == []
+    assert (await call(server, "open_notifications", entity_id=entity))["notifications"] == []
