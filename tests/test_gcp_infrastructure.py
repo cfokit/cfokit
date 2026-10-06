@@ -80,3 +80,11 @@ def test_every_backend_that_runs_code_has_a_security_policy() -> None:
     assert backends
     for name, body in backends:
         assert "security_policy" in body, name
+
+
+def test_no_cloud_armor_expression_has_a_capture_group() -> None:
+    """Cloud Armor refuses a regular expression containing a capture group ("Capture Groups
+    are not allowed"), and only when the policy is created: OpenTofu sees only a string."""
+    armor = (GCP / "armor.tf").read_text(encoding="utf-8")
+    for pattern in re.findall(r"matches\('([^']*)'\)", armor):
+        assert "(" not in pattern.replace("(?:", ""), pattern
