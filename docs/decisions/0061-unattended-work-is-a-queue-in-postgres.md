@@ -126,6 +126,9 @@ running one finishes, so a connection is never synchronized by two runs at once.
   environment (ADR-0004), with a default the kind declares. It is never shown to a customer as a
   setting. Each reference's windows are offset within the interval by a hash of its id, so a
   deployment's connections fall due spread across the interval, never all at the top of the hour.
+  **An operational window is a backstop**: it enqueues a run only if its reference has had no
+  successful run within the interval. Work its cause already did — a feed synchronized on a
+  webhook an hour ago — is not done again because a timer came round.
 
 Each pass of the worker's loop enqueues a run for every window due since the last one enqueued.
 **Each kind declares how missed windows are recovered.** An ingestion kind coalesces them into one
@@ -368,6 +371,10 @@ which would have to be rebuilt as an outbox — this table under another name.
 * Claiming contends: workers waiting on one another, or the run table large enough that the
   due-work query is no longer cheap. A Postgres queue's ceiling is not published anywhere this
   record could find; the symptom is the measure.
+* Completed runs, kept as the record of what ran (§ 4), grow the run table to where its size is a
+  cost of its own — at about eight runs a connection a day, tens of millions of rows a year at ten
+  thousand connections. That is the case for partitioning it by month, and for a retention rule for
+  run records under `PLT-19`.
 * A deployment needs more of a provider's limit than its share, which is a conversation with the
   provider before it is a change here.
 * A second cloud target is added that offers no always-running runtime without ingress.

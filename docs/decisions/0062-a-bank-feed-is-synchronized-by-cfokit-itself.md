@@ -364,7 +364,8 @@ It remains the implementation where there is no KMS, which is the local default 
 
 * [ADR-0061](0061-unattended-work-is-a-queue-in-postgres.md) gains a feed kind: operational and
   ingestion, missed windows coalesced, throttled to Plaid's 2,500 sync calls a minute per client. Its
-  backstop interval is `FEED_SYNC_INTERVAL`, six hours by default. No entity sets it: the provider's
+  backstop interval is `FEED_SYNC_INTERVAL`, six hours by default, and a connection synchronized
+  within it is not synchronized again by the backstop. No entity sets it: the provider's
   webhook drives syncs, Plaid refreshes from an institution on its own timing one to four times a
   day, and it bills per connection rather than per call, so a customer's choice of interval would buy
   neither fresher books nor a lower bill (`BKP-16`).
