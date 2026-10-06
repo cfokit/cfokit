@@ -1,0 +1,5 @@
+#!/bin/sh
+# Runs every host gate before a push, so a failure costs seconds here rather than a CI run.
+# Opt-in. Install once per clone:  git config core.hooksPath scripts/hooks
+# Skip one push with `git push --no-verify`. It checks the working tree, so commit first.
+exec uv run task check

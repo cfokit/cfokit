@@ -98,6 +98,7 @@ adopts a specification workflow is undecided and needs its own record. (ADR-0001
 
 ```
 uv sync                          # install everything
+uv run task check                # every host gate, cheapest first; web/ only if it changed. Run before pushing
 uv run task test                 # the tests needing no infrastructure; integration skips
 uv run task test <path>          # scope it, e.g. tests/test_migrations.py
 uv run task lint                 # ruff + mypy --strict + import-linter + async boundary

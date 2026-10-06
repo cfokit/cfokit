@@ -180,8 +180,19 @@ docker compose --profile test build test   # before running the test suite
 ## Running the checks
 
 ```bash
-uv run task lint
-uv run task test
+uv run task check
+```
+
+That runs every gate CI runs on the host, cheapest first, and stops at the first failure: format,
+lint, types, import contracts, the async boundary, the money and decision gates, the published
+interfaces, and the unit and documentation tests. It adds the web client's checks when your
+branch changes `web/`, `docs/contracts/` or `docs/design/`. `uv run task lint` and
+`uv run task test` run parts of it on their own.
+
+To run it before every push, install the hook once per clone (`git push --no-verify` skips it):
+
+```bash
+git config core.hooksPath scripts/hooks
 ```
 
 CI runs these and more on every pull request.

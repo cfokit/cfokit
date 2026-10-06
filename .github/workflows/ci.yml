@@ -29,6 +29,55 @@ env:
   UV_VERSION: "0.11.33"
 
 jobs:
+  # Whether a pull request changes anything the stack, its image or the web client is built or
+  # tested from. When it changes only prose nothing reads, the three jobs that build the stack
+  # or the client (web, portability, e2e) are skipped, and every gate a documentation change can
+  # break still runs: lint, money, decisions, contracts, and the unit and documentation tests.
+  #
+  # Prose here means: Markdown anywhere except web/ (Prettier checks it there) and the root
+  # README.md (the image copies it as package metadata), plus docs/ and .claude/, except
+  # docs/contracts/ and docs/design/, which the web client reads. The image cannot see the rest:
+  # .dockerignore excludes docs/ and .claude/, and nothing in the stack reads the Markdown it
+  # copies. Every other path, including an unrecognized one, counts as code.
+  #
+  # A push to main and a manual run always count as code, so main is always fully proved.
+  changes:
+    name: what changed
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.classify.outputs.code }}
+    steps:
+      # A pull request checks out its merge commit; its first parent is the base it merges into,
+      # so the diff between them is exactly what the pull request changes.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - id: classify
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" != "pull_request" ]; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            echo "A $EVENT run checks everything."
+            exit 0
+          fi
+          code=false
+          changed=$(git diff --name-only HEAD^1 HEAD)
+          while IFS= read -r path; do
+            [ -n "$path" ] || continue
+            case "$path" in
+              web/*|docs/contracts/*|docs/design/*|README.md) kind=code ;;
+              *.md|docs/*|.claude/*) kind=prose ;;
+              *) kind=code ;;
+            esac
+            echo "$kind: $path"
+            if [ "$kind" = code ]; then code=true; fi
+          done <<< "$changed"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          echo "Changes code: $code"
+
   # Gate 1 — ruff, mypy --strict, import-linter layer contracts.
   lint:
     name: "Gate 1: lint"
@@ -91,6 +140,8 @@ jobs:
   # and no Node in any other job but the end-to-end one, which drives a browser at the stack.
   web:
     name: web client
+    needs: [changes]
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -113,6 +164,8 @@ jobs:
   # credentials. This job must never be given any (ADR-0004).
   portability:
     name: "Gate 2: portability (no cloud credentials)"
+    needs: [changes]
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -184,6 +237,8 @@ jobs:
   # and published from main for the README.
   e2e:
     name: getting started, end to end
+    needs: [changes]
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -310,18 +365,37 @@ jobs:
   gates:
     name: All gates
     if: always()
-    needs: [lint, money, decisions, test, web, portability, e2e, contracts]
+    needs: [changes, lint, money, decisions, test, web, portability, e2e, contracts]
     runs-on: ubuntu-latest
     steps:
       - name: Fail if any gate failed
         # Each result is checked individually and compared exactly. Substring-matching the
         # joined string would pass on "success failure success", and inverted grep is easy
         # to get subtly wrong, so neither is used here.
+        #
+        # Every job in `needs` must succeed. The one exception is `skipped`, accepted only for
+        # web, portability and e2e, and only when `changes` succeeded and said the pull request
+        # changes no code. A skip for any other reason (a failed `changes` skips its dependents
+        # too) fails here, as do failure and cancellation.
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+          CHANGES_CODE: ${{ needs.changes.outputs.code }}
+          CHANGES_RESULT: ${{ needs.changes.result }}
         run: |
           failed=0
-          for result in ${{ join(needs.*.result, ' ') }}; do
-            echo "gate result: $result"
-            if [ "$result" != "success" ]; then failed=1; fi
+          for job in $(jq -r 'keys[]' <<< "$NEEDS"); do
+            result=$(jq -r --arg job "$job" '.[$job].result' <<< "$NEEDS")
+            echo "gate $job: $result"
+            if [ "$result" = "success" ]; then continue; fi
+            if [ "$result" = "skipped" ] && [ "$CHANGES_RESULT" = "success" ] \
+               && [ "$CHANGES_CODE" = "false" ]; then
+              case "$job" in
+                web|portability|e2e)
+                  echo "  skipped: the pull request changes no code this job builds or tests"
+                  continue ;;
+              esac
+            fi
+            failed=1
           done
           if [ "$failed" -ne 0 ]; then
             echo "::error::One or more CI gates did not succeed."

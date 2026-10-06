@@ -90,6 +90,7 @@ dev = { cmd = "docker compose -f compose.yaml -f compose.dev.yaml up", help = "L
 "check-money" = { cmd = "python scripts/check_money.py", help = "CI gate 4: no floats touch money, in schema or code (ADR-0005)" }
 "check-decisions" = { cmd = "python scripts/check_decisions.py", help = "CI gate 6: the decision corpus is well-formed (ADR-0001)" }
 "generate-contracts" = { cmd = "python scripts/generate_contracts.py", help = "CI gate 5: regenerate the published interfaces; a diff is a contract change (ADR-0015)" }
+check = { cmd = "python scripts/check.py", help = "Every gate that runs on the host, cheapest first, failing fast; the web client's only when it changed" }
 
 # ---------------------------------------------------------------------------
 # ruff
