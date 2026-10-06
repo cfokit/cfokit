@@ -79,6 +79,7 @@ foreseen, not the complete set.
 |---|---|---|
 | Slack as a delivery surface | [ADR-0021](0021-slack-as-a-delivery-surface.md) | 2026-08-18 |
 | A web client, not an admin console | [ADR-0049](0049-cfokit-has-a-web-client.md) | 2026-09-29 |
+| A work queue, not an event bus | [ADR-0061](0061-unattended-work-is-a-queue-in-postgres.md) | 2026-10-06 |
 
 Slack was never literally on the list, but two ways of building it are — Socket Mode is a websocket,
 and a chat surface is adjacent enough to "web UI" that building one unrecorded would be the drift
