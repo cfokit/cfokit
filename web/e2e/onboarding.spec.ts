@@ -1,7 +1,10 @@
 /**
  * Getting started, end to end (ADR-0058; ADR-0049's confirmation): a new person creates an account
  * on the issuer's page, chooses the sample export, confirms the company, imports, and reaches the
- * first question — in a real browser, against the compose stack, as the person would.
+ * first question — in a real browser, against the compose stack, as the person would. Against an
+ * issuer that requires a second factor (E2E_REQUIRE_SECOND_FACTOR=true, matching the stack's
+ * CFOKIT_REQUIRE_SECOND_FACTOR), the person also sets up an authenticator app before their first
+ * session (SOC2-19).
  *
  * Every expected figure is one the synthetic export states for itself (`synthetic.ts`): two
  * transactions, 1,200.00 and 12.50, a journal total of 1,212.50, and a general ledger stating three
@@ -12,6 +15,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import Big from "big.js";
 import { syntheticExport } from "../src/quickbooks/synthetic.ts";
+import { totp } from "./totp.ts";
 
 // A pause on each screen so a person watching the recording can read it, and typing a person can
 // see; neither in a gate run.
@@ -19,6 +23,10 @@ const PACE = Number(process.env.E2E_PACE ?? "0");
 const settle = (page: Page) => (PACE > 0 ? page.waitForTimeout(PACE) : Promise.resolve());
 const type = (field: Locator, text: string) =>
   PACE > 0 ? field.pressSequentially(text, { delay: 35 }) : field.fill(text);
+
+// Whether the stack under test requires a second factor: a test that guessed would pass against
+// either and prove neither.
+const SECOND_FACTOR_REQUIRED = process.env.E2E_REQUIRE_SECOND_FACTOR === "true";
 
 interface TrialBalance {
   balances: boolean;
@@ -54,6 +62,19 @@ test("a new person goes from creating an account to their first question", async
   await type(page.getByLabel("Confirm password"), `Sample-${stamp}-password`);
   await settle(page);
   await page.getByRole("button", { name: "Create account" }).click();
+
+  // Where the deployment requires it, a second factor before the first session exists (SOC2-19):
+  // the key an authenticator app would hold, entered by hand, and the code it would show.
+  if (SECOND_FACTOR_REQUIRED) {
+    await expect(page.getByRole("heading", { name: "Set up two-step sign-in" })).toBeVisible();
+    await settle(page);
+    await page.getByRole("link", { name: "Can't scan it? Enter a key instead" }).click();
+    const key = await page.locator("li code").innerText();
+    await type(page.getByLabel("Device name"), "Phone");
+    await type(page.getByLabel("Code", { exact: true }), totp(key));
+    await settle(page);
+    await page.getByRole("button", { name: "Turn on" }).click();
+  }
 
   // Back in CFOKit, signed in: choose the export.
   await expect(page.getByRole("heading", { name: "Bring in your books" })).toBeVisible();

@@ -113,6 +113,12 @@ Any conforming issuer must provide:
 - The **client credentials grant**, for separate components authenticating as machine callers
   (ADR-0032 — an extension to the contract originally set in ADR-0019)
 
+**A deployment operated as a service requires a second factor of every person** (`SOC2-19`), and
+that is the issuer's configuration rather than the application's, so it is not in the table
+above. The default issuer requires one when `CFOKIT_REQUIRE_SECOND_FACTOR` is `true`, read when
+the realm is imported; unset, a second factor is the person's choice. `infra/keycloak/README.md`
+says what each setting does.
+
 **One identity, and one port, from every side.** A client is handed the issuer's address in the
 ledger's protected-resource metadata and goes to it directly, so a port mapped to a different
 number outside the network makes that address wrong for exactly one side — and on a network
