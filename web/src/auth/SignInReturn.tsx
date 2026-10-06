@@ -21,6 +21,8 @@ export function SignInReturn() {
           <Button
             variant="primary"
             onClick={() => {
+              // To the client's root, not the page they started from: that was stored with the
+              // sign-in that failed, and is gone with it.
               window.history.replaceState(null, "", "/app/");
               void auth.signinRedirect({ state: "/app/" });
             }}

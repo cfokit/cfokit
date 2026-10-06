@@ -52,7 +52,9 @@ Run `lint`, `test` and `build` before reporting work complete, as the `web clien
   party; everything is bundled. The CSP is `default-src 'self'`. (ADR-0049 § 6)
 - **A file the build serves is named by its content hash** unless its name must stay fixed, as
   `index.html`'s and the license texts' do. A hashed file is cached for a year by a browser or
-  any CDN and needs no purge on deploy; a fixed name is revalidated on every request. Import
+  any CDN and needs no purge on deploy; a fixed name is revalidated on every request, except
+  `index.html`, which a CDN never stores, because the deep-link fallback passes on a
+  revalidation's empty body. Import
   fonts, images and icons by path from `design/` or `src/`; `public/` holds only fixed names. (ADR-0055 § 2)
 - **Nothing about the books or the session in browser storage.** Tokens live in page memory. The
   one exception is the PKCE verifier and `state`, in `sessionStorage` for the sign-in round trip
