@@ -209,15 +209,19 @@ resource "google_cloud_run_v2_service" "issuer" {
         startup_cpu_boost = true
       }
 
-      # Health is on Keycloak's management port, which Cloud Run cannot probe; the serving port
-      # accepting connections is what a startup probe can see.
+      # Ready when a realm answers, not when the port opens: Keycloak listens before it has
+      # bootstrapped and answers 503 until it has. Until this passes the instance is starting and
+      # has its full CPU, so the bootstrap finishes before traffic arrives rather than crawling
+      # between throttled requests. Health is on the management port, which Cloud Run cannot probe.
       startup_probe {
-        tcp_socket {
+        http_get {
+          path = "/realms/master"
           port = 8080
         }
         initial_delay_seconds = 10
         period_seconds        = 10
-        failure_threshold     = 18
+        timeout_seconds       = 5
+        failure_threshold     = 30
       }
     }
   }
