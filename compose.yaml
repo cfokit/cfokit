@@ -327,6 +327,10 @@ volumes:
 # An extra certificate authority for image builds whose network re-terminates TLS. Empty unless
 # BUILD_CA_FILE names one; the Dockerfile ignores it when empty. Set only by the Claude Code
 # cloud session hook (.claude/hooks/session-start.sh).
+#
+# The file is always inside the project. Compose builds through `buildx bake`, which refuses to
+# read a path outside the working directory unless granted (`--allow=fs.read=...`); /dev/null,
+# the old default, failed every compose build on the 2026-10-04 runner image.
 secrets:
   build_ca:
-    file: ${BUILD_CA_FILE:-/dev/null}
+    file: ${BUILD_CA_FILE:-./infra/no-build-ca.pem}

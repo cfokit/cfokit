@@ -309,6 +309,8 @@ jobs:
   # session. Unpaced and unrecorded; the screencast is the default stack's.
   e2e-second-factor:
     name: getting started, second factor required
+    needs: [changes]
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     env:
       CFOKIT_REQUIRE_SECOND_FACTOR: "true"
@@ -417,7 +419,7 @@ jobs:
   gates:
     name: All gates
     if: always()
-    needs: [changes, lint, money, decisions, test, web, portability, e2e, contracts]
+    needs: [changes, lint, money, decisions, test, web, portability, e2e, e2e-second-factor, contracts]
     runs-on: ubuntu-latest
     steps:
       - name: Fail if any gate failed
@@ -442,7 +444,7 @@ jobs:
             if [ "$result" = "skipped" ] && [ "$CHANGES_RESULT" = "success" ] \
                && [ "$CHANGES_CODE" = "false" ]; then
               case "$job" in
-                web|portability|e2e)
+                web|portability|e2e|e2e-second-factor)
                   echo "  skipped: the pull request changes no code this job builds or tests"
                   continue ;;
               esac
