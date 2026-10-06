@@ -5,12 +5,14 @@
 # shellcheck source=env.sh
 . "$(dirname "$0")/env.sh"
 
-step "Cloud SQL's service agent"
-# It encrypts the database with the project's own key, so it must exist before the key's policy
-# can name it; on a new project it may not yet.
-gcloud services enable sqladmin.googleapis.com --quiet
-gcloud beta services identity create --service=sqladmin.googleapis.com --quiet >/dev/null
-done_ "exists"
+step "Service agents"
+# Cloud SQL's encrypts the database with the project's own key, and IAP's reaches the issuer's
+# admin console; each must exist before a policy can name it, and on a new project neither does.
+gcloud services enable sqladmin.googleapis.com iap.googleapis.com --quiet
+for service in sqladmin.googleapis.com iap.googleapis.com; do
+  gcloud beta services identity create --service="$service" --quiet >/dev/null
+done
+done_ "exist"
 
 step "Network, database, secret containers, identities"
 need "Creating a Cloud SQL instance takes 10 to 15 minutes the first time."

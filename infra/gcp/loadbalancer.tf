@@ -107,6 +107,15 @@ resource "google_compute_backend_service" "issuer_admin" {
   }
 }
 
+# IAP reaches Cloud Run as its own service agent, which must exist (setup/foundation.sh creates
+# it; a new project has none) and may invoke the issuer.
+resource "google_cloud_run_v2_service_iam_member" "iap" {
+  name     = google_cloud_run_v2_service.issuer.name
+  location = var.region
+  role     = "roles/run.invoker"
+  member   = "serviceAccount:service-${data.google_project.this.number}@gcp-sa-iap.iam.gserviceaccount.com"
+}
+
 resource "google_iap_web_backend_service_iam_member" "admin" {
   for_each            = toset(var.admin_members)
   web_backend_service = google_compute_backend_service.issuer_admin.name
