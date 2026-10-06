@@ -14,9 +14,12 @@ decision-makers: [Geoff Scott]
 Everything CFOKit does today happens inside a request someone made. Several requirements need work
 that no request starts:
 
-* `BKP-16`: feeds synchronize "on a schedule the entity controls, with no person triggering them".
-* `PLT-14`: scheduled work "runs on a timer the entity controls. A missed window is recoverable
-  rather than skipped in silence, and every run is attributable in the same way a person's action is."
+* `BKP-16`: feeds synchronize with no person triggering them, when the source reports new activity
+  and in any case within an interval the deployment sets.
+* `PLT-14`: scheduled work runs on a timer — the entity's where its timing is a business decision,
+  such as when an invoice recurs, and the deployment's where it is operational, such as how often a
+  feed is checked. "A missed window is recoverable rather than skipped in silence, and every run is
+  attributable in the same way a person's action is."
 * `PLT-07`: a scheduled run that did not complete reaches the people who operate the entity.
 * `PLT-10` and `PLT-12`: suspension halts every scheduled job and cancels outbound work in flight;
   on resume, ingestion backfills the suspended period and canceled outbound work is not replayed.
@@ -43,15 +46,19 @@ is a second thing to deploy and a second place for that skew to hide.
 
 Four existing records bound the answer. [ADR-0023](0023-one-image-many-entrypoints.md) allowed two
 runtime shapes, a request-serving service and a one-shot job, and ruled out long-running workers. It
-also treated a run schedule as infrastructure, which `BKP-16` and `PLT-14` contradict: a schedule
-the entity controls is the entity's data. [ADR-0003](0003-postgres-as-sole-storage-backend.md) allows no
+also treated a run schedule as infrastructure, which `PLT-14` contradicts for business timing: when
+an entity's invoice recurs is the entity's data. [ADR-0003](0003-postgres-as-sole-storage-backend.md) allows no
 second store. [ADR-0012](0012-binding-non-goals-and-scope-discipline.md) gates an event bus. And
 `NFR-11` and `NFR-17` require every capability, scheduled work included, to run on one machine with
 no cloud account.
 
 ## Decision Drivers
 
-* A schedule is the entity's to set and change, with each change recorded (`PLT-15`).
+* A business schedule is the entity's to set and change, with each change recorded (`PLT-15`). An
+  operational interval is the deployment's, and is never asked of a customer.
+* Many entities' work never falls due at the same instant, and no entity's backlog holds up
+  another's.
+* Unattended work stays inside the limits of the services it calls.
 * Work that is due survives a crash, a failed attempt, or a missed timer, and is recovered rather
   than lost (`PLT-14`).
 * Work is enqueued in the same commit as whatever caused it, or not at all — a webhook acknowledged
@@ -99,22 +106,31 @@ connection, a schedule), the window it covers, and when it becomes due. It is in
 transaction as what caused it: a verified webhook, a person's request, or a schedule's window
 falling due. A cause that commits has enqueued its work; one that rolls back has not.
 
-**At most one open run per entity, kind and reference.** A second cause while one is waiting joins
-it rather than adding another. Plaid sends duplicate and out-of-order webhooks and asks for
-idempotent handling; this is where that is satisfied.
+**At most one waiting run per entity, kind and reference, and at most one running.** A cause
+arriving while a run waits joins it rather than adding another; Plaid sends duplicate and
+out-of-order webhooks and asks for idempotent handling, and this is where that is satisfied. A cause
+arriving while a run is already running enqueues a new waiting run, because what it announces may
+have arrived after the running one read its source. The waiting run is not claimed until the
+running one finishes, so a connection is never synchronized by two runs at once.
 
-### 2. A schedule is the entity's row, and a missed window is coalesced, never skipped
+### 2. A schedule is the entity's where its timing is a business decision, and a missed window is never skipped
 
-A schedule is a cadence for one kind of work, in the entity's time zone (`PLT-08`), within bounds the
-kind declares — a feed may run every few hours, never every few seconds. It is a chain of versions,
-appended and never edited, so the cadence in force at any moment is recoverable and every change
-names who made it (`PLT-15`), the shape [ADR-0045](0045-assignment-is-stored-rules.md) § 2 gives a
-rule.
+**Each kind declares whose its timing is.**
 
-Each pass of the worker's loop enqueues a run for every window due since the last one enqueued. **Each kind declares how
-missed windows are recovered.** An ingestion kind coalesces them into one run over the whole span,
-because one sync catches up any gap. A kind whose windows are distinct — one recurring invoice per
-month — enqueues one run per window. A missed window is never dropped.
+* **A business kind** — a recurring invoice, a scheduled report — has a schedule the entity sets: a
+  cadence in the entity's time zone (`PLT-08`), within bounds the kind declares. It is a chain of
+  versions, appended and never edited, so the cadence in force at any moment is recoverable and every
+  change names who made it (`PLT-15`), the shape [ADR-0045](0045-assignment-is-stored-rules.md) § 2
+  gives a rule.
+* **An operational kind** — a feed's backstop sync — has an interval the deployment sets, in its
+  environment (ADR-0004), with a default the kind declares. It is never shown to a customer as a
+  setting. Each reference's windows are offset within the interval by a hash of its id, so a
+  deployment's connections fall due spread across the interval, never all at the top of the hour.
+
+Each pass of the worker's loop enqueues a run for every window due since the last one enqueued.
+**Each kind declares how missed windows are recovered.** An ingestion kind coalesces them into one
+run over the whole span, because one sync catches up any gap. A kind whose windows are distinct —
+one recurring invoice per month — enqueues one run per window. A missed window is never dropped.
 
 ### 3. One worker, always running, deployed as the application is
 
@@ -124,11 +140,19 @@ composition point knows the module list; the handlers live in their modules. It 
 * **Enqueue** a run for every schedule window that has come due (§ 2).
 * **Claim:** a short transaction selects due runs with `FOR UPDATE SKIP LOCKED`, marks them running
   under a lease, and commits. Two workers never take the same run; a run whose worker died is due
-  again when its lease expires.
+  again when its lease expires. The claim takes the oldest due run of each entity in turn, never a
+  second run of an entity that has one running, so one entity's backlog — a first sync of two
+  years' history — delays only that entity.
+* **Throttle:** a kind that calls an outside service declares that service's limit, and the worker
+  starts no more of its runs than the limit allows. Plaid's is 2,500 `/transactions/sync` calls a
+  minute per client. With more than one instance, each takes an equal share.
 * **Run:** each handler runs in its entity's scope — `cfokit.entity_id` set, row-level security in
   force — and takes the entity's lock for any ledger write, as every write does
   ([ADR-0011](0011-entity-advisory-lock.md)).
 * **Wait** a few seconds when nothing was due, then loop.
+
+The worker runs several runs at once, in threads, up to a bound it is configured with. Handlers are
+synchronous code holding a transaction, as ADR-0024 requires inside the ledger.
 
 Its loop is the only timer. What runs when is the schedules' business, held in the database, so a
 schedule changes without a deploy and the worker changes only when the code does.
@@ -157,7 +181,9 @@ webhook delivery, or the request id — and every `audit_log` row a handler writ
 id as its request id, so a change made unattended traces to the schedule, and the schedule to the
 person who set it. That record, over a period, is `PLT-18`'s "what the system did unattended".
 
-A failed attempt is retried with backoff up to a bound the kind declares. A run that exhausts it is
+A failed attempt is retried with exponential backoff and full jitter — a random delay up to the
+backoff, so retries after a shared failure do not arrive together — up to a bound the kind declares.
+A provider's refusal for its rate limit is a failed attempt like any other. A run that exhausts it is
 failed, and a notification is raised (`PLT-07`, [ADR-0052](0052-notifications-are-records-delivered-after-commit.md)).
 Nothing fails silently.
 
@@ -196,6 +222,10 @@ claimed, so what the claim learns is only that an entity has work due.
   undo with a side effect of its own.
 * Bad, because the run table is read across entities, an exception to row-level security that has
   to stay content-free to stay harmless.
+* Bad, because a Postgres queue degrades in known ways: dead rows from completed runs bloat the
+  table, and one long-running transaction anywhere in the database holds back the cleanup of all of
+  them. Completed runs are kept as the record of what ran (§ 4), so the claim reads from an index
+  over open runs only.
 * Neutral, because [ADR-0023](0023-one-image-many-entrypoints.md) gains a third runtime shape, the
   worker, beside the service and the job.
 
@@ -203,7 +233,10 @@ claimed, so what the claim learns is only that an entity has work due.
 
 Integration tests drive one pass of the worker's loop as a function against the compose database: a
 run enqueued in a transaction that rolls back is never claimed; two concurrent workers never claim
-the same run; an expired lease makes a run due again; a stop signal claims nothing more; a missed span coalesces for an ingestion kind and enumerates
+the same run; a cause arriving during a run enqueues one waiting run that is claimed only after the
+running one finishes; an entity with a backlog does not delay another entity's due run; a throttled
+kind starts no more runs than its limit; operational windows for many references are spread across
+the interval; an expired lease makes a run due again; a stop signal claims nothing more; a missed span coalesces for an ingestion kind and enumerates
 for a windowed one; a suspended entity's runs are not claimed and its outbound runs are canceled; a
 run that exhausts its retries raises a notification.
 
@@ -256,7 +289,8 @@ a worker already written.
 * Bad, because it is a seventh runtime dependency (MIT, 3.10.0), and its worker requires an async
   connector: the synchronous psycopg 3 connector "may only be used for deferring jobs". pgqueuer and
   Chancy (both MIT) are the same trade.
-* Bad, because the parts this record needs most — schedules the entity controls and versions,
+* Bad, because the parts this record needs most — business schedules the entity versions, fairness
+  between entities, throttling against a provider's limit,
   per-kind recovery of missed windows, suspension semantics, runs attributable through `audit_log` —
   are ours to write either way. What the library supplies is the claim, which is the part that is a
   few lines of SQL.
@@ -332,6 +366,9 @@ which would have to be rebuilt as an outbox — this table under another name.
 * One worker cannot keep up: runs waiting behind others long enough that the queue's lag is visible.
   More instances are the first answer, and they are already safe.
 * Claiming contends: workers waiting on one another, or the run table large enough that the
-  due-work query is no longer cheap.
+  due-work query is no longer cheap. A Postgres queue's ceiling is not published anywhere this
+  record could find; the symptom is the measure.
+* A deployment needs more of a provider's limit than its share, which is a conversation with the
+  provider before it is a change here.
 * A second cloud target is added that offers no always-running runtime without ingress.
 * Plaid stops requiring webhooks, or a feed provider pushes data rather than announcing it.

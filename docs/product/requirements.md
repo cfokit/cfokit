@@ -197,7 +197,7 @@ Getting transactions in, deciding where they belong, and agreeing that the books
 | **BKP-13** | An incoming transaction can be matched to a record the books already hold — an expected payment, or a transaction entered by hand ahead of the feed — rather than creating a duplicate. | Must | Approved |
 | **BKP-14** | A movement between two of the entity's own accounts is recognized as one transfer rather than as unrelated income and expense, whether it arrives as two feed transactions or one. | Must | Approved |
 | **BKP-15** | An account can be reconciled against a statement balance for a period, and the reconciliation is a durable record of the account having been agreed as of that date. A reconciliation later found to be wrong is superseded by a new one rather than edited, and both remain visible. | Must | Approved |
-| **BKP-16** | Feeds synchronize on a schedule the entity controls, with no person triggering them. | Must | Approved |
+| **BKP-16** | Feeds synchronize with no person triggering them: when the source reports new activity, and in any case within an interval the deployment sets, so that a lost notice from the source delays the books rather than leaving them behind. | Must | Approved |
 | **BKP-17** | A document — a receipt, an invoice, a statement — can be attached to a transaction, an account, or a period, and is retained and exported with what it is attached to. | Could | Deferred — activates when an entity needs supporting documents held with its books. Not built before then |
 | **BKP-18** | A document supplies the content of a draft transaction, which is then assigned and posted like any other. | Could | Deferred — activates with BKP-17 |
 | **BKP-19** | Where a transaction was derived from something outside the books — a feed record, an uploaded statement, a document — it records what it came from, and that link survives for the life of the transaction. | Must | Approved |
@@ -383,7 +383,7 @@ records about itself.
 
 | | Requirement | Priority | Status |
 |---|---|---|---|
-| **PLT-14** | Work that must happen on a schedule rather than in response to a request runs on a timer the entity controls. A missed window is recoverable rather than skipped in silence, and every run is attributable in the same way a person's action is. | Must | Approved |
+| **PLT-14** | Work that must happen on a schedule rather than in response to a request runs on a timer. Where its timing is a business decision — when an invoice recurs, when a report is sent — the entity sets it; where its timing is operational — how often a feed is checked — the deployment does. A missed window is recoverable rather than skipped in silence, and every run is attributable in the same way a person's action is. | Must | Approved |
 | **PLT-15** | Every change to configuration that affects what the system does — feeds, schedules, reminder cadences, thresholds, display scale, retention — is recorded with what changed, who changed it, and when, and the prior value remains retrievable. | Must | Approved |
 | **PLT-16** | An entity can retrieve a complete record of every change made to its books — what changed, who changed it, and when. | Must | Approved |
 | **PLT-17** | Security-relevant events — authentication, refused authorization, role change, export, and deletion — are recorded and retrievable independently of the books they concern. | Must | Approved |

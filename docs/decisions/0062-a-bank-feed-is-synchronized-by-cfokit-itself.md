@@ -13,7 +13,8 @@ decision-makers: [Geoff Scott]
 ## Context and Problem Statement
 
 `BKP-01` requires transactions to arrive from bank and card accounts without manual entry, and
-`BKP-16` requires them to arrive on a schedule with no person triggering them. Today every line
+`BKP-16` requires them to arrive with no person triggering them, when the source reports new activity
+and in any case within an interval the deployment sets. Today every line
 arrives from a statement a person uploads ([ADR-0046](0046-a-statement-proves-itself.md)), and is
 drafted rather than posted, because a model transcribed it
 ([ADR-0047](0047-an-uploaded-line-is-drafted.md)).
@@ -361,8 +362,12 @@ It remains the implementation where there is no KMS, which is the local default 
 
 **Follow-on obligations.**
 
-* [ADR-0061](0061-unattended-work-is-a-queue-in-postgres.md) gains a feed kind: ingestion, missed
-  windows coalesced, a default cadence of every six hours within bounds of one to twenty-four.
+* [ADR-0061](0061-unattended-work-is-a-queue-in-postgres.md) gains a feed kind: operational and
+  ingestion, missed windows coalesced, throttled to Plaid's 2,500 sync calls a minute per client. Its
+  backstop interval is `FEED_SYNC_INTERVAL`, six hours by default. No entity sets it: the provider's
+  webhook drives syncs, Plaid refreshes from an institution on its own timing one to four times a
+  day, and it bills per connection rather than per call, so a customer's choice of interval would buy
+  neither fresher books nor a lower bill (`BKP-16`).
 * [ADR-0063](0063-a-feed-provider-webhook-only-marks-a-connection-due.md) decides the provider's
   webhook, the signal that a connection has new data.
 * [ADR-0045](0045-assignment-is-stored-rules.md) § 1 is corrected in place: a feed is synchronized by

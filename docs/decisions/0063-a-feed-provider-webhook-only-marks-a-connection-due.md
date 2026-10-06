@@ -102,8 +102,8 @@ connection's history.
 
 The route is served only where a feed provider is configured. A connection is created with a webhook
 URL only where `PUBLIC_BASE_URL` is set. Where it is not, or Plaid cannot reach it, the
-connection's schedule syncs it, which Plaid's own guidance requires as a backstop anyway. The books
-are then up to one schedule interval behind, and nothing else differs.
+deployment's backstop interval syncs it ([ADR-0062](0062-a-bank-feed-is-synchronized-by-cfokit-itself.md)), which Plaid's own guidance requires anyway. The books
+are then up to one backstop interval behind, and nothing else differs.
 
 ### Consequences
 
