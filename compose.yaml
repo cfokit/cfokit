@@ -98,6 +98,9 @@ services:
       # Whether every person must sign in with a second factor. Optional on a laptop; a deployment
       # operated as a service sets it to true (SOC2-19). infra/keycloak/README.md says what it does.
       CFOKIT_REQUIRE_SECOND_FACTOR: ${CFOKIT_REQUIRE_SECOND_FACTOR:-false}
+      # How long an access token lives, in seconds. Eight hours here; a deployment reachable by
+      # anything else shortens it (infra/keycloak/README.md says why).
+      CFOKIT_ACCESS_TOKEN_LIFESPAN: ${CFOKIT_ACCESS_TOKEN_LIFESPAN:-28800}
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
       KC_DB_USERNAME: cfokit

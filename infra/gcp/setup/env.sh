@@ -29,6 +29,11 @@ if [ -z "${TF_VAR_admin_members:-}" ]; then
   TF_VAR_admin_members=$(printf '["user:%s"]' "$(gcloud config get account 2>/dev/null)")
 fi
 export TF_VAR_admin_members
+# Where alerts go (monitoring.tf): the same person, unless set.
+if [ -z "${TF_VAR_alert_emails:-}" ]; then
+  TF_VAR_alert_emails=$(printf '["%s"]' "$(gcloud config get account 2>/dev/null)")
+fi
+export TF_VAR_alert_emails
 
 export CLOUDSDK_CORE_PROJECT="$CFOKIT_PROJECT"
 # A person's application-default credentials carry a quota project of their own, often some other

@@ -135,6 +135,14 @@ locals {
     # factor (SOC2-19). Read when the realm is first imported; a self-hosted install
     # leaves it unset and the factor optional (IAM-23).
     CFOKIT_REQUIRE_SECOND_FACTOR = "true"
+    # A revoked session stops working within fifteen minutes, wherever its token went
+    # (SOC2-20). Read when the realm is first imported, like the line above; a self-hosted
+    # install keeps eight hours (infra/keycloak/README.md says why).
+    CFOKIT_ACCESS_TOKEN_LIFESPAN = "900"
+    # Every sign-in, success or failure, and every administrator's change, in the issuer's log
+    # at a level Cloud Logging keeps and monitoring.tf alerts on (PLT-17, SOC2-24). Keycloak logs
+    # successes at debug otherwise. Identifiers and the sign-in name; never a credential.
+    KC_SPI_EVENTS_LISTENER__JBOSS_LOGGING__SUCCESS_LEVEL = "info"
   }
 
   issuer_secrets = {

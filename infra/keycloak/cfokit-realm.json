@@ -606,7 +606,7 @@
     "offline_access",
     "phone"
   ],
-  "accessTokenLifespan": 28800,
+  "accessTokenLifespan": "${CFOKIT_ACCESS_TOKEN_LIFESPAN:28800}",
   "ssoSessionIdleTimeout": 28800,
   "ssoSessionMaxLifespan": 86400,
   "clients": [
@@ -639,6 +639,20 @@
   "loginWithEmailAllowed": true,
   "registrationEmailAsUsername": true,
   "verifyEmail": false,
+  "passwordPolicy": "length(15) and maxLength(128) and notUsername and notEmail",
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "failureFactor": 10,
+  "waitIncrementSeconds": 60,
+  "maxFailureWaitSeconds": 900,
+  "maxDeltaTimeSeconds": 43200,
+  "quickLoginCheckMilliSeconds": 1000,
+  "minimumQuickLoginWaitSeconds": 60,
+  "eventsEnabled": true,
+  "eventsListeners": ["jboss-logging"],
+  "eventsExpiration": 7776000,
+  "adminEventsEnabled": true,
+  "adminEventsDetailsEnabled": true,
   "authenticationFlows": [
     {
       "alias": "cfokit browser",

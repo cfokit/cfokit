@@ -44,3 +44,11 @@ variable "admin_members" {
   type        = list(string)
 }
 
+
+variable "alert_emails" {
+  description = <<-EOT
+    Where monitoring.tf sends alerts, as email addresses. setup/env.sh sets it to whoever runs
+    the setup; no address is kept in the repository.
+  EOT
+  type        = list(string)
+}

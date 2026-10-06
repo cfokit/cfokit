@@ -79,6 +79,9 @@ resource "google_compute_backend_service" "run" {
     group = google_compute_region_network_endpoint_group.run[each.key].id
   }
 
+  # armor.tf: rate limits in front of the sign-in endpoints and the API.
+  security_policy = each.key == "issuer" ? google_compute_security_policy.issuer.id : google_compute_security_policy.api.id
+
   log_config {
     enable      = true
     sample_rate = 1.0
@@ -87,7 +90,7 @@ resource "google_compute_backend_service" "run" {
 
 # The admin console: the same issuer, through a backend that Identity-Aware Proxy guards. Only
 # the accounts in var.admin_members get through, with their Google sign-in and its second
-# factor, and every request is in the audit log (SOC2-19, SOC2-23).
+# factor, and every request is in the audit log (audit.tf; SOC2-19, SOC2-23).
 resource "google_compute_backend_service" "issuer_admin" {
   name                  = "cfokit-issuer-admin"
   load_balancing_scheme = "EXTERNAL_MANAGED"
@@ -100,6 +103,8 @@ resource "google_compute_backend_service" "issuer_admin" {
   iap {
     enabled = true
   }
+
+  security_policy = google_compute_security_policy.issuer.id
 
   log_config {
     enable      = true
@@ -207,6 +212,14 @@ resource "google_compute_url_map" "https" {
         redirect_response_code = "FOUND"
         strip_query            = true
       }
+    }
+
+    # Nor the master realm, which holds the administrators: its sign-in and token endpoints are
+    # a way to guess an administrator's password, so they answer only behind Identity-Aware
+    # Proxy, as the console does. Served rather than redirected, so a POST arrives intact.
+    path_rule {
+      paths   = ["/realms/master", "/realms/master/*"]
+      service = google_compute_backend_service.issuer_admin.id
     }
   }
 

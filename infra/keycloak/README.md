@@ -88,8 +88,32 @@ Eight hours removes the trigger rather than the symptom: within one working sess
 re-authenticates, so there is nothing to race. The refresh token already lasted thirty days, so
 this lengthens how long a *bearer* token is worth stealing — which on a laptop, where the issuer
 is not reachable and anyone who can reach it can reach the ledger anyway, is a trade worth
-making. **A deployment reachable by anything else should shorten it**, and accept that a client
-which cannot tolerate re-authentication is a client that needs static credentials instead.
+making. **A deployment reachable by anything else shortens it**, through one variable read when
+the realm is imported, the same way as the second-factor setting below:
+
+| `CFOKIT_ACCESS_TOKEN_LIFESPAN` | Who uses it | What it costs |
+|---|---|---|
+| unset: `28800`, eight hours | a laptop, or a self-hosted install that has not chosen otherwise | A stolen token is good for a working day. |
+| `900`, fifteen minutes | CFOKit's hosted service, or any install claiming SOC 2 | A revoked session stops working within fifteen minutes (`SOC2-20`). A local server running several proxies, as Claude Desktop does through `mcp-remote`, re-authenticates every fifteen minutes and can trip over itself; a client that connects directly, as a Claude custom connector does, refreshes its token and does not. |
+
+**Repeated failures lock an account for a while.** After ten failed sign-ins within twelve
+hours, each further attempt waits a minute longer, up to fifteen minutes; a correct password
+inside the wait is refused too. Never permanent, so nobody can lock a person out of their own
+books for good by guessing at their address. It stops guessing one person's password; guessing
+a few passwords across many accounts from one address is the load balancer's to stop, which on
+GCP is Cloud Armor (`infra/gcp/armor.tf`).
+
+**A password is at least fifteen characters, and nothing else is asked of it.** NIST SP
+800-63B-4 § 3.1.1.2 sets fifteen for a password that is the only authenticator, which it can be
+where a second factor is optional, and forbids composition rules. It allows up to 128, and
+refuses one equal to the person's username or email address.
+
+**Every sign-in and every administrative change is an event in the issuer's log** (`PLT-17`):
+who, from which address, through which client, and on failure why. Kept in the database for
+ninety days, where the admin console shows them, and in whatever collects the issuer's output for
+as long as that keeps it. Keycloak logs successes at debug level unless told otherwise, so a
+deployment collecting them sets `KC_SPI_EVENTS_LISTENER__JBOSS_LOGGING__SUCCESS_LEVEL` to `info`.
+The log carries the sign-in name, which is an email address, and never a credential.
 
 **`cfokit-web`, the web client's own client.** CFOKit ships the web client, so its client ships
 with the realm: public, because a browser cannot keep a secret; authorization code with PKCE
@@ -119,7 +143,8 @@ reaches the two places the setting lives: `CONFIGURE_TOTP`'s `defaultAction` (wr
 string, which Keycloak reads as the boolean) and the `included` option of one flow condition.
 **It is read once, when the realm is created.** An issuer whose realm already exists keeps the
 setting it was created with; changing it means recreating the realm, or making the same two
-changes in the admin console.
+changes in the admin console. The same holds for every setting in this file, the token
+lifetime, lockout, password policy and events above included.
 
 Three parts do the work, and each closes a different way in:
 
