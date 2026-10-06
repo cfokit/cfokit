@@ -95,7 +95,7 @@ Builds the application and issuer images from this checkout and pushes them. **A
 minutes**; set your DNS records (next step but one) while it runs, in a second terminal tab.
 
 ```sh
-infra/gcp/setup/images.sh
+infra/gcp/setup/images.sh --latest
 ```
 
 ## Services and the load balancer
