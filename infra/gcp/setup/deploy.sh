@@ -65,7 +65,9 @@ docker rm "$container" >/dev/null
   find . -type f ! -path './assets/*' ! -name index.html | sed 's|^\./||' | while read -r f; do
     gcloud storage cp --quiet --cache-control="no-cache" "$f" "${bucket}/app/${f}"
   done
-  gcloud storage cp --quiet --cache-control="no-cache" index.html "${bucket}/app/index.html"
+  # Never cached by the CDN, not merely revalidated: the fallback that answers deep links with this
+  # page passes on the body of whatever the CDN returns, and a revalidation returns none.
+  gcloud storage cp --quiet --cache-control="no-store" index.html "${bucket}/app/index.html"
 
   find . -type f | sed 's|^\./|app/|' | sort >"$work/current.txt"
   gcloud storage cp "${bucket}/builds/current.txt" "$work/previous.txt" --quiet 2>/dev/null \

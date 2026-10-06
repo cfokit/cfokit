@@ -1,5 +1,6 @@
 import { createRootRoute, createRoute, createRouter, Outlet } from "@tanstack/react-router";
 import { SignedIn } from "./auth/SignedIn";
+import { SignInReturn } from "./auth/SignInReturn";
 import { QuestionsPage } from "./questions/QuestionsPage";
 import { ConnectPage } from "./start/ConnectPage";
 import { FirstQuestion } from "./start/FirstQuestion";
@@ -85,11 +86,11 @@ const questions = createRoute({
 });
 
 // The issuer sends the person back here with a code; the sign-in provider exchanges it and
-// returns them to the page they started from. Nothing to show meanwhile.
+// returns them to the page they started from. If the exchange fails, this page says so.
 const signedIn = createRoute({
   getParentRoute: () => root,
   path: "/signed-in",
-  component: () => null,
+  component: SignInReturn,
 });
 
 export const router = createRouter({
