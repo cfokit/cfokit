@@ -161,6 +161,10 @@ resource "google_cloud_run_v2_service" "issuer" {
           # The realm's web client redirects to the web client and nowhere else.
           PUBLIC_BASE_URL             = "https://${local.app_host}"
           KC_BOOTSTRAP_ADMIN_USERNAME = "admin"
+          # The hosted service is a service organization: every person signs in with a second
+          # factor (SOC2-19). Read when the realm is first imported; a self-hosted install
+          # leaves it unset and the factor optional (IAM-23).
+          CFOKIT_REQUIRE_SECOND_FACTOR = "true"
         }
         content {
           name  = env.key
