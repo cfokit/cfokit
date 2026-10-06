@@ -62,6 +62,22 @@ test("a refused sign-in is shown beside the password, not twice", () => {
   expect(screen.getByLabelText("Password").getAttribute("aria-invalid")).toBe("true");
 });
 
+test("the code page offers another second factor only when the person has one", () => {
+  const without = render(<KcPage kcContext={getKcContextMock({ pageId: "login-otp.ftl" })} />);
+  expect(screen.queryByRole("button", { name: "Try another way" })).toBeNull();
+  without.unmount();
+
+  const kcContext = getKcContextMock({
+    pageId: "login-otp.ftl",
+    overrides: { auth: { showTryAnotherWayLink: true } },
+  });
+  render(<KcPage kcContext={kcContext} />);
+  const button = screen.getByRole("button", { name: "Try another way" });
+  const other = button.closest("form");
+  expect(other?.getAttribute("action")).toBe(kcContext.url.loginAction);
+  expect(other?.querySelector<HTMLInputElement>('input[name="tryAnotherWay"]')?.value).toBe("on");
+});
+
 test("registration asks for the profile the realm defines and a password, and no phone", () => {
   const kcContext = getKcContextMock({ pageId: "register.ftl" });
   const { container } = render(<KcPage kcContext={kcContext} />);

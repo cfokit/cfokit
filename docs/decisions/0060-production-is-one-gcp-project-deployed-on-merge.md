@@ -97,8 +97,12 @@ nothing of CFOKit's.
 
 ### 4. The database: one instance, private IP, passwords never in state
 
-Cloud SQL for PostgreSQL, the major version the compose stack runs, zonal, the smallest dedicated
-tier, with automated backups and point-in-time recovery. It has a private IP only. The services and
+Cloud SQL for PostgreSQL, the major version the compose stack runs, zonal, on Enterprise edition's
+`db-g1-small` shared core, with automated backups and point-in-time recovery. A shared core has no
+SLA, which nobody depends on until there are customers; it costs about half the smallest dedicated
+tier. The tier moves to a dedicated one before the first customer, as a one-line change and a
+restart. The database is encrypted with a Cloud KMS key the deployment holds, which Cloud SQL
+accepts only when an instance is created. It has a private IP only. The services and
 jobs reach it through Direct VPC egress, by the plain connection string the contract already
 describes, so `DATABASE_URL` means the same thing here as on a laptop.
 
@@ -213,6 +217,8 @@ project from the start, so a second one is a second set of values and a second s
 
 ## Revisit when
 
+* The first customer is about to depend on the deployment — then the database moves to a dedicated
+  tier with an SLA.
 * A paying customer depends on the deployment — then a staging project, or at least a second
   issuer instance with clustering, earns its cost.
 * Keycloak gains clustering that works without instance discovery, or Cloud Run gains discovery.

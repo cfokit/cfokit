@@ -55,9 +55,12 @@ if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
     echo "export PATH=\"$HOME/.local/node/bin:\$PATH\"" >> "$CLAUDE_ENV_FILE"
   fi
   # Container traffic here is TLS-intercepted by the session's proxy, so image builds need its
-  # CA to reach PyPI. compose.yaml passes it to the build as the optional `build_ca` secret.
+  # CA to reach PyPI. compose.yaml passes it to the build as the optional `build_ca` secret,
+  # copied into the project because buildx bake reads nothing outside it unless granted.
   if [ -f /root/.ccr/ca-bundle.crt ]; then
-    echo 'export BUILD_CA_FILE=/root/.ccr/ca-bundle.crt' >> "$CLAUDE_ENV_FILE"
+    mkdir -p "$PWD/.local"
+    cp /root/.ccr/ca-bundle.crt "$PWD/.local/build-ca.pem"
+    echo "export BUILD_CA_FILE=$PWD/.local/build-ca.pem" >> "$CLAUDE_ENV_FILE"
     echo 'export NODE_EXTRA_CA_CERTS=/root/.ccr/ca-bundle.crt' >> "$CLAUDE_ENV_FILE"
   fi
 fi

@@ -95,6 +95,9 @@ services:
       # Where the web client is served: the realm's cfokit-web client redirects there and nowhere
       # else, so it is the same value the REST service says about itself (ADR-0004, ADR-0049).
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://localhost:8080}
+      # Whether every person must sign in with a second factor. Optional on a laptop; a deployment
+      # operated as a service sets it to true (SOC2-19). infra/keycloak/README.md says what it does.
+      CFOKIT_REQUIRE_SECOND_FACTOR: ${CFOKIT_REQUIRE_SECOND_FACTOR:-false}
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
       KC_DB_USERNAME: cfokit
@@ -324,6 +327,10 @@ volumes:
 # An extra certificate authority for image builds whose network re-terminates TLS. Empty unless
 # BUILD_CA_FILE names one; the Dockerfile ignores it when empty. Set only by the Claude Code
 # cloud session hook (.claude/hooks/session-start.sh).
+#
+# The file is always inside the project. Compose builds through `buildx bake`, which refuses to
+# read a path outside the working directory unless granted (`--allow=fs.read=...`); /dev/null,
+# the old default, failed every compose build on the 2026-10-04 runner image.
 secrets:
   build_ca:
-    file: ${BUILD_CA_FILE:-/dev/null}
+    file: ${BUILD_CA_FILE:-./infra/no-build-ca.pem}

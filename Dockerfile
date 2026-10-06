@@ -53,6 +53,9 @@ RUN --mount=type=cache,target=/root/.m2 corepack pnpm exec keycloakify build
 
 FROM quay.io/keycloak/keycloak:26.7.4@sha256:82a77884f3af238beab1e7afd63b5f530e1b5c0590bd7aa60b40a40463e29b2c AS issuer
 COPY --from=sign-in-theme /web/dist_keycloak/cfokit-theme.jar /opt/keycloak/providers/
+# The realm, imported on first start where nothing mounts it — Cloud Run mounts nothing
+# (ADR-0060 § 3). The compose stack mounts the same file over this path.
+COPY infra/keycloak/cfokit-realm.json /opt/keycloak/data/import/cfokit-realm.json
 
 # ---------------------------------------------------------------------------
 FROM python:3.14.7-slim@sha256:51dafde81dbdb6ebde285137a295cf18a47ca95234fe388a343719cb97305b3d AS builder

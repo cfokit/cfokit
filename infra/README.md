@@ -113,6 +113,12 @@ Any conforming issuer must provide:
 - The **client credentials grant**, for separate components authenticating as machine callers
   (ADR-0032 — an extension to the contract originally set in ADR-0019)
 
+**A deployment operated as a service requires a second factor of every person** (`SOC2-19`), and
+that is the issuer's configuration rather than the application's, so it is not in the table
+above. The default issuer requires one when `CFOKIT_REQUIRE_SECOND_FACTOR` is `true`, read when
+the realm is imported; unset, a second factor is the person's choice. `infra/keycloak/README.md`
+says what each setting does.
+
 **One identity, and one port, from every side.** A client is handed the issuer's address in the
 ledger's protected-resource metadata and goes to it directly, so a port mapped to a different
 number outside the network makes that address wrong for exactly one side — and on a network
@@ -242,10 +248,9 @@ tier. (ADR-0016)
 **GCP — Cloud Run plus Cloud SQL for PostgreSQL.** The first and only maintained cloud
 target. (ADR-0017)
 
-Configuration is not yet written; it arrives with the first managed deployment and will live
-in `infra/gcp/`. There is no placeholder directory, deliberately: module sets nobody runs and
-CI never exercises rot silently, and the first user to try an unmaintained module concludes
-the project is abandoned. That is worse than shipping nothing for a cloud. (ADR-0016)
+The configuration is in [`infra/gcp/`](gcp/README.md): one project, one load balancer for the
+API and web client, MCP and the issuer, and a deploy on every merge to `main` (ADR-0055,
+ADR-0060). Its README holds the first-time steps.
 
 **We do not maintain AWS or Azure configurations, including placeholder directories.** Users
 on another cloud write their own infrastructure code against the contract above — that is why

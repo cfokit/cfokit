@@ -213,7 +213,7 @@ A sweep found five conflicts and eight unserved requirements. None is fixed.
 |---|---|
 | `SOC1-25` requires the acting principal's own credential to flow through, "never against a shared credential with the real actor passed as a parameter". Components authenticate by client credentials and assert which user is acting — the intersection of grants mitigates this but does not satisfy it. The fix is OAuth token exchange (RFC 8693), which ADR-0019's conformance contract also does not require | ADR-0021, ADR-0032, ADR-0019 |
 | `SOC1-15` puts actor class on the entry "in the data itself, not only in an audit record", and `SOC1-06`, `SOC1-34` and `SOC1-35` add model and skill versions against it. ADR-0022 says the ledger knows nothing about agents. Its boundary test has no answer for this | ADR-0022 |
-| `SOC2-19` requires refusing a session where the issuer does not assert MFA, and `SOC2-20` requires central session revocation reaching skills. ADR-0019's conformance contract enumerates neither, so a conforming issuer satisfies neither requirement | ADR-0019 |
+| `SOC2-20` requires central session revocation reaching skills. ADR-0019's conformance contract does not enumerate it, so a conforming issuer does not satisfy it | ADR-0019 |
 | `SOC1-22` requires audit records in storage the application cannot modify or delete by any code path, administrative ones included. ADR-0003 permits only Postgres and does not address how | ADR-0003 |
 | `SOC2-03` requires an agent turn reading untrusted content to hold a reduced capability set, enforced at the interface, so reading a document and writing to the ledger are not simultaneously available. The published tool surface has no notion of a reduced capability set | ADR-0015, ADR-0009 |
 
