@@ -41,10 +41,12 @@ resource "google_sql_database_instance" "this" {
   depends_on = [google_service_networking_connection.sql, google_kms_crypto_key_iam_member.sql]
 
   settings {
-    # PostgreSQL 16 and later default to Enterprise Plus, which has no small machine. The
-    # smallest dedicated Enterprise tier serves a first customer (ADR-0060 § 4).
+    # PostgreSQL 16 and later default to Enterprise Plus, which has no small machine. Until
+    # there are customers, a shared core: $25.55 a month against $49.31 for the smallest
+    # dedicated one, at the price of an SLA nobody yet depends on. f1-micro's 0.6 GB is too
+    # little for CFOKit and Keycloak together (ADR-0060 § 4).
     edition           = "ENTERPRISE"
-    tier              = "db-custom-1-3840"
+    tier              = "db-g1-small"
     availability_type = "ZONAL"
     disk_autoresize   = true
 
