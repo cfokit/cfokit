@@ -85,9 +85,12 @@ other security headers, with the same values the REST service sends for `/app/`.
 one source in the repository, which both the service and the OpenTofu read.
 
 Cache lifetimes follow the build, set as each object's `Cache-Control` when it is uploaded:
-content-hashed files are immutable for a year; `index.html`, the service worker and the web app
-manifest are revalidated on every request, so a deploy reaches an open tab at its next navigation
-and the service worker's update prompt (ADR-0049 § 8) fires.
+content-hashed files are immutable for a year; the service worker and the web app manifest are
+revalidated on every request, so a deploy reaches an open tab at its next navigation and the service
+worker's update prompt (ADR-0049 § 8) fires. `index.html` is never stored by the CDN at all
+(`no-store`): the error response policy in § 1 answers every deep link with it and passes on the
+body of whatever the CDN returns, and a revalidation returns none — a 200 with an empty body, which
+is a blank page.
 
 ### 3. The bucket holds the image's build, and the previous one
 

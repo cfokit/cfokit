@@ -31,9 +31,13 @@ check "MCP ready: https://mcp.$CFOKIT_DOMAIN/readyz" curl -fsS "https://mcp.$CFO
 check "Issuer discovery: https://auth.$CFOKIT_DOMAIN/realms/cfokit" \
   curl -fsS "https://auth.$CFOKIT_DOMAIN/realms/cfokit/.well-known/openid-configuration"
 check "Web client carries its CSP: $app/app/" has_header "$app/app/" "content-security-policy:"
-check "Web client is revalidated" has_header "$app/app/" "cache-control: no-cache"
+check "Web client is never cached" has_header "$app/app/" "cache-control: no-store"
 check "The client's root answers with its page" is_client_page "$app/app/"
 check "A deep link answers with the client's page" is_client_page "$app/app/companies/check/questions"
+# Again, so the page comes from wherever the CDN keeps it rather than a first fetch: an empty
+# body on the second request is how a blank page shipped once.
+check "And again, once the CDN has seen it" is_client_page "$app/app/companies/check/questions"
+check "The sign-in return page, with its query" is_client_page "$app/app/signed-in?state=check"
 if [ -n "${CFOKIT_ASSET:-}" ]; then
   check "A hashed asset is immutable" \
     has_header "$app/app/$CFOKIT_ASSET" "cache-control: public, max-age=31536000, immutable"
