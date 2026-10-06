@@ -98,14 +98,14 @@ protocol", because a line no caller can forge is the only kind a rule can be tru
 
 ### 1. A feed line has one way in
 
-The sync is a handler in `cfokit.activity`, run by the drain in CFOKit's own process. It is the only
+The sync is a handler in `cfokit.activity`, run by the worker in CFOKit's own process. It is the only
 code that creates a line whose source is a feed. No REST endpoint or MCP tool accepts a candidate
 with `source_kind: feed`; a caller that sends one is refused.
 
 That makes `source_kind` a fact the server established rather than one a caller asserted, which is
 what lets a rule post a feed line while an uploaded one stays drafted (ADR-0047). It is a module by
 ADR-0022 § 3's default: the credential argument for a component is met by § 6, and the scheduled
-runtime shape by ADR-0061's job.
+runtime shape by ADR-0061's worker.
 
 ### 2. A provider is a protocol, and a deployment configures one or none
 
@@ -193,7 +193,7 @@ does not open.
 
 **Sealing and opening are separate grants.** The API's service account, `cfokit-service`, holds
 `roles/cloudkms.cryptoKeyEncrypter` on the key and nothing else: it seals the token when the person
-finishes Link, and can never read one back. The drain's, `cfokit-work`
+finishes Link, and can never read one back. The worker's, `cfokit-work`
 ([ADR-0061](0061-unattended-work-is-a-queue-in-postgres.md) § 3), holds
 `roles/cloudkms.cryptoKeyDecrypter`: only syncs and removals open a token, and both are unattended
 work. The process that faces the internet cannot read any token at all, which is the isolation a
@@ -387,7 +387,7 @@ It remains the implementation where there is no KMS, which is the local default 
 
 **Reversal cost.** Low for the provider: a second one is another implementation of the protocol.
 Low for § 6: moving between seals is opening each token with one and sealing it with the
-other, which the drain can do as work. A destroyed KMS key, though, is every connection relinked by
+other, which the worker can do as work. A destroyed KMS key, though, is every connection relinked by
 its person: the key is guarded as the database's is. Moderate for § 5: lines already coded from posted transactions would need re-reading if pending
 activity were ever booked, though the stored changes keep everything needed to do it. High for § 1:
 once rules post feed lines straight through, opening a published path for feed lines would make

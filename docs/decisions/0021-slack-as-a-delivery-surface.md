@@ -34,7 +34,7 @@ financial position.
 ## Decision Drivers
 
 * The tenancy boundary must not be addressable by anything a message contains.
-* Only the two runtime shapes ADR-0023 permits, on a platform where scale-to-zero is assumed
+* Only the runtime shapes ADR-0023 permits, on a platform where scale-to-zero is assumed
   (ADR-0017).
 * Websockets are a binding non-goal (ADR-0012), so any design needing one must clear that gate.
 * "Deploy once, manage multiple clients" is the value proposition, so per-client operational burden
@@ -175,9 +175,9 @@ project that treats self-hosting as a product promise, that is a real argument.
 * Good, because it removes the public-ingress requirement entirely, which is the chosen option's
   worst cost.
 * Bad, because it is a websocket, which is a binding non-goal (ADR-0012).
-* Bad, because it requires a persistently connected process, which is not one of the two runtime
-  shapes (ADR-0023) — it would be the long-running worker that record explicitly excludes, on a
-  platform where scale-to-zero is assumed (ADR-0017).
+* Bad, because it requires a persistently connected process, which none of ADR-0023's runtime shapes
+  is. Its one worker drains the work queue ([ADR-0061](0061-unattended-work-is-a-queue-in-postgres.md))
+  and holds no connection open; a Slack connection would be a second always-running process.
 
 ### Slack as an in-process module inside the service
 
