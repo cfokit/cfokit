@@ -249,6 +249,58 @@ jobs:
         if: always()
         run: docker compose -f compose.yaml down -v
 
+  # The same path against an issuer that requires a second factor, as a deployment operated as a
+  # service runs it (SOC2-19): the new person sets up an authenticator app before their first
+  # session. Unpaced and unrecorded; the screencast is the default stack's.
+  e2e-second-factor:
+    name: getting started, second factor required
+    runs-on: ubuntu-latest
+    env:
+      CFOKIT_REQUIRE_SECOND_FACTOR: "true"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Bring up compose.yaml WITHOUT the dev overlay, requiring a second factor
+        run: docker compose -f compose.yaml up -d --wait --wait-timeout 240
+      - name: Create the schema
+        run: docker compose -f compose.yaml --profile migrate run --rm migrate
+
+      - name: Trust the stack's CA in the browser's certificate store
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq libnss3-tools
+          mkdir -p "$HOME/.pki/nssdb"
+          certutil -d "sql:$HOME/.pki/nssdb" -N --empty-password
+          certutil -d "sql:$HOME/.pki/nssdb" -A -t "C,," -n "CFOKit local CA" -i .local/tls/ca/ca.pem
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: web/.nvmrc
+      - run: corepack pnpm install --frozen-lockfile
+        working-directory: web
+      - run: corepack pnpm exec playwright install --with-deps chromium
+        working-directory: web
+
+      - name: Getting started with a second factor, in Chromium
+        working-directory: web
+        env:
+          E2E_REQUIRE_SECOND_FACTOR: "true"
+          NODE_EXTRA_CA_CERTS: ${{ github.workspace }}/.local/tls/ca/ca.pem
+        run: corepack pnpm e2e
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: failure()
+        with:
+          name: e2e-second-factor-report
+          path: |
+            web/playwright-report/
+            web/test-results/
+      - name: Stack diagnostics
+        if: failure()
+        run: docker compose -f compose.yaml ps && docker compose -f compose.yaml logs --tail 200
+      - name: Tear down
+        if: always()
+        run: docker compose -f compose.yaml down -v
+
   # The recording from main, at a fixed address the README links to: the assets of one prerelease,
   # replaced on every push to main. GITHUB_TOKEN is the only credential, and only this job writes.
   recording:

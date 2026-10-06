@@ -101,31 +101,52 @@ it, call the token endpoint.
 **People sign themselves up**, by email, and reset their own passwords (`IAM-22`, ADR-0049 § 3).
 No mail relay ships, so an address is not verified; a deployment with one turns `verifyEmail` on.
 
-**Every person signs in with a second factor** (`SOC2-19`), an authenticator app or a security
-key, whichever they have set up (`IAM-23`). No session is issued on a password alone. Three parts
-do it, and each closes a different way in:
+**A second factor is the person's choice, or the deployment's requirement.** Any person can
+protect their sign-in with an authenticator app or a security key (`IAM-23`), and once they have
+one they are asked for it every time. Whether a person may go without one is a property of the
+deployment, set by one variable read when the realm is imported:
 
-- **`CONFIGURE_TOTP` is a default required action**, so an account created on the sign-up page
-  sets up an authenticator app before its first session exists. Registration does not run the
-  browser flow, so this is the only part that reaches a new account.
+| `CFOKIT_REQUIRE_SECOND_FACTOR` | Who uses it | What a person sees |
+|---|---|---|
+| unset, or `false` | a laptop, or any self-hosted install that has not chosen otherwise | Signing up goes straight in. A second factor is added when the person chooses, and asked for from then on. |
+| `true` | a deployment operated as a service — CFOKit's hosted service, or any install claiming SOC 2 (`SOC2-19`) | Signing up asks for an authenticator app before the first session exists. No session is issued on a password alone. |
+
+The variable reaches the realm through Keycloak's own import: when the issuer starts with
+`--import-realm`, it replaces every `${NAME}` and `${NAME:default}` in this file with that
+environment variable, or the default when it is unset — the same mechanism that fills
+`${PUBLIC_BASE_URL}`. The replacement is plain text, applied before the file is parsed, so it
+reaches the two places the setting lives: `CONFIGURE_TOTP`'s `defaultAction` (written as a
+string, which Keycloak reads as the boolean) and the `included` option of one flow condition.
+**It is read once, when the realm is created.** An issuer whose realm already exists keeps the
+setting it was created with; changing it means recreating the realm, or making the same two
+changes in the admin console.
+
+Three parts do the work, and each closes a different way in:
+
+- **`CONFIGURE_TOTP` is a default required action when the setting is `true`**, so an account
+  created on the sign-up page sets up an authenticator app before its first session exists.
+  Registration does not run the browser flow, so this is the only part that reaches a new
+  account.
 - **`cfokit browser` is the browser flow.** After the password, `cfokit second factor` asks for
   whichever factor the person has — a code, or their security key — and a person with both can
-  switch on the page. If they have neither, because an administrator created the account or
-  they removed their last factor, `cfokit second factor setup` runs instead and makes them set up
-  an authenticator app before the sign-in completes. This is the shape Keycloak's documentation
-  gives as "Conditional 2FA sub-flow with OTP default".
-- **`cfokit direct grant` is the password grant's flow.** The password grant is off for
-  `cfokit-web`, but a client registering itself can ask for it, and Keycloak's own flow skips
-  the code for a person with no authenticator app. Here the code is required, and a person
-  without an app — one who signs in with a security key alone — is refused, since a key cannot
-  be presented to a token endpoint.
+  switch on the page. That part holds whatever the setting. Under `true`, a person with neither,
+  because an administrator created the account or they removed their last factor, meets
+  `cfokit second factor setup` instead, which makes them set up an authenticator app before the
+  sign-in completes: the shape Keycloak's documentation gives as "Conditional 2FA sub-flow with
+  OTP default". Its condition is "a password was used, and the setting is `true`" — the
+  condition's `included` option is the setting — so under `false` it never runs, and a sign-in
+  with a passkey, which proves two factors itself, never meets it either way.
+- **`cfokit direct grant` is the password grant's flow**, under either setting. The password grant
+  is off for `cfokit-web`, but a client registering itself can ask for it, and Keycloak's own
+  flow skips the code for a person with no authenticator app. Here a person with an app must send
+  its code, and a person without one is refused — including one who signs in with a security key
+  alone, since a key cannot be presented to a token endpoint. A person who has chosen no second
+  factor signs in in a browser, as `cfokit-web` does.
 
-The choice between the two is made after the first sign-in, not at it: Keycloak has one required
-action per credential type and no built-in step that offers both, so a new account sets up an
-app, and adds a security key from the account console if they prefer one. Both remain enough on
-their own afterwards. A sign-in with a passkey, if a deployment turns passkeys on, already proves
-two factors, and both second-factor sub-flows skip themselves for it, as Keycloak's own browser
-flow does.
+The choice between app and key is made after the first sign-in, not at it: Keycloak has one
+required action per credential type and no built-in step that offers both, so a new account under
+`true` sets up an app, and adds a security key from the account console if they prefer one. Both
+are enough on their own afterwards.
 
 Only the flows that differ from Keycloak's are declared. `authenticationFlows` does not replace
 the built-in set the way `clientScopes` does — Keycloak adds whichever built-in flows a realm
@@ -133,7 +154,7 @@ lacks at import — so registration, password reset and the rest stay Keycloak's
 `requiredActions` is restated in full for the same reason `clientScopes` is: declaring it
 replaces Keycloak's list.
 
-**Two ways in this does not cover.** Neither is open in the realm as it ships:
+**Two ways in the requirement does not cover.** Neither is open in the realm as it ships:
 
 - **A sign-in through another identity provider** — a Google or Microsoft account — does not run
   the browser flow. The first one creates the account, which takes the default required action
