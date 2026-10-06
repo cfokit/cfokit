@@ -31,9 +31,13 @@ fi
 export TF_VAR_admin_members
 
 export CLOUDSDK_CORE_PROJECT="$CFOKIT_PROJECT"
-# Application-default credentials carry a quota project of their own, often some other project.
-# API calls OpenTofu makes are billed and checked against this one instead.
-export GOOGLE_CLOUD_QUOTA_PROJECT="$CFOKIT_PROJECT"
+# A person's application-default credentials carry a quota project of their own, often some other
+# project, so their API calls are billed and checked against this one instead. Not in GitHub
+# Actions: the deploy identity is a service account, which needs no quota project, and naming one
+# would require it to hold serviceusage.services.use on the project for nothing.
+if [ -z "${GITHUB_ACTIONS:-}" ]; then
+  export GOOGLE_CLOUD_QUOTA_PROJECT="$CFOKIT_PROJECT"
+fi
 
 CFOKIT_INFRA="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export CFOKIT_INFRA
