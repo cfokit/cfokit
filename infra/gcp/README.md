@@ -19,6 +19,7 @@ not know it is on GCP.
 | `loadbalancer.tf` | The web bucket and CDN, the load balancer, the certificate |
 | `armor.tf` | Cloud Armor: rate limits on sign-in and the API |
 | `audit.tf` | Which reads are audit-logged, and how long logs are kept |
+| `orgpolicy.tf` | Organization policy on the project: no service-account keys, US locations, ingress and egress, federation issuers |
 | `monitoring.tf` | Alerts per event class, and uptime checks, emailed to `alert_emails` |
 | `outputs.tf` | What the first-time steps and the deploy workflow need |
 

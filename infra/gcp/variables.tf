@@ -52,3 +52,12 @@ variable "alert_emails" {
   EOT
   type        = list(string)
 }
+
+variable "org_policies" {
+  description = <<-EOT
+    Whether orgpolicy.tf sets organization policy on the project. Needs roles/orgpolicy.policyAdmin
+    at the organization; false for a project that has no organization.
+  EOT
+  type        = bool
+  default     = true
+}

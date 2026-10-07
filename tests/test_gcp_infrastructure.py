@@ -115,3 +115,21 @@ def test_production_restricts_where_a_registered_client_may_redirect() -> None:
         r"CFOKIT_RESTRICT_REGISTERED_REDIRECTS\s*=\s*local\.issuer_env\.CFOKIT_RESTRICT_REGISTERED_REDIRECTS",
         terraform,
     )
+
+
+def test_every_cloud_run_ingress_and_egress_is_one_the_org_policy_allows() -> None:
+    """A service or job declared with a setting the project's policy refuses fails only when
+    OpenTofu applies it. Each ingress and egress in run.tf must be among the policy's values."""
+    terraform = _terraform()
+    named = {
+        "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER": "internal-and-cloud-load-balancing",
+        "PRIVATE_RANGES_ONLY": "private-ranges-only",
+    }
+    for setting, constraint in (
+        ("ingress", "run.allowedIngress"),
+        ("egress", "run.allowedVPCEgress"),
+    ):
+        allowed = re.search(rf'"{re.escape(constraint)}"\s*=\s*\[([^\]]*)\]', terraform)
+        assert allowed, constraint
+        for used in set(re.findall(rf'\b{setting}\s*=\s*"([A-Z_]+)"', terraform)):
+            assert f'"{named[used]}"' in allowed.group(1), (setting, used)
