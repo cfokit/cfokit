@@ -100,5 +100,18 @@ def test_the_master_realm_is_pointed_at_the_admin_console_host() -> None:
         re.DOTALL,
     )
     assert job, "no settings job"
-    assert 'CFOKIT_MASTER_FRONTEND_URL   = "https://${local.admin_host}"' in job.group(0)
+    assert re.search(
+        r'CFOKIT_MASTER_FRONTEND_URL\s*=\s*"https://\$\{local\.admin_host\}"', job.group(0)
+    )
     assert 'command = ["/bin/bash", "/opt/cfokit/realm-settings.sh"]' in job.group(0)
+
+
+def test_production_restricts_where_a_registered_client_may_redirect() -> None:
+    """ADR-0064: the hosted issuer is reachable from anywhere, so the switch is on, and the
+    settings job applies the same value to the running realm."""
+    terraform = _terraform()
+    assert re.search(r'CFOKIT_RESTRICT_REGISTERED_REDIRECTS\s*=\s*"true"', terraform)
+    assert re.search(
+        r"CFOKIT_RESTRICT_REGISTERED_REDIRECTS\s*=\s*local\.issuer_env\.CFOKIT_RESTRICT_REGISTERED_REDIRECTS",
+        terraform,
+    )

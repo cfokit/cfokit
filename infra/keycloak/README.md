@@ -73,10 +73,38 @@ every request. The roles in a token are Keycloak's business, and `offline_access
 one anything here consults.
 
 **That is a deployment posture, and it holds only while the issuer is not reachable.** On a
-laptop it costs nothing: anyone who can reach `keycloak.localhost:8443` can already reach the ledger. A
-deployment reachable by anything else must close it — by registering clients deliberately
-instead, which `mcp-remote --static-oauth-client-info` and Claude's connector settings both
-support.
+laptop it costs nothing: anyone who can reach `keycloak.localhost:8443` can already reach the ledger.
+
+## Clients that register themselves
+
+On a deployment anyone can reach, open registration with no consent screen lets an attacker
+register a client whose redirect is their own server, send a person a link to the genuine sign-in
+page, and receive the code when they sign in, second factor and all (ADR-0064). So a deployment
+reachable by others restricts where a client that registers itself may send a sign-in, set by one
+variable read when the realm is imported:
+
+| `CFOKIT_RESTRICT_REGISTERED_REDIRECTS` | Who uses it | A client that registers itself may redirect to |
+|---|---|---|
+| unset, or `false` | a laptop, where nothing else reaches the issuer | anywhere |
+| `true` | CFOKit's hosted service, or any deployment reachable by others | Claude's callback, `https://claude.ai/api/mcp/auth_callback` or the same on `claude.com`; or a loopback address over http, `127.0.0.1`, `[::1]` or `localhost`, on any port |
+
+Claude's custom connectors and local proxies, `mcp-remote` and Claude Code among them, register
+exactly those, so connecting stays one step. A code sent to either reaches only the person:
+Claude's callback completes only the connection that browser started, and a loopback address is
+their own machine.
+
+The rule is the client profile `cfokit-registered-redirects`: Keycloak's
+`secure-client-uris-pattern` executor on the redirect URIs and no other field, so a client that
+also names a homepage or a logo still registers, which is where the `Trusted Hosts` policy above
+failed. It compares text. Keycloak's purpose-made `secure-redirect-uris-enforcer` decides whether
+a host is loopback by resolving it when no port is given, and so admits a name that resolves to
+`127.0.0.1` today and to someone's server tomorrow. The client policy of the same name applies the
+profile only to a client that registers itself, or changes itself with its registration token; the
+realm's own clients, and any an administrator registers, are unaffected.
+
+Supporting another MCP client on such a deployment means adding its redirect to the patterns here
+and in `realm-settings.sh`. A client registered before the restriction keeps its redirect;
+`realm-settings.sh` lists every one outside the patterns, for a person to remove.
 
 **Tokens that outlive a working session.** Keycloak's default access token lives five minutes,
 and a desktop client runs several proxy instances that all re-authenticate the moment it
@@ -196,8 +224,9 @@ replaces Keycloak's list.
 
 `realm-settings.sh` sets, on realms that already exist, the values a running deployment cannot
 otherwise receive: the lockout, password policy, events and token lifetime this file holds, on
-the `cfokit` realm, and the lockout and events on `master`. It keeps every account, which
-re-importing the realm does not. `tests/test_issuer_realm.py` asserts its values and this file's
+the `cfokit` realm, with the restriction on clients that register themselves, and the lockout
+and events on `master`. It keeps every account, which re-importing the realm does not. It then
+lists each client already registered whose redirects fall outside the patterns, and removes none. `tests/test_issuer_realm.py` asserts its values and this file's
 agree.
 
 It also sets the one thing the master realm needs where the admin console has a host of its own

@@ -93,3 +93,88 @@ def test_the_issuer_image_carries_the_settings_script() -> None:
     """It runs as a job from the issuer image, which is the only place it is."""
     dockerfile = (REALM.parent.parent.parent / "Dockerfile").read_text(encoding="utf-8")
     assert "COPY infra/keycloak/realm-settings.sh /opt/cfokit/realm-settings.sh" in dockerfile
+
+
+CLAUDE_CALLBACK = r"^https://claude\.(ai|com)/api/mcp/auth_callback$"
+LOOPBACK = r"^http://(127\.0\.0\.1|\[::1\]|localhost)(:[0-9]{1,5})?/[^?#*]*$"
+
+
+def _registered_redirects() -> tuple[dict[str, Any], dict[str, Any]]:
+    realm = _realm()
+    (profile,) = realm["clientProfiles"]["profiles"]
+    (policy,) = realm["clientPolicies"]["policies"]
+    return profile, policy
+
+
+def test_a_registered_client_may_redirect_only_to_claude_or_loopback() -> None:
+    """ADR-0064: on a reachable deployment, a sign-in goes only to Claude's callback or the
+    person's own machine. One executor, on the redirect URIs and no other field, so a client
+    that also names a homepage still registers."""
+    profile, policy = _registered_redirects()
+    (executor,) = profile["executors"]
+    assert executor["executor"] == "secure-client-uris-pattern"
+    assert executor["configuration"]["client-uri-fields"] == ["redirectUris"]
+    assert executor["configuration"]["allowed-patterns"] == [CLAUDE_CALLBACK, LOOPBACK]
+    assert policy["profiles"] == [profile["name"]]
+
+
+def test_the_restriction_covers_only_clients_that_register_themselves() -> None:
+    """ADR-0064: registration without an administrator, and that client's own later changes.
+    The realm's own clients, and an administrator's, are configured deliberately."""
+    _, policy = _registered_redirects()
+    (condition,) = policy["conditions"]
+    assert condition["condition"] == "client-updater-context"
+    sources = set(condition["configuration"]["update-client-source"])
+    assert sources == {"ByAnonymous", "ByRegistrationAccessToken"}
+
+
+def test_the_restriction_is_the_deployments_to_switch_on() -> None:
+    """ADR-0064: off on a laptop, where nothing else reaches the issuer."""
+    _, policy = _registered_redirects()
+    assert policy["enabled"] == "${CFOKIT_RESTRICT_REGISTERED_REDIRECTS:false}"
+
+
+def test_the_patterns_admit_the_supported_clients_and_nothing_resembling_them() -> None:
+    """ADR-0064's accepted and refused forms. A name that resolves to 127.0.0.1 is not loopback:
+    the check is the text, so registering one and repointing it later gains nothing."""
+    allowed = (CLAUDE_CALLBACK, LOOPBACK)
+    accepted = [
+        "https://claude.ai/api/mcp/auth_callback",
+        "https://claude.com/api/mcp/auth_callback",
+        "http://127.0.0.1:33418/oauth/callback",
+        "http://localhost:33418/oauth/callback",
+        "http://[::1]:33418/callback",
+        "http://localhost/callback",
+    ]
+    refused = [
+        "https://evil.example/cb",
+        "http://claude.ai/api/mcp/auth_callback",
+        "https://evil.claude.ai/api/mcp/auth_callback",
+        "https://claude.ai.evil.example/api/mcp/auth_callback",
+        "https://claude.ai/api/mcp/auth_callback?next=https://evil.example",
+        "https://claude.ai/api/mcp/*",
+        "http://localtest.me/cb",
+        "http://lvh.me/cb",
+        "http://127.0.0.1.nip.io/cb",
+        "http://localhost.evil.example/cb",
+        "http://localhost@evil.example/cb",
+        "http://localhost:1234/*",
+        "http://localhost:1234/cb#fragment",
+        "http://10.0.0.5/cb",
+        "myapp://callback",
+    ]
+    for uri in accepted:
+        assert any(re.fullmatch(p, uri) for p in allowed), uri
+    for uri in refused:
+        assert not any(re.fullmatch(p, uri) for p in allowed), uri
+
+
+def test_a_running_issuer_receives_the_same_redirect_patterns() -> None:
+    """realm-settings.sh applies the profile to a realm that already exists; its patterns are
+    the file's."""
+    script = SETTINGS.read_text(encoding="utf-8")
+    block = re.search(r"registered_redirects=\(\n(.*?)\n\)", script, re.DOTALL)
+    assert block
+    patterns = re.findall(r"'([^']+)'", block.group(1))
+    assert patterns == [CLAUDE_CALLBACK, LOOPBACK]
+    assert '"enabled":${CFOKIT_RESTRICT_REGISTERED_REDIRECTS}' in script
