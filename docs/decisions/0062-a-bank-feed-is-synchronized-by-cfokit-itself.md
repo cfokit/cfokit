@@ -13,7 +13,8 @@ decision-makers: [Geoff Scott]
 ## Context and Problem Statement
 
 `BKP-01` requires transactions to arrive from bank and card accounts without manual entry, and
-`BKP-16` requires them to arrive on a schedule with no person triggering them. Today every line
+`BKP-16` requires them to arrive with no person triggering them, when the source reports new activity
+and in any case within an interval the deployment sets. Today every line
 arrives from a statement a person uploads ([ADR-0046](0046-a-statement-proves-itself.md)), and is
 drafted rather than posted, because a model transcribed it
 ([ADR-0047](0047-an-uploaded-line-is-drafted.md)).
@@ -98,14 +99,14 @@ protocol", because a line no caller can forge is the only kind a rule can be tru
 
 ### 1. A feed line has one way in
 
-The sync is a handler in `cfokit.activity`, run by the drain in CFOKit's own process. It is the only
+The sync is a handler in `cfokit.activity`, run by the worker in CFOKit's own process. It is the only
 code that creates a line whose source is a feed. No REST endpoint or MCP tool accepts a candidate
 with `source_kind: feed`; a caller that sends one is refused.
 
 That makes `source_kind` a fact the server established rather than one a caller asserted, which is
 what lets a rule post a feed line while an uploaded one stays drafted (ADR-0047). It is a module by
 ADR-0022 § 3's default: the credential argument for a component is met by § 6, and the scheduled
-runtime shape by ADR-0061's job.
+runtime shape by ADR-0061's worker.
 
 ### 2. A provider is a protocol, and a deployment configures one or none
 
@@ -193,7 +194,7 @@ does not open.
 
 **Sealing and opening are separate grants.** The API's service account, `cfokit-service`, holds
 `roles/cloudkms.cryptoKeyEncrypter` on the key and nothing else: it seals the token when the person
-finishes Link, and can never read one back. The drain's, `cfokit-work`
+finishes Link, and can never read one back. The worker's, `cfokit-work`
 ([ADR-0061](0061-unattended-work-is-a-queue-in-postgres.md) § 3), holds
 `roles/cloudkms.cryptoKeyDecrypter`: only syncs and removals open a token, and both are unattended
 work. The process that faces the internet cannot read any token at all, which is the isolation a
@@ -361,8 +362,13 @@ It remains the implementation where there is no KMS, which is the local default 
 
 **Follow-on obligations.**
 
-* [ADR-0061](0061-unattended-work-is-a-queue-in-postgres.md) gains a feed kind: ingestion, missed
-  windows coalesced, a default cadence of every six hours within bounds of one to twenty-four.
+* [ADR-0061](0061-unattended-work-is-a-queue-in-postgres.md) gains a feed kind: operational and
+  ingestion, missed windows coalesced, throttled to Plaid's 2,500 sync calls a minute per client. Its
+  backstop interval is `FEED_SYNC_INTERVAL`, six hours by default, and a connection synchronized
+  within it is not synchronized again by the backstop. No entity sets it: the provider's
+  webhook drives syncs, Plaid refreshes from an institution on its own timing one to four times a
+  day, and it bills per connection rather than per call, so a customer's choice of interval would buy
+  neither fresher books nor a lower bill (`BKP-16`).
 * [ADR-0063](0063-a-feed-provider-webhook-only-marks-a-connection-due.md) decides the provider's
   webhook, the signal that a connection has new data.
 * [ADR-0045](0045-assignment-is-stored-rules.md) § 1 is corrected in place: a feed is synchronized by
@@ -387,7 +393,7 @@ It remains the implementation where there is no KMS, which is the local default 
 
 **Reversal cost.** Low for the provider: a second one is another implementation of the protocol.
 Low for § 6: moving between seals is opening each token with one and sealing it with the
-other, which the drain can do as work. A destroyed KMS key, though, is every connection relinked by
+other, which the worker can do as work. A destroyed KMS key, though, is every connection relinked by
 its person: the key is guarded as the database's is. Moderate for § 5: lines already coded from posted transactions would need re-reading if pending
 activity were ever booked, though the stored changes keep everything needed to do it. High for § 1:
 once rules post feed lines straight through, opening a published path for feed lines would make

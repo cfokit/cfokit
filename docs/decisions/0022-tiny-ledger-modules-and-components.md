@@ -105,15 +105,18 @@ not yet made.
 
 - **The module list.** Only the ledger is fixed. Invoicing is a module because `AR-03` requires
   atomicity with ledger writes. Everything else is classified when it is built, using § 3.
-- **Where ingestion lands.** The criteria pull both ways and the verdict is deliberately left open.
-  Ingestion writes *drafts*, which are ledger records, so a sync batch committing atomically argues
-  for a module; credential isolation and a scheduled runtime shape argue for a component.
+- **Where ingestion lands.** The criteria pull both ways, and the verdict is
+  [ADR-0062](0062-a-bank-feed-is-synchronized-by-cfokit-itself.md)'s: a feed is synchronized by the
+  `activity` module in CFOKit's own process. Ingestion writes what the books then code, which argues
+  for a module; credential isolation and a scheduled runtime shape argue for a component, and
+  ADR-0062 meets both without one — opening a token is granted only to the worker
+  ([ADR-0061](0061-unattended-work-is-a-queue-in-postgres.md)) that runs unattended work.
 
   A `packages/connectors` existed as a placeholder for this, holding no code, with an
   `import-linter` contract and its own rules file. That was the guess this record rejected in
   "Decide the full module list now" — a boundary drawn before the domain existed — and it had begun
   to act as an answer: the package's rules file asserted HTTP-only as settled. It has been removed.
-  The question is open, and nothing now pre-empts it.
+  Nothing pre-empted the question, and ADR-0062 answers it.
 
   Note also that it cannot be answered for "ingestion" as a unit. Scheduled feeds hold credentials
   and are third-party extensible (`NFR-12`); statement file upload (`BKP-03`) holds no credentials,

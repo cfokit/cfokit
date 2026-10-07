@@ -27,8 +27,9 @@ How a component *authenticates* is a separate decision, held in
 Two existing constraints narrow the answer sharply. **Portability is a build gate** — configuration
 is environment variables only, no provider SDKs at module scope, and CI runs the stack with no cloud
 credentials present ([ADR-0004](0004-portability-as-a-build-gate.md)). And **there is no event bus**;
-it is a binding non-goal ([ADR-0012](0012-binding-non-goals-and-scope-discipline.md)), which removes
-the entire queue-and-worker category from consideration without further argument.
+it is a binding non-goal ([ADR-0012](0012-binding-non-goals-and-scope-discipline.md)). A work queue is
+not one, and passed that gate in [ADR-0061](0061-unattended-work-is-a-queue-in-postgres.md), which
+also decides what drains it.
 
 ## Decision Drivers
 
@@ -36,19 +37,20 @@ the entire queue-and-worker category from consideration without further argument
 * The portability gate should exercise the artifact users actually run, and preferably only one.
 * The workload is mostly idle by assumption (ADR-0003), so paying for idle compute is a real cost.
 * A schedule is never application behavior that requires a deploy to change.
+* Code that runs unattended is deployed with the code that serves requests, in the same step.
 
 ## Considered Options
 
-* One image with many entrypoints, in two runtime shapes
+* One image with many entrypoints, in three runtime shapes
 * A separate image per component
 * A separate repository per component
-* A queue with long-running worker components
+* A broker-backed queue with worker components
 * Components as sidecars in the same container or pod
-* Always-on services for scheduled work
+* Two shapes only, with unattended work as a scheduled job
 
 ## Decision Outcome
 
-Chosen option: "One image with many entrypoints, in two runtime shapes", because it makes version
+Chosen option: "One image with many entrypoints, in three runtime shapes", because it makes version
 skew between a component and the API structurally impossible, which is the only failure in this set
 that costs correctness rather than money.
 
@@ -58,8 +60,8 @@ All components build from **one image**, differing only in the command they run.
 
 ```
 service   python -m cfokit.ledger.api          request-serving
+worker    python -m cfokit.server work         always running, no ingress
 job       python -m cfokit.ledger.migrations   one-shot, explicit
-job       python -m cfokit.<component>         one-shot or scheduled
 ```
 
 The decisive reason is **version skew**. Separate images mean a component can run last week's code
@@ -67,31 +69,36 @@ against this week's API, and the failure surfaces as a contract violation rather
 error. One image makes that structurally impossible. It also means the portability gate exercises one
 artifact rather than several.
 
-### 2. Two runtime shapes, and only two
+### 2. Three runtime shapes, and only three
 
 | Shape | What it is | Local | Cloud |
 |---|---|---|---|
 | **Service** | Request-serving, scale-to-zero, HTTP ingress | compose service | Cloud Run service |
+| **Worker** | Always running, no ingress, drains the work queue | compose service, on by default | Cloud Run worker pool |
 | **Job** | One-shot, invoked explicitly, no request timeout | compose profile, run on demand | Cloud Run job |
 
-Unattended work is one job with a fixed tick attached — Cloud Scheduler in the cloud, a compose
-service running it in a loop locally. What runs when is the entity's stored schedule, drained from a
-queue in Postgres; the tick only starts the drain, and the job only knows how to run once.
-[ADR-0061](0061-unattended-work-is-a-queue-in-postgres.md) holds that decision.
+**There is one worker**, and it runs everything unattended: what is due is the entity's stored
+schedule and the causes enqueued with their writes, held in a queue in Postgres
+([ADR-0061](0061-unattended-work-is-a-queue-in-postgres.md)). Its own loop is its only timer, so no
+infrastructure knows when work runs. It is rolled out with the services, from the same image, in the
+same step.
 
-**There are no long-running workers.** The queue is drained by a job that exits when nothing is due,
-not by a process that waits for work.
+**A job is never scheduled.** It is a one-shot command a person or the deploy runs, such as a
+migration. Anything that must happen on a schedule is a kind of work for the worker.
 
 ### Consequences
 
 * Good, because a component cannot run against an API version it was not built for.
 * Good, because the portability gate exercises one artifact rather than several.
-* Good, because a schedule is data and the tick is infrastructure, so changing either is not a deploy.
+* Good, because a schedule is data, so changing one is not a deploy, and unattended code is deployed
+  with the rest of the code, so it never runs a different version.
 * Bad, because the serving image carries dependencies only some entrypoints use, and that will worsen
   as components are added. A provider SDK needed only by an ingestion component ships in the serving
   image too — mitigated but not eliminated by the rule that provider SDKs are imported inside
   functions rather than at module scope (ADR-0004).
-* Bad, because a local deployment runs one service more than the API, the tick, so that scheduled
+* Bad, because the worker runs and is paid for while idle, unlike everything else in the deployment.
+  ADR-0061 states the cost.
+* Bad, because a local deployment runs one service more than the API, the worker, so that scheduled
   work happens there as it does in the cloud (`NFR-17`).
 
 ### Confirmation
@@ -105,7 +112,7 @@ no second version to skew against.
 
 ## Pros and Cons of the Options
 
-### One image with many entrypoints, in two runtime shapes
+### One image with many entrypoints, in three runtime shapes
 
 * Good, because version skew is impossible by construction.
 * Good, because one artifact is built, scanned, and exercised.
@@ -135,15 +142,17 @@ Clean ownership and independent release cadence.
 * Bad, because ADR-0022 keeps components in one repository, and splitting repositories makes the
   version-skew problem worse rather than better while adding cross-repository contract testing.
 
-### A queue with long-running worker components
+### A broker-backed queue with worker components
 
-The standard shape for ingestion and background work, with real benefits: backpressure, retries, and
-decoupling.
+The standard shape for background work — Redis or a managed queue, with workers per component —
+with real benefits: backpressure, retries, and decoupling.
 
 * Good, because backpressure and retry semantics come free, and it is the shape most engineers expect.
-* Bad, because an event bus is a binding non-goal (ADR-0012).
-* Bad, because the workload does not need it — ingestion is periodic rather than continuous, and
-  idempotency keys already make retries safe (ADR-0029).
+* Bad, because a broker is a second store (ADR-0003), and work published to it cannot commit with the
+  write that caused it. ADR-0061 holds the queue in Postgres for that reason, with one worker
+  draining every kind of work.
+* Bad, because a worker per component multiplies always-running processes for a workload that is
+  periodic rather than continuous.
 
 ### Components as sidecars in the same container or pod
 
@@ -153,25 +162,29 @@ Would keep deployment simple and let components share a network namespace with t
 * Bad, because it forfeits the isolation that justified making them components at all. If a component
   is co-located and shares a lifecycle, the criteria in ADR-0022 § 3 say it should have been a module.
 
-### Always-on services for scheduled work
+### Two shapes only, with unattended work as a scheduled job
 
-Simpler than jobs: one deployment shape, an internal timer, no scheduler to configure.
+A job with Cloud Scheduler attached, draining what is due and exiting: no compute paid for while
+idle.
 
-* Good, because it removes a runtime shape and needs no external scheduler.
-* Bad, because it pays for idle compute on a workload that is mostly idle by assumption (ADR-0003).
-* Bad, because an internal timer makes the run schedule application behavior that cannot be changed
-  without a deploy.
+* Good, because it scales to zero, and keeps the shapes to two.
+* Bad, because the trigger lives in infrastructure — a scheduler, a job resource, an identity to
+  start it, and a deploy step that exists only to keep the job's image current. A job left on an old
+  image is the version skew this record exists to prevent, and nothing fails when it happens.
+* Bad, because ADR-0061 weighs the cost difference, about $20 a month, and finds it does not pay for
+  that.
 
 ## More Information
 
 **Follow-on obligations.**
 
-- `infra/README.md` states the two runtime shapes any target must provide — a request-serving runtime
-  and a one-shot job runtime with no request timeout.
+- `infra/README.md` states the three runtime shapes any target must provide — a request-serving
+  runtime, an always-running runtime with no ingress, and a one-shot job runtime with no request
+  timeout.
 - `compose.yaml` defines component entrypoints behind profiles so they never run by default — the same
   discipline applied to seeding in ADR-0018.
-  The tick that drains unattended work is the exception: it runs by default, because scheduled work
-  is a capability every deployment has (ADR-0061).
+  The worker is the exception: it runs by default, because scheduled work is a capability every
+  deployment has (ADR-0061).
 - Because the local default ingestion provider requires no cloud account (`BKP-03`), ingestion is
   exercisable locally and in CI without any third-party credential.
 
@@ -184,7 +197,7 @@ authenticates and what it reads from the environment.
 
 - **Dependency sets diverge** enough that the serving image carries meaningful unused weight. The
   remedy is multi-stage build targets from one Dockerfile, not separate builds.
-- Work appears that genuinely needs queueing and backpressure, which is a scope-gate question
-  (ADR-0012) before it is a deployment one.
-- A second cloud target is added, which is when the two-runtime-shape abstraction is first tested
-  against a platform that may not offer both.
+- One worker cannot keep up, or a kind of work needs isolation from the others — the case for a
+  second worker shape, which is a change to this record.
+- A second cloud target is added, which is when the three-runtime-shape abstraction is first tested
+  against a platform that may not offer all three.
