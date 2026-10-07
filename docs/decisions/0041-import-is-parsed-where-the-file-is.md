@@ -142,9 +142,10 @@ polled, and no worker runs.
 **This is where the previous draft's event-bus question dissolves rather than being answered.**
 That draft argued a fixed pipeline should be stage rows rather than messages. With parsing on the
 client there is no server-side pipeline to shape either way: the stages are steps in a script,
-and a script's stages are lines of code. `ADR-0012`'s gate on an event bus is untouched and
-unspent. It will be asked again when a bank feed arrives on a cadence, which is the case that
-genuinely has server-side work between arrivals.
+and a script's stages are lines of code. `ADR-0012`'s gate on an event bus is untouched by an
+import. Server-side work between arrivals is a bank feed's, and
+[ADR-0061](0061-unattended-work-is-a-queue-in-postgres.md) decides it: a work queue in Postgres,
+not an event bus.
 
 Retry stays safe because [ADR-0029](0029-mandatory-idempotency-keys.md)'s keys are derived from the
 file's fingerprint and the source's own row reference: a batch sent twice is a replay, and a client
@@ -333,7 +334,5 @@ Now § 6, for sandboxed runtimes only.
   host. Either makes § 6 unnecessary and collapses two transports back to one.
 * A second reader lands, which tests whether the neutral shape is genuinely neutral or a
   QuickBooks shape with the labels filed off.
-* A bank feed arrives on a cadence, which puts server-side work between arrivals and is the case
-  that reopens the queue question this record leaves unspent.
 * The write path is batched. 43% of per-transaction cost is connection setup paid 5,553 times; if
   an import finishes in seconds, the batch size and the client's loop are both worth revisiting.

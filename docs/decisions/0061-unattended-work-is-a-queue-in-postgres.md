@@ -44,10 +44,11 @@ Whatever runs it has to be deployed as the application is — the same image, in
 handler can run last week's code against this week's schema. A trigger that lives in infrastructure
 is a second thing to deploy and a second place for that skew to hide.
 
-Four existing records bound the answer. [ADR-0023](0023-one-image-many-entrypoints.md) allowed two
-runtime shapes, a request-serving service and a one-shot job, and ruled out long-running workers. It
-also treated a run schedule as infrastructure, which `PLT-14` contradicts for business timing: when
-an entity's invoice recurs is the entity's data. [ADR-0003](0003-postgres-as-sole-storage-backend.md) allows no
+Four existing records bound the answer. [ADR-0023](0023-one-image-many-entrypoints.md) builds every
+entrypoint from one image so none runs a different version from the API, and names the runtime
+shapes a deployment must provide; whatever runs unattended work is one of them. Under `PLT-14`, when
+an entity's invoice recurs is the entity's data, not infrastructure, so no schedule may need a
+deploy to change. [ADR-0003](0003-postgres-as-sole-storage-backend.md) allows no
 second store. [ADR-0012](0012-binding-non-goals-and-scope-discipline.md) gates an event bus. And
 `NFR-11` and `NFR-17` require every capability, scheduled work included, to run on one machine with
 no cloud account.

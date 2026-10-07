@@ -81,7 +81,10 @@ positive. One convention for every account type is what keeps the proof one line
 
 `activity`, for account activity (`BKP-`). Not `statements`, which is the artifact of two of the
 three producers ADR-0045 § 1 names and not of a feed; not `upload`, which is a mechanism
-(ADR-0031). In-process by ADR-0022 § 3's default: it holds no credential and runs on no schedule.
+(ADR-0031). In-process by ADR-0022 § 3's default. A statement holds no credential and runs on no
+schedule; a feed in the same module does both, and
+[ADR-0062](0062-a-bank-feed-is-synchronized-by-cfokit-itself.md) § 1 holds why that does not make it a
+component.
 
 What is stored is the statement as stated, append-only: the lines are the source's claim, and the
 transactions coded from them are the ledger's. Keeping them apart is what lets the books be
