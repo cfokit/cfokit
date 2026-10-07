@@ -61,8 +61,10 @@ locals {
     }
     console = {
       name   = "Admin console opened"
-      detail = "Someone passed, or was refused by, Identity-Aware Proxy in front of the issuer's admin console and master realm: privileged access (SOC2-23)."
-      filter = "${local.data_access} AND protoPayload.serviceName=\"iap.googleapis.com\""
+      detail = "Someone passed Identity-Aware Proxy into the issuer's admin console or master realm: privileged access (SOC2-23)."
+      # Granted only. The hostname is public, so scanners are refused by IAP around the clock;
+      # each refusal stays in the audit log, and none is a reason to wake anyone.
+      filter = "${local.data_access} AND protoPayload.serviceName=\"iap.googleapis.com\" AND protoPayload.authorizationInfo.granted=true"
     }
     lockout = {
       name   = "Account locked"
