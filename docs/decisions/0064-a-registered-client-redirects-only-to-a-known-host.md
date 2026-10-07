@@ -108,9 +108,6 @@ policy to a realm that already exists.
 * Bad, because every other MCP client is refused on a deployment with the switch on until its
   redirect is added to the patterns, which is a change to the realm file and to
   `realm-settings.sh`.
-* Bad, because a client registered before the policy keeps whatever redirect it registered. The
-  policy governs registration and change, not authorization; `realm-settings.sh` reports each such
-  redirect so a person can remove the client.
 * Neutral, because a self-hosted deployment reachable by others carries the same risk and the
   same remedy, which it turns on by setting the variable.
 
@@ -192,8 +189,7 @@ The strongest control: no client exists that someone did not create.
 
 **Follow-on obligations.** Supporting another MCP client on a deployment with the switch on means
 adding its redirect to the patterns in `infra/keycloak/cfokit-realm.json` and
-`infra/keycloak/realm-settings.sh`, as one reviewed change. When the switch is first turned on
-for a running deployment, the clients `realm-settings.sh` reports are reviewed by a person.
+`infra/keycloak/realm-settings.sh`, as one reviewed change.
 
 **Reversal cost.** Low. The switch turns the policy off, and the profile and policy are two
 entries in the realm file. Nothing in CFOKit depends on them.

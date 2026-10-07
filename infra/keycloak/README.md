@@ -103,8 +103,7 @@ profile only to a client that registers itself, or changes itself with its regis
 realm's own clients, and any an administrator registers, are unaffected.
 
 Supporting another MCP client on such a deployment means adding its redirect to the patterns here
-and in `realm-settings.sh`. A client registered before the restriction keeps its redirect;
-`realm-settings.sh` lists every one outside the patterns, for a person to remove.
+and in `realm-settings.sh`.
 
 **Tokens that outlive a working session.** Keycloak's default access token lives five minutes,
 and a desktop client runs several proxy instances that all re-authenticate the moment it
@@ -225,9 +224,8 @@ replaces Keycloak's list.
 `realm-settings.sh` sets, on realms that already exist, the values a running deployment cannot
 otherwise receive: the lockout, password policy, events and token lifetime this file holds, on
 the `cfokit` realm, with the restriction on clients that register themselves, and the lockout
-and events on `master`. It keeps every account, which re-importing the realm does not. It then
-lists each client already registered whose redirects fall outside the patterns, and removes none. `tests/test_issuer_realm.py` asserts its values and this file's
-agree.
+and events on `master`. It keeps every account, which re-importing the realm does not.
+`tests/test_issuer_realm.py` asserts its values and this file's agree.
 
 It also sets the one thing the master realm needs where the admin console has a host of its own
 and the issuer's public host does not serve the master realm, as on GCP: the master realm's
