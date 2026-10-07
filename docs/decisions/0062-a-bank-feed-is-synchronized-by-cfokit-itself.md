@@ -8,7 +8,7 @@ decision-makers: [Geoff Scott]
 # ADR-0062: A bank feed is synchronized by CFOKit's own process into account activity, through a provider protocol, and only a posted transaction becomes a line
 
 **Requirements served:** `BKP-01`, `BKP-02`, `BKP-16`, `BKP-19`, `BKP-21`, `IAM-10`, `NFR-11`,
-`NFR-12`, `NFR-21`, `PLT-07`, `PLT-15`, `SOC2-14`.
+`NFR-12`, `NFR-14`, `NFR-21`, `PLT-07`, `PLT-15`, `SOC2-14`.
 
 ## Context and Problem Statement
 
@@ -116,8 +116,41 @@ since the cursor, the next cursor, and the provider's own account of how current
 
 Plaid is the provider the hosted offering uses. A deployment names its provider and its credentials
 in environment variables (ADR-0004); a self-hosted deployment may bring its own Plaid account. With
-none configured, there is no feed, and uploads remain (`BKP-03`). The test suite uses a provider that
-replays recorded responses, so the feed is exercised end to end with no account (`NFR-21`).
+none configured, there is no feed: no webhook route is served, no feed work runs, and connecting an
+account says this deployment has no feed. Uploads remain (`BKP-03`), as an unsent invoice remains a
+link where a deployment has no mail relay (`PLT-06`).
+
+**A replay provider stands in for Plaid wherever no account should be needed.** It is the Plaid
+provider with its HTTPS calls answered from responses CFOKit writes, so the code that talks to Plaid
+is the code under test. In the web client a stand-in replaces Plaid Link and completes without a
+bank, and the syncs play a scripted sequence — a first sync with history, pending transactions that
+post, a modification and a removal of coded lines, a login required and repaired.
+
+**Its responses are written to Plaid's published API reference, not recorded from Plaid.** Plaid's
+Developer Terms of Use allow a Sandbox account to be used "solely for internal evaluation of the
+Services" (§ 2) and forbid making the Services or their output available to, or distributing them to,
+a third party (§ 1.2); a recording committed to this repository is both. Plaid's API definition
+carries no license either, so its examples are no better. Each response is therefore CFOKit's own
+text, in the shape Plaid's reference documents, and each step of the sequence cites the page of that
+reference defining the behavior it plays: that cited page, not the response, is where a test's
+expected value comes from, outside the implementation (ADR-0036), as a cited rule is under
+ADR-0044 (`NFR-14`). It serves two uses:
+
+* **The test suite**, which exercises the feed end to end with no account and no network.
+* **A contributor's local stack**, with `FEED_PROVIDER=replay`, so connect, sync, match, code and
+  question can be clicked through in a browser from a clean checkout with no credentials
+  (`NFR-21`). Its webhook is a button in the web client that enqueues a sync, as Plaid's would.
+
+**It runs only on a loopback address.** The server refuses to start with `FEED_PROVIDER=replay`
+unless `PUBLIC_BASE_URL` names `localhost`, a `.localhost` name or a loopback address, because its
+lines are invented and a rule posts them into whatever entity it is connected to. Its institution is
+named as a replay, and every line it produces says so in the reference it carries. On the local
+stack, which holds real books (ADR-0018), it is connected to an entity made for trying it.
+
+A developer with their own Plaid account may instead set Plaid's Sandbox keys, and reach webhooks
+through a tunnel or rely on the backstop interval. Tests against the Sandbox run only where those
+keys are present, and are what notice when Plaid's responses drift from what the replay provider
+plays. Nothing they receive is written to the repository.
 
 Payment processors (`BKP-02`) are further providers of the same protocol. Plaid is called over HTTPS
 with the standard library, as the mail relay is ([ADR-0052](0052-notifications-are-records-delivered-after-commit.md)).
@@ -255,7 +288,9 @@ statement.
 
 * A test asserts that every REST endpoint and MCP tool that accepts a candidate refuses
   `source_kind: feed`.
-* Tests against the replaying provider assert that: a failure mid-loop leaves the cursor and the
+* A test asserts that the server refuses to start with `FEED_PROVIDER=replay` and a
+  `PUBLIC_BASE_URL` that is not a loopback address.
+* Tests against the replay provider assert that: a failure mid-loop leaves the cursor and the
   stored changes unchanged; a pending transaction never becomes a line; pending-then-posted produces
   one line; a sync replayed codes nothing new; a modification or removal of a coded line changes no
   posting and raises a notification; a duplicate connection is refused before exchange; a re-mapped
@@ -375,7 +410,11 @@ It remains the implementation where there is no KMS, which is the local default 
   account activity in CFOKit's process, not by a component.
 * [ADR-0047](0047-an-uploaded-line-is-drafted.md)'s consequence on caller-supplied `source_kind` is
   corrected in place to name § 1 here.
-* `infra/README.md` gains `FEED_PROVIDER` and the provider's credentials, each a secret container
+* `compose.dev.yaml` documents `FEED_PROVIDER=replay`, and `CONTRIBUTING.md` describes trying the
+  feed with it and with Plaid's Sandbox.
+* Each step of the replay provider's sequence names the Plaid API reference page it follows, and a
+  test refuses a step that names none, as the conformance corpus refuses a case with no citation.
+* `infra/README.md` gains `FEED_PROVIDER` (`plaid`, `replay`, or unset) and the provider's credentials, each a secret container
   populated out of band; `FEED_TOKEN_KMS_KEY`, the KMS key's name; and `FEED_TOKEN_KEY`, the local
   key, for a deployment without KMS. One of the last two is set wherever a provider is.
 * `infra/gcp/` gains the `feed-tokens` key on the `cfokit` ring, with a 90-day rotation and
