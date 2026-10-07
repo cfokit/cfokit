@@ -191,6 +191,11 @@ The strongest control: no client exists that someone did not create.
 adding its redirect to the patterns in `infra/keycloak/cfokit-realm.json` and
 `infra/keycloak/realm-settings.sh`, as one reviewed change.
 
+The policy checks a client's redirects when the client registers or changes itself, not when a
+person signs in through it, so tightening the rule does not reach a client already registered.
+A change that tightens it — removing a pattern, or turning the switch on for a deployment that has
+admitted registration without it — also decides what happens to the clients registered before it.
+
 **Reversal cost.** Low. The switch turns the policy off, and the profile and policy are two
 entries in the realm file. Nothing in CFOKit depends on them.
 
