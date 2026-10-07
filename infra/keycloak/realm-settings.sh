@@ -13,8 +13,15 @@
 #
 #   CFOKIT_ACCESS_TOKEN_LIFESPAN   seconds; what the realm file reads at import
 #   CFOKIT_MASTER_FRONTEND_URL     where the admin console is served, e.g. https://admin.example.com
+#   CFOKIT_RESTRICT_REGISTERED_REDIRECTS
+#                                  true or false; what the realm file reads at import
 set -euo pipefail
 : "${CFOKIT_ACCESS_TOKEN_LIFESPAN:?}" "${CFOKIT_MASTER_FRONTEND_URL:?}"
+case "${CFOKIT_RESTRICT_REGISTERED_REDIRECTS:?}" in true | false) ;; *)
+  echo "CFOKIT_RESTRICT_REGISTERED_REDIRECTS is true or false" >&2
+  exit 2
+  ;;
+esac
 
 kc=/opt/keycloak/bin/kc.sh
 adm=/opt/keycloak/bin/kcadm.sh
@@ -97,6 +104,12 @@ lockout=(-s bruteForceProtected=true -s permanentLockout=false -s failureFactor=
 events=(-s eventsEnabled=true -s eventsExpiration=7776000 -s 'eventsListeners=["jboss-logging"]'
   -s adminEventsEnabled=true -s adminEventsDetailsEnabled=true)
 password_policy='length(15) and maxLength(128) and notUsername and notEmail'
+# Where a client that registers itself may send a person's sign-in (infra/keycloak/README.md,
+# "Clients that register themselves").
+registered_redirects=(
+  '^https://claude\.(ai|com)/api/mcp/auth_callback$'
+  '^http://(127\.0\.0\.1|\[::1\]|localhost)(:[0-9]{1,5})?/[^?#*]*$'
+)
 
 # Events first, so every change after them is an admin event.
 "$adm" update events/config -r master "${events[@]}"
@@ -105,6 +118,17 @@ password_policy='length(15) and maxLength(128) and notUsername and notEmail'
 "$adm" update realms/cfokit "${lockout[@]}" \
   -s "accessTokenLifespan=${CFOKIT_ACCESS_TOKEN_LIFESPAN}" \
   -s "passwordPolicy=${password_policy}"
+
+# The client profile and policy, as the realm file holds them. Both lists are replaced whole, and
+# these are the realm's only ones.
+patterns=$(printf '"%s",' "${registered_redirects[@]//\\/\\\\}")
+"$adm" update client-policies/profiles -r cfokit -f - <<JSON
+{"profiles":[{"name":"cfokit-registered-redirects","description":"A client that registers itself may send a person's sign-in only to Claude's callback, or back to the person's own machine.","executors":[{"executor":"secure-client-uris-pattern","configuration":{"client-uri-fields":["redirectUris"],"allowed-patterns":[${patterns%,}]}}]}]}
+JSON
+"$adm" update client-policies/policies -r cfokit -f - <<JSON
+{"policies":[{"name":"cfokit-registered-redirects","description":"Applies the registered-redirects profile to every client that registers or updates itself without an administrator.","enabled":${CFOKIT_RESTRICT_REGISTERED_REDIRECTS},"conditions":[{"condition":"client-updater-context","configuration":{"update-client-source":["ByAnonymous","ByRegistrationAccessToken"]}}],"profiles":["cfokit-registered-redirects"]}]}
+JSON
+
 "$adm" update realms/master "${lockout[@]}"
 # The admin console signs in to the master realm at that realm's frontend URL, from a hidden
 # frame. Left at the issuer's public hostname, where Identity-Aware Proxy guards the master
@@ -120,3 +144,4 @@ echo "-- cfokit"
 "$adm" get realms/cfokit --fields accessTokenLifespan,bruteForceProtected,failureFactor,passwordPolicy
 "$adm" get events/config -r cfokit \
   --fields eventsEnabled,eventsExpiration,eventsListeners,adminEventsEnabled,adminEventsDetailsEnabled
+"$adm" get client-policies/policies -r cfokit | grep -E '"(name|enabled)"'

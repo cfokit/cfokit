@@ -139,6 +139,9 @@ locals {
     # (SOC2-20). Read when the realm is first imported, like the line above; a self-hosted
     # install keeps eight hours (infra/keycloak/README.md says why).
     CFOKIT_ACCESS_TOKEN_LIFESPAN = "900"
+    # The issuer is reachable from anywhere, so a client that registers itself may send a
+    # person's sign-in only to Claude or back to their own machine (ADR-0064).
+    CFOKIT_RESTRICT_REGISTERED_REDIRECTS = "true"
     # Every sign-in, success or failure, and every administrator's change, in the issuer's log
     # at a level Cloud Logging keeps and monitoring.tf alerts on (PLT-17, SOC2-24). Keycloak logs
     # successes at debug otherwise. Identifiers and the sign-in name; never a credential.
@@ -346,11 +349,12 @@ resource "google_cloud_run_v2_job" "issuer_settings" {
 
         dynamic "env" {
           for_each = {
-            KC_DB                        = local.issuer_env.KC_DB
-            KC_DB_URL                    = local.issuer_env.KC_DB_URL
-            KC_DB_USERNAME               = local.issuer_env.KC_DB_USERNAME
-            CFOKIT_ACCESS_TOKEN_LIFESPAN = local.issuer_env.CFOKIT_ACCESS_TOKEN_LIFESPAN
-            CFOKIT_MASTER_FRONTEND_URL   = "https://${local.admin_host}"
+            KC_DB                                = local.issuer_env.KC_DB
+            KC_DB_URL                            = local.issuer_env.KC_DB_URL
+            KC_DB_USERNAME                       = local.issuer_env.KC_DB_USERNAME
+            CFOKIT_ACCESS_TOKEN_LIFESPAN         = local.issuer_env.CFOKIT_ACCESS_TOKEN_LIFESPAN
+            CFOKIT_RESTRICT_REGISTERED_REDIRECTS = local.issuer_env.CFOKIT_RESTRICT_REGISTERED_REDIRECTS
+            CFOKIT_MASTER_FRONTEND_URL           = "https://${local.admin_host}"
           }
           content {
             name  = env.key

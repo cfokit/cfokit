@@ -899,6 +899,44 @@
       }
     }
   ],
+  "clientProfiles": {
+    "profiles": [
+      {
+        "name": "cfokit-registered-redirects",
+        "description": "A client that registers itself may send a person's sign-in only to Claude's callback, or back to the person's own machine.",
+        "executors": [
+          {
+            "executor": "secure-client-uris-pattern",
+            "configuration": {
+              "client-uri-fields": ["redirectUris"],
+              "allowed-patterns": [
+                "^https://claude\\.(ai|com)/api/mcp/auth_callback$",
+                "^http://(127\\.0\\.0\\.1|\\[::1\\]|localhost)(:[0-9]{1,5})?/[^?#*]*$"
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "clientPolicies": {
+    "policies": [
+      {
+        "name": "cfokit-registered-redirects",
+        "description": "Applies the registered-redirects profile to every client that registers or updates itself without an administrator.",
+        "enabled": "${CFOKIT_RESTRICT_REGISTERED_REDIRECTS:false}",
+        "conditions": [
+          {
+            "condition": "client-updater-context",
+            "configuration": {
+              "update-client-source": ["ByAnonymous", "ByRegistrationAccessToken"]
+            }
+          }
+        ],
+        "profiles": ["cfokit-registered-redirects"]
+      }
+    ]
+  },
   "browserFlow": "cfokit browser",
   "directGrantFlow": "cfokit direct grant",
   "requiredActions": [

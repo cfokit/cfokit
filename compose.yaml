@@ -101,6 +101,9 @@ services:
       # How long an access token lives, in seconds. Eight hours here; a deployment reachable by
       # anything else shortens it (infra/keycloak/README.md says why).
       CFOKIT_ACCESS_TOKEN_LIFESPAN: ${CFOKIT_ACCESS_TOKEN_LIFESPAN:-28800}
+      # Whether a client that registers itself may send a sign-in only to Claude or back to this
+      # machine. Off here, where nothing outside can reach the issuer (ADR-0064).
+      CFOKIT_RESTRICT_REGISTERED_REDIRECTS: ${CFOKIT_RESTRICT_REGISTERED_REDIRECTS:-false}
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
       KC_DB_USERNAME: cfokit
