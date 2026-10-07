@@ -56,6 +56,9 @@ COPY --from=sign-in-theme /web/dist_keycloak/cfokit-theme.jar /opt/keycloak/prov
 # The realm, imported on first start where nothing mounts it — Cloud Run mounts nothing
 # (ADR-0060 § 3). The compose stack mounts the same file over this path.
 COPY infra/keycloak/cfokit-realm.json /opt/keycloak/data/import/cfokit-realm.json
+# What applies the realm's settings to a deployment whose realm already exists, run as a job from
+# this image (infra/keycloak/realm-settings.sh).
+COPY infra/keycloak/realm-settings.sh /opt/cfokit/realm-settings.sh
 
 # ---------------------------------------------------------------------------
 FROM python:3.14.7-slim@sha256:51dafde81dbdb6ebde285137a295cf18a47ca95234fe388a343719cb97305b3d AS builder

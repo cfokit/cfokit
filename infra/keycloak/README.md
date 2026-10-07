@@ -144,7 +144,8 @@ string, which Keycloak reads as the boolean) and the `included` option of one fl
 **It is read once, when the realm is created.** An issuer whose realm already exists keeps the
 setting it was created with; changing it means recreating the realm, or making the same two
 changes in the admin console. The same holds for every setting in this file, the token
-lifetime, lockout, password policy and events above included.
+lifetime, lockout, password policy and events above included; the next section is how those
+reach a realm that already exists.
 
 Three parts do the work, and each closes a different way in:
 
@@ -190,6 +191,29 @@ replaces Keycloak's list.
 - **A password reset by email** replaces the authenticator app rather than asking for it, so it
   rests on the mailbox alone. No mail relay ships, so the reset email is never sent; a deployment
   that adds one makes this a way in.
+
+## Settings on a running issuer
+
+`realm-settings.sh` sets, on realms that already exist, the values a running deployment cannot
+otherwise receive: the lockout, password policy, events and token lifetime this file holds, on
+the `cfokit` realm, and the lockout and events on `master`. It keeps every account, which
+re-importing the realm does not. `tests/test_issuer_realm.py` asserts its values and this file's
+agree.
+
+It also sets the one thing the master realm needs where the admin console has a host of its own
+and the issuer's public host does not serve the master realm, as on GCP: the master realm's
+**frontend URL**, pointed at the console's host. The console signs in to the master realm at that
+realm's frontend URL, from a hidden frame, and by default that is the issuer's public hostname.
+Behind Identity-Aware Proxy, which cannot answer inside a frame, the sign-in never completes and
+the console reports a timeout waiting for the "3rd party check iframe".
+
+It needs no administrator's password. Keycloak's own recovery command, `kc.sh bootstrap-admin`,
+creates a temporary administrator client whose secret is generated inside the container and
+never leaves it; the script signs in as that, applies the settings, deletes the client, and
+proves it gone by being refused when it signs in again. Events are switched on first, so each
+change after that is an admin event. It runs from the issuer image, against the issuer's
+database, with Keycloak started inside the same container; on GCP, `setup/realm.sh --settings`
+runs it as a job and then restarts the issuer, which caches realms.
 
 ## What it deliberately does not contain
 

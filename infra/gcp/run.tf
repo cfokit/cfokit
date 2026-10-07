@@ -246,9 +246,10 @@ resource "google_cloud_run_v2_service" "issuer" {
   depends_on = [google_secret_manager_secret_iam_member.reader]
 }
 
-# Replaces the realm with the one in the issuer image (setup/realm.sh). Keycloak imports a realm
-# only when it does not exist, so a change to infra/keycloak/cfokit-realm.json reaches a running
-# deployment only through this, and it removes the realm's accounts.
+# Replaces the realm with the one in the issuer image (setup/realm.sh --replace). Keycloak imports
+# a realm only when it does not exist, so this is how the whole of cfokit-realm.json reaches a
+# running deployment, and it removes the realm's accounts. The settings job below changes a
+# realm in place instead.
 resource "google_cloud_run_v2_job" "issuer_import" {
   name                = "cfokit-issuer-import"
   location            = var.region
@@ -290,6 +291,79 @@ resource "google_cloud_run_v2_job" "issuer_import" {
                 secret  = google_secret_manager_secret.this[env.value].secret_id
                 version = "latest"
               }
+            }
+          }
+        }
+
+        resources {
+          limits = {
+            cpu    = "1"
+            memory = "2Gi"
+          }
+        }
+      }
+    }
+  }
+
+  lifecycle {
+    ignore_changes = [
+      template[0].template[0].containers[0].image,
+      client,
+      client_version,
+    ]
+  }
+
+  depends_on = [google_secret_manager_secret_iam_member.reader]
+}
+
+# Applies the realms' settings in place, keeping every account (setup/realm.sh --settings,
+# infra/keycloak/realm-settings.sh). It needs the issuer's database and nothing else: none of the
+# issuer's hostnames, and not the first administrator's password, because it signs in as a
+# temporary administrator it creates and then deletes.
+resource "google_cloud_run_v2_job" "issuer_settings" {
+  name                = "cfokit-issuer-settings"
+  location            = var.region
+  deletion_protection = false
+
+  template {
+    task_count = 1
+    template {
+      service_account = google_service_account.issuer.email
+      max_retries     = 0
+      timeout         = "900s"
+
+      vpc_access {
+        network_interfaces {
+          network    = local.vpc_egress.network
+          subnetwork = local.vpc_egress.subnetwork
+        }
+        egress = "PRIVATE_RANGES_ONLY"
+      }
+
+      containers {
+        image   = "${local.images}/issuer:latest"
+        command = ["/bin/bash", "/opt/cfokit/realm-settings.sh"]
+
+        dynamic "env" {
+          for_each = {
+            KC_DB                        = local.issuer_env.KC_DB
+            KC_DB_URL                    = local.issuer_env.KC_DB_URL
+            KC_DB_USERNAME               = local.issuer_env.KC_DB_USERNAME
+            CFOKIT_ACCESS_TOKEN_LIFESPAN = local.issuer_env.CFOKIT_ACCESS_TOKEN_LIFESPAN
+            CFOKIT_MASTER_FRONTEND_URL   = "https://${local.admin_host}"
+          }
+          content {
+            name  = env.key
+            value = env.value
+          }
+        }
+
+        env {
+          name = "KC_DB_PASSWORD"
+          value_source {
+            secret_key_ref {
+              secret  = google_secret_manager_secret.this["keycloak-db-password"].secret_id
+              version = "latest"
             }
           }
         }

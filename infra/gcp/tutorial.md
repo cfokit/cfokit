@@ -132,6 +132,17 @@ and checks every hostname from the outside.
 infra/gcp/setup/deploy.sh
 ```
 
+## The issuer's settings
+
+Points the master realm, which holds the issuer's administrators, at the admin console's own
+host, without which the console cannot finish signing in; and sets the lockout, password policy,
+events and token lifetime on both realms. It signs in as a temporary administrator it creates and
+deletes, so no password is needed.
+
+```sh
+infra/gcp/setup/realm.sh --settings
+```
+
 ## Deploy on every merge
 
 Tells your repository's deploy workflow where to deploy. These are names, not secrets: the
