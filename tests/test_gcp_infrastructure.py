@@ -88,3 +88,17 @@ def test_no_cloud_armor_expression_has_a_capture_group() -> None:
     armor = (GCP / "armor.tf").read_text(encoding="utf-8")
     for pattern in re.findall(r"matches\('([^']*)'\)", armor):
         assert "(" not in pattern.replace("(?:", ""), pattern
+
+
+def test_the_master_realm_is_pointed_at_the_admin_console_host() -> None:
+    """The console signs in to the master realm at its frontend URL, from a hidden frame. On the
+    public host, Identity-Aware Proxy guards the master realm and cannot answer in a frame, so
+    the settings job points it at the console's own host."""
+    job = re.search(
+        r'resource "google_cloud_run_v2_job" "issuer_settings" \{.*?\n\}',
+        _terraform(),
+        re.DOTALL,
+    )
+    assert job, "no settings job"
+    assert 'CFOKIT_MASTER_FRONTEND_URL   = "https://${local.admin_host}"' in job.group(0)
+    assert 'command = ["/bin/bash", "/opt/cfokit/realm-settings.sh"]' in job.group(0)
