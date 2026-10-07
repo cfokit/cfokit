@@ -26,18 +26,13 @@ CFOKIT_OPS_ID="cfokit-settings-$(date -u +%Y%m%d%H%M%S)"
 CFOKIT_OPS_SECRET="$(od -An -N32 -tx1 /dev/urandom | tr -d ' \n')"
 export CFOKIT_OPS_ID CFOKIT_OPS_SECRET
 
-"$kc" bootstrap-admin service --client-id:env CFOKIT_OPS_ID --client-secret:env CFOKIT_OPS_SECRET --no-prompt
-
-"$kc" start --http-enabled=true --http-port=8080 --hostname=http://localhost:8080 --cache=local &
-server=$!
+server=
 
 ready() {
   exec 3<>/dev/tcp/127.0.0.1/8080 || return 1
   printf 'GET /realms/master HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3
   head -1 <&3 | grep -q ' 200'
 }
-for _ in $(seq 150); do ready 2>/dev/null && break; sleep 2; done
-ready
 
 login() {
   "$adm" config credentials --server http://localhost:8080 --realm master \
@@ -46,7 +41,7 @@ login() {
 
 fail() {
   echo "FAILED: $1. Delete every cfokit-settings-* client in the master realm by hand." >&2
-  kill "$server" 2>/dev/null
+  [ -n "$server" ] && kill "$server" 2>/dev/null
   exit 1
 }
 
@@ -76,13 +71,24 @@ cleanup() {
   [ -n "$own" ] || fail "this run's own client was not found"
   "$adm" delete "clients/$own" -r master || fail "could not delete this run's own client"
   if login 2>/dev/null; then fail "this run's own client still signs in"; fi
-  kill "$server" 2>/dev/null
+  [ -n "$server" ] && kill "$server" 2>/dev/null
   echo "temporary admin client deleted, and its credential refused"
   exit "$status"
 }
 
-login
+# Defined above, registered here: from the moment the temporary client may exist, however the
+# script ends, it is cleaned up, or the script says plainly that it could not be.
 trap cleanup EXIT
+
+"$kc" bootstrap-admin service --client-id:env CFOKIT_OPS_ID --client-secret:env CFOKIT_OPS_SECRET --no-prompt
+
+"$kc" start --http-enabled=true --http-port=8080 --hostname=http://localhost:8080 --cache=local &
+server=$!
+
+for _ in $(seq 150); do ready 2>/dev/null && break; sleep 2; done
+ready
+
+login
 
 # The values cfokit-realm.json holds; tests/test_issuer_realm.py asserts the two agree.
 lockout=(-s bruteForceProtected=true -s permanentLockout=false -s failureFactor=10

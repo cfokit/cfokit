@@ -74,9 +74,8 @@ def test_a_running_issuer_receives_the_values_a_new_realm_imports() -> None:
     """A realm is imported once, so the script that sets these on a realm that already exists
     must hold the same values as the file, or a running deployment and a new one differ."""
     realm, settings = _realm(), _settings()
-    shared = {key for key in settings if key in realm and key != "accessTokenLifespan"}
-    assert {"bruteForceProtected", "failureFactor", "passwordPolicy", "eventsEnabled"} <= shared
-    for key in shared:
+    assert set(settings) <= set(realm), "the script sets something the file does not hold"
+    for key in settings.keys() - {"accessTokenLifespan"}:
         assert settings[key] == realm[key], key
 
 
