@@ -87,15 +87,28 @@ resource "google_cloud_run_v2_service" "api" {
 
       # Liveness only: /healthz does not touch the database, so a migration never restarts a
       # healthy container (infra/README.md, "Health endpoints").
+      #
+      # Nearly every visit starts cold, because people look at their books rarely. A cold start
+      # takes two or three of Cloud Run's default checks — three, ten seconds apart, a second to
+      # answer each — so the slowest were killed and their request answered 503. Checked every
+      # five seconds, three seconds to answer, for up to two minutes: a slow start is waited for,
+      # and a ready one is noticed sooner.
       startup_probe {
         http_get {
           path = "/healthz"
         }
+        period_seconds    = 5
+        timeout_seconds   = 3
+        failure_threshold = 24
       }
+      # A busy instance that answers in two seconds is not dead.
       liveness_probe {
         http_get {
           path = "/healthz"
         }
+        period_seconds    = 10
+        timeout_seconds   = 3
+        failure_threshold = 3
       }
     }
   }
