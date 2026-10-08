@@ -177,7 +177,8 @@ project that treats self-hosting as a product promise, that is a real argument.
 * Bad, because it is a websocket, which is a binding non-goal (ADR-0012).
 * Bad, because it requires a persistently connected process, which none of ADR-0023's runtime shapes
   is. Its one worker drains the work queue ([ADR-0061](0061-unattended-work-is-a-queue-in-postgres.md))
-  and holds no connection open; a Slack connection would be a second always-running process.
+  and holds no connection open, and on GCP runs only while there is work. A Slack connection would
+  need a process that is always running and always connected.
 
 ### Slack as an in-process module inside the service
 

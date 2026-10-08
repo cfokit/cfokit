@@ -104,7 +104,7 @@ nothing cites these but this repository. They are added when something breaks wi
 | [0058](0058-getting-started-is-one-path-on-the-web.md) | Getting started is one path, on web pages, for both offerings | Proposed |
 | [0059](0059-a-line-is-matched-before-it-is-coded.md) | An incoming transaction is matched to what the books already hold before any rule codes it, and only a sole exact counterpart is acted on | Accepted |
 | [0060](0060-production-is-one-gcp-project-deployed-on-merge.md) | Production is one GCP project behind one load balancer, deployed on every merge | Accepted |
-| [0061](0061-unattended-work-is-a-queue-in-postgres.md) | Unattended work is a queue in Postgres, filled from stored schedules and drained by an always-running worker | Proposed |
+| [0061](0061-unattended-work-is-a-queue-in-postgres.md) | Unattended work is a queue in Postgres, filled from stored schedules and drained a pass at a time, on a tick and when a person waits | Proposed |
 | [0062](0062-a-bank-feed-is-synchronized-by-cfokit-itself.md) | A bank feed is synchronized by CFOKit's own process into account activity, through a provider protocol, and only a posted transaction becomes a line | Proposed |
 | [0063](0063-a-feed-provider-webhook-only-marks-a-connection-due.md) | A feed provider's webhook is a signed way in that only marks one connection's sync as due | Proposed |
 | [0064](0064-a-registered-client-redirects-only-to-a-known-host.md) | A client that registers itself may send a sign-in only to a known redirect | Accepted |

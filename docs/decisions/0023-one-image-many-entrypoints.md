@@ -46,7 +46,7 @@ also decides what drains it.
 * A separate repository per component
 * A broker-backed queue with worker components
 * Components as sidecars in the same container or pod
-* Two shapes only, with unattended work as a scheduled job
+* Two shapes only, with the worker as one more job
 
 ## Decision Outcome
 
@@ -60,7 +60,7 @@ All components build from **one image**, differing only in the command they run.
 
 ```
 service   python -m cfokit.ledger.api          request-serving
-worker    python -m cfokit.server work         always running, no ingress
+worker    python -m cfokit.server work         drains the work queue, no ingress
 job       python -m cfokit.ledger.migrations   one-shot, explicit
 ```
 
@@ -74,17 +74,20 @@ artifact rather than several.
 | Shape | What it is | Local | Cloud |
 |---|---|---|---|
 | **Service** | Request-serving, scale-to-zero, HTTP ingress | compose service | Cloud Run service |
-| **Worker** | Always running, no ingress, drains the work queue | compose service, on by default | Cloud Run worker pool |
+| **Worker** | No ingress, drains the work queue a pass at a time | compose service, on by default, a pass after each | Cloud Run job, started on a tick and when a person waits |
 | **Job** | One-shot, invoked explicitly, no request timeout | compose profile, run on demand | Cloud Run job |
 
 **There is one worker**, and it runs everything unattended: what is due is the entity's stored
 schedule and the causes enqueued with their writes, held in a queue in Postgres
-([ADR-0061](0061-unattended-work-is-a-queue-in-postgres.md)). Its own loop is its only timer, so no
-infrastructure knows when work runs. It is rolled out with the services, from the same image, in the
-same step.
+([ADR-0061](0061-unattended-work-is-a-queue-in-postgres.md)). What is due is the database's to say,
+so what starts a pass knows only that one should start. It is rolled out with the services, from the
+same image, in the same step. On GCP it runs as a Cloud Run job until the queue is busy enough to
+keep one instance always running, which changes the infrastructure and not the code (ADR-0061 § 3).
 
 **A job is never scheduled.** It is a one-shot command a person or the deploy runs, such as a
-migration. Anything that must happen on a schedule is a kind of work for the worker.
+migration. Anything that must happen on a schedule is a kind of work for the worker. That GCP runs
+the worker with a Cloud Run job is the worker's runtime, not a job's shape: the tick starts a pass,
+and the schedule stays in the database.
 
 ### Consequences
 
@@ -96,8 +99,8 @@ migration. Anything that must happen on a schedule is a kind of work for the wor
   as components are added. A provider SDK needed only by an ingestion component ships in the serving
   image too — mitigated but not eliminated by the rule that provider SDKs are imported inside
   functions rather than at module scope (ADR-0004).
-* Bad, because the worker runs and is paid for while idle, unlike everything else in the deployment.
-  ADR-0061 states the cost.
+* Bad, because the worker is a fourth thing to run, and on GCP two triggers start it: a tick and a
+  person's request. ADR-0061 states the cost and when it becomes always running instead.
 * Bad, because a local deployment runs one service more than the API, the worker, so that scheduled
   work happens there as it does in the cloud (`NFR-17`).
 
@@ -162,25 +165,27 @@ Would keep deployment simple and let components share a network namespace with t
 * Bad, because it forfeits the isolation that justified making them components at all. If a component
   is co-located and shares a lifecycle, the criteria in ADR-0022 § 3 say it should have been a module.
 
-### Two shapes only, with unattended work as a scheduled job
+### Two shapes only, with the worker as one more job
 
-A job with Cloud Scheduler attached, draining what is due and exiting: no compute paid for while
-idle.
+On GCP the worker runs as a Cloud Run job (ADR-0061 § 3), so it could be stated as a job and the
+shapes kept to two.
 
-* Good, because it scales to zero, and keeps the shapes to two.
-* Bad, because the trigger lives in infrastructure — a scheduler, a job resource, an identity to
-  start it, and a deploy step that exists only to keep the job's image current. A job left on an old
-  image is the version skew this record exists to prevent, and nothing fails when it happens.
-* Bad, because ADR-0061 weighs the cost difference, about $20 a month, and finds it does not pay for
-  that.
+* Good, because it is one fewer shape to state, and matches the resource GCP runs it as.
+* Bad, because a job's contract is to run once, when a person or the deploy chooses, and nothing in
+  it says a target must run anything unattended. A target that provided only services and jobs would
+  meet the contract and never sync a feed or send a recurring invoice.
+* Bad, because the worker's contract is its own: started repeatedly with no person, safe to run more
+  than once at the same time, and on a laptop running continuously. Stated as a job, those are
+  obligations of one job among several rather than of a shape every target supplies. That GCP meets
+  them with a job resource is the worker's runtime there, not its shape.
 
 ## More Information
 
 **Follow-on obligations.**
 
 - `infra/README.md` states the three runtime shapes any target must provide — a request-serving
-  runtime, an always-running runtime with no ingress, and a one-shot job runtime with no request
-  timeout.
+  runtime, a way to run the worker unattended (a job it can start on a timer and on request, or one
+  always-running process with no ingress), and a one-shot job runtime with no request timeout.
 - `compose.yaml` defines component entrypoints behind profiles so they never run by default — the same
   discipline applied to seeding in ADR-0018.
   The worker is the exception: it runs by default, because scheduled work is a capability every
