@@ -46,6 +46,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       code: ${{ steps.classify.outputs.code }}
+      record: ${{ steps.record.outputs.record }}
     steps:
       # A pull request checks out its merge commit; its first parent is the base it merges into,
       # so the diff between them is exactly what the pull request changes.
@@ -77,6 +78,38 @@ jobs:
           done <<< "$changed"
           echo "code=$code" >> "$GITHUB_OUTPUT"
           echo "Changes code: $code"
+
+      # Whether to make the documentation recordings: Playwright sessions recorded for developer
+      # and end-user documentation, published from main. Only when a change alters what a
+      # recorded flow shows, and always when the workflow is run by hand, to record on demand. A
+      # pull request records nothing. A new recording adds the paths its flow shows below.
+      - id: record
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          case "$EVENT" in
+            workflow_dispatch) echo "record=true" >> "$GITHUB_OUTPUT"; echo "Run by hand: recording."; exit 0 ;;
+            push) ;;
+            *) echo "record=false" >> "$GITHUB_OUTPUT"; exit 0 ;;
+          esac
+          # Everything the push brought to main, which may be more than one commit.
+          if [ -z "$BEFORE" ] || ! git fetch -q --depth=1 origin "$BEFORE"; then
+            echo "record=true" >> "$GITHUB_OUTPUT"; echo "No earlier main to compare with: recording."; exit 0
+          fi
+          record=false
+          while IFS= read -r path; do
+            case "$path" in
+              # Getting started (web/e2e/onboarding.spec.ts): signing up on the issuer's page,
+              # the start pages, the sample export, the first question, and what they render with.
+              web/e2e/onboarding.spec.ts|web/src/login/*|web/src/start/*|web/src/quickbooks/*|\
+              web/src/questions/*|web/src/components/*|web/src/*.css|infra/keycloak/*)
+                echo "recorded flow: $path"; record=true ;;
+            esac
+          done <<< "$(git diff --name-only "$BEFORE" HEAD)"
+          echo "record=$record" >> "$GITHUB_OUTPUT"
+          echo "Records: $record"
 
   # Gate 1 — ruff, mypy --strict, import-linter layer contracts.
   lint:
@@ -280,16 +313,15 @@ jobs:
         run: corepack pnpm e2e
 
       # The screencast: an MP4 to watch, and a GIF small enough for a README to show inline.
-      # Made only where the recording job publishes it, on a push to main: ffmpeg is most of
-      # what this job downloads from the mirror, and a pull request has no use for the video. The
-      # retries set above apply.
+      # Made only when the recordings are (the `record` output of `what changed`): ffmpeg is most
+      # of what this job downloads from the mirror. The retries set above apply.
       - name: Install ffmpeg
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: needs.changes.outputs.record == 'true'
         timeout-minutes: 10
         run: |
           sudo apt-get install -y -qq ffmpeg
       - name: Make the recording
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: needs.changes.outputs.record == 'true'
         working-directory: web
         run: |
           mkdir -p recording
@@ -301,7 +333,7 @@ jobs:
             recording/onboarding.gif
           ls -la recording
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: needs.changes.outputs.record == 'true'
         with:
           name: onboarding-recording
           path: web/recording/
@@ -381,8 +413,8 @@ jobs:
   # replaced on every push to main. GITHUB_TOKEN is the only credential, and only this job writes.
   recording:
     name: publish the getting-started recording
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [e2e]
+    if: needs.changes.outputs.record == 'true' && github.ref == 'refs/heads/main'
+    needs: [changes, e2e]
     runs-on: ubuntu-latest
     permissions:
       contents: write
