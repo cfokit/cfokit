@@ -57,10 +57,10 @@ resource "google_sql_database_instance" "this" {
     retain_backups_on_delete    = true
 
     # A password set on a built-in user through the Admin API, as setup/database.sh sets each,
-    # is long and is not the user's name. The setup generates 48 characters.
+    # is long and is not the user's name. 30 is the most Cloud SQL accepts; the setup generates 48.
     password_validation_policy {
       enable_password_policy      = true
-      min_length                  = 32
+      min_length                  = 30
       disallow_username_substring = true
     }
 
