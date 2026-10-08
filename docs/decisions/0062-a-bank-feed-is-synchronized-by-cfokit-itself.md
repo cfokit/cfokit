@@ -71,6 +71,8 @@ credentials.
 * Bank credentials go to the provider, never to CFOKit, an agent or a model (`IAM-10`). The
   provider's token is a secret held by CFOKit's process alone, and the process that answers the
   internet cannot read it.
+* A person connects an account from wherever they work with CFOKit, an agent's conversation
+  included, and no address a model handles can link a bank by itself.
 * Key custody, rotation and revocation are stated properties of a deployment (`SOC2-14`).
 * A provider can be added as a contribution against a stable extension point (`NFR-12`), and none
   is needed to build, test or run the product (`NFR-11`, `NFR-21`).
@@ -85,6 +87,7 @@ credentials.
 * Plaid's Python SDK rather than HTTPS from the standard library
 * The token key in the deployment's environment
 * A different provider for the hosted offering
+* Plaid's Hosted Link, handed to the person through the agent
 
 ## Decision Outcome
 
@@ -155,13 +158,32 @@ plays. Nothing they receive is written to the repository.
 Payment processors (`BKP-02`) are further providers of the same protocol. Plaid is called over HTTPS
 with the standard library, as the mail relay is ([ADR-0052](0052-notifications-are-records-delivered-after-commit.md)).
 
-### 3. Connecting happens in the web client, and is a person's act
+### 3. Connecting happens in the web client, reached from wherever the person works, and is a person's act
 
 The person links an account through Plaid Link, embedded in the web client
 ([ADR-0049](0049-cfokit-has-a-web-client.md)). Their bank credentials go to Plaid and never to
 CFOKit, an agent or a model (`IAM-10`). CFOKit creates the link token, naming the person by an
 opaque identifier rather than an email address, and exchanges the public token on its server at
 once.
+
+**The web client has a page for it, `/app/companies/{entity}/connect-bank`, and an agent hands the
+person a link to that page.** The page requires the person to be signed in. It names the company the
+account will be connected to before Link opens, so the person sees where their bank is going. It
+creates the link token for the entity in its address, and only for a person whose grant on that
+entity allows connecting an account; anyone else is refused, as any request for that entity is
+(ADR-0011). Link runs in an ordinary browser tab, where an institution's OAuth step leaves for the
+bank and returns as it does on any site.
+
+An MCP tool returns the page's address for an entity, and the agent gives it to the person in the
+conversation. A panel ([ADR-0058](0058-getting-started-is-one-path-on-the-web.md)) offers the same
+address as a button that asks the host to open it (`ui/open-link`). **The address carries no
+authority**: whoever opens it connects nothing until they are signed in as themselves, and then only
+to a company they may already connect. A link planted in something the agent reads can send the
+person to their own company's page, which is harmless, or to another domain, which is phishing the
+person meets as they would anywhere. The MCP service builds the address from `WEB_CLIENT_URL`, the
+web client's own address — on GCP `https://app.<domain>/app`, served on the API's origin
+([ADR-0055](0055-on-gcp-the-web-client-is-served-from-a-cdn.md)) — never from a request's headers
+(ADR-0004). Unset, the tool says it does not know where the web client is.
 
 **A duplicate is refused before the exchange.** If the institution and an account's mask match a
 connection the entity already holds, the person is sent to repair that connection instead.
@@ -251,7 +273,8 @@ confirms a removal, the sealed token is deleted: it is a credential, not a finan
 
 When the provider reports that a connection needs the person — a login required, consent about to
 lapse, new accounts available — the state is recorded on the connection and a notification is
-raised. The person repairs it in the web client with Link in update mode. Syncs for that connection
+raised. The person repairs it in the web client with Link in update mode, at a page an agent links
+to as it does the connect page. Syncs for that connection
 are not retried in the meantime; they resume when the provider reports it repaired, and the next
 sync's window covers the gap.
 
@@ -274,8 +297,8 @@ statement.
   every open is in the audit log.
 * Bad, because pending activity is invisible to the books, so a cash view lags the bank by a few
   days. That is the books being right rather than early.
-* Bad, because a feed requires the web client to connect. A person working only in an agent cannot
-  link an account there.
+* Bad, because connecting takes the person out of an agent's conversation to a browser tab, signed
+  in to CFOKit, which may mean a sign-in with its second factor before the bank's own.
 * Bad, because every sync opens its token with a call to KMS, so a KMS outage stops syncs. They
   wait as due work and resume (ADR-0061); nothing is lost.
 * Bad, because the seal has two implementations, and the one production uses is exercised only on
@@ -297,6 +320,9 @@ statement.
   account keeps its lines' ledger account.
 * A test asserts that no response body and no log record contains a stored token, by planting a
   known token and searching for it.
+* Tests assert that a link token is created only for a person whose grant on the entity in the
+  page's address allows connecting, and that the MCP tool's address is the web client's page for
+  that entity, built from `WEB_CLIENT_URL`, never an address at the provider.
 * A test asserts that a sealed token moved to another connection's row fails to open, for the local
   implementation.
 * `infra/gcp/setup/check.sh` asserts the key's IAM policy: `cfokit-service` may only encrypt,
@@ -360,6 +386,24 @@ Plaid Statements returns the bank's own statement, which ADR-0046's balance proo
 * Bad, because the replaying provider tests the client we write. A generated client would put the
   part we most need to test behind code we do not own.
 
+### Plaid's Hosted Link, handed to the person through the agent
+
+Plaid hosts the whole of Link on its own page and returns its address, which can be opened anywhere,
+and recommends it for a client embedded in someone else's application. An agent could print it, or
+a panel open it, and the person would connect without signing in to CFOKit at all.
+
+* Good, because it needs no CFOKit page and no sign-in, and Plaid handles OAuth on its page.
+* Bad, because the address is the authority: for thirty minutes by Plaid's default, whoever opens it
+  links a bank to the entity it was created for. Given to an agent, it sits in the conversation's
+  transcript, in its history and in anything the conversation is shared or exported as.
+* Bad, because every such address looks the same whoever created it. An instruction planted in a
+  document the agent reads could have it show the person an attacker's address, created for the
+  attacker's own entity, and the person would sign in to their real bank on Plaid's real page and
+  connect it to the attacker's books. Neither the person nor the agent could tell the two apart.
+* Bad, because the panel has no dependable alternative: the MCP Apps specification requires a host
+  to grant a panel's frame only `allow-scripts` and `allow-same-origin`, so Link embedded there
+  cannot count on the popup or redirect an OAuth institution needs.
+
 ### A different provider for the hosted offering
 
 * **Teller** is self-serve and cheap — $0.30 per connection a month, with 100 live connections free
@@ -412,6 +456,10 @@ It remains the implementation where there is no KMS, which is the local default 
   corrected in place to name § 1 here.
 * `compose.dev.yaml` documents `FEED_PROVIDER=replay`, and `CONTRIBUTING.md` describes trying the
   feed with it and with Plaid's Sandbox.
+* The web client gains the connect page and the repair page, and the MCP surface a tool returning
+  each one's address for an entity. `infra/README.md` gains `WEB_CLIENT_URL`, MCP service only, and
+  `infra/gcp/run.tf` sets it to the web client's address. A panel shows the address, and a button
+  that opens it where the host supports `ui/open-link`.
 * Each step of the replay provider's sequence names the Plaid API reference page it follows, and a
   test refuses a step that names none, as the conformance corpus refuses a case with no citation.
 * `infra/README.md` gains `FEED_PROVIDER` (`plaid`, `replay`, or unset) and the provider's credentials, each a secret container
@@ -443,8 +491,10 @@ every such posting suspect.
 * The rewritten CFPB rule is published and extends a data access right to business accounts, or an
   institution offers direct FDX access worth a provider of its own.
 * Self-hosters ask for a feed without a Plaid account. SimpleFIN Bridge is the candidate provider.
-* A person working only in an agent needs to connect an account, which would need a link the agent
-  can hand them rather than the web client's screen.
+* A host gives panels the popups an OAuth institution needs, which would let Link run in the panel
+  itself, with no tab and no sign-in beyond the conversation's.
+* `ui/open-link` is probed in Claude Desktop and on claude.ai and added to ADR-0058's table, which
+  would settle where a panel's button appears.
 * An examiner or a customer requires keys in hardware. An HSM key version is about $1 a month,
   and the protocol is unchanged.
 * Questions about changed lines become frequent enough to be a burden, which would argue for a
