@@ -170,3 +170,17 @@ def test_audit_evidence_is_kept_where_nobody_can_delete_it() -> None:
     assert sink
     assert "cloudaudit.googleapis.com%2Fdata_access" in sink.group(1)
     assert "org.keycloak.events" in sink.group(1)
+
+
+def test_a_slow_cold_start_is_waited_for() -> None:
+    """A REST or MCP instance's startup probe allows at least a minute. Production's cold
+    starts took two or three of Cloud Run's three default checks; the slowest were killed."""
+    run = (GCP / "run.tf").read_text(encoding="utf-8")
+    api = re.search(r'resource "google_cloud_run_v2_service" "api" \{(.*?)\n\}', run, re.DOTALL)
+    assert api
+    probe = re.search(r"startup_probe \{(.*?)\n      \}", api.group(1), re.DOTALL)
+    assert probe
+    period = re.search(r"period_seconds\s*=\s*(\d+)", probe.group(1))
+    tries = re.search(r"failure_threshold\s*=\s*(\d+)", probe.group(1))
+    assert period and tries
+    assert int(period.group(1)) * int(tries.group(1)) >= 60
