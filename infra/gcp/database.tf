@@ -50,6 +50,20 @@ resource "google_sql_database_instance" "this" {
     availability_type = "ZONAL"
     disk_autoresize   = true
 
+    # Deleting the instance is refused by Cloud SQL itself, not only by OpenTofu
+    # (`deletion_protection` below guards only `tofu destroy`), and if it is ever deleted its
+    # backups outlive it (SOC2-14).
+    deletion_protection_enabled = true
+    retain_backups_on_delete    = true
+
+    # A password set on a built-in user through the Admin API, as setup/database.sh sets each,
+    # is long and is not the user's name. The setup generates 48 characters.
+    password_validation_policy {
+      enable_password_policy      = true
+      min_length                  = 32
+      disallow_username_substring = true
+    }
+
     location_preference {
       zone = var.zone
     }

@@ -39,3 +39,34 @@ resource "google_logging_project_bucket_config" "default" {
   bucket_id      = "_Default"
   retention_days = 400
 }
+
+# A copy of the evidence nobody can delete (SOC2-24). `_Required` already holds Admin Activity
+# and System Event logs, locked, for 400 days. Everything else lands in `_Default`, which an
+# Owner can shorten or empty. This bucket is locked: its retention cannot be reduced and it
+# cannot be deleted, by anyone, until every entry in it is 400 days old. Locking cannot be undone.
+#
+# What it keeps: every Data Access audit log, which records who read a secret, used a key,
+# administered the database or passed Identity-Aware Proxy; and the issuer's sign-in and
+# administration events (run.tf). A change to the sink or the bucket is alerted (monitoring.tf).
+resource "google_logging_project_bucket_config" "audit" {
+  project        = var.project_id
+  location       = "us"
+  bucket_id      = "cfokit-audit"
+  description    = "Audit evidence, locked for 400 days (infra/gcp/audit.tf)."
+  retention_days = 400
+  locked         = true
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+resource "google_logging_project_sink" "audit" {
+  name        = "cfokit-audit"
+  destination = "logging.googleapis.com/${google_logging_project_bucket_config.audit.id}"
+  filter = join(" OR ", [
+    "logName=\"projects/${var.project_id}/logs/cloudaudit.googleapis.com%2Fdata_access\"",
+    "(resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"${google_cloud_run_v2_service.issuer.name}\" AND textPayload:\"org.keycloak.events\")",
+  ])
+  unique_writer_identity = true
+}

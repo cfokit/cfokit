@@ -12,6 +12,15 @@ resource "google_compute_subnetwork" "run" {
   network       = google_compute_network.this.id
   region        = var.region
   ip_cidr_range = "10.10.0.0/24"
+
+  # Which addresses every service and job reached, and when (SOC2-24): half of the flows,
+  # summed over five minutes, which is enough to see an unexpected destination at a cost
+  # proportional to traffic that is mostly the database.
+  log_config {
+    aggregation_interval = "INTERVAL_5_MIN"
+    flow_sampling        = 0.5
+    metadata             = "INCLUDE_ALL_METADATA"
+  }
 }
 
 # Private services access: the range Cloud SQL's private IP is allocated from.
