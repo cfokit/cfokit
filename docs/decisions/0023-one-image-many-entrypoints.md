@@ -46,7 +46,7 @@ also decides what drains it.
 * A separate repository per component
 * A broker-backed queue with worker components
 * Components as sidecars in the same container or pod
-* Two shapes only, with unattended work as a scheduled job
+* Two shapes only, with the worker as one more job
 
 ## Decision Outcome
 
@@ -165,17 +165,19 @@ Would keep deployment simple and let components share a network namespace with t
 * Bad, because it forfeits the isolation that justified making them components at all. If a component
   is co-located and shares a lifecycle, the criteria in ADR-0022 § 3 say it should have been a module.
 
-### Two shapes only, with unattended work as a scheduled job
+### Two shapes only, with the worker as one more job
 
-A job with Cloud Scheduler attached, draining what is due and exiting: no compute paid for while
-idle.
+On GCP the worker runs as a Cloud Run job (ADR-0061 § 3), so it could be stated as a job and the
+shapes kept to two.
 
-* Good, because it scales to zero, and keeps the shapes to two.
-* Bad, because the trigger lives in infrastructure — a scheduler, a job resource, an identity to
-  start it, and a deploy step that exists only to keep the job's image current. A job left on an old
-  image is the version skew this record exists to prevent, and nothing fails when it happens.
-* Bad, because ADR-0061 weighs the cost difference, about $20 a month, and finds it does not pay for
-  that.
+* Good, because it is one fewer shape to state, and matches the resource GCP runs it as.
+* Bad, because a job's contract is to run once, when a person or the deploy chooses, and nothing in
+  it says a target must run anything unattended. A target that provided only services and jobs would
+  meet the contract and never sync a feed or send a recurring invoice.
+* Bad, because the worker's contract is its own: started repeatedly with no person, safe to run more
+  than once at the same time, and on a laptop running continuously. Stated as a job, those are
+  obligations of one job among several rather than of a shape every target supplies. That GCP meets
+  them with a job resource is the worker's runtime there, not its shape.
 
 ## More Information
 
