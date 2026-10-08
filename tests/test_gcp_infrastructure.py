@@ -144,3 +144,29 @@ def test_a_change_to_organization_policy_is_alerted() -> None:
         'serviceName=\\"orgpolicy.googleapis.com\\"' in f and "SetOrgPolicy" in f
         for f in filters
     )
+
+
+def test_the_database_refuses_deletion_and_its_backups_outlive_it() -> None:
+    """SOC2-14: deletion is refused by Cloud SQL itself, not only by OpenTofu, and a deleted
+    instance's backups are kept."""
+    database = (GCP / "database.tf").read_text(encoding="utf-8")
+    assert re.search(r"deletion_protection_enabled\s*=\s*true", database)
+    assert re.search(r"retain_backups_on_delete\s*=\s*true", database)
+
+
+def test_audit_evidence_is_kept_where_nobody_can_delete_it() -> None:
+    """SOC2-24: Data Access audit logs, and the issuer's sign-in events, are routed to a bucket
+    that is locked for 400 days, the review period and its lookback."""
+    audit = (GCP / "audit.tf").read_text(encoding="utf-8")
+    bucket = re.search(
+        r'resource "google_logging_project_bucket_config" "audit" \{(.*?)\n\}', audit, re.DOTALL
+    )
+    assert bucket
+    assert re.search(r"locked\s*=\s*true", bucket.group(1))
+    assert re.search(r"retention_days\s*=\s*400", bucket.group(1))
+    sink = re.search(
+        r'resource "google_logging_project_sink" "audit" \{(.*?)\n\}', audit, re.DOTALL
+    )
+    assert sink
+    assert "cloudaudit.googleapis.com%2Fdata_access" in sink.group(1)
+    assert "org.keycloak.events" in sink.group(1)
