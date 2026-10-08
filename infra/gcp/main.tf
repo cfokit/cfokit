@@ -21,6 +21,9 @@ locals {
     "logging.googleapis.com",
     "monitoring.googleapis.com",
     "orgpolicy.googleapis.com",
+    # Every image pushed is scanned for known vulnerabilities, once, at $0.26 an image (ADR-0060).
+    "containerscanning.googleapis.com",
+    "essentialcontacts.googleapis.com",
     "run.googleapis.com",
     "secretmanager.googleapis.com",
     "servicenetworking.googleapis.com",
@@ -44,6 +47,10 @@ resource "google_artifact_registry_repository" "images" {
   format        = "DOCKER"
   description   = "The application and issuer images, tagged by commit (ADR-0023, ADR-0060)."
 
+  # Tags are left mutable. Immutable tags would stop the cleanup below deleting any tagged image,
+  # so the repository would only grow; and a moved tag cannot change what runs, because Cloud Run
+  # records the digest it pulled on each revision and runs that.
+  #
   # Keep the most recent images, so a rollback has somewhere to go, and nothing older.
   cleanup_policies {
     id     = "keep-recent"

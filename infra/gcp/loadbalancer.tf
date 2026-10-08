@@ -15,7 +15,23 @@ resource "google_storage_bucket" "web" {
   uniform_bucket_level_access = true
   public_access_prevention    = "inherited"
   force_destroy               = false
-  depends_on                  = [google_project_service.this]
+
+  # Every browser runs what this bucket serves, so a replaced or deleted file keeps its previous
+  # version for thirty days: what was served, and when, is recoverable, and a bad upload is undone
+  # by restoring rather than rebuilding.
+  versioning {
+    enabled = true
+  }
+  lifecycle_rule {
+    condition {
+      days_since_noncurrent_time = 30
+    }
+    action {
+      type = "Delete"
+    }
+  }
+
+  depends_on = [google_project_service.this]
 }
 
 # The build is public: it is what every browser downloads.
@@ -42,6 +58,7 @@ resource "google_compute_backend_bucket" "web" {
     "Content-Security-Policy: default-src 'self'; connect-src 'self' ${local.issuer_origin}; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'",
     "X-Content-Type-Options: nosniff",
     "Referrer-Policy: same-origin",
+    local.hsts,
   ]
 }
 
@@ -50,6 +67,11 @@ resource "google_compute_backend_bucket" "web" {
 # ---------------------------------------------------------------------------------------------
 locals {
   cert_domains = [local.app_host, local.mcp_host, local.auth_host, local.admin_host]
+
+  # A browser that has reached a hostname over HTTPS never tries it over HTTP again, for a year,
+  # so nothing on the path can strip TLS from a later visit. Set where TLS ends, at the load
+  # balancer, not in the application, which a laptop serves over plain HTTP on localhost.
+  hsts = "Strict-Transport-Security: max-age=31536000; includeSubDomains"
 
   run_backends = {
     rest   = google_cloud_run_v2_service.api["rest"].name
@@ -81,6 +103,9 @@ resource "google_compute_backend_service" "run" {
 
   # armor.tf: rate limits in front of the sign-in endpoints and the API.
   security_policy = each.key == "issuer" ? google_compute_security_policy.issuer.id : google_compute_security_policy.api.id
+
+  # The issuer sends its own Strict-Transport-Security; the API's are added here, where TLS ends.
+  custom_response_headers = each.key == "issuer" ? [] : [local.hsts]
 
   log_config {
     enable      = true

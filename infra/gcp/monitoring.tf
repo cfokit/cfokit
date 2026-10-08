@@ -233,3 +233,14 @@ resource "google_monitoring_alert_policy" "uptime" {
     mime_type = "text/markdown"
   }
 }
+
+# Who Google tells about the project: a security incident, a suspension, a technical or legal
+# matter. Without a contact these go to the project's owners only, and only by role.
+resource "google_essential_contacts_contact" "this" {
+  for_each                            = toset(var.alert_emails)
+  parent                              = "projects/${var.project_id}"
+  email                               = each.value
+  language_tag                        = "en"
+  notification_category_subscriptions = ["SECURITY", "SUSPENSION", "TECHNICAL", "LEGAL"]
+  depends_on                          = [google_project_service.this]
+}
