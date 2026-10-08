@@ -458,9 +458,8 @@ It remains the implementation where there is no KMS, which is the local default 
   feed with it and with Plaid's Sandbox.
 * The web client gains the connect page and the repair page, and the MCP surface a tool returning
   each one's address for an entity. `infra/README.md` gains `WEB_CLIENT_URL`, MCP service only, and
-  `infra/gcp/run.tf` sets it to the web client's address. A panel's button waits on a probe of
-  `ui/open-link` in Claude Desktop and on claude.ai, added to ADR-0058's table; until then a panel
-  shows the address for the person to open.
+  `infra/gcp/run.tf` sets it to the web client's address. A panel shows the address, and a button
+  that opens it where the host supports `ui/open-link`.
 * Each step of the replay provider's sequence names the Plaid API reference page it follows, and a
   test refuses a step that names none, as the conformance corpus refuses a case with no citation.
 * `infra/README.md` gains `FEED_PROVIDER` (`plaid`, `replay`, or unset) and the provider's credentials, each a secret container
@@ -494,6 +493,8 @@ every such posting suspect.
 * Self-hosters ask for a feed without a Plaid account. SimpleFIN Bridge is the candidate provider.
 * A host gives panels the popups an OAuth institution needs, which would let Link run in the panel
   itself, with no tab and no sign-in beyond the conversation's.
+* `ui/open-link` is probed in Claude Desktop and on claude.ai and added to ADR-0058's table, which
+  would settle where a panel's button appears.
 * An examiner or a customer requires keys in hardware. An HSM key version is about $1 a month,
   and the protocol is unchanged.
 * Questions about changed lines become frequent enough to be a burden, which would argue for a
