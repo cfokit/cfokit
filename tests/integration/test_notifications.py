@@ -166,8 +166,10 @@ def test_the_notification_carries_no_figure(
     [found] = open_notifications(database, entity_id=entity, principal=OWNER)
     assert found.notification_class == UNRESOLVED_TRANSACTION
     assert found.link == f"/app/companies/{entity}/questions"
-    assert "240" not in found.subject_ref + found.link
-    assert "acme" not in (found.subject_ref + found.link).lower()
+    # Not the entity id: random hex, it contains "240" about one run in two hundred.
+    carried = found.subject_ref + found.link.replace(entity, "")
+    assert "240" not in carried
+    assert "acme" not in carried.lower()
 
 
 def test_running_an_unanswered_line_again_asks_once(
