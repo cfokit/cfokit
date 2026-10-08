@@ -130,10 +130,25 @@ books for good by guessing at their address. It stops guessing one person's pass
 a few passwords across many accounts from one address is the load balancer's to stop, which on
 GCP is Cloud Armor (`infra/gcp/armor.tf`).
 
-**A password is at least fifteen characters, and nothing else is asked of it.** NIST SP
-800-63B-4 § 3.1.1.2 sets fifteen for a password that is the only authenticator, which it can be
-where a second factor is optional, and forbids composition rules. It allows up to 128, and
-refuses one equal to the person's username or email address.
+**A password is at least fifteen characters, is not a known breached password, and nothing else
+is asked of it.** NIST SP 800-63B-4 § 3.1.1.2 sets fifteen for a password that is the only
+authenticator, which it can be where a second factor is optional; requires checking a password
+against values known to be compromised; and forbids composition rules. A password may be up to 128
+characters, and may not equal the person's username or email address.
+
+| `CFOKIT_PASSWORD_MIN_LENGTH` | Who uses it |
+|---|---|
+| unset: `15` | any deployment, CFOKit's hosted service included |
+| `12` to `14` | a deployment where every person also has a second factor, as NIST permits; never lower than 12 |
+
+**The breached passwords are a snapshot.** The issuer image carries the passwords of 12 to 128
+characters among the ten million most common in public breach compilations, from
+[SecLists](https://github.com/danielmiessler/SecLists) (MIT, its license beside the list in the
+image), pinned to one commit and checksum in the `Dockerfile`: about 702,000 of them. Twelve is the
+shortest minimum the variable allows, so every length a deployment accepts is checked, and
+`realm-settings.sh` refuses a lower one. The list changes only when the `Dockerfile` pins a newer
+one; it does not know about breaches after its commit. Keycloak compares in lower case, so the list
+is stored in lower case.
 
 **Every sign-in and every administrative change is an event in the issuer's log** (`PLT-17`):
 who, from which address, through which client, and on failure why. Kept in the database for
@@ -237,8 +252,10 @@ the console reports a timeout waiting for the "3rd party check iframe".
 It needs no administrator's password. Keycloak's own recovery command, `kc.sh bootstrap-admin`,
 creates a temporary administrator client whose secret is generated inside the container and
 never leaves it; the script signs in as that, applies the settings, deletes the client, and
-proves it gone by being refused when it signs in again. Events are switched on first, so each
-change after that is an admin event. It runs from the issuer image, against the issuer's
+proves it gone by being refused when it signs in again. A run killed outright, at the job's
+timeout or by a person, cannot clean up; its client stays until the next run, which deletes every
+`cfokit-settings-*` client it finds before its own. Events are switched on first, so each change
+after that is an admin event. It runs from the issuer image, against the issuer's
 database, with Keycloak started inside the same container; on GCP, `setup/realm.sh --settings`
 runs it as a job and then restarts the issuer, which caches realms.
 

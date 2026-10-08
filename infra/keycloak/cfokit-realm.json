@@ -639,7 +639,7 @@
   "loginWithEmailAllowed": true,
   "registrationEmailAsUsername": true,
   "verifyEmail": false,
-  "passwordPolicy": "length(15) and maxLength(128) and notUsername and notEmail",
+  "passwordPolicy": "length(${CFOKIT_PASSWORD_MIN_LENGTH:15}) and maxLength(128) and notUsername and notEmail and passwordBlacklist(cfokit-breached.txt)",
   "bruteForceProtected": true,
   "permanentLockout": false,
   "failureFactor": 10,

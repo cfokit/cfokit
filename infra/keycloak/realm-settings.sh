@@ -15,8 +15,15 @@
 #   CFOKIT_MASTER_FRONTEND_URL     where the admin console is served, e.g. https://admin.example.com
 #   CFOKIT_RESTRICT_REGISTERED_REDIRECTS
 #                                  true or false; what the realm file reads at import
+#   CFOKIT_PASSWORD_MIN_LENGTH     optional, 15 by default; at least 12, the shortest password the
+#                                  image's breached-password list covers
 set -euo pipefail
 : "${CFOKIT_ACCESS_TOKEN_LIFESPAN:?}" "${CFOKIT_MASTER_FRONTEND_URL:?}"
+min_length="${CFOKIT_PASSWORD_MIN_LENGTH:-15}"
+if ! [[ $min_length =~ ^[0-9]+$ ]] || [ "$min_length" -lt 12 ] || [ "$min_length" -gt 128 ]; then
+  echo "CFOKIT_PASSWORD_MIN_LENGTH is 12 to 128: the breached-password list covers 12 and up" >&2
+  exit 2
+fi
 case "${CFOKIT_RESTRICT_REGISTERED_REDIRECTS:?}" in true | false) ;; *)
   echo "CFOKIT_RESTRICT_REGISTERED_REDIRECTS is true or false" >&2
   exit 2
@@ -103,7 +110,7 @@ lockout=(-s bruteForceProtected=true -s permanentLockout=false -s failureFactor=
   -s quickLoginCheckMilliSeconds=1000 -s minimumQuickLoginWaitSeconds=60)
 events=(-s eventsEnabled=true -s eventsExpiration=7776000 -s 'eventsListeners=["jboss-logging"]'
   -s adminEventsEnabled=true -s adminEventsDetailsEnabled=true)
-password_policy='length(15) and maxLength(128) and notUsername and notEmail'
+password_policy="length(${min_length}) and maxLength(128) and notUsername and notEmail and passwordBlacklist(cfokit-breached.txt)"
 # Where a client that registers itself may send a person's sign-in (infra/keycloak/README.md,
 # "Clients that register themselves").
 registered_redirects=(
