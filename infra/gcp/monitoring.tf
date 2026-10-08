@@ -29,6 +29,11 @@ locals {
       detail = "An IAM policy, a service account, a key for one, or the GitHub federation changed. Expected only from `tofu apply`."
       filter = "${local.activity} AND (protoPayload.methodName:\"SetIamPolicy\" OR protoPayload.methodName:(\"CreateServiceAccount\" OR \"DeleteServiceAccount\" OR \"DisableServiceAccount\" OR \"EnableServiceAccount\" OR \"ServiceAccountKey\" OR \"WorkloadIdentityPool\"))"
     }
+    orgpolicy = {
+      name   = "Organization policy changed"
+      detail = "A policy on what may be created in the project was set, changed or removed (orgpolicy.tf). Expected only from `tofu apply`."
+      filter = "${local.activity} AND (protoPayload.serviceName=\"orgpolicy.googleapis.com\" OR protoPayload.methodName:(\"SetOrgPolicy\" OR \"ClearOrgPolicy\"))"
+    }
     logging = {
       name   = "Audit logging changed"
       detail = "A log sink, bucket, exclusion or log was changed or deleted: the evidence itself."

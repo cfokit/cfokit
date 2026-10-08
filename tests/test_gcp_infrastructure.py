@@ -133,3 +133,14 @@ def test_every_cloud_run_ingress_and_egress_is_one_the_org_policy_allows() -> No
         assert allowed, constraint
         for used in set(re.findall(rf'\b{setting}\s*=\s*"([A-Z_]+)"', terraform)):
             assert f'"{named[used]}"' in allowed.group(1), (setting, used)
+
+
+def test_a_change_to_organization_policy_is_alerted() -> None:
+    """orgpolicy.tf rests on a policy change being audited and alerted (SOC2-24): an alert's log
+    filter names the Org Policy service, and the legacy methods that set the same policies."""
+    monitoring = (GCP / "monitoring.tf").read_text(encoding="utf-8")
+    filters = re.findall(r"filter\s*=\s*\"(.*)\"\n", monitoring)
+    assert any(
+        'serviceName=\\"orgpolicy.googleapis.com\\"' in f and "SetOrgPolicy" in f
+        for f in filters
+    )
