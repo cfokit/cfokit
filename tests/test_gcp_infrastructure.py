@@ -115,3 +115,32 @@ def test_production_restricts_where_a_registered_client_may_redirect() -> None:
         r"CFOKIT_RESTRICT_REGISTERED_REDIRECTS\s*=\s*local\.issuer_env\.CFOKIT_RESTRICT_REGISTERED_REDIRECTS",
         terraform,
     )
+
+
+def test_every_cloud_run_ingress_and_egress_is_one_the_org_policy_allows() -> None:
+    """A service or job declared with a setting the project's policy refuses fails only when
+    OpenTofu applies it. Each ingress and egress in run.tf must be among the policy's values."""
+    terraform = _terraform()
+    named = {
+        "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER": "internal-and-cloud-load-balancing",
+        "PRIVATE_RANGES_ONLY": "private-ranges-only",
+    }
+    for setting, constraint in (
+        ("ingress", "run.allowedIngress"),
+        ("egress", "run.allowedVPCEgress"),
+    ):
+        allowed = re.search(rf'"{re.escape(constraint)}"\s*=\s*\[([^\]]*)\]', terraform)
+        assert allowed, constraint
+        for used in set(re.findall(rf'\b{setting}\s*=\s*"([A-Z_]+)"', terraform)):
+            assert f'"{named[used]}"' in allowed.group(1), (setting, used)
+
+
+def test_a_change_to_organization_policy_is_alerted() -> None:
+    """orgpolicy.tf rests on a policy change being audited and alerted (SOC2-24): an alert's log
+    filter names the Org Policy service, and the legacy methods that set the same policies."""
+    monitoring = (GCP / "monitoring.tf").read_text(encoding="utf-8")
+    filters = re.findall(r"filter\s*=\s*\"(.*)\"\n", monitoring)
+    assert any(
+        'serviceName=\\"orgpolicy.googleapis.com\\"' in f and "SetOrgPolicy" in f
+        for f in filters
+    )
