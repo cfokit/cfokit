@@ -5,7 +5,7 @@ date: 2026-10-06
 decision-makers: [Geoff Scott]
 ---
 
-# ADR-0061: Unattended work is a queue in Postgres, filled from stored schedules and drained by an always-running worker
+# ADR-0061: Unattended work is a queue in Postgres, filled from stored schedules and drained a pass at a time, on a tick and when a person waits
 
 **Requirements served:** `PLT-14`, `BKP-16`, `PLT-07`, `PLT-10`, `PLT-12`, `PLT-18`, `SOC2-15`.
 
@@ -39,10 +39,15 @@ work — period-close checks, recurring invoices, scheduled reports — run dail
 scales to zero ([ADR-0017](0017-gcp-initial-cloud-target.md)), so nothing in the deployment is
 running when no one is using it.
 
+Almost none of it has a person waiting. A sync announced by webhook brings data the provider fetched
+from the bank hours before, so minutes more are invisible, and a recurring invoice or a period-close
+check has a day to run in. The exceptions are a person's own requests: connecting an account, whose
+first sync brings the history they are waiting to see; asking for a sync now; repairing a broken
+connection. Each is a person on a page, waiting for work the request itself cannot do.
+
 This is production work, part of the application, and it changes with the application's code.
 Whatever runs it has to be deployed as the application is — the same image, in the same step — or a
-handler can run last week's code against this week's schema. A trigger that lives in infrastructure
-is a second thing to deploy and a second place for that skew to hide.
+handler can run last week's code against this week's schema.
 
 Four existing records bound the answer. [ADR-0023](0023-one-image-many-entrypoints.md) builds every
 entrypoint from one image so none runs a different version from the API, and names the runtime
@@ -68,15 +73,20 @@ no cloud account.
 * Suspension stops work without losing ingestion (`PLT-10`, `PLT-12`).
 * The same mechanism on a laptop and in the cloud (`NFR-11`, `NFR-17`).
 * No second store (ADR-0003), and no runtime dependency without a reason (root `CLAUDE.md`).
-* Unattended work deploys as the application does — same image, same step — with no
-  infrastructure that knows when work runs.
-* Its cost is stated and bounded. Tens of dollars a month is acceptable for a capability every
-  entity depends on; a design that bends the application around saving them is not.
+* Unattended work deploys as the application does — same image, same step — and nothing outside the
+  database knows a schedule.
+* A person waiting on work sees it start within seconds. Work no one is waiting on may wait minutes.
+* Its cost is stated, bounded, and in proportion to the work while there is little of it. Tens of
+  dollars a month is acceptable for a capability every entity depends on; paying them for a process
+  that is idle almost all month is not, and a design that bends the application around saving them
+  is not either.
 
 ## Considered Options
 
-* A work table in Postgres, filled from stored schedules and by causes, drained by an always-running worker
-* The same table, drained by a job on a fixed tick
+* A work table in Postgres, filled from stored schedules and by causes, drained a pass at a time by
+  a job on a fixed tick and started early when a person is waiting
+* The same table, drained by an always-running worker
+* The same table, drained by a job on a fixed tick alone
 * The same table, drained by a thread in the API's process
 * A task-queue library on Postgres
 * A managed queue: Cloud Tasks or Pub/Sub
@@ -86,15 +96,17 @@ no cloud account.
 
 ## Decision Outcome
 
-Chosen option: "A work table in Postgres, filled from stored schedules and by causes, drained by an
-always-running worker", because it is a real queue — durable, transactional with its cause, claimable
-safely by more than one worker — in the store the books already require, drained by a process that
-is deployed exactly as the API is.
+Chosen option: "A work table in Postgres, filled from stored schedules and by causes, drained a pass
+at a time by a job on a fixed tick and started early when a person is waiting", because it is a real
+queue — durable, transactional with its cause, claimable safely by any number of passes at once — in
+the store the books already require, drained by code deployed exactly as the API is, and paid for
+only while it runs.
 
 > Unattended work is a row in Postgres, enqueued in the same commit as what caused it. Schedules are
-> the entity's own rows, and a due window becomes a row. One always-running worker, from the same
-> image and rolled out in the same step as the API, claims and runs what is due. No timer exists
-> outside it.
+> the entity's own rows, and a due window becomes a row. A pass, from the same image and rolled out
+> in the same step as the API, claims and runs what is due, and exits. A tick starts a pass every
+> fifteen minutes, and a person's request that leaves work they are waiting on starts one at once.
+> The tick knows no schedule: what is due is the database's to say.
 
 This is a queue, and this record is what [ADR-0012](0012-binding-non-goals-and-scope-discipline.md)'s
 gate asks of one. It is not an event bus: a row names one piece of work for one handler, and nothing
@@ -136,10 +148,10 @@ Each pass of the worker's loop enqueues a run for every window due since the las
 run over the whole span, because one sync catches up any gap. A kind whose windows are distinct —
 one recurring invoice per month — enqueues one run per window. A missed window is never dropped.
 
-### 3. One worker, always running, deployed as the application is
+### 3. A pass, run on a tick and when a person waits, deployed as the application is
 
-`python -m cfokit.server work` is a long-running process. It lives in `server` because only the
-composition point knows the module list; the handlers live in their modules. It loops:
+`python -m cfokit.server work` runs passes. It lives in `server` because only the composition point
+knows the module list; the handlers live in their modules. A pass:
 
 * **Enqueue** a run for every schedule window that has come due (§ 2).
 * **Claim:** a short transaction selects due runs with `FOR UPDATE SKIP LOCKED`, marks them running
@@ -153,30 +165,61 @@ composition point knows the module list; the handlers live in their modules. It 
 * **Run:** each handler runs in its entity's scope — `cfokit.entity_id` set, row-level security in
   force — and takes the entity's lock for any ledger write, as every write does
   ([ADR-0011](0011-entity-advisory-lock.md)).
-* **Wait** a few seconds when nothing was due, then loop.
+* **Repeat** until nothing is due or the pass has run for its budget, ten minutes by default, then
+  claim nothing more, finish what it holds, and exit.
 
-The worker runs several runs at once, in threads, up to a bound it is configured with. Handlers are
-synchronous code holding a transaction, as ADR-0024 requires inside the ledger.
+A pass runs several runs at once, in threads, up to a bound it is configured with. Handlers are
+synchronous code holding a transaction, as ADR-0024 requires inside the ledger. **Two passes at once
+are safe**, because the claim is the only way to a run and two claims never take the same one; the
+budget bounds a pass's cost, not its correctness.
 
-Its loop is the only timer. What runs when is the schedules' business, held in the database, so a
-schedule changes without a deploy and the worker changes only when the code does.
+**What runs when is the schedules' business, held in the database**, so a schedule changes without a
+deploy and the pass changes only when the code does. The tick that starts a pass knows nothing of
+schedules: a pass enqueues every window that has come due since the last one enqueued (§ 2), so a
+tick late or missed delays work and never loses it.
 
-**On a stop signal it claims nothing more**, finishes what it holds if it can, and exits. A run cut
-off mid-way is due again when its lease expires and runs again from the start, which is safe because
-every write it makes is idempotent by key ([ADR-0029](0029-mandatory-idempotency-keys.md)). Cloud Run
-allows ten seconds between the signal and the kill.
+**On a stop signal a pass claims nothing more**, finishes what it holds if it can, and exits. A run
+cut off mid-way is due again when its lease expires and runs again from the start, which is safe
+because every write it makes is idempotent by key ([ADR-0029](0029-mandatory-idempotency-keys.md)).
 
-**On GCP it is a Cloud Run worker pool, `cfokit-work`, of one instance.** A worker pool is Cloud Run's
-resource for a process that serves no requests: no URL, no port to listen on. It is rolled out in the
-same step that updates `cfokit-rest` and `cfokit-mcp` to the merged commit's image. **Locally it is a
-compose service running the same command, on by default**, because a self-hosted deployment with a
-feed has to sync. More than one instance is safe, and one is the configuration.
+**On GCP a pass is a Cloud Run job, `cfokit-work`, running `work --once`.** Cloud Scheduler starts it
+every fifteen minutes. Its image is updated in the same step that updates `cfokit-rest` and
+`cfokit-mcp` to the merged commit's image, as the migration job's already is. **Locally it is a
+compose service running `work`, on by default, which starts a pass a few seconds after the last
+ends**, because a self-hosted deployment with a feed has to sync, and a laptop has no tick to start
+one.
 
-**It runs as its own service account, `cfokit-work`**, not the API's `cfokit-service`. Unattended
-work holds permissions a request never needs — decrypting a feed's token
+**A person's request that leaves work they are waiting on starts a pass at once**: connecting an
+account, asking for a sync now, repairing a connection. The request enqueues its run in its own
+transaction, as every cause does (§ 1), and after the commit the API starts `cfokit-work`, without
+waiting for it to finish or knowing what it will claim. The wake is a convenience, never the only way
+a run gets claimed: if it fails, the run is due, and the next tick takes it. A webhook does not wake a
+pass. What it announces is hours old already, and no one is waiting on it.
+
+Starting the job is the API's one permission over it: `roles/run.jobsExecutor` on `cfokit-work`
+alone, which runs the job as it is deployed and cancels its executions, and cannot change its image,
+command, arguments or environment (`run.jobs.runWithOverrides` is a separate permission, not
+granted). What a pass does is decided by the queue, so a caller who can start one can make it run
+sooner, never differently. The call is Cloud Run's Admin API over HTTPS with the standard library,
+behind a protocol whose local default does nothing, because the local pass is never stopped;
+authenticated by the service account's token from the metadata server, which is the process's
+identity, as [ADR-0062](0062-a-bank-feed-is-synchronized-by-cfokit-itself.md) § 6 has it; and named
+by `WORK_JOB`, so the job's name is configuration in the environment (ADR-0004). **With `WORK_JOB` unset the
+wake does nothing and reaches for no credential**, which is the local stack's configuration and any
+deployment's that runs the worker continuously: there a committed run is claimed by the next pass
+within seconds. Where it is set and the call fails — a missing metadata server, a refused permission
+— the failure is logged and the request's outcome is unchanged.
+
+**A pass runs as its own service account, `cfokit-work`**, not the API's `cfokit-service`.
+Unattended work holds permissions a request never needs — decrypting a feed's token
 ([ADR-0062](0062-a-bank-feed-is-synchronized-by-cfokit-itself.md) § 6) is the first — and a separate
-identity is what lets them be granted to the worker alone. It holds the database secret and what its
-kinds of work require, nothing more.
+identity is what lets them be granted to the pass alone. It holds the database secret and what its
+kinds of work require, nothing more. Starting the job does not lend the API any of them.
+
+**An always-running worker is the same code, looping.** When the queue is rarely empty at a tick, or
+people wait on the wake often enough that its start time shows, `cfokit-work` becomes a Cloud Run
+worker pool of one instance running `work`, as the local service does, and the tick and the wake are
+removed. That changes infrastructure and nothing in the queue.
 
 ### 4. Every run is recorded, and a failure reaches a person
 
@@ -215,15 +258,21 @@ claimed, so what the claim learns is only that an entity has work due.
 * Good, because one mechanism serves every kind of unattended work, on a laptop and in the cloud.
 * Good, because it adds no store and no runtime dependency. The claim is a few lines of SQL Postgres
   has supported since 9.5.
-* Good, because it deploys as the application does. Nothing in infrastructure knows a schedule, and
-  there is no second artifact to fall behind the code.
-* Good, because work starts within seconds of its cause. A person who has just connected a bank sees
-  the first sync begin at once.
-* Bad, because one instance runs all month whether or not anything is due: about $25 a month at
-  1 vCPU and 512 MiB by the worker pool rates Google publishes for us-central1, after the free tier.
-* Bad, because a run can be cut off by a deploy, ten seconds after the signal. Every handler must
-  tolerate running again from the start, which idempotency keys give writes but a handler must not
-  undo with a side effect of its own.
+* Good, because it deploys as the application does, and nothing in infrastructure knows a schedule:
+  the tick only starts a pass.
+* Good, because a person who has just connected a bank sees the first sync begin within the time a
+  job takes to start, seconds to tens of seconds, without anything running while no one needs it.
+* Good, because it is paid for only while it runs. A pass every fifteen minutes is about a third of
+  the five-minute tick's $5 a month, under $2, before the free tier, against about $25 for a worker
+  pool of one instance at 1 vCPU and 512 MiB by the rates Google publishes for us-central1.
+* Bad, because work no one waits on waits up to a tick: a webhook's sync, a schedule's window. For
+  the workloads above the delay is invisible; for one that needs it shorter, see Revisit when.
+* Bad, because the API calls Cloud Run's Admin API, the one place the API knows the deployment's
+  cloud. It sits behind a protocol with a local default, and its permission is to start the job and
+  nothing more.
+* Bad, because a run can be cut off: a pass's budget, a job's timeout, or a deploy. Every handler
+  must tolerate running again from the start, which idempotency keys give writes but a handler must
+  not undo with a side effect of its own.
 * Bad, because the run table is read across entities, an exception to row-level security that has
   to stay content-free to stay harmless.
 * Bad, because a Postgres queue degrades in known ways: dead rows from completed runs bloat the
@@ -231,49 +280,63 @@ claimed, so what the claim learns is only that an entity has work due.
   them. Completed runs are kept as the record of what ran (§ 4), so the claim reads from an index
   over open runs only.
 * Neutral, because [ADR-0023](0023-one-image-many-entrypoints.md) gains a third runtime shape, the
-  worker, beside the service and the job.
+  worker, beside the service and the job. On GCP it is run as a Cloud Run job until it is busy enough
+  to be always on.
 
 ### Confirmation
 
-Integration tests drive one pass of the worker's loop as a function against the compose database: a
+Integration tests drive one pass as a function against the compose database: a
 run enqueued in a transaction that rolls back is never claimed; two concurrent workers never claim
 the same run; a cause arriving during a run enqueues one waiting run that is claimed only after the
 running one finishes; an entity with a backlog does not delay another entity's due run; a throttled
 kind starts no more runs than its limit; operational windows for many references are spread across
-the interval; an expired lease makes a run due again; a stop signal claims nothing more; a missed span coalesces for an ingestion kind and enumerates
-for a windowed one; a suspended entity's runs are not claimed and its outbound runs are canceled; a
-run that exhausts its retries raises a notification.
+the interval; an expired lease makes a run due again; a stop signal, or a pass's budget running
+out, claims nothing more; two passes at once never claim the same run; a missed span coalesces for an
+ingestion kind and enumerates for a windowed one; a suspended entity's runs are not claimed and its
+outbound runs are canceled; a run that exhausts its retries raises a notification; a person's request
+whose wake fails leaves its run due.
 
 A schema test asserts that the run table has no column of a money type and no free-text column
 beyond the kind's reference. Content creeping into the queue is the failure § 6 exists to prevent.
 
-`infra/gcp/setup/check.sh` asserts that the worker pool runs the image the API runs.
+`infra/gcp/setup/check.sh` asserts that `cfokit-work` runs the image the API runs.
+`tests/test_gcp_infrastructure.py` asserts that the API holds `roles/run.jobsExecutor` on
+`cfokit-work` and no other role on it.
 
-Not gated: that the worker is alive between deploys. A run overdue by more than a few minutes is the
-symptom, and watching for it is monitoring's, not CI's.
+Not gated: that the tick fires. A run overdue by more than a tick is the symptom, and watching for it
+is monitoring's, not CI's.
 
 ## Pros and Cons of the Options
 
-### A work table in Postgres, filled from stored schedules and by causes, drained by an always-running worker
+### A work table in Postgres, drained a pass at a time on a tick and when a person waits
 
 * Good, because it is transactional with its cause, which no queue outside Postgres can be.
-* Good, because it is one more name in the rollout the API already has.
-* Bad, because it is paid for while idle.
+* Good, because it is paid for only while it runs, which while there is little work is almost never.
+* Good, because the one wait a person sees — after connecting an account, asking for a sync, or
+  repairing a connection — is a job's start, not a tick.
+* Bad, because it has two triggers where a worker has none: a Cloud Scheduler job, with an identity
+  allowed to start the job, and the API's wake, with its one permission.
+* Bad, because work no one waits on waits up to fifteen minutes.
 
-### The same table, drained by a job on a fixed tick
+### The same table, drained by an always-running worker
 
-The cheapest way to run the same drain: Cloud Scheduler starts a Cloud Run job every five minutes,
-which drains what is due and exits.
+The same code, looping in a Cloud Run worker pool of one instance, as it does locally.
 
-* Good, because it scales to zero between ticks, at about $5 a month against the worker's $25.
-* Bad, because the trigger lives in infrastructure: a Cloud Scheduler job, a job resource, an
-  invoker identity allowed to start it, and a deploy step whose only purpose is to keep the job's
-  image current. Forget that step and the job runs stale code with nothing failing loudly — the skew
-  ADR-0023 exists to prevent.
-* Bad, because work waits up to a tick, and a tick cannot be shortened cheaply. Cloud Run bills a job
-  instance for at least a minute, so a one-minute tick costs about $44 a month, more than the worker.
-* Bad, because executions overlap when a drain outlasts the tick, so the drain needs a time budget
-  and the tick a margin, both tuned against each other.
+* Good, because work starts within seconds of any cause, a webhook's included, with no trigger in
+  infrastructure and no permission for the API to hold.
+* Good, because it is the simplest shape to reason about: one process, always there.
+* Bad, because it is paid for while idle, about $25 a month, for a queue that is empty almost all of
+  every day while there is little work. It is where this design goes when that stops being true
+  (§ 3); the code is the same, so going there later costs only infrastructure.
+
+### The same table, drained by a job on a fixed tick alone
+
+* Good, because it is the cheapest shape, with no permission for the API to hold.
+* Bad, because a person who has just connected an account waits up to a tick, seven and a half minutes
+  on average at fifteen, before the history they are waiting for begins to arrive, at the point a new
+  customer is deciding whether CFOKit works. A tick short enough not to be noticed is not cheap: Cloud
+  Run bills a job instance for at least a minute, so a one-minute tick costs about $44 a month, more
+  than a worker.
 
 ### The same table, drained by a thread in the API's process
 
@@ -339,36 +402,45 @@ a worker already written.
 **Follow-on obligations.**
 
 * [ADR-0023](0023-one-image-many-entrypoints.md) is corrected in place: a third runtime shape, the
-  worker, beside the service and the job; a run schedule is the entity's data.
+  worker, beside the service and the job, run on GCP as a ticked and woken job; a run schedule is the
+  entity's data.
 * [ADR-0012](0012-binding-non-goals-and-scope-discipline.md)'s table of items that have passed the
   gate gains this record. A queue is not on the list, but an event bus is, and a queue is near enough
   to it that passing it unrecorded would be the drift the gate exists to catch.
-* `infra/gcp/` gains the `cfokit-work` worker pool (`google_cloud_run_v2_worker_pool`, in the
-  provider since 6.37.0) and the `cfokit-work` service account. `infra/gcp/setup/deploy.sh` updates
-  the worker pool's image in the same rollout step as `cfokit-rest` and `cfokit-mcp`.
-* `compose.yaml` gains the worker as a service outside any profile.
-* `infra/README.md` states that any target must supply a runtime for one always-running process
-  with no ingress.
+* `infra/gcp/` gains the `cfokit-work` job, running `work --once` as the `cfokit-work` service
+  account; a Cloud Scheduler job that starts it every fifteen minutes, as an identity holding
+  `roles/run.jobsExecutor` on it and nothing else; and `roles/run.jobsExecutor` on it for
+  `cfokit-service`. `infra/gcp/setup/deploy.sh` updates its image in the same rollout step as
+  `cfokit-rest` and `cfokit-mcp`, as it does the migration job's.
+* `compose.yaml` gains the worker as a service outside any profile, running `work`.
+* `infra/README.md` states that any target must supply a way to run the worker unattended: a job it
+  can start on a timer and on request, or one always-running process with no ingress. It gains
+  `WORK_JOB`, the job a person's request starts, which a deployment that runs the worker
+  continuously leaves unset.
 * A kind of work declares its cadence bounds, its recovery of missed windows, whether it is ingestion
   or outbound, and its retry bound. A kind that leaves one undeclared does not register.
 * A root `CLAUDE.md` rule: unattended work is enqueued as a run in the same transaction as its cause,
-  and nothing runs on a timer of its own.
-* Worker pool pricing is from Google's published rate table. The pricing page's own worked example
-  comes out lower than the table, and the two were not reconciled, so the $25 is an upper estimate.
-  How a worker pool replaces instances on a new revision is not documented for worker pools; the ten
-  seconds are Cloud Run's general container contract.
+  and no schedule lives outside the database. What starts a pass knows only that one should start.
+* Prices are from Google's published rate tables for us-central1. Worker pool pricing's own worked
+  example comes out lower than the table, and the two were not reconciled, so the $25 is an upper
+  estimate. The job's cost scales from the five-minute tick's estimate by the number of executions.
+  Whether starting a job also needs the starter to act as the job's service account was not
+  verified; the API is granted nothing more without a record saying why.
 
-**Reversal cost.** Low for the worker: the loop's body is the same function a ticked job would run,
-so moving to a job changes infrastructure and not the queue. Moderate for the queue: every kind of unattended work is enqueued
+**Reversal cost.** Low for how a pass is run: a ticked job, a woken job and an always-running worker
+run the same function, so moving between them changes infrastructure and not the queue. Moderate for the queue: every kind of unattended work is enqueued
 through it, and replacing it with an external queue gives up enqueueing in the cause's transaction,
 which would have to be rebuilt as an outbox — this table under another name.
 
 ## Revisit when
 
-* A kind of work needs to start faster than the worker's wait between polls, which is the case for
-  waking it with `LISTEN`/`NOTIFY`.
-* One worker cannot keep up: runs waiting behind others long enough that the queue's lag is visible.
-  More instances are the first answer, and they are already safe.
+* The queue is rarely empty when a tick starts a pass, or people wait on the wake often enough that a
+  job's start time shows: the case for the always-running worker (§ 3), and for removing the tick and
+  the wake.
+* A kind of work no person starts needs to start faster than a tick: the same case.
+* One pass cannot keep up: runs waiting behind others long enough that the queue's lag is visible.
+  More passes at once, or more instances of the worker, are the first answer, and they are already
+  safe.
 * Claiming contends: workers waiting on one another, or the run table large enough that the
   due-work query is no longer cheap. A Postgres queue's ceiling is not published anywhere this
   record could find; the symptom is the measure.
@@ -378,5 +450,6 @@ which would have to be rebuilt as an outbox — this table under another name.
   run records under `PLT-19`.
 * A deployment needs more of a provider's limit than its share, which is a conversation with the
   provider before it is a change here.
-* A second cloud target is added that offers no always-running runtime without ingress.
+* A second cloud target is added that offers no job runtime a deployment can start on a timer and on
+  request.
 * Plaid stops requiring webhooks, or a feed provider pushes data rather than announcing it.
