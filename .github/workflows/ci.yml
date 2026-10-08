@@ -250,9 +250,15 @@ jobs:
 
       # The browser trusts the stack's CA the way a person's does after the README's one-time
       # step: in the system store Chromium reads on Linux, NSS. No certificate check is skipped.
+      # The Ubuntu mirror is sometimes slow enough to stall a step for twenty minutes: every
+      # apt-get in this job retries a download and times out a stalled one, and the step gives
+      # up in five.
       - name: Trust the stack's CA in the browser's certificate store
+        timeout-minutes: 5
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq libnss3-tools ffmpeg
+          echo 'Acquire::Retries "3"; Acquire::http::Timeout "30"; Acquire::https::Timeout "30";' |
+            sudo tee /etc/apt/apt.conf.d/80-retries >/dev/null
+          sudo apt-get update -qq && sudo apt-get install -y -qq libnss3-tools
           mkdir -p "$HOME/.pki/nssdb"
           certutil -d "sql:$HOME/.pki/nssdb" -N --empty-password
           certutil -d "sql:$HOME/.pki/nssdb" -A -t "C,," -n "CFOKit local CA" -i .local/tls/ca/ca.pem
@@ -274,7 +280,16 @@ jobs:
         run: corepack pnpm e2e
 
       # The screencast: an MP4 to watch, and a GIF small enough for a README to show inline.
+      # Made only where the recording job publishes it, on a push to main: ffmpeg is most of
+      # what this job downloads from the mirror, and a pull request has no use for the video. The
+      # retries set above apply.
+      - name: Install ffmpeg
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        timeout-minutes: 10
+        run: |
+          sudo apt-get install -y -qq ffmpeg
       - name: Make the recording
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         working-directory: web
         run: |
           mkdir -p recording
@@ -286,6 +301,7 @@ jobs:
             recording/onboarding.gif
           ls -la recording
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           name: onboarding-recording
           path: web/recording/
@@ -323,7 +339,10 @@ jobs:
         run: docker compose -f compose.yaml --profile migrate run --rm migrate
 
       - name: Trust the stack's CA in the browser's certificate store
+        timeout-minutes: 5
         run: |
+          echo 'Acquire::Retries "3"; Acquire::http::Timeout "30"; Acquire::https::Timeout "30";' |
+            sudo tee /etc/apt/apt.conf.d/80-retries >/dev/null
           sudo apt-get update -qq && sudo apt-get install -y -qq libnss3-tools
           mkdir -p "$HOME/.pki/nssdb"
           certutil -d "sql:$HOME/.pki/nssdb" -N --empty-password
