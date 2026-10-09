@@ -1,5 +1,5 @@
 ---
-status: "proposed"
+status: "accepted"
 kind: "requirement-driven"
 date: 2026-10-06
 decision-makers: [Geoff Scott]
@@ -178,7 +178,8 @@ as the design.
 
 * Root `CLAUDE.md`'s Authentication section names this webhook beside the mail relay's as a way to
   reach an entity without an issuer token.
-* On GCP the route is served through the existing load balancer. `infra/gcp/setup/check.sh` checks
+* On GCP the route is served through the existing load balancer, under the API's Cloud Armor
+  policy and its per-client throttle (`infra/gcp/armor.tf`). `infra/gcp/setup/check.sh` checks
   that it refuses an unsigned request.
 * A provider other than Plaid that offers webhooks gets a route of its own under the same rules: a
   signature verified over the exact body, the entity and connection named in the URL, and one
@@ -192,5 +193,5 @@ nothing stored depends on a webhook having arrived.
 * Plaid changes its signing scheme or stops requiring webhooks.
 * A provider's webhook carries data that cannot be fetched afterwards. The enqueue-only rule then
   stops being sufficient, and storing what it carries needs this record superseded.
-* Requests to the route that fail verification are seen in volume, which would make rate limiting it
-  at the load balancer worth a decision.
+* Requests to the route that fail verification are seen in volume despite the API's throttle,
+  which would make a limit of the route's own at the load balancer worth a decision.
