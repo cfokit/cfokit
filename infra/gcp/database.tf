@@ -93,7 +93,8 @@ resource "google_sql_database_instance" "this" {
     }
 
     # Who connected and when, kept with the project's other logs (SOC2-24). Statement text is
-    # not logged: a role's password is set as a verifier, but a statement can still carry data.
+    # not logged for reads or writes: a role's password is set as a verifier, but a statement can
+    # still carry data.
     database_flags {
       name  = "log_connections"
       value = "on"
@@ -101,6 +102,20 @@ resource "google_sql_database_instance" "this" {
     database_flags {
       name  = "log_disconnections"
       value = "on"
+    }
+    # Every change to the schema or to a role, with its statement: a migration, a grant, a role
+    # created or altered, by whoever made it (SOC2-24). pgaudit sends them to Cloud Logging as Data
+    # Access audit logs, kept in the locked cfokit-audit bucket (audit.tf). Reads and writes of
+    # data are not audited here: their statements carry customer data, and the application's
+    # audit_log is the record of what changed in the books. Turning pgaudit on restarts the
+    # instance; setup/database.sh creates the extension in each database.
+    database_flags {
+      name  = "cloudsql.enable_pgaudit"
+      value = "on"
+    }
+    database_flags {
+      name  = "pgaudit.log"
+      value = "ddl,role"
     }
   }
 

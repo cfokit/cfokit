@@ -108,6 +108,7 @@ nothing cites these but this repository. They are added when something breaks wi
 | [0062](0062-a-bank-feed-is-synchronized-by-cfokit-itself.md) | A bank feed is synchronized by CFOKit's own process into account activity, through a provider protocol, and only a posted transaction becomes a line | Proposed |
 | [0063](0063-a-feed-provider-webhook-only-marks-a-connection-due.md) | A feed provider's webhook is a signed way in that only marks one connection's sync as due | Proposed |
 | [0064](0064-a-registered-client-redirects-only-to-a-known-host.md) | A client that registers itself may send a sign-in only to a known redirect | Accepted |
+| [0065](0065-database-connections-are-encrypted-not-certificate-verified.md) | Database connections are encrypted, and the server's certificate is not verified | Proposed |
 
 ## Deferred — decided in principle, waiting on a need
 

@@ -132,3 +132,26 @@ SH
   unset pw
   done_ "created"
 fi
+
+# pgaudit, in both databases (infra/gcp/database.tf): the instance's flag loads it, and each
+# database audits only once the extension exists in it. Run every time, because it is idempotent.
+# As the migration job's identity, whose owner role may create the extension in either database.
+step "pgaudit in both databases"
+gcloud run jobs delete cfokit-bootstrap-pgaudit --region "$CFOKIT_REGION" --quiet >/dev/null 2>&1 || true
+script=$(base64 <<'SH' | tr -d '\n'
+set -e
+for db in cfokit keycloak; do
+  psql "$(printf '%s' "$OWNER_URL" | sed "s#/cfokit?#/${db}?#")" -v ON_ERROR_STOP=1 \
+    -c 'CREATE EXTENSION IF NOT EXISTS pgaudit' >/dev/null
+done
+SH
+)
+gcloud run jobs deploy cfokit-bootstrap-pgaudit --region "$CFOKIT_REGION" --quiet \
+  --image postgres:18.6-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873 \
+  --service-account "cfokit-migrate@${CFOKIT_PROJECT}.iam.gserviceaccount.com" \
+  --network cfokit --subnet cfokit-run --vpc-egress private-ranges-only \
+  --set-secrets OWNER_URL=database-url-owner:latest \
+  --command sh --args="-c,echo $script | base64 -d | sh" --max-retries 0 >/dev/null
+gcloud run jobs execute cfokit-bootstrap-pgaudit --region "$CFOKIT_REGION" --wait --quiet >/dev/null
+gcloud run jobs delete cfokit-bootstrap-pgaudit --region "$CFOKIT_REGION" --quiet >/dev/null
+done_ "pgaudit created in cfokit and keycloak"
