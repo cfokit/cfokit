@@ -1,5 +1,5 @@
 ---
-status: "proposed"
+status: "accepted"
 kind: "requirement-driven"
 date: 2026-10-06
 decision-makers: [Geoff Scott]

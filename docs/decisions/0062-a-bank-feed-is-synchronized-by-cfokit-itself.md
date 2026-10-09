@@ -1,5 +1,5 @@
 ---
-status: "proposed"
+status: "accepted"
 kind: "requirement-driven"
 date: 2026-10-06
 decision-makers: [Geoff Scott]
@@ -266,6 +266,13 @@ KMS is called over HTTPS with the standard library, authenticated by the service
 token from Cloud Run's metadata server. That is the process's identity, not its configuration, which
 is what ADR-0004 keeps out of metadata: the key's name still arrives as `FEED_TOKEN_KMS_KEY`.
 
+**The KMS implementation is tested as the Plaid provider is.** Its HTTPS calls are answered from
+responses written to Cloud KMS's published REST reference — `encrypt` and `decrypt`, with additional
+authenticated data, and a refusal for a missing permission — each citing the reference page it
+follows, so the code production runs is the code under test, with no account and no network. A round
+trip through the real key after each deploy is not possible by design: no identity may both seal and
+open.
+
 No interface returns a token, no log line carries one, and no model sees one. After the provider
 confirms a removal, the sealed token is deleted: it is a credential, not a financial record.
 
@@ -277,6 +284,13 @@ raised. The person repairs it in the web client with Link in update mode, at a p
 to as it does the connect page. Syncs for that connection
 are not retried in the meantime; they resume when the provider reports it repaired, and the next
 sync's window covers the gap.
+
+**A connection can stay broken for months**, because an owner who looks at the books at reporting
+time does not see the notification until then. What the provider returns after a long break depends
+on the institution, so the repair is not assumed to fill the gap. The first sync after a repair
+compares the dates it delivered with the span the connection was broken, records the coverage
+(`BKP-21`), and where dates are missing raises a notification naming them, which a statement upload
+fills (ADR-0046).
 
 ### 8. A feed's balance is not a reconciliation
 
@@ -301,8 +315,9 @@ statement.
   in to CFOKit, which may mean a sign-in with its second factor before the bank's own.
 * Bad, because every sync opens its token with a call to KMS, so a KMS outage stops syncs. They
   wait as due work and resume (ADR-0061); nothing is lost.
-* Bad, because the seal has two implementations, and the one production uses is exercised only on
-  GCP. The local one is what the suite tests.
+* Bad, because the seal has two implementations, and the one production uses talks to a service the
+  suite cannot reach. The suite tests it against KMS's published responses, which prove the requests
+  and their handling but not the key's permissions; `check.sh` asserts those.
 * Bad, because Plaid's client is ours to maintain against its API changes, rather than Plaid's.
 * Neutral, because every feed run is one more kind of unattended work, which ADR-0061 already
   accounts for.
@@ -325,6 +340,11 @@ statement.
   that entity, built from `WEB_CLIENT_URL`, never an address at the provider.
 * A test asserts that a sealed token moved to another connection's row fails to open, for the local
   implementation.
+* Tests drive the KMS implementation against responses written to Cloud KMS's REST reference, each
+  citing its page: a seal and an open with the connection as additional authenticated data, and a
+  refused permission surfacing as a failed run rather than a token.
+* A test against the replay provider asserts that a repair after a break longer than the dates the
+  next sync delivers raises a notification naming the missing dates.
 * `infra/gcp/setup/check.sh` asserts the key's IAM policy: `cfokit-service` may only encrypt,
   `cfokit-work` may only decrypt, and no one else holds either.
 * A test against Plaid's sandbox runs only where Plaid credentials are present. CI gate 2 runs with
