@@ -220,3 +220,21 @@ def test_a_fixable_critical_vulnerability_stops_the_deploy_before_anything_runs(
     assert re.search(
         r'"deploy_scan_results" \{[^}]*roles/containeranalysis\.occurrences\.viewer', iam
     )
+
+
+def test_the_database_accepts_only_encrypted_connections() -> None:
+    """ADR-0065: every connection is encrypted, and the instance refuses one that is not; no
+    virtual machine may sit on the network with a public address."""
+    assert re.search(r'ssl_mode\s*=\s*"ENCRYPTED_ONLY"', (GCP / "database.tf").read_text())
+    orgpolicy = (GCP / "orgpolicy.tf").read_text(encoding="utf-8")
+    assert "compute.vmExternalIpAccess" in orgpolicy
+
+
+def test_schema_and_role_changes_are_audited() -> None:
+    """pgaudit records every change to the schema or a role (SOC2-24); reads and writes of data,
+    whose statements carry customer data, are not audited by it."""
+    database = (GCP / "database.tf").read_text(encoding="utf-8")
+    assert re.search(r'"cloudsql\.enable_pgaudit"\s*value\s*=\s*"on"', database)
+    assert re.search(r'"pgaudit\.log"\s*value\s*=\s*"ddl,role"', database)
+    setup = (GCP / "setup" / "database.sh").read_text(encoding="utf-8")
+    assert "CREATE EXTENSION IF NOT EXISTS pgaudit" in setup
