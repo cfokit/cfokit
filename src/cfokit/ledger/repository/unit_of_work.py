@@ -48,7 +48,7 @@ from cfokit.ledger.repository.connection import connect
 from cfokit.ledger.repository.notifications import Notification
 from cfokit.ledger.repository.transactions import StoredTransaction
 
-__all__ = ["Database", "EntitySettings", "EntityWrite", "UnscopedWrite"]
+__all__ = ["Database", "EntitySettings", "EntityWrite", "PrincipalRead", "UnscopedWrite"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -633,6 +633,21 @@ class UnscopedWrite:
         )
 
 
+class PrincipalRead:
+    """What can be read about a principal across entities: where it holds a grant, and nothing
+    else (migration 0019).
+
+    Separate from `EntityWrite` and `UnscopedWrite` so the one cross-entity read of grants is
+    available only here, and offers no entity's books.
+    """
+
+    def __init__(self, conn: psycopg.Connection[Any]) -> None:
+        self._conn = conn
+
+    def entities_held(self, principal_id: str, at: datetime) -> frozenset[str]:
+        return grants.entities_held(self._conn, principal_id, at)
+
+
 class Database:
     """The database, as everything above `repository` sees it."""
 
@@ -649,6 +664,12 @@ class Database:
         """
         with connect(self._dsn) as conn, conn.transaction():
             yield UnscopedWrite(conn)
+
+    @contextmanager
+    def principal_read(self) -> Iterator[PrincipalRead]:
+        """One transaction, scoped to no entity, for reading where a principal holds grants."""
+        with connect(self._dsn) as conn, conn.transaction():
+            yield PrincipalRead(conn)
 
     @contextmanager
     def entity_write(self, entity_id: str) -> Iterator[EntityWrite]:

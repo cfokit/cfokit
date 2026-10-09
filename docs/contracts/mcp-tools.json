@@ -487,6 +487,15 @@
     "name": "issued_statements"
   },
   {
+    "description": "The companies whose books the person can reach here, each with the entity_id every other tool takes, its name, and what it declared. Call this first when the person names a company or has not said which: match by name, and ask them to choose only if more than one fits.",
+    "inputSchema": {
+      "properties": {},
+      "title": "list_the_entitiesArguments",
+      "type": "object"
+    },
+    "name": "list_entities"
+  },
+  {
     "description": "One obligation read as both events: the commitment as it arose, and every settlement applied to it since.",
     "inputSchema": {
       "properties": {

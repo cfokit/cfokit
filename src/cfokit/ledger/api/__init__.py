@@ -42,6 +42,7 @@ from cfokit.ledger.api.models import (
     CreateAccountRequest,
     CreateEntityRequest,
     DismissalResponse,
+    EntitiesResponse,
     EntityCreatedResponse,
     EntityResponse,
     ErrorResponse,
@@ -112,7 +113,7 @@ from cfokit.ledger.service.notifications import dismiss, open_notifications
 from cfokit.ledger.service.opening import CarriedBalance, open_balances
 from cfokit.ledger.service.periods import close_period, reopen_period
 from cfokit.ledger.service.principal import Principal
-from cfokit.ledger.service.read import read_entity, read_transaction
+from cfokit.ledger.service.read import list_entities, read_entity, read_transaction
 from cfokit.ledger.service.readiness import check_readiness
 from cfokit.ledger.service.receivables import obligation_detail, outstanding_obligations
 from cfokit.ledger.service.reports import (
@@ -403,6 +404,37 @@ def create_app(settings: Settings, authenticator: Authenticator | None = None) -
         return EntityCreatedResponse(
             entity_id=created.entity_id,
             owner_grant_id=created.owner_grant_id,
+        )
+
+    @app.get(
+        "/entities",
+        tags=["administration"],
+        summary="List the entities the caller may read",
+        responses=ERRORS,
+    )
+    def entities(
+        acting: Annotated[Principal, Depends(get_principal)],
+        database: Annotated[Database, Depends(get_database)],
+    ) -> EntitiesResponse:
+        """Every entity in which the caller holds a role that reads, by name (`IAM-08`).
+
+        For an agent acting for a person, only those where both hold one (`IAM-11`). What to
+        pass as `entity_id` everywhere else.
+        """
+        return EntitiesResponse(
+            entities=[
+                EntityResponse(
+                    id=found.id,
+                    slug=found.slug,
+                    name=found.name,
+                    accounting_basis=found.accounting_basis,
+                    fiscal_year_end_month=found.fiscal_year_end_month,
+                    fiscal_year_end_day=found.fiscal_year_end_day,
+                    functional_currency=found.functional_currency,
+                    time_zone=found.time_zone,
+                )
+                for found in list_entities(database, principal=acting)
+            ]
         )
 
     @app.get(

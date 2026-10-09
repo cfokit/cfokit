@@ -139,6 +139,7 @@ def test_the_mcp_tool_surface_is_published() -> None:
         "import_reconciliations",
         "issue_statement",
         "issued_statements",
+        "list_entities",
         "obligation_detail",
         "open_balances",
         "open_notifications",
