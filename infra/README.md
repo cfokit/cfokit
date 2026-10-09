@@ -167,14 +167,15 @@ has no ingress, so its `tls` step generates a local CA and the issuer's certific
 `SSL_CERT_FILE` — a standard OpenSSL variable, not part of the configuration surface above, and
 set nowhere but `compose.yaml`.
 
-### 5. Two runtime shapes
+### 5. Three runtime shapes
 
-Any target must provide both (ADR-0023):
+Any target must provide all three (ADR-0023):
 
 | Shape | Requirement |
 |---|---|
 | **Service** | Request-serving with HTTPS ingress. May scale to zero. |
 | **Job** | One-shot execution, invoked explicitly, **with no request timeout**. |
+| **Worker** | Unattended work, run with no request behind it (ADR-0061): either a job the target starts on a timer and on request, running `python -m cfokit.server work --once`, or one always-running process with no ingress, running `python -m cfokit.server work`. |
 
 Two services run from this image, and each needs its own ingress and its own
 `PUBLIC_BASE_URL`:
@@ -197,7 +198,11 @@ component running against an API version it was not built for. Scheduling a job 
 concern, not the application's: the component only knows how to run once. Locally there is no
 scheduler, so periodic work is run on demand.
 
-There are no long-running worker processes, because there is no queue (ADR-0012).
+Unattended work is a queue in the database, not in the target (ADR-0061). A pass of the worker
+runs what is due and exits; `work --once` is one pass, and `work` alone runs passes a few
+seconds apart until stopped, which is how the local stack runs it. What runs when is held in
+the database, so nothing in the target knows a schedule: a timer only starts a pass. Two passes
+at once are safe, so a target may start one whenever it likes.
 
 ### 6. A compute path without a request timeout
 

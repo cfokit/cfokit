@@ -288,6 +288,29 @@ services:
       timeout: 3s
       retries: 5
 
+  # Unattended work (ADR-0061): one pass after another, a few seconds apart, for as long as the
+  # stack runs. On by default, because a deployment with a feed has to sync and a laptop has no
+  # tick to start a pass. It serves nothing and publishes no port. Until migrations are applied
+  # its passes fail and it restarts, as the other services report not ready.
+  work:
+    build:
+      context: .
+      target: runtime
+      secrets: [build_ca]
+    command: ["python", "-m", "cfokit.server", "work"]
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # The REST service's configuration: the same application role, under the same row-level
+      # security, and its address, which the links in what a run raises are relative to.
+      DATABASE_URL: postgresql://cfokit_app:${POSTGRES_APP_PASSWORD:-cfokit_app}@postgres:5432/cfokit
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://localhost:8080}
+      AUTH_ISSUER_URL: ${AUTH_ISSUER_URL:-https://keycloak.localhost:8443/realms/cfokit}
+      AUTH_AUDIENCE: ${AUTH_AUDIENCE:-cfokit-ledger}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+
   # The suite, run inside the compose network (ADR-0023: one image, many entrypoints).
   # compose.yaml deliberately publishes no database port, so a host-run integration test
   # cannot reach Postgres — and CI gate 2 runs this file without the dev overlay. Running

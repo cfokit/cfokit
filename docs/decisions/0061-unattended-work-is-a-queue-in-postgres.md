@@ -228,6 +228,12 @@ webhook delivery, or the request id — and every `audit_log` row a handler writ
 id as its request id, so a change made unattended traces to the schedule, and the schedule to the
 person who set it. That record, over a period, is `PLT-18`'s "what the system did unattended".
 
+**The queue's own bookkeeping is recorded in the queue, not in `audit_log`.** Enqueueing, claiming,
+sweeping and an attempt's outcome are no principal's act, so there is no actor for an audit row to
+name. Each run's causes and attempts are its record, appended and never changed. The acts around it
+write their rows as any act does: the person's request or the verified webhook that enqueued it,
+and every write a handler makes.
+
 A failed attempt is retried with exponential backoff and full jitter — a random delay up to the
 backoff, so retries after a shared failure do not arrive together — up to a bound the kind declares.
 A provider's refusal for its rate limit is a failed attempt like any other. A run that exhausts it is

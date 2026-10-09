@@ -71,15 +71,23 @@ application role, in `tests/integration/test_entity_isolation.py`. It is the enf
 a repository read addresses a transaction by id and relies on the scope set on the session, so
 isolation is a property of the database rather than of each query.
 
-One read crosses entities, and it is narrower than any entity's data: **a principal's own
-grants.** `entity_grant` has a second policy, for `SELECT` only, that shows a transaction the
-grant rows naming the principal it declares in `cfokit.principal_id`. Listing the entities a
-caller may read needs it; without it, every conversation starts with the person reciting an
-entity id. Only that listing declares a principal — the authenticated one, for one transaction
-— and each entity found is then read under its own scope like any other. A declaring
-transaction sees its principal's grants and nothing else: no other principal's grant, no row of
-any entity's books, and no write, each measured as the application role in
-`tests/integration/test_entity_list.py`. Widening it would be a new record.
+Two reads cross entities, each narrower than any entity's data:
+
+* **A principal's own grants.** `entity_grant` has a second policy, for `SELECT` only, that
+  shows a transaction the grant rows naming the principal it declares in
+  `cfokit.principal_id`. Listing the entities a caller may read needs it; without it, every
+  conversation starts with the person reciting an entity id. Only that listing declares a
+  principal — the authenticated one, for one transaction — and each entity found is then read
+  under its own scope like any other. A declaring transaction sees its principal's grants and
+  nothing else: no other principal's grant, no row of any entity's books, and no write, each
+  measured as the application role in `tests/integration/test_entity_list.py`.
+* **The work queue** ([ADR-0061](0061-unattended-work-is-a-queue-in-postgres.md) § 6). Its
+  tables carry no row-level security, because the pass claims work across entities before it
+  has one to scope to, and so they carry no content: every text column is an identifier or a
+  state held to a pattern, and a failure is recorded by its code. A test asserts the queue has
+  no money column and no free text, in `tests/integration/test_unattended_work.py`.
+
+Widening either would be a new record.
 
 The deferred constraint
 trigger (ADR-0006) enforces zero-sum, and is exercised in

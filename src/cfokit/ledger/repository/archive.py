@@ -200,6 +200,31 @@ TABLES: tuple[tuple[str, str], ...] = (
         " FROM notification_closing WHERE entity_id = %(entity_id)s ORDER BY closed_at, id",
     ),
     (
+        # ADR-0061 § 4: the record of what ran unattended, and why, is `PLT-18`'s evidence for
+        # the entity, so it goes with the entity. A run's causes and attempts follow the run.
+        "work_schedule",
+        "SELECT id, kind, reference, created_at, last_window_end, ended_at"
+        " FROM work_schedule WHERE entity_id = %(entity_id)s ORDER BY created_at, id",
+    ),
+    (
+        "work_run",
+        "SELECT id, kind, reference, window_start, window_end, state, due_at, enqueued_at,"
+        " attempts, claimed_at, lease_expires_at, finished_at, merged_into"
+        # Newest first: a run is only ever merged into one enqueued after it, so this puts the
+        # run a merged one names before the run naming it.
+        " FROM work_run WHERE entity_id = %(entity_id)s ORDER BY enqueued_at DESC, id",
+    ),
+    (
+        "work_run_cause",
+        "SELECT id, run_id, cause, cause_ref, caused_at"
+        " FROM work_run_cause WHERE entity_id = %(entity_id)s ORDER BY caused_at, id",
+    ),
+    (
+        "work_attempt",
+        "SELECT id, run_id, attempt, started_at, ended_at, outcome, error_code"
+        " FROM work_attempt WHERE entity_id = %(entity_id)s ORDER BY run_id, attempt",
+    ),
+    (
         "audit_log",
         "SELECT id, request_id, actor, action, subject_type, subject_id, occurred_at, detail"
         " FROM audit_log WHERE entity_id = %(entity_id)s ORDER BY occurred_at, id",
