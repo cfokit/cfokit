@@ -101,6 +101,9 @@ services:
       # How long an access token lives, in seconds. Eight hours here; a deployment reachable by
       # anything else shortens it (infra/keycloak/README.md says why).
       CFOKIT_ACCESS_TOKEN_LIFESPAN: ${CFOKIT_ACCESS_TOKEN_LIFESPAN:-28800}
+      # The shortest password accepted: 15, or as low as 12 where every person also has a second
+      # factor. infra/keycloak/README.md says why.
+      CFOKIT_PASSWORD_MIN_LENGTH: ${CFOKIT_PASSWORD_MIN_LENGTH:-15}
       # Whether a client that registers itself may send a sign-in only to Claude or back to this
       # machine. Off here, where nothing outside can reach the issuer (ADR-0064).
       CFOKIT_RESTRICT_REGISTERED_REDIRECTS: ${CFOKIT_RESTRICT_REGISTERED_REDIRECTS:-false}

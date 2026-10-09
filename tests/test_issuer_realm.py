@@ -30,12 +30,27 @@ def test_repeated_failures_lock_the_account_for_a_while() -> None:
 def test_a_password_alone_is_at_least_fifteen_characters() -> None:
     """NIST SP 800-63B-4 § 3.1.1.2: a password that is the only authenticator is at least 15
     characters, and no composition rule is imposed. A second factor is optional outside a
-    service organization (IAM-23), so a password can be the only one."""
+    service organization (IAM-23), so a password can be the only one: the deployment's minimum
+    defaults to 15."""
     policy = _realm()["passwordPolicy"]
-    length = re.search(r"\blength\((\d+)\)", policy)
+    length = re.search(r"\blength\(\$\{CFOKIT_PASSWORD_MIN_LENGTH:(\d+)\}\)", policy)
     assert length and int(length.group(1)) >= 15
     for composition in ("digits", "upperCase", "lowerCase", "specialChars"):
         assert composition not in policy
+
+
+def test_a_breached_password_is_refused_down_to_the_shortest_minimum() -> None:
+    """NIST SP 800-63B-4 § 3.1.1.2: a password is checked against values known to be
+    compromised. The image's list keeps breached passwords from the shortest minimum a
+    deployment may set, and the settings script refuses a minimum below it, so no accepted
+    length goes unchecked."""
+    dockerfile = (REALM.parent.parent.parent / "Dockerfile").read_text(encoding="utf-8")
+    floor = re.search(r"awk 'length\(\$0\) >= (\d+)", dockerfile)
+    assert floor
+    script = SETTINGS.read_text(encoding="utf-8")
+    assert f'[ "$min_length" -lt {floor.group(1)} ]' in script
+    assert "out/cfokit-breached.txt" in dockerfile
+    assert "passwordBlacklist(cfokit-breached.txt)" in _realm()["passwordPolicy"]
 
 
 def test_sign_ins_and_administration_are_recorded() -> None:
@@ -64,9 +79,12 @@ def _settings() -> dict[str, Any]:
     values: dict[str, Any] = {}
     for key, raw in re.findall(r"-s '?(\w+)=([^'\s)]+)'?", script):
         values[key] = json.loads(raw) if raw[0] in "[0123456789tf" else raw
-    policy = re.search(r"password_policy='([^']+)'", script)
+    policy = re.search(r'password_policy="([^"]+)"', script)
     assert policy
-    values["passwordPolicy"] = policy.group(1)
+    # The script reads the minimum from the same variable the realm file does.
+    values["passwordPolicy"] = policy.group(1).replace(
+        "${min_length}", "${CFOKIT_PASSWORD_MIN_LENGTH:15}"
+    )
     return values
 
 

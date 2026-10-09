@@ -51,7 +51,25 @@ ENV JAVA_HOME=/opt/java/openjdk \
     PATH=/opt/java/openjdk/bin:/usr/share/maven/bin:$PATH
 RUN --mount=type=cache,target=/root/.m2 corepack pnpm exec keycloakify build
 
+# Passwords the issuer refuses because they are in public breach compilations
+# (infra/keycloak/README.md). The ten million most common, from SecLists (MIT), pinned by commit
+# and checksum, kept to those of 12 to 128 characters: 12 is the shortest minimum a deployment may
+# set (CFOKIT_PASSWORD_MIN_LENGTH), and anything shorter is refused before the list is read. The
+# download stays in this stage; the issuer image carries the 9.5 MB result and its license.
+FROM python:3.14.7-slim@sha256:51dafde81dbdb6ebde285137a295cf18a47ca95234fe388a343719cb97305b3d AS breached-passwords
+ADD --checksum=sha256:18dc49ca32b62455a61e3398f4ab9f93eb700ff142fa0d4b9fd11a727f3b80e4 \
+    https://raw.githubusercontent.com/danielmiessler/SecLists/12274c98fdebe98c7a7284914436a472ed469aed/Passwords/Common-Credentials/Pwdb_top-10000000.txt \
+    /tmp/passwords.txt
+ADD --chmod=644 --checksum=sha256:3dbdc93d5f8829de0941744841730a09c106d0732e5ae0e98ca1d77be7ded66c \
+    https://raw.githubusercontent.com/danielmiessler/SecLists/12274c98fdebe98c7a7284914436a472ed469aed/LICENSE \
+    /out/SecLists-LICENSE
+# Lower case, because Keycloak compares a password with the list in lower case.
+RUN LC_ALL=C awk 'length($0) >= 12 && length($0) <= 128' /tmp/passwords.txt \
+    | LC_ALL=C tr 'A-Z' 'a-z' | LC_ALL=C sort -u > /out/cfokit-breached.txt \
+    && rm /tmp/passwords.txt
+
 FROM quay.io/keycloak/keycloak:26.7.4@sha256:82a77884f3af238beab1e7afd63b5f530e1b5c0590bd7aa60b40a40463e29b2c AS issuer
+COPY --from=breached-passwords /out/ /opt/keycloak/data/password-blacklists/
 COPY --from=sign-in-theme /web/dist_keycloak/cfokit-theme.jar /opt/keycloak/providers/
 # The realm, imported on first start where nothing mounts it — Cloud Run mounts nothing
 # (ADR-0060 § 3). The compose stack mounts the same file over this path.
