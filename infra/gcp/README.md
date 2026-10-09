@@ -47,7 +47,8 @@ The tutorial runs the scripts in [`setup/`](setup/), in order, and they run the 
 | `images.sh [--latest] [COMMIT]` | Build and push both images, tagged with the commit (and `latest`, before the first apply) |
 | `apply.sh` | Services, the migration job, the web bucket, the load balancer |
 | `dns.sh [--wait]` | The three A records to set; waits for them and the certificate |
-| `deploy.sh [COMMIT]` | Build, migrate, publish the web build, roll out, check |
+| `deploy.sh [COMMIT]` | Build, check for vulnerabilities, migrate, publish the web build, roll out, check |
+| `vulnerabilities.sh IMAGE...` | Wait for each image's scan; fail on a critical vulnerability with a fix |
 | `github.sh` | The deploy workflow's repository variables |
 | `realm.sh --settings [COMMIT]` | Apply the realms' settings in place, keeping every account; once after the first deploy |
 | `realm.sh --replace [COMMIT]` | Replace the issuer's realm with the image's, removing its accounts |

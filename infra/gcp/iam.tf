@@ -92,6 +92,15 @@ resource "google_service_account_iam_member" "deploy_acts_as" {
   member             = google_service_account.deploy.member
 }
 
+# The deploy reads each image's vulnerability findings before shipping it
+# (setup/vulnerabilities.sh). Read-only, across the project, which is the narrowest scope the
+# role is granted at.
+resource "google_project_iam_member" "deploy_scan_results" {
+  project = var.project_id
+  role    = "roles/containeranalysis.occurrences.viewer"
+  member  = google_service_account.deploy.member
+}
+
 resource "google_artifact_registry_repository_iam_member" "deploy_push" {
   repository = google_artifact_registry_repository.images.name
   location   = google_artifact_registry_repository.images.location
