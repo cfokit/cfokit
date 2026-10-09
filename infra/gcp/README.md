@@ -66,5 +66,12 @@ and every later one are the same code.
   by itself, because Keycloak imports a realm only when it does not exist. A change to a value
   `infra/keycloak/realm-settings.sh` sets reaches it through `setup/realm.sh --settings`, which
   keeps every account; anything else through `setup/realm.sh --replace`, which removes them.
+* **A Keycloak upgrade** is a new digest in the `Dockerfile`. Keycloak migrates its own schema
+  when the new version first starts, and the old revision serves until the new one is ready, so
+  for that minute both run. Keycloak says whether that is safe: generate metadata with the old
+  image (`kc.sh update-compatibility metadata`) and check it with the new
+  (`kc.sh update-compatibility check`), both with the issuer's options. Exit 3 means it is not;
+  deploy it when no one is signing in. Going back after the new version has started means
+  restoring the database, not deploying the old image.
 * **A rollback** is `gcloud run services update-traffic` to the previous revision. A migration is
   not rolled back: migrations are written forward-only.

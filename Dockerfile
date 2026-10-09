@@ -68,7 +68,7 @@ RUN LC_ALL=C awk 'length($0) >= 12 && length($0) <= 128' /tmp/passwords.txt \
     | LC_ALL=C tr 'A-Z' 'a-z' | LC_ALL=C sort -u > /out/cfokit-breached.txt \
     && rm /tmp/passwords.txt
 
-FROM quay.io/keycloak/keycloak:26.7.5@sha256:37dbaf6f0722c9ec246335f36e1ef8b2e6cb960f7c27e0d8c615121a3d475a85 AS issuer
+FROM quay.io/keycloak/keycloak:26.8.0@sha256:b0f60d489d51c5d113390bdf5461d4c06e6051be026c05549f2e1e10ec352bcc AS issuer
 COPY --from=breached-passwords /out/ /opt/keycloak/data/password-blacklists/
 COPY --from=sign-in-theme /web/dist_keycloak/cfokit-theme.jar /opt/keycloak/providers/
 # The realm, imported on first start where nothing mounts it — Cloud Run mounts nothing
