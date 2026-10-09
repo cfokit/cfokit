@@ -184,3 +184,26 @@ def test_a_slow_cold_start_is_waited_for() -> None:
     tries = re.search(r"failure_threshold\s*=\s*(\d+)", probe.group(1))
     assert period and tries
     assert int(period.group(1)) * int(tries.group(1)) >= 60
+
+
+def test_the_web_client_and_the_api_are_https_only_in_the_browser() -> None:
+    """A browser told Strict-Transport-Security never tries the host over HTTP again, so nothing
+    on the path can strip TLS. The web client's bucket and the REST and MCP backends send it."""
+    lb = (GCP / "loadbalancer.tf").read_text(encoding="utf-8")
+    assert re.search(r'hsts\s*=\s*"Strict-Transport-Security: max-age=31536000', lb)
+    bucket = re.search(
+        r'resource "google_compute_backend_bucket" "web" \{(.*?)\n\}', lb, re.DOTALL
+    )
+    assert bucket and "local.hsts" in bucket.group(1)
+    run = re.search(
+        r'resource "google_compute_backend_service" "run" \{(.*?)\n\}', lb, re.DOTALL
+    )
+    assert run and "local.hsts" in run.group(1)
+
+
+def test_what_browsers_were_served_is_recoverable() -> None:
+    """The web client's bucket keeps a replaced or deleted file's previous version."""
+    lb = (GCP / "loadbalancer.tf").read_text(encoding="utf-8")
+    bucket = re.search(r'resource "google_storage_bucket" "web" \{(.*?)\n\}', lb, re.DOTALL)
+    assert bucket
+    assert re.search(r"versioning \{\s*enabled\s*=\s*true", bucket.group(1))
