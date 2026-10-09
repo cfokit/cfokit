@@ -207,3 +207,16 @@ def test_what_browsers_were_served_is_recoverable() -> None:
     bucket = re.search(r'resource "google_storage_bucket" "web" \{(.*?)\n\}', lb, re.DOTALL)
     assert bucket
     assert re.search(r"versioning \{\s*enabled\s*=\s*true", bucket.group(1))
+
+
+def test_a_fixable_critical_vulnerability_stops_the_deploy_before_anything_runs() -> None:
+    """Scanning records findings nobody reads; the deploy acts on them. It checks both images
+    after pushing them and before the migration job or any service runs them, and the deploy
+    identity can read the findings, and nothing more for them."""
+    deploy = (GCP / "setup" / "deploy.sh").read_text(encoding="utf-8")
+    gate = deploy.index('vulnerabilities.sh" "$app" "$issuer"')
+    assert deploy.index('images.sh" "$sha"') < gate < deploy.index("cfokit-migrate")
+    iam = (GCP / "iam.tf").read_text(encoding="utf-8")
+    assert re.search(
+        r'"deploy_scan_results" \{[^}]*roles/containeranalysis\.occurrences\.viewer', iam
+    )

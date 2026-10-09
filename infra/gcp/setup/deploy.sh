@@ -45,6 +45,9 @@ issuer="${repository}/issuer:${sha}"
 
 "$(dirname "$0")/images.sh" "$sha"
 
+# Before anything runs them: a critical vulnerability with a fix stops the deploy here.
+"$(dirname "$0")/vulnerabilities.sh" "$app" "$issuer"
+
 # Before any revision that needs it serves traffic, never by a service at startup (ADR-0004).
 step "Migrate"
 gcloud run jobs update cfokit-migrate --region "$CFOKIT_REGION" --image "$app" --quiet >/dev/null
