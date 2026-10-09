@@ -41,6 +41,8 @@ TOOLS = {
     "create_entity",
     "issue_statement",
     "issued_statements",
+    # Which books the person can reach, so a conversation never starts with an id (`IAM-08`).
+    "list_entities",
     "obligation_detail",
     "open_balances",
     # What CFOKit asked the person and nobody has answered (ADR-0056 § 4).

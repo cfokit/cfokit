@@ -82,7 +82,7 @@ from cfokit.ledger.service.issuance import Issued, issue_statement, issued
 from cfokit.ledger.service.notifications import open_notifications
 from cfokit.ledger.service.opening import CarriedBalance, open_balances
 from cfokit.ledger.service.principal import Principal
-from cfokit.ledger.service.read import read_entity, read_transaction
+from cfokit.ledger.service.read import list_entities, read_entity, read_transaction
 from cfokit.ledger.service.readiness import check_readiness
 from cfokit.ledger.service.receivables import obligation_detail, outstanding_obligations
 from cfokit.ledger.service.reports import (
@@ -443,6 +443,36 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
                 "ok": True,
                 "entity_id": created.entity_id,
                 "owner_grant_id": created.owner_grant_id,
+            }
+
+        return _refusals(work)
+
+    @server.tool(
+        name="list_entities",
+        description=(
+            "The companies whose books the person can reach here, each with the entity_id "
+            "every other tool takes, its name, and what it declared. Call this first when "
+            "the person names a company or has not said which: match by name, and ask them "
+            "to choose only if more than one fits."
+        ),
+    )
+    def list_the_entities() -> dict[str, Any]:
+        def work() -> dict[str, Any]:
+            return {
+                "ok": True,
+                "entities": [
+                    {
+                        "id": found.id,
+                        "slug": found.slug,
+                        "name": found.name,
+                        "accounting_basis": found.accounting_basis,
+                        "fiscal_year_end_month": found.fiscal_year_end_month,
+                        "fiscal_year_end_day": found.fiscal_year_end_day,
+                        "functional_currency": found.functional_currency,
+                        "time_zone": found.time_zone,
+                    }
+                    for found in list_entities(database, principal=acting())
+                ],
             }
 
         return _refusals(work)

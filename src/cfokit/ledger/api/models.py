@@ -184,6 +184,12 @@ class EntityResponse(BaseModel):
     time_zone: str
 
 
+class EntitiesResponse(BaseModel):
+    """The entities the caller may read, by name (IAM-08)."""
+
+    entities: list[EntityResponse]
+
+
 class CreateAccountRequest(BaseModel):
     """Add an account to the entity's chart (LED-01, LED-02)."""
 

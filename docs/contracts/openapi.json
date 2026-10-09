@@ -926,6 +926,23 @@
         "title": "DivergenceModel",
         "type": "object"
       },
+      "EntitiesResponse": {
+        "description": "The entities the caller may read, by name (IAM-08).",
+        "properties": {
+          "entities": {
+            "items": {
+              "$ref": "#/components/schemas/EntityResponse"
+            },
+            "title": "Entities",
+            "type": "array"
+          }
+        },
+        "required": [
+          "entities"
+        ],
+        "title": "EntitiesResponse",
+        "type": "object"
+      },
       "EntityCreatedResponse": {
         "properties": {
           "entity_id": {
@@ -3063,6 +3080,94 @@
       }
     },
     "/entities": {
+      "get": {
+        "description": "Every entity in which the caller holds a role that reads, by name (`IAM-08`).\n\nFor an agent acting for a person, only those where both hold one (`IAM-11`). What to\npass as `entity_id` everywhere else.",
+        "operationId": "entities_entities_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntitiesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "List the entities the caller may read",
+        "tags": [
+          "administration"
+        ]
+      },
       "post": {
         "description": "Requires authentication and no prior role (`IAM-06`).\n\nThe entity and its first owner are written in one transaction, or neither is\n(`IAM-05`).",
         "operationId": "create_entities_post",
