@@ -59,8 +59,14 @@ def _naming(
 
     def named() -> dict[str, Any]:
         result = work()
-        found = read_entity(database, entity_id=entity_id, principal=acting())
-        return {"ok": result["ok"], "company": {"id": found.id, "name": found.name}, **result}
+        if not result["ok"]:
+            return result
+        try:
+            found = read_entity(database, entity_id=entity_id, principal=acting())
+        except LedgerError:
+            # The work is done and may have committed; reporting it refused would be false.
+            return result
+        return {"ok": True, "company": {"id": found.id, "name": found.name}, **result}
 
     return _refusals(named)
 

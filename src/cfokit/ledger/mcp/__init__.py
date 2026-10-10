@@ -310,13 +310,20 @@ def _naming(
     only as an argument it repeats on every call. Naming the company on every answer puts it in
     front of the agent at each step, so it reads which books a figure came from rather than
     remembering, and a call that drifted to another entity is visible where it happened. Read
-    after `work`, so a refusal is the work's own and keeps its code.
+    after `work`, so a refusal is the work's own and keeps its code, and only on success, so
+    both refusal shapes stay as ADR-0015 publishes them.
     """
 
     def named() -> dict[str, Any]:
         result = work()
-        found = read_entity(database, entity_id=entity_id, principal=acting())
-        return {"ok": result["ok"], "company": {"id": found.id, "name": found.name}, **result}
+        if not result["ok"]:
+            return result
+        try:
+            found = read_entity(database, entity_id=entity_id, principal=acting())
+        except LedgerError:
+            # The work is done and may have committed; reporting it refused would be false.
+            return result
+        return {"ok": True, "company": {"id": found.id, "name": found.name}, **result}
 
     return _refusals(named)
 
