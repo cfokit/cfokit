@@ -101,7 +101,7 @@ nothing cites these but this repository. They are added when something breaks wi
 | [0055](0055-on-gcp-the-web-client-is-served-from-a-cdn.md) | On GCP the web client is served from a bucket behind Cloud CDN, on the API's origin | Proposed |
 | [0056](0056-a-notification-is-open-until-answered-or-dismissed.md) | A notification is open until its question is answered or its recipient dismisses it, and open notifications are read through the published interface | Proposed |
 | [0057](0057-push-is-web-push-sent-by-cfokit.md) | Push notifications are Web Push to the installed web client, sent by CFOKit's own process | Proposed |
-| [0058](0058-getting-started-is-one-path-on-the-web.md) | Getting started is one path, on web pages, for both offerings | Proposed |
+| [0058](0058-getting-started-is-one-path-on-the-web.md) | Getting started is one path: web pages until the agent is connected, then the conversation | Proposed |
 | [0059](0059-a-line-is-matched-before-it-is-coded.md) | An incoming transaction is matched to what the books already hold before any rule codes it, and only a sole exact counterpart is acted on | Accepted |
 | [0060](0060-production-is-one-gcp-project-deployed-on-merge.md) | Production is one GCP project behind one load balancer, deployed on every merge | Accepted |
 | [0061](0061-unattended-work-is-a-queue-in-postgres.md) | Unattended work is a queue in Postgres, filled from stored schedules and drained a pass at a time, on a tick and when a person waits | Accepted |
@@ -109,6 +109,7 @@ nothing cites these but this repository. They are added when something breaks wi
 | [0063](0063-a-feed-provider-webhook-only-marks-a-connection-due.md) | A feed provider's webhook is a signed way in that only marks one connection's sync as due | Accepted |
 | [0064](0064-a-registered-client-redirects-only-to-a-known-host.md) | A client that registers itself may send a sign-in only to a known redirect | Accepted |
 | [0065](0065-database-connections-are-encrypted-not-certificate-verified.md) | Database connections are encrypted, and the server's certificate is not verified | Accepted |
+| [0068](0068-cfokit-optimizes-for-the-persons-own-agent.md) | Where the person's own agent and the browser trade off, CFOKit optimizes for the agent | Proposed |
 
 ## Deferred — decided in principle, waiting on a need
 
