@@ -74,7 +74,7 @@ def test_a_protected_path_goes_to_a_person(path: str) -> None:
         "src/cfokit/activity/service.py",
         "src/cfokit/ledgerish/thing.py",  # a prefix of a protected name is not inside it
         "tests/test_activity.py",
-        "docs/connect-claude-desktop.md",
+        "docs/how-to/connect-claude.md",
         "skills/bookkeeper/SKILL.md",
         "README.md",
     ],

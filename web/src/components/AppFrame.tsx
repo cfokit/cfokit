@@ -9,16 +9,18 @@ interface AppFrameProps {
   /** The signed-in person's name. */
   person: string;
   onSignOut: () => void;
+  /** Opens the person's settings; when given, "Settings" sits beside "Sign out". */
+  onSettings?: () => void;
   children: ReactNode;
 }
 
 /**
  * The frame every signed-in page sits in: a `bar-height` header on `surface` with the mark and
- * the company's name at the left and the person with "Sign out" at the right; below `bp-tablet`
+ * the company's name at the left and the person, "Settings" and "Sign out" at the right; below `bp-tablet`
  * those two move into a menu. The header and the gutters add the device's safe-area insets, so
  * nothing sits under a notch, in either orientation. Content is centered and stops widening at `content-max`. Sign-in screens have no frame.
  */
-export function AppFrame({ company, person, onSignOut, children }: AppFrameProps) {
+export function AppFrame({ company, person, onSignOut, onSettings, children }: AppFrameProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuId = useId();
 
@@ -44,6 +46,11 @@ export function AppFrame({ company, person, onSignOut, children }: AppFrameProps
           </div>
           <div className="hidden shrink-0 items-center gap-2 tablet:flex">
             <span className="text-body text-ink">{person}</span>
+            {onSettings !== undefined && (
+              <Button variant="link" onClick={onSettings}>
+                Settings
+              </Button>
+            )}
             <Button variant="link" onClick={onSignOut}>
               Sign out
             </Button>
@@ -65,9 +72,16 @@ export function AppFrame({ company, person, onSignOut, children }: AppFrameProps
             className="flex items-center justify-between gap-4 border-t border-rule px-safe-gutter-phone py-2 tablet:hidden"
           >
             <span className="truncate text-body text-ink">{person}</span>
-            <Button variant="link" onClick={onSignOut}>
-              Sign out
-            </Button>
+            <div className="flex shrink-0 items-center gap-2">
+              {onSettings !== undefined && (
+                <Button variant="link" onClick={onSettings}>
+                  Settings
+                </Button>
+              )}
+              <Button variant="link" onClick={onSignOut}>
+                Sign out
+              </Button>
+            </div>
           </div>
         )}
       </header>

@@ -24,31 +24,14 @@ docker compose up -d --wait                       # the stack: Postgres, identit
 docker compose --profile migrate run --rm migrate # create the schema; never runs on startup
 ```
 
-Everything serves HTTPS from a certificate authority the stack generates in `.local/tls/`. Trust
-it once, so your browser opens the pages without a warning (macOS; it asks for your password):
-
-```bash
-security add-trusted-cert -r trustRoot -k ~/Library/Keychains/login.keychain-db .local/tls/ca/ca.pem
-```
-
-Then open **https://localhost:8080/app/** and create your account. Getting started takes you from
-there to your books in Claude: choose your QuickBooks export, confirm the company, import, and
-connect Claude Desktop.
+Then open **https://localhost:8080/app/**, create your account, and follow getting started: your
+QuickBooks export, your company, the import, connecting Claude, and a first question.
+[Run CFOKit on your computer](docs/tutorials/run-cfokit-on-your-computer.md) walks through every
+step, including trusting the local certificate authority.
 
 [![Getting started, from creating an account to the first question](https://github.com/cfokit/cfokit/releases/download/onboarding-recording/onboarding.gif)](https://github.com/cfokit/cfokit/releases/download/onboarding-recording/onboarding.mp4)
 
 <sub>Recorded by CI from `main`, against this stack, on every push.</sub>
-
-No QuickBooks export to hand? `cd web && corepack pnpm install && corepack pnpm sample-export`
-writes a small one to `.local/quickbooks-sample.zip` (it needs the Node version in `web/.nvmrc`).
-
-The web client and REST API listen on `:8080`, the MCP endpoint on `:8081`, and the identity
-provider on `keycloak.localhost:8443`. This is the real thing, not a demo: data lives in a named
-volume, and `docker compose down -v` destroys it.
-
-To connect Claude Desktop and install the bookkeeper skill, continue with
-[`docs/connect-claude-desktop.md`](docs/connect-claude-desktop.md) (tested on macOS only). Working on the code instead?
-See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Start here
 
@@ -57,7 +40,9 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 | Understand what CFOKit is for and who it serves | [`docs/product/vision.md`](docs/product/vision.md) |
 | Know what it must do | [`docs/product/requirements.md`](docs/product/requirements.md) |
 | Understand why the architecture is the way it is | [`docs/decisions/README.md`](docs/decisions/README.md) |
-| Run it locally and connect Claude Desktop | [`docs/connect-claude-desktop.md`](docs/connect-claude-desktop.md) |
+| Run it on your computer, from nothing to your first question | [`docs/tutorials/run-cfokit-on-your-computer.md`](docs/tutorials/run-cfokit-on-your-computer.md) |
+| Connect Claude, hosted or on your computer | [`docs/how-to/connect-claude.md`](docs/how-to/connect-claude.md) |
+| Understand what an import's comparison with QuickBooks means | [`docs/explanation/reading-an-import.md`](docs/explanation/reading-an-import.md) |
 | Contribute code | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
 | Work on this repo with an AI agent | [`CLAUDE.md`](CLAUDE.md) |
 
@@ -67,7 +52,7 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 src/cfokit/  The Python distribution; one package per capability
 skills/      Shipped Agent Skills (SKILL.md bundles)
 infra/       OpenTofu for the one maintained cloud target
-docs/        Vision, requirements, and decision records
+docs/        User guides, vision, requirements, and decision records
 ```
 
 ## License

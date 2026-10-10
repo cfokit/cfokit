@@ -104,7 +104,8 @@ jobs:
               # Getting started (web/e2e/onboarding.spec.ts): signing up on the issuer's page,
               # the start pages, the sample export, the first question, and what they render with.
               web/e2e/onboarding.spec.ts|web/src/login/*|web/src/start/*|web/src/quickbooks/*|\
-              web/src/questions/*|web/src/components/*|web/src/*.css|infra/keycloak/*)
+              web/src/questions/*|web/src/connect/*|web/src/settings/*|web/src/components/*|\
+              web/src/*.css|infra/keycloak/*)
                 echo "recorded flow: $path"; record=true ;;
             esac
           done <<< "$(git diff --name-only "$BEFORE" HEAD)"

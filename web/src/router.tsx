@@ -2,6 +2,7 @@ import { createRootRoute, createRoute, createRouter, Outlet } from "@tanstack/re
 import { SignedIn } from "./auth/SignedIn";
 import { SignInReturn } from "./auth/SignInReturn";
 import { QuestionsPage } from "./questions/QuestionsPage";
+import { SettingsPage } from "./settings/SettingsPage";
 import { ConnectPage } from "./start/ConnectPage";
 import { FirstQuestion } from "./start/FirstQuestion";
 import { GettingStarted } from "./start/GettingStarted";
@@ -85,6 +86,17 @@ const questions = createRoute({
   },
 });
 
+// The person's settings: their companies, and connecting Claude, whenever they need it again.
+const settings = createRoute({
+  getParentRoute: () => root,
+  path: "/settings",
+  component: () => (
+    <SignedIn>
+      <SettingsPage />
+    </SignedIn>
+  ),
+});
+
 // The issuer sends the person back here with a code; the sign-in provider exchanges it and
 // returns them to the page they started from. If the exchange fails, this page says so.
 const signedIn = createRoute({
@@ -94,7 +106,7 @@ const signedIn = createRoute({
 });
 
 export const router = createRouter({
-  routeTree: root.addChildren([start, importing, connect, ask, questions, signedIn]),
+  routeTree: root.addChildren([start, importing, connect, ask, questions, settings, signedIn]),
   basepath: "/app",
 });
 
