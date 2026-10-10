@@ -20,6 +20,9 @@ from typing import Any
 
 import psycopg
 
+# The first key of the throttle's two-key advisory locks.
+THROTTLE_LOCK_NAMESPACE = 61_001
+
 __all__ = [
     "Claimed",
     "LapsedRun",
@@ -30,13 +33,15 @@ __all__ = [
     "end_schedule",
     "enqueue",
     "fail",
+    "lapsed",
     "last_success",
+    "lock_kind",
     "mark_window",
     "schedules",
     "start_schedule",
     "started_since",
     "succeed",
-    "sweep_lapsed",
+    "sweep",
 ]
 
 
@@ -226,88 +231,99 @@ def last_success(
     return row[0] if row is not None else None
 
 
-def sweep_lapsed(
-    conn: psycopg.Connection[Any], *, max_attempts: dict[str, int]
-) -> list[LapsedRun]:
-    """Find runs whose lease lapsed, record each attempt as interrupted, and settle each.
-
-    A run with a cause waiting behind it is joined into that one, which then covers both
-    windows. Any other is due again at once, from the start — unless the interrupted attempt
-    was its last by its kind's bound, in which case it is failed: a handler that kills its
-    worker every time would otherwise be retried for ever. A kind this pass does not know
-    keeps its run due. Locked as they are read, so two passes sweeping at once handle each run
-    once.
-    """
-    lapsed: list[LapsedRun] = []
+def lapsed(conn: psycopg.Connection[Any]) -> list[tuple[str, str]]:
+    """Runs whose lease has lapsed, as (run, entity), each to sweep under its entity's lock."""
     with conn.cursor() as cur:
         cur.execute(
-            "SELECT id, entity_id, kind, reference, attempts, claimed_at, window_start,"
-            "       window_end"
-            "  FROM work_run WHERE state = 'running' AND lease_expires_at < clock_timestamp()"
-            " ORDER BY lease_expires_at FOR UPDATE SKIP LOCKED"
+            "SELECT id, entity_id FROM work_run"
+            " WHERE state = 'running' AND lease_expires_at < clock_timestamp()"
+            " ORDER BY lease_expires_at"
         )
-        rows = cur.fetchall()
-        for run_id, entity_id, kind, reference, attempts, claimed_at, start, end in rows:
+        return [(str(r[0]), str(r[1])) for r in cur.fetchall()]
+
+
+def sweep(
+    conn: psycopg.Connection[Any], *, run_id: str, max_attempts: dict[str, int]
+) -> LapsedRun | None:
+    """Record a lapsed run's attempt as interrupted, and settle the run. None if it is no longer
+    lapsed — another pass swept it, or its worker finished after all.
+
+    Run in the entity's write, under its lock, so it is serialized with every cause that could
+    enqueue for the same reference, and so a run failed here is failed in the transaction that
+    raises its notification. A run with a cause waiting behind it is joined into that one,
+    which then covers both windows. Any other is due again at once, from the start — unless the
+    interrupted attempt was its last by its kind's bound in `max_attempts`, in which case it is
+    failed: a handler that kills its worker every time would otherwise be retried for ever. A
+    kind this pass does not know keeps its run due.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT entity_id, kind, reference, attempts, claimed_at, window_start, window_end"
+            "  FROM work_run"
+            " WHERE id = %s AND state = 'running' AND lease_expires_at < clock_timestamp()"
+            " FOR UPDATE SKIP LOCKED",
+            (run_id,),
+        )
+        row = cur.fetchone()
+        if row is None:
+            return None
+        entity_id, kind, reference, attempts, claimed_at, start, end = row
+        cur.execute(
+            "INSERT INTO work_attempt"
+            " (entity_id, run_id, attempt, started_at, ended_at, outcome)"
+            " VALUES (%s, %s, %s, %s, clock_timestamp(), 'interrupted')",
+            (entity_id, run_id, attempts + 1, claimed_at),
+        )
+        merged_into = _join_waiting(
+            cur,
+            run_id=run_id,
+            entity_id=entity_id,
+            kind=kind,
+            reference=reference,
+            window_start=start,
+            window_end=end,
+            attempts=attempts + 1,
+        )
+        bound = max_attempts.get(str(kind))
+        exhausted = bound is not None and attempts + 1 >= bound
+        if merged_into is None and exhausted:
             cur.execute(
-                "INSERT INTO work_attempt"
-                " (entity_id, run_id, attempt, started_at, ended_at, outcome)"
-                " VALUES (%s, %s, %s, %s, clock_timestamp(), 'interrupted')",
-                (entity_id, run_id, attempts + 1, claimed_at),
+                "UPDATE work_run SET state = 'failed', attempts = %s, claimed_at = NULL,"
+                "       lease_expires_at = NULL, finished_at = clock_timestamp()"
+                " WHERE id = %s",
+                (attempts + 1, run_id),
             )
-            merged_into = _join_waiting(
-                cur,
-                run_id=run_id,
-                entity_id=entity_id,
-                kind=kind,
-                reference=reference,
-                window_start=start,
-                window_end=end,
-                attempts=attempts + 1,
+        elif merged_into is None:
+            cur.execute(
+                "UPDATE work_run SET state = 'waiting', attempts = %s,"
+                "       due_at = clock_timestamp(), claimed_at = NULL,"
+                "       lease_expires_at = NULL"
+                " WHERE id = %s",
+                (attempts + 1, run_id),
             )
-            exhausted = attempts + 1 >= max_attempts.get(str(kind), attempts + 2)
-            if merged_into is None and exhausted:
-                cur.execute(
-                    "UPDATE work_run SET state = 'failed', attempts = %s, claimed_at = NULL,"
-                    "       lease_expires_at = NULL, finished_at = clock_timestamp()"
-                    " WHERE id = %s",
-                    (attempts + 1, run_id),
-                )
-            elif merged_into is None:
-                try:
-                    # A savepoint, because the sweep holds no entity lock: a cause can commit
-                    # a waiting run for this reference after the join above found none, and
-                    # making this one waiting too would then break the one-waiting index.
-                    with conn.transaction():
-                        cur.execute(
-                            "UPDATE work_run SET state = 'waiting', attempts = %s,"
-                            "       due_at = clock_timestamp(), claimed_at = NULL,"
-                            "       lease_expires_at = NULL"
-                            " WHERE id = %s",
-                            (attempts + 1, run_id),
-                        )
-                except psycopg.errors.UniqueViolation:
-                    merged_into = _join_waiting(
-                        cur,
-                        run_id=run_id,
-                        entity_id=entity_id,
-                        kind=kind,
-                        reference=reference,
-                        window_start=start,
-                        window_end=end,
-                        attempts=attempts + 1,
-                    )
-            lapsed.append(
-                LapsedRun(
-                    id=str(run_id),
-                    entity_id=str(entity_id),
-                    kind=str(kind),
-                    reference=str(reference),
-                    attempts=int(attempts) + 1,
-                    merged_into=merged_into,
-                    failed=merged_into is None and exhausted,
-                )
-            )
-    return lapsed
+    return LapsedRun(
+        id=run_id,
+        entity_id=str(entity_id),
+        kind=str(kind),
+        reference=str(reference),
+        attempts=int(attempts) + 1,
+        merged_into=merged_into,
+        failed=merged_into is None and exhausted,
+    )
+
+
+def lock_kind(conn: psycopg.Connection[Any], *, kind: str) -> None:
+    """Serialize claims of one throttled kind until this transaction ends.
+
+    The two-key form, under a namespace of its own: Postgres keeps the two-key and one-key
+    advisory lock spaces apart, so this never contends with an entity's lock, which is keyed
+    on `entity.lock_key` alone (ADR-0011). Two kinds whose names hash alike only wait on each
+    other.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT pg_advisory_xact_lock(%s, hashtext(%s))", (THROTTLE_LOCK_NAMESPACE, kind)
+        )
 
 
 def _join_waiting(
