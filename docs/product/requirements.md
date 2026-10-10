@@ -56,7 +56,7 @@ These are decided. Each bounds what the product may promise.
 | Not in scope | Boundary |
 |---|---|
 | Acting as a CFO | CFOKit does the bookkeeper and controller work beneath the role. The role is always held by a person. |
-| An admin console, or a web client that duplicates the agent | The agent keeps and questions the books; getting started is a few web pages, and everything after happens where the agent runs (IMP-09). Each capability a web client gains is a deliberate decision, not drift (PLT-24). |
+| An admin console, or a web client that duplicates the agent | The agent keeps and questions the books; signing up and connecting the agent are a few web pages, and everything after, including setting up the company and importing its books, happens where the agent runs (IMP-09). Each capability a web client gains is a deliberate decision, not drift (PLT-24). |
 | Moving money | CFOKit reads financial data and keeps books. It does not initiate payment. |
 | Filing returns | CFOKit produces the closed year and supporting detail. A preparer files. |
 | Being hosted-only | Self-hosting is a product promise, not a trial edition. |
