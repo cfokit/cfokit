@@ -109,6 +109,8 @@ nothing cites these but this repository. They are added when something breaks wi
 | [0063](0063-a-feed-provider-webhook-only-marks-a-connection-due.md) | A feed provider's webhook is a signed way in that only marks one connection's sync as due | Accepted |
 | [0064](0064-a-registered-client-redirects-only-to-a-known-host.md) | A client that registers itself may send a sign-in only to a known redirect | Accepted |
 | [0065](0065-database-connections-are-encrypted-not-certificate-verified.md) | Database connections are encrypted, and the server's certificate is not verified | Accepted |
+| [0066](0066-an-agent-is-the-client-it-signs-in-through.md) | An agent is the client it signs in through, and acts in a company once the person allows it | Proposed |
+| [0067](0067-an-agent-connection-serves-one-company.md) | An agent's connection serves one company, named in its address | Proposed |
 
 ## Deferred — decided in principle, waiting on a need
 

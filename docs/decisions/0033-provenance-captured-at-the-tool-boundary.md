@@ -97,7 +97,8 @@ Four columns, and no more:
 - `decision_record_id` — lineage pointer, nullable
 
 The ledger has learned that **principals have a class and one may act on behalf of another**. That is
-an identity concept — it is the delegation `act` claim, the same machinery `SOC1-25` already wants —
+an identity concept — delegation, read from an `act` claim or from the client the token was issued
+to (ADR-0066), the same machinery `SOC1-25` already wants —
 not knowledge of what a skill is. "Which skill acted" resolves through the principal registry, which
 lives outside the ledger, exactly as `entity_id` resolves without the ledger knowing what a company
 is. ADR-0022's boundary test survives: the ledger still does not know what a customer, an invoice, or
