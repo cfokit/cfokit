@@ -29,6 +29,7 @@ from cfokit.activity.service import Recorded, record_statement, statement_agreem
 from cfokit.ledger.errors import LedgerError
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.principal import Principal
+from cfokit.ledger.service.read import read_entity
 
 __all__ = ["register"]
 
@@ -45,6 +46,29 @@ def _refusals(work: Callable[[], dict[str, Any]]) -> dict[str, Any]:
         return work()
     except LedgerError as exc:
         return {"ok": False, "code": exc.code, "message": exc.message}
+
+
+def _naming(
+    database: Database,
+    acting: Callable[[], Principal],
+    entity_id: str,
+    work: Callable[[], dict[str, Any]],
+) -> dict[str, Any]:
+    """Run `work` for one company, and name that company on the result, as the ledger's tools
+    do: the agent reads which books an answer came from rather than remembering it."""
+
+    def named() -> dict[str, Any]:
+        result = work()
+        if not result["ok"]:
+            return result
+        try:
+            found = read_entity(database, entity_id=entity_id, principal=acting())
+        except LedgerError:
+            # The work is done and may have committed; reporting it refused would be false.
+            return result
+        return {"ok": True, "company": {"id": found.id, "name": found.name}, **result}
+
+    return _refusals(named)
 
 
 def _decimal(raw: str, where: str) -> Decimal:
@@ -142,7 +166,7 @@ def register(server: MCPServer, database: Database, *, acting: Callable[[], Prin
                 )
             )
 
-        return _refusals(work)
+        return _naming(database, acting, entity_id, work)
 
     @server.tool(
         name="account_statement_agreement",
@@ -172,4 +196,4 @@ def register(server: MCPServer, database: Database, *, acting: Callable[[], Prin
                 },
             }
 
-        return _refusals(work)
+        return _naming(database, acting, entity_id, work)
