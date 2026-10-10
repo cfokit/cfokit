@@ -1,9 +1,12 @@
-"""``python -m cfokit.server {rest|mcp}`` — run one of the deployable's surfaces.
+"""``python -m cfokit.server {rest|mcp|work}`` — run one of the deployable's entrypoints.
 
 One image, many entrypoints (ADR-0023). These replace `python -m cfokit.ledger.api` and
 `python -m cfokit.ledger.mcp`, which served the ledger alone: a module's tools cannot be
 reached through an entrypoint inside the ledger, because the ledger depends on no module
 (ADR-0022, ADR-0040). Running the deployable means running it from above both.
+
+`work` runs unattended work rather than serving anything (ADR-0061); `work --once` runs one pass
+and exits, which is how a job started on a tick runs it.
 
 Migrations are never applied here; they are a separate, explicitly invoked job (ADR-0004).
 """
@@ -20,8 +23,9 @@ import uvicorn
 from cfokit.ledger.config import load_settings
 from cfokit.ledger.errors import LedgerError
 from cfokit.server import mcp_server, rest_app
+from cfokit.server.work import work
 
-USAGE = "usage: python -m cfokit.server {rest|mcp}"
+USAGE = "usage: python -m cfokit.server {rest|mcp|work [--once]}"
 
 # Where the image build puts the web client's static build (Dockerfile, ADR-0054). Absent in a
 # source checkout, where the REST service then serves the API alone.
@@ -45,7 +49,7 @@ class _JsonFormatter(logging.Formatter):
 
 def main(argv: list[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
-    if len(args) != 1 or args[0] not in {"rest", "mcp"}:
+    if args not in (["rest"], ["mcp"], ["work"], ["work", "--once"]):
         print(USAGE, file=sys.stderr)  # noqa: T201 - a usage line, before logging is up
         return 2
 
@@ -62,6 +66,9 @@ def main(argv: list[str] | None = None) -> int:
             }
         },
     )
+
+    if args[0] == "work":
+        return work(settings, once=args[1:] == ["--once"])
 
     # Binding all interfaces is correct inside a container; the platform controls ingress.
     # TLS only when given a certificate: a local stack serves HTTPS itself, while a deployment

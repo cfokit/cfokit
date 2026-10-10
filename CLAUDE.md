@@ -160,6 +160,11 @@ otherwise get wrong, because absence isn't visible in a manifest:
   --no-dev --no-emit-project --no-hashes | grep -c '^[a-z]'` — and the MCP SDK is most of it,
   accepted knowingly (ADR-0024). Accounting exports are parsed in the person's browser, never
   by the server, so no spreadsheet library is a dependency of any kind (ADR-0058).
+- **Unattended work is a run in Postgres, enqueued in the same transaction as its cause**
+  (`EntityWrite.enqueue_work`), and run by `python -m cfokit.server work`. No schedule lives
+  outside the database: what starts a pass knows only that one should start. Not a task-queue
+  library, Cloud Tasks, Pub/Sub, Redis or `pg_cron`. A handler opens its own transactions and
+  must tolerate running again from the start. (ADR-0061)
 - **Python 3.14**, `ruff`, `mypy --strict`, `import-linter`, and the image and CI run it.
 
 ## Money and correctness
@@ -200,7 +205,9 @@ Rules, not tooling. What you log matters more than where it goes.
   level.** Log identifiers and counts instead.
 - Structured JSON logs. One request id per inbound call, propagated into `audit_log`.
 - Every state-changing service call writes exactly one `audit_log` row. If a code path
-  mutates state without one, that is a bug.
+  mutates state without one, that is a bug. The work queue's own bookkeeping is the one
+  exception: it is no principal's act, and its record is the queue's appended causes and
+  attempts (ADR-0061 § 4).
 - Errors carry a stable machine-readable `code`. Callers depend on it. (ADR-0015)
 - `/healthz` is liveness only. `/readyz` checks database reachability and that
   migrations are current.

@@ -43,12 +43,20 @@ from cfokit.ledger.repository import (
     periods,
     reports,
     transactions,
+    work,
 )
 from cfokit.ledger.repository.connection import connect
 from cfokit.ledger.repository.notifications import Notification
 from cfokit.ledger.repository.transactions import StoredTransaction
 
-__all__ = ["Database", "EntitySettings", "EntityWrite", "PrincipalRead", "UnscopedWrite"]
+__all__ = [
+    "Database",
+    "EntitySettings",
+    "EntityWrite",
+    "PrincipalRead",
+    "UnscopedWrite",
+    "WorkQueue",
+]
 
 
 @dataclass(frozen=True, slots=True)
@@ -226,6 +234,65 @@ class EntityWrite:
     def open_notifications(self, recipient: str) -> list[Notification]:
         return notifications.open_for(
             self._conn, entity_id=self._entity_id, recipient=recipient
+        )
+
+    # --- unattended work (PLT-14, ADR-0061) ----------------------------------------------
+
+    def enqueue_work(
+        self,
+        *,
+        kind: str,
+        reference: str,
+        cause: str,
+        cause_ref: str,
+        window_start: datetime | None = None,
+        window_end: datetime | None = None,
+    ) -> str:
+        """Enqueue a run in this act's transaction, or join the one already waiting (§ 1)."""
+        return work.enqueue(
+            self._conn,
+            entity_id=self._entity_id,
+            kind=kind,
+            reference=reference,
+            cause=cause,
+            cause_ref=cause_ref,
+            window_start=window_start,
+            window_end=window_end,
+        )
+
+    def start_work_schedule(self, *, kind: str, reference: str) -> str:
+        """Start a reference's operational timer, in the act that creates what it serves."""
+        return work.start_schedule(
+            self._conn, entity_id=self._entity_id, kind=kind, reference=reference
+        )
+
+    def end_work_schedule(self, *, kind: str, reference: str) -> bool:
+        """End a reference's timer, in the act that ends what it served."""
+        return work.end_schedule(
+            self._conn, entity_id=self._entity_id, kind=kind, reference=reference
+        )
+
+    def mark_work_window(self, *, schedule_id: str, window_end: datetime) -> bool:
+        """Claim a timer's window for this pass. False if another pass already dealt with it."""
+        return work.mark_window(self._conn, schedule_id=schedule_id, window_end=window_end)
+
+    def last_work_success(self, *, kind: str, reference: str) -> datetime | None:
+        """When work for this reference last finished successfully."""
+        return work.last_success(
+            self._conn, entity_id=self._entity_id, kind=kind, reference=reference
+        )
+
+    def succeed_run(self, run: work.Claimed) -> bool:
+        return work.succeed(self._conn, run=run)
+
+    def fail_run(
+        self, run: work.Claimed, *, error_code: str, retry_after_seconds: int | None
+    ) -> str:
+        return work.fail(
+            self._conn,
+            run=run,
+            error_code=error_code,
+            retry_after_seconds=retry_after_seconds,
         )
 
     # --- periods (LED-11, ADR-0030) ------------------------------------------------------
@@ -648,6 +715,36 @@ class PrincipalRead:
         return grants.entities_held(self._conn, principal_id, at)
 
 
+class WorkQueue:
+    """What the pass does across entities, before it has claimed work in any one (ADR-0061).
+
+    Separate from `EntityWrite` and `UnscopedWrite` so the cross-entity reads it needs are
+    available to the pass alone, and touch only the queue's tables, which hold no content
+    (§ 6). Everything a run does to an entity's data happens in that entity's `entity_write`.
+    """
+
+    def __init__(self, conn: psycopg.Connection[Any]) -> None:
+        self._conn = conn
+
+    def now(self) -> datetime:
+        return work.database_now(self._conn)
+
+    def schedules(self, kinds: list[str]) -> list[work.Schedule]:
+        return work.schedules(self._conn, kinds=kinds)
+
+    def sweep_lapsed(self, max_attempts: dict[str, int]) -> list[work.LapsedRun]:
+        return work.sweep_lapsed(self._conn, max_attempts=max_attempts)
+
+    def candidates(self, kinds: list[str], limit: int) -> list[str]:
+        return work.candidates(self._conn, kinds=kinds, limit=limit)
+
+    def claim(self, run_id: str, *, lease_seconds: int) -> work.Claimed | None:
+        return work.claim(self._conn, run_id=run_id, lease_seconds=lease_seconds)
+
+    def started_since(self, kind: str, *, seconds: int) -> int:
+        return work.started_since(self._conn, kind=kind, seconds=seconds)
+
+
 class Database:
     """The database, as everything above `repository` sees it."""
 
@@ -670,6 +767,17 @@ class Database:
         """One transaction, scoped to no entity, for reading where a principal holds grants."""
         with connect(self._dsn) as conn, conn.transaction():
             yield PrincipalRead(conn)
+
+    @contextmanager
+    def work_queue(self) -> Iterator[WorkQueue]:
+        """One short transaction over the queue, scoped to no entity and locking none.
+
+        Short is the point: a claim commits before its run starts, so a run's own transactions
+        never sit inside the one that took it, and a lock on the queue is never held while a
+        handler talks to a provider.
+        """
+        with connect(self._dsn) as conn, conn.transaction():
+            yield WorkQueue(conn)
 
     @contextmanager
     def entity_write(self, entity_id: str) -> Iterator[EntityWrite]:
