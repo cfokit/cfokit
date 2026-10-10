@@ -24,6 +24,7 @@ from cfokit.imports.reconciliation import Reconciled, reconciliations
 from cfokit.ledger.errors import LedgerError
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.principal import Principal
+from cfokit.ledger.service.read import read_entity
 
 __all__ = ["register"]
 
@@ -98,6 +99,12 @@ def register(server: MCPServer, database: Database, *, acting: Callable[[], Prin
     def reconciliations_tool(entity_id: str) -> dict[str, Any]:
         try:
             found = reconciliations(database, entity_id=entity_id, principal=acting())
+            company = read_entity(database, entity_id=entity_id, principal=acting())
         except LedgerError as exc:
             return {"ok": False, "code": exc.code, "message": exc.message}
-        return {"ok": True, "reconciliations": [_rendered(each) for each in found]}
+        return {
+            "ok": True,
+            # Named on the answer, as every tool about one company is.
+            "company": {"id": company.id, "name": company.name},
+            "reconciliations": [_rendered(each) for each in found],
+        }

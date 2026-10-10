@@ -301,6 +301,26 @@ def _refusals(work: Callable[[], dict[str, Any]]) -> dict[str, Any]:
         return refused(exc.code, exc.message)
 
 
+def _naming(
+    database: Database, entity_id: str, work: Callable[[], dict[str, Any]]
+) -> dict[str, Any]:
+    """Run `work` for one company, and name that company on the result.
+
+    A person may hold several sets of books, and the agent carries which one it is working in
+    only as an argument it repeats on every call. Naming the company on every answer puts it in
+    front of the agent at each step, so it reads which books a figure came from rather than
+    remembering, and a call that drifted to another entity is visible where it happened. Read
+    after `work`, so a refusal is the work's own and keeps its code.
+    """
+
+    def named() -> dict[str, Any]:
+        result = work()
+        found = read_entity(database, entity_id=entity_id, principal=acting())
+        return {"ok": result["ok"], "company": {"id": found.id, "name": found.name}, **result}
+
+    return _refusals(named)
+
+
 def create_server(settings: Settings, authenticator: Authenticator | None = None) -> MCPServer:
     """Build the MCP server.
 
@@ -336,7 +356,9 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
             "idempotency key; replaying a key returns the original result rather than booking "
             "again. Amounts are decimal strings. A posted transaction is never edited — "
             "correct it with reverse_transaction. Every tool returns an 'ok' field: false "
-            "means the ledger refused the operation and 'code' says why."
+            "means the ledger refused the operation and 'code' says why. Every answer about "
+            "one company names it in 'company'; state that company with every figure, and "
+            "keep to the company the person chose until they name another."
         ),
     )
 
@@ -441,6 +463,7 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
             )
             return {
                 "ok": True,
+                "company": {"id": created.entity_id, "name": name},
                 "entity_id": created.entity_id,
                 "owner_grant_id": created.owner_grant_id,
             }
@@ -553,7 +576,7 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
                 "replayed": written.replayed,
             }
 
-        return _refusals(work)
+        return _naming(database, entity_id, work)
 
     @server.tool(
         name="post_transaction",
@@ -574,7 +597,7 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
                 "replayed": written.replayed,
             }
 
-        return _refusals(work)
+        return _naming(database, entity_id, work)
 
     @server.tool(
         name="reverse_transaction",
@@ -604,7 +627,7 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
                 "replayed": written.replayed,
             }
 
-        return _refusals(work)
+        return _naming(database, entity_id, work)
 
     def _at(as_of: str | None, watermark: str | None) -> tuple[date, datetime | None]:
         """Parse the two moments a report is produced at, refusing a malformed one clearly."""
@@ -651,7 +674,7 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
                 "equity_amount": str(opened.equity_amount),
             }
 
-        return _refusals(work)
+        return _naming(database, entity_id, work)
 
     @server.tool(
         name="issue_statement",
@@ -686,7 +709,7 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
             )
             return {"ok": True, "issuance_id": issuance_id}
 
-        return _refusals(work)
+        return _naming(database, entity_id, work)
 
     @server.tool(
         name="issued_statements",
@@ -706,7 +729,7 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
                 ],
             }
 
-        return _refusals(work)
+        return _naming(database, entity_id, work)
 
     @server.tool(
         name="outstanding_obligations",
@@ -734,7 +757,7 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
                 "obligations": [_obligation(o) for o in found],
             }
 
-        return _refusals(work)
+        return _naming(database, entity_id, work)
 
     @server.tool(
         name="obligation_detail",
@@ -766,7 +789,7 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
                 ],
             }
 
-        return _refusals(work)
+        return _naming(database, entity_id, work)
 
     @server.tool(
         name="reconcile",
@@ -827,7 +850,7 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
                 ],
             }
 
-        return _refusals(work)
+        return _naming(database, entity_id, work)
 
     @server.tool(
         name="trial_balance",
@@ -870,7 +893,7 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
                 "balances": report.balances,
             }
 
-        return _refusals(work)
+        return _naming(database, entity_id, work)
 
     @server.tool(
         name="profit_and_loss",
@@ -906,7 +929,7 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
                 "net_income": str(report.net_income),
             }
 
-        return _refusals(work)
+        return _naming(database, entity_id, work)
 
     @server.tool(
         name="comparative_profit_and_loss",
@@ -962,7 +985,7 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
                 "net_income": _comparative_line(report.net_income),
             }
 
-        return _refusals(work)
+        return _naming(database, entity_id, work)
 
     @server.tool(
         name="balance_sheet",
@@ -998,7 +1021,7 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
                 "balances": report.balances,
             }
 
-        return _refusals(work)
+        return _naming(database, entity_id, work)
 
     @server.tool(
         name="account_detail",
@@ -1056,7 +1079,7 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
                 ],
             }
 
-        return _refusals(work)
+        return _naming(database, entity_id, work)
 
     @server.tool(
         name="read_transaction",
@@ -1091,7 +1114,7 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
                 ],
             }
 
-        return _refusals(work)
+        return _naming(database, entity_id, work)
 
     @server.tool(
         name="open_notifications",
@@ -1121,6 +1144,6 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
                 ],
             }
 
-        return _refusals(work)
+        return _naming(database, entity_id, work)
 
     return server

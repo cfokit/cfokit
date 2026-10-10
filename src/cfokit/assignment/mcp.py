@@ -36,6 +36,7 @@ from cfokit.assignment.service import (
 from cfokit.ledger.errors import LedgerError
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.principal import Principal
+from cfokit.ledger.service.read import read_entity
 from cfokit.ledger.service.write import WriteContext
 
 __all__ = ["register"]
@@ -108,6 +109,23 @@ def _refusals(work: Callable[[], dict[str, Any]]) -> dict[str, Any]:
         return work()
     except LedgerError as exc:
         return _refused(exc.code, exc.message)
+
+
+def _naming(
+    database: Database,
+    acting: Callable[[], Principal],
+    entity_id: str,
+    work: Callable[[], dict[str, Any]],
+) -> dict[str, Any]:
+    """Run `work` for one company, and name that company on the result, as the ledger's tools
+    do: the agent reads which books an answer came from rather than remembering it."""
+
+    def named() -> dict[str, Any]:
+        result = work()
+        found = read_entity(database, entity_id=entity_id, principal=acting())
+        return {"ok": result["ok"], "company": {"id": found.id, "name": found.name}, **result}
+
+    return _refusals(named)
 
 
 def _decimal(raw: str) -> Decimal:
@@ -190,7 +208,7 @@ def register(server: MCPServer, database: Database, *, acting: Callable[[], Prin
                 "unaffected": len(proposal.unaffected),
             }
 
-        return _refusals(work)
+        return _naming(database, acting, entity_id, work)
 
     @server.tool(
         name="approve_assignment_rule",
@@ -225,7 +243,7 @@ def register(server: MCPServer, database: Database, *, acting: Callable[[], Prin
                 ),
             }
 
-        return _refusals(work)
+        return _naming(database, acting, entity_id, work)
 
     @server.tool(
         name="run_assignment",
@@ -258,7 +276,7 @@ def register(server: MCPServer, database: Database, *, acting: Callable[[], Prin
                 "unresolved": [_booked(b) for b in applied.unresolved],
             }
 
-        return _refusals(work)
+        return _naming(database, acting, entity_id, work)
 
     @server.tool(
         name="answer_unresolved_transaction",
@@ -310,7 +328,7 @@ def register(server: MCPServer, database: Database, *, acting: Callable[[], Prin
                 "replayed": answered.replayed,
             }
 
-        return _refusals(work)
+        return _naming(database, acting, entity_id, work)
 
     @server.tool(
         name="replay_assignments",
@@ -336,7 +354,7 @@ def register(server: MCPServer, database: Database, *, acting: Callable[[], Prin
                 "diverged": list(report.diverged),
             }
 
-        return _refusals(work)
+        return _naming(database, acting, entity_id, work)
 
     @server.tool(
         name="unresolved_transactions",
@@ -360,4 +378,4 @@ def register(server: MCPServer, database: Database, *, acting: Callable[[], Prin
                 ],
             }
 
-        return _refusals(work)
+        return _naming(database, acting, entity_id, work)
