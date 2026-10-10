@@ -282,6 +282,10 @@ class EntityWrite:
             self._conn, entity_id=self._entity_id, kind=kind, reference=reference
         )
 
+    def sweep_run(self, run_id: str, *, max_attempts: dict[str, int]) -> work.LapsedRun | None:
+        """Settle a run whose lease lapsed, under this entity's lock."""
+        return work.sweep(self._conn, run_id=run_id, max_attempts=max_attempts)
+
     def succeed_run(self, run: work.Claimed) -> bool:
         return work.succeed(self._conn, run=run)
 
@@ -732,8 +736,11 @@ class WorkQueue:
     def schedules(self, kinds: list[str]) -> list[work.Schedule]:
         return work.schedules(self._conn, kinds=kinds)
 
-    def sweep_lapsed(self, max_attempts: dict[str, int]) -> list[work.LapsedRun]:
-        return work.sweep_lapsed(self._conn, max_attempts=max_attempts)
+    def lapsed(self) -> list[tuple[str, str]]:
+        return work.lapsed(self._conn)
+
+    def lock_kind(self, kind: str) -> None:
+        work.lock_kind(self._conn, kind=kind)
 
     def candidates(self, kinds: list[str], limit: int) -> list[str]:
         return work.candidates(self._conn, kinds=kinds, limit=limit)

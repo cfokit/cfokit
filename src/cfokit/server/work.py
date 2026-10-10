@@ -33,8 +33,8 @@ IDLE_SECONDS = 5
 def kinds(settings: Settings) -> dict[str, Kind]:
     """Every kind of unattended work this deployment runs, by name.
 
-    Empty until a module declares one. The pass still sweeps runs whose worker stopped, so a
-    deployment that has run work keeps its record of it straight.
+    Built from what each module declares. A pass with none still sweeps runs whose worker
+    stopped, so a deployment that has run work keeps its record of it straight.
     """
     del settings
     return {}

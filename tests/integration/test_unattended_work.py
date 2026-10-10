@@ -285,6 +285,27 @@ def test_a_throttled_kind_starts_no_more_runs_than_its_limit(
     assert [r[3] for r in runs(owner_conn, name)].count("waiting") == 3
 
 
+def test_passes_at_once_share_a_throttled_kinds_limit(
+    database: Database, owner_conn: psycopg.Connection[Any]
+) -> None:
+    """The limit is the provider's, so it holds across every pass, not within each."""
+    name = kind_name()
+    for _ in range(6):
+        enqueue(database, new_entity(database), name)
+
+    def handler(_db: Database, _run: Run) -> None:
+        time.sleep(0.05)
+
+    kinds = {name: a_kind(name, handler, per_minute=2)}
+    passes = [threading.Thread(target=run_pass, args=(database, kinds)) for _ in range(3)]
+    for p in passes:
+        p.start()
+    for p in passes:
+        p.join()
+
+    assert [r[3] for r in runs(owner_conn, name)].count("succeeded") == 2
+
+
 # --- what a failure does -----------------------------------------------------------------
 
 
@@ -415,8 +436,8 @@ def test_a_handler_that_outlives_its_lease_has_its_late_outcome_discarded(
                     " WHERE id = %s",
                     (run.id,),
                 )
-            with database.work_queue() as queue:
-                queue.sweep_lapsed({name: 3})
+            with database.entity_write(entity_id) as write:
+                write.sweep_run(run.id, max_attempts={name: 3})
             if finishes == "fails":
                 raise ProviderRefused("too late to matter")
 

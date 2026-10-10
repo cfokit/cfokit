@@ -110,7 +110,7 @@ class Kind:
     # reference: a path under the deployment's own address, as every notification's link is.
     failure_link: Callable[[str, str], str]
     # The provider's limit on runs started a minute, if it calls one. Counted across every
-    # pass, so two passes at once share it.
+    # pass, and claimed under a lock on the kind, so two passes at once share it.
     per_minute: int | None = None
     # For an operational kind, the interval its timer backstops: a reference with no
     # successful run within it is enqueued at its window's end. None for a kind with no timer.
@@ -235,19 +235,27 @@ def _run(claimed: Claimed) -> Run:
 
 
 def _sweep(database: Database, kinds: Mapping[str, Kind], report: PassReport) -> None:
-    """Make abandoned runs due again, and tell a person about any that were out of attempts."""
+    """Make abandoned runs due again, and tell a person about any that were out of attempts.
+
+    One transaction per run, in its entity's write: the run is failed in the transaction that
+    raises its notification, so neither exists without the other.
+    """
+    bounds = {name: kind.max_attempts for name, kind in kinds.items()}
     with database.work_queue() as queue:
-        lapsed = queue.sweep_lapsed({name: k.max_attempts for name, k in kinds.items()})
-    for run in lapsed:
+        found = queue.lapsed()
+    for run_id, entity_id in found:
+        with database.entity_write(entity_id) as write:
+            run = write.sweep_run(run_id, max_attempts=bounds)
+            if run is None:
+                continue
+            if run.failed:
+                _notify_failed(write, kinds[run.kind], run.id, run.reference)
         report.interrupted += 1
+        report.failed += int(run.failed)
         logger.warning(
             "run interrupted",
             extra={"fields": {"run_id": run.id, "kind": run.kind, "attempts": run.attempts}},
         )
-        if run.failed:
-            report.failed += 1
-            with database.entity_write(run.entity_id) as write:
-                _notify_failed(write, kinds[run.kind], run.id, run.reference)
 
 
 def _enqueue_windows(database: Database, kinds: Mapping[str, Kind], report: PassReport) -> None:
@@ -290,13 +298,16 @@ def _claim_next(
 ) -> Claimed | None:
     """The next due run this pass may start, claimed, or None if there is none it may."""
     with database.work_queue() as queue:
-        throttled = {
-            name
-            for name in names
-            if kinds[name].per_minute is not None
-            and queue.started_since(name, seconds=THROTTLE_WINDOW_SECONDS)
-            >= (kinds[name].per_minute or 0)
-        }
+        throttled: set[str] = set()
+        for name in names:
+            limit = kinds[name].per_minute
+            if limit is None:
+                continue
+            # Held until this claim commits, so two passes cannot both count under the limit
+            # and both start a run: the second counts the first's claim.
+            queue.lock_kind(name)
+            if queue.started_since(name, seconds=THROTTLE_WINDOW_SECONDS) >= limit:
+                throttled.add(name)
         allowed = [name for name in names if name not in throttled]
         if not allowed:
             return None
