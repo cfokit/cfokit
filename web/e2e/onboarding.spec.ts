@@ -143,5 +143,12 @@ test("a new person goes from creating an account to their first question", async
     "Confirm they match QuickBooks and explain any differences",
   );
   await settle(page);
+
+  // Settings, from the frame: the company just made, and connecting Claude, at any time.
+  await page.getByRole("button", { name: "Settings" }).first().click();
+  await expect(page.getByRole("heading", { name: "Settings", level: 1 })).toBeVisible();
+  await expect(page.getByRole("list", { name: "Companies" })).toContainText("Synthetic Co");
+  await expect(page.getByRole("figure", { name: "Configuration" })).toContainText("/mcp");
+  await settle(page);
   await settle(page);
 });

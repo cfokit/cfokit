@@ -305,51 +305,18 @@ describe("the import", () => {
 });
 
 describe("connecting Claude and the first question", () => {
-  test("the client registration goes where the issuer's metadata says", async () => {
-    answers["/.well-known/openid-configuration"] = {
-      registration_endpoint: "https://issuer.test/realms/cfokit/register-here",
-    };
-    const { container } = withExport(<ConnectPage entityId="ent-1" />);
-    await screen.findByText(/register-here/);
-    expect(requests.map((request) => request.path)).toContain(
-      "https://issuer.test/realms/cfokit/.well-known/openid-configuration",
-    );
-    await noViolations(container);
-  });
-
-  test("Claude is pointed at the MCP address the deployment configures", async () => {
+  test("the connect step gives this CFOKit's address, and goes on to the first question", async () => {
     answers["/connection"] = { mcp_url: "https://mcp.example.test/mcp" };
-    withExport(<ConnectPage entityId="ent-1" />);
-    const block = await screen.findByRole("figure", { name: "Configuration" });
-    expect(block.textContent).toContain('"https://mcp.example.test/mcp"');
-    expect(requests.find((request) => request.path === "/connection")?.authorization).toBe(
-      "Bearer a-token",
-    );
-  });
-
-  test("the configuration sends the secret the way the client is registered to", async () => {
-    answers["/connection"] = { mcp_url: "https://mcp.example.test/mcp" };
-    answers["/.well-known/openid-configuration"] = {
-      registration_endpoint: "https://issuer.test/realms/cfokit/register-here",
-    };
-    withExport(<ConnectPage entityId="ent-1" />);
-    const registration = (await screen.findByText(/register-here/)).closest("figure");
-    const configuration = await screen.findByRole("figure", { name: "Configuration" });
-    const method = /"token_endpoint_auth_method":\s*"(\w+)"/;
-    const registered = method.exec(registration?.querySelector("pre")?.textContent ?? "")?.[1];
-    expect(registered).toBe("client_secret_post");
-    const config = JSON.parse(configuration.querySelector("pre")?.textContent ?? "") as {
-      mcpServers: { cfokit: { args: string[] } };
-    };
-    expect(method.exec(config.mcpServers.cfokit.args.at(-1) ?? "")?.[1]).toBe(registered);
-  });
-
-  test("a deployment that does not say where Claude connects is told so, not guessed", async () => {
-    answers["/connection"] = { mcp_url: null };
     const { container } = withExport(<ConnectPage entityId="ent-1" />);
-    await screen.findByText(/MCP_PUBLIC_BASE_URL/);
-    expect(screen.queryByRole("figure", { name: "Configuration" })).toBeNull();
+    const address = await screen.findByRole("figure", { name: "Connector address" });
+    expect(address.textContent).toContain("https://mcp.example.test/mcp");
     await noViolations(container);
+
+    fireEvent.click(screen.getByRole("button", { name: "Next: your first question" }));
+    expect(navigate).toHaveBeenCalledWith({
+      to: "/companies/$entityId/ask",
+      params: { entityId: "ent-1" },
+    });
   });
 
   test("the first question names the company, and the link drafts it in a new Claude chat", async () => {

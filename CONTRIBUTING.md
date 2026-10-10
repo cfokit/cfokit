@@ -68,18 +68,17 @@ open pull requests. Go one step at a time, and wait for me where a step needs me
 3. Build and run the stack as CONTRIBUTING.md describes: run the migrations, bring the
    stack up, and confirm /healthz and /readyz respond.
 4. Run `uv run task lint` and `uv run task test`.
-5. Trust the local certificate authority as the README says, then tell me to open
-   https://localhost:8080/app/ and go through getting started. Wait until I say I am done.
+5. Trust the local certificate authority as docs/tutorials/run-cfokit-on-your-computer.md
+   says, then tell me to open https://localhost:8080/app/ and go through getting started.
+   Wait until I say I am done.
 6. Report each step's result, and anything you could not do, with the error output.
 ````
 
 ### Getting started in the app
 
-Open <https://localhost:8080/app/>, create your account, and follow the pages: export your books
-from QuickBooks, confirm your company, import, and connect Claude Desktop. The last page opens a
-chat in Claude with a first question about your books already drafted
-([ADR-0058](docs/decisions/0058-getting-started-is-one-path-on-the-web.md)). Then go back to
-Claude Code and say you're done.
+Open <https://localhost:8080/app/>, create your account, and follow the pages to your first
+question in Claude. [Run CFOKit on your computer](docs/tutorials/run-cfokit-on-your-computer.md)
+describes each step. Then go back to Claude Code and say you're done.
 
 When you have a change ready, ask Claude Code to commit it on a branch, then push and open the
 pull request yourself from your terminal
@@ -121,7 +120,7 @@ exercise it from the session but not from your own machine.
 | `python` and `postgres` images | Docker Hub: `registry-1.docker.io`, `auth.docker.io`, `production.cloudflare.docker.com` |
 | the `uv` image used in builds | `ghcr.io` |
 | the Keycloak image | `quay.io` and its CDN hosts (`*.quay.io`) |
-| pnpm (fetched by corepack), the web client's packages, and `mcp-remote` in the Claude Desktop guide (`npx`) | `registry.npmjs.org` |
+| pnpm (fetched by corepack), the web client's packages, and `mcp-remote` when connecting Claude Desktop locally (`npx`) | `registry.npmjs.org` |
 | Chromium for the end-to-end test (`playwright install`) | `cdn.playwright.dev`, `playwright.download.prss.microsoft.com` |
 
 To paste into a cloud environment's allowed domains, one per line:

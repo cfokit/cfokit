@@ -8,6 +8,7 @@ import { dismissalKey, QuestionsPage, unresolvedQuestion } from "./QuestionsPage
 // the API returns here is a stand-in; what is asserted is what the page sends, and that it shows
 // what it was given.
 
+vi.mock("@tanstack/react-router", () => ({ useNavigate: () => vi.fn() }));
 vi.mock("react-oidc-context", () => ({
   useAuth: () => ({
     user: { access_token: "a-token", profile: { name: "Dana Whitfield" } },

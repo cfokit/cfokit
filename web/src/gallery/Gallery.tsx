@@ -42,7 +42,12 @@ export function Gallery() {
   const [refused, setRefused] = useState<string>();
 
   return (
-    <AppFrame company="[COMPANY NAME]" person="[PERSON NAME]" onSignOut={() => undefined}>
+    <AppFrame
+      company="[COMPANY NAME]"
+      person="[PERSON NAME]"
+      onSignOut={() => undefined}
+      onSettings={() => undefined}
+    >
       <div className="flex flex-col gap-10">
         <h1 className="font-display text-display-compact text-ink tablet:text-display">
           Components

@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { useAuth } from "react-oidc-context";
 import { useApi, type Api } from "../api";
 import {
-  AppFrame,
   Button,
   CopyBlock,
   MoneyTable,
@@ -12,7 +10,7 @@ import {
   type Row,
 } from "../components";
 import { claudeLink } from "../start/FirstQuestion";
-import { personName } from "../start/StartFrame";
+import { PersonFrame } from "../settings/PersonFrame";
 import { useStarted } from "../start/state";
 
 /** A record already in the books that a line could be (ADR-0059), as the API lists it. */
@@ -217,7 +215,6 @@ function transactions(count: number): string {
  * person's own act (ADR-0056 § 2).
  */
 export function QuestionsPage({ entityId }: { entityId: string }) {
-  const auth = useAuth();
   const api = useApi();
   const started = useStarted();
   const company = useCompanyName(api, entityId, started.company);
@@ -254,11 +251,7 @@ export function QuestionsPage({ entityId }: { entityId: string }) {
   }
 
   return (
-    <AppFrame
-      company={company}
-      person={personName(auth.user?.profile)}
-      onSignOut={() => void auth.signoutRedirect()}
-    >
+    <PersonFrame company={company}>
       <div className="flex flex-col gap-6">
         <h1 className="font-display text-display-compact text-ink tablet:text-display">
           Questions for you
@@ -316,7 +309,7 @@ export function QuestionsPage({ entityId }: { entityId: string }) {
           </>
         )}
       </div>
-    </AppFrame>
+    </PersonFrame>
   );
 }
 
