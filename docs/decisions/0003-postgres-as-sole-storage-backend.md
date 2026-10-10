@@ -69,7 +69,19 @@ including for local development.
 Row-level security keyed on `entity_id` is enforced and proved from outside, as the
 application role, in `tests/integration/test_entity_isolation.py`. It is the enforcing layer:
 a repository read addresses a transaction by id and relies on the scope set on the session, so
-isolation is a property of the database rather than of each query. The deferred constraint
+isolation is a property of the database rather than of each query.
+
+One read crosses entities, and it is narrower than any entity's data: **a principal's own
+grants.** `entity_grant` has a second policy, for `SELECT` only, that shows a transaction the
+grant rows naming the principal it declares in `cfokit.principal_id`. Listing the entities a
+caller may read needs it; without it, every conversation starts with the person reciting an
+entity id. Only that listing declares a principal — the authenticated one, for one transaction
+— and each entity found is then read under its own scope like any other. A declaring
+transaction sees its principal's grants and nothing else: no other principal's grant, no row of
+any entity's books, and no write, each measured as the application role in
+`tests/integration/test_entity_list.py`. Widening it would be a new record.
+
+The deferred constraint
 trigger (ADR-0006) enforces zero-sum, and is exercised in
 `tests/integration/test_schema_invariants.py`.
 
