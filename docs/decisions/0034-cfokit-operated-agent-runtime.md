@@ -152,9 +152,9 @@ ADR-0035 gives CFOKit, and capturing the evidence `SOC1-06` and `SOC1-35` requir
 
 **So a capability is built once, as skills, tools and panels**, and runs in both hosts: an
 organization's own agent with the hosted backend, and CFOKit's runtime with managed bookkeeping.
-Nothing is built as a page only the runtime can show. The exception is getting started — the
-lead, the plan, the subscription, registration and the first import — which happens on web
-pages before any agent is involved (ADR-0058).
+Nothing is built as a page only the runtime can show. The exception is what the browser holds —
+the lead, the plan, the subscription, registration, connecting an agent and granting authority —
+which happens on web pages (ADR-0058, ADR-0068).
 
 **The runtime is the web app**, served by CFOKit — the web client of ADR-0049, which cleared
 ADR-0012's gate. Mobile apps follow, and a desktop app if one is
