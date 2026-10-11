@@ -3,7 +3,9 @@
 From first click to books worth talking about, and on into the work CFOKit exists for. One
 journey for both offerings; where they differ, the row says so.
 
-Getting started (stages 1–7) happens on web pages, before any agent is involved. Everything after
+Getting started has two doors. A person who arrives on the web stays on web pages until
+their books are in, then chooses their agent or the browser. A person who arrives through Claude's
+directory connects first, and sets up the company and imports in the conversation. Everything after
 is built as skills, MCP tools and MCP App panels, so it runs wherever the agent does: Claude
 Desktop for an organization bringing its own agent, CFOKit's runtime for managed bookkeeping. The
 runtime is the web app; mobile apps follow, and a desktop app if warranted.
@@ -12,6 +14,8 @@ Getting the books in delivers nothing by itself. It is a chore, and the measure 
 of the person it takes. Everything after it is the product.
 
 ## Getting started
+
+### The web door
 
 | # | Stage | Commercial (hosted) | Self-hosted | Where |
 |---|---|---|---|---|
@@ -22,8 +26,17 @@ of the person it takes. Everything after it is the product.
 | 5 | **Export** | Export from QuickBooks (shown how) and choose the file; it is read in the browser | Same | Web |
 | 6 | **Company** | Confirm what the export states — name, basis, fiscal year end, currency — and fill in what it does not, such as the time zone | Same | Web |
 | 7 | **Import** | See what will land, confirm; posted in batches and reconciled | Same | Web |
-| 8 | **Connect** | Managed: nothing. Own agent: add CFOKit to Claude (a connector, or the plugin) | Own agent: the same, against their own stack | Web, guiding; Claude |
-| 9 | **First insight** | Managed: in the runtime. Own agent: **Continue in Claude** opens a chat with the first question drafted, with a copy block beside it | Own agent: the same | Web → Claude |
+| 8 | **Choose** | Managed: nothing; the runtime opens on the first question. Own agent: **Continue in Claude** adds CFOKit to Claude, waits for it to connect, asks the person to allow it, and opens a chat with the first question drafted; or **Continue in the browser**, connecting later from Settings | Own agent: the same, against their own stack | Web → Claude, or web |
+
+### The agent door
+
+| # | Stage | Commercial (hosted) | Self-hosted | Where |
+|---|---|---|---|---|
+| 1 | **Arrive** | CFOKit in Claude's directory | A custom connector pointed at their own stack | Claude |
+| 2 | **Connect** | Sign in or register on the issuer's page | The same page | Issuer, in the browser |
+| 3 | **Company** | The skill asks how the business works and proposes what the company declares; without a plan, creating it gives the plan's address, and the person comes back | The same, with no plan | Claude; the plan on the web |
+| 4 | **Import** | In a panel in the conversation; a host without panels links to the web door's import page | Same | Claude |
+| 5 | **First insight** | In the same conversation | Same | Claude |
 
 **The first question** after an import is "did it all come across?", and the second "how's the
 business doing?". The drafted prompt asks both:
