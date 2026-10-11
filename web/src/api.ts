@@ -16,19 +16,23 @@ export interface Api {
   get<T>(path: string): Promise<T>;
   /** `headers` carries what a write needs besides its body, such as its `Idempotency-Key`. */
   post<T>(path: string, body: unknown, headers?: Record<string, string>): Promise<T>;
+  /** Ends something, such as a grant; the API answers with no body. */
+  delete(path: string): Promise<void>;
+}
+
+async function refusal(response: Response): Promise<ApiError> {
+  const payload: unknown = await response.json().catch(() => null);
+  const problem = (payload ?? {}) as { code?: unknown; message?: unknown };
+  return new ApiError(
+    response.status,
+    typeof problem.code === "string" ? problem.code : "unexpected",
+    typeof problem.message === "string" ? problem.message : response.statusText,
+  );
 }
 
 async function answer<T>(response: Response): Promise<T> {
-  const payload: unknown = await response.json().catch(() => null);
-  if (!response.ok) {
-    const problem = (payload ?? {}) as { code?: unknown; message?: unknown };
-    throw new ApiError(
-      response.status,
-      typeof problem.code === "string" ? problem.code : "unexpected",
-      typeof problem.message === "string" ? problem.message : response.statusText,
-    );
-  }
-  return payload as T;
+  if (!response.ok) throw await refusal(response);
+  return (await response.json().catch(() => null)) as T;
 }
 
 /**
@@ -52,6 +56,10 @@ export function useApi(): Api {
             body: JSON.stringify(body),
           }),
         );
+      },
+      async delete(path: string): Promise<void> {
+        const response = await fetch(path, { method: "DELETE", headers: authorization });
+        if (!response.ok) throw await refusal(response);
       },
     };
   }, [token]);

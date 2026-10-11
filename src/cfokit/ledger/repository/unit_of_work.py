@@ -171,6 +171,10 @@ class EntityWrite:
         """The catalog entry for a role, or None if this deployment defines no such role."""
         return grants.role_definition(self._conn, name)
 
+    def grants_in_force(self, at: datetime) -> list[administration.Grant]:
+        """Every grant in force here at `at`: who may do what in this entity."""
+        return administration.grants_in_force(self._conn, entity_id=self._entity_id, at=at)
+
     def role_of_grant(self, grant_id: str) -> str | None:
         """The role an unrevoked grant in this entity carries, or None if there is none."""
         return administration.role_of_grant(

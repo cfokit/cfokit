@@ -48,6 +48,7 @@ PERSON = Principal(id="user:geoff", actor_class=ActorClass.PERSON)
 
 CLAIMS: dict[str, Any] = {
     "sub": PERSON.id,
+    "azp": "cfokit-web",
     "iss": "http://localhost:8180/realms/cfokit",
     "aud": "cfokit-ledger",
 }

@@ -487,7 +487,7 @@
     "name": "issued_statements"
   },
   {
-    "description": "The companies whose books the person can reach here, each with the entity_id every other tool takes, its name, and what it declared. Call this first when the person names a company or has not said which: match by name, and ask them to choose only if more than one fits.",
+    "description": "The companies whose books the person can reach here, each with the entity_id every other tool takes, its name, and what it declared. Call this first when the person names a company or has not said which: match by name, and ask them to choose only if more than one fits. 'allow_url', when present, is where the person allows this agent in more of their companies; give it to them if a company they name is not listed.",
     "inputSchema": {
       "properties": {},
       "title": "list_the_entitiesArguments",

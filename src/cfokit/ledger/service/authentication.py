@@ -10,11 +10,13 @@ the failure the audience claim exists to prevent — so it is checked here rathe
 a caller to remember.
 
 **`actor_class` comes from the shape of the token, never from a claim the caller sets**
-(ADR-0033). An RFC 8693 `act` claim means delegation: the subject is acting *for* the
-principal it names, which is an agent acting for a person (`IAM-11`). Its absence is a person
-acting for themselves. Nothing here reads a claim that says "I am an agent", because a
-principal that can describe itself is a principal that can describe itself wrongly, and
-ADR-0033 rejects self-reported provenance by name.
+(ADR-0033, ADR-0066). An RFC 8693 `act` claim means delegation: the subject is acting *for* the
+principal it names, which is an agent acting for a person (`IAM-11`). Without one, the client
+the token was issued to decides. A token issued to the web client is its person; a token issued
+to any other client is that client, an agent, acting for the person in `sub`. Nothing here
+reads a claim that says "I am an agent", because a principal that can describe itself is a
+principal that can describe itself wrongly, and ADR-0033 rejects self-reported provenance by
+name. The client is named by the issuer, not by the caller.
 
 `rule` is deliberately unreachable from a token. A rule's principal is the system's own when
 a stored rule assigns a coding, and it will not arrive bearing a credential.
@@ -35,7 +37,19 @@ from jwt import PyJWKClient
 from cfokit.ledger.errors import NotAuthenticated
 from cfokit.ledger.service.principal import ActorClass, Principal
 
-__all__ = ["Authenticator", "DenyAll", "TokenAuthenticator", "principal_from_claims"]
+__all__ = [
+    "WEB_CLIENT_ID",
+    "Authenticator",
+    "DenyAll",
+    "TokenAuthenticator",
+    "principal_from_claims",
+]
+
+# The web client's OAuth client id. A constant of the product rather than a setting, because the
+# web bundle is built with it (web/src/auth/settings.ts) and the realm registers it
+# (infra/keycloak/cfokit-realm.json); a deployment could not change it without rebuilding the
+# client, and a test holds the three together.
+WEB_CLIENT_ID = "cfokit-web"
 
 DISCOVERY_PATHS = (
     "/.well-known/openid-configuration",
@@ -86,7 +100,7 @@ def principal_from_claims(claims: dict[str, Any]) -> Principal:
 
     delegation = claims.get("act")
     if delegation is None:
-        return Principal(id=subject, actor_class=ActorClass.PERSON)
+        return _from_client(claims, subject)
 
     if not isinstance(delegation, dict):
         raise NotAuthenticated("act claim is not a delegation object")
@@ -163,3 +177,18 @@ class TokenAuthenticator:
             raise NotAuthenticated(f"token rejected: {exc.__class__.__name__}") from exc
 
         return claims
+
+
+def _from_client(claims: dict[str, Any], subject: str) -> Principal:
+    """The person, or an agent acting for them, from the client the token was issued to.
+
+    OpenID Connect names the client in `azp`, and RFC 9068's access-token profile in
+    `client_id`; every issuer ADR-0019 admits sends one of them. A token naming neither is
+    refused, because there is no truthful principal to record (ADR-0066 § 1).
+    """
+    client = claims.get("azp") or claims.get("client_id")
+    if not isinstance(client, str) or not client:
+        raise NotAuthenticated("token names no client")
+    if client == WEB_CLIENT_ID:
+        return Principal(id=subject, actor_class=ActorClass.PERSON)
+    return Principal(id=f"client:{client}", actor_class=ActorClass.AGENT, acting_for=subject)

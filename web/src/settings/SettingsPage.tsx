@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useApi } from "../api";
 import { ActionBar, Button, Notice } from "../components";
+import { agentName } from "../agents/name";
 import { ConnectClaude } from "../connect/ConnectClaude";
 import { PersonFrame } from "./PersonFrame";
 
@@ -39,12 +40,12 @@ export function declared(company: Company): string {
   return `${basis} · year ends ${yearEnd} · ${company.functional_currency} · ${company.time_zone}`;
 }
 
-type Listing =
+export type Listing =
   | { state: "loading" }
   | { state: "ready"; companies: Company[] }
   | { state: "failed"; message: string };
 
-function useCompanies(): Listing {
+export function useCompanies(): Listing {
   const api = useApi();
   const [listing, setListing] = useState<Listing>({ state: "loading" });
   useEffect(() => {
@@ -130,6 +131,103 @@ function Companies() {
   );
 }
 
+type Allowed =
+  | { state: "loading" }
+  | { state: "ready"; agents: string[] }
+  | { state: "failed"; message: string };
+
+/** Every agent allowed in any of these companies, once each (ADR-0066 § 2). */
+function useAllowedAgents(companies: Company[]): Allowed {
+  const api = useApi();
+  const [allowed, setAllowed] = useState<Allowed>({ state: "loading" });
+  useEffect(() => {
+    let current = true;
+    Promise.all(
+      companies.map((company) =>
+        api
+          .get<{ grants: { principal_id: string }[] }>(`/entities/${company.id}/grants`)
+          // A company the person cannot grant in has no agents of theirs to manage.
+          .catch(() => ({ grants: [] })),
+      ),
+    )
+      .then((answers) => {
+        if (!current) return;
+        const agents = new Set(
+          answers.flatMap((answer) =>
+            answer.grants
+              .map((held) => held.principal_id)
+              .filter((principal) => principal.startsWith("client:")),
+          ),
+        );
+        setAllowed({ state: "ready", agents: [...agents].sort() });
+      })
+      .catch((error: unknown) => {
+        if (current) {
+          setAllowed({
+            state: "failed",
+            message: error instanceof Error ? error.message : String(error),
+          });
+        }
+      });
+    return () => {
+      current = false;
+    };
+  }, [api, companies]);
+  return allowed;
+}
+
+function Agents({ companies }: { companies: Company[] }) {
+  const allowed = useAllowedAgents(companies);
+  const navigate = useNavigate();
+  if (allowed.state === "loading") {
+    return <p className="text-caption text-ink-muted">Checking which agents you allowed…</p>;
+  }
+  if (allowed.state === "failed") {
+    return (
+      <Notice tone="danger" label="Your agents could not be listed">
+        {allowed.message}
+      </Notice>
+    );
+  }
+  if (allowed.agents.length === 0) {
+    return <p className="text-body text-ink">No agent is allowed in your companies yet.</p>;
+  }
+  return (
+    <ul aria-label="Agents" className="flex flex-col border-t border-rule">
+      {allowed.agents.map((agent) => (
+        <li
+          key={agent}
+          className="flex items-center justify-between gap-2 border-b border-rule py-4"
+        >
+          <span className="text-body text-ink">{agentName(agent)}</span>
+          <Button
+            variant="link"
+            onClick={() => void navigate({ to: "/agents/$agent", params: { agent } })}
+          >
+            Manage
+          </Button>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function AgentsSection() {
+  const listing = useCompanies();
+  if (listing.state !== "ready" || listing.companies.length === 0) return null;
+  return (
+    <section aria-labelledby="agents" className="flex flex-col gap-4">
+      <h2 id="agents" className="font-display text-heading text-ink">
+        Agents
+      </h2>
+      <p className="text-body text-ink">
+        An agent acts only in the companies you allowed it in. Manage one to allow or revoke it.
+      </p>
+      <Agents companies={listing.companies} />
+    </section>
+  );
+}
+
 /** The person's settings: the companies they hold, and how to connect Claude, at any time. */
 export function SettingsPage() {
   return (
@@ -147,11 +245,12 @@ export function SettingsPage() {
             Connect Claude
           </h2>
           <p className="text-body text-ink">
-            One connection reaches every company above. Claude asks which company you mean when more
-            than one fits.
+            One connection serves all your companies, and acts only in the ones you allow it in.
+            Claude asks which company you mean when more than one fits.
           </p>
           <ConnectClaude />
         </section>
+        <AgentsSection />
       </div>
     </PersonFrame>
   );

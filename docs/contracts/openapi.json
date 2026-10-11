@@ -1044,6 +1044,55 @@
         "title": "Field",
         "type": "string"
       },
+      "GrantModel": {
+        "description": "A grant in force: who holds which role here, since when, and from whom.",
+        "properties": {
+          "grant_id": {
+            "title": "Grant Id",
+            "type": "string"
+          },
+          "granted_at": {
+            "format": "date-time",
+            "title": "Granted At",
+            "type": "string"
+          },
+          "granted_by": {
+            "title": "Granted By",
+            "type": "string"
+          },
+          "lapses_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lapses At"
+          },
+          "principal_id": {
+            "description": "The holder. A person's subject, or `client:<client_id>` for an agent, the client a person signed in through (ADR-0066).",
+            "title": "Principal Id",
+            "type": "string"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "grant_id",
+          "principal_id",
+          "role",
+          "granted_by",
+          "granted_at",
+          "lapses_at"
+        ],
+        "title": "GrantModel",
+        "type": "object"
+      },
       "GrantResponse": {
         "properties": {
           "grant_id": {
@@ -1088,6 +1137,22 @@
           "role"
         ],
         "title": "GrantRoleRequest",
+        "type": "object"
+      },
+      "GrantsResponse": {
+        "properties": {
+          "grants": {
+            "items": {
+              "$ref": "#/components/schemas/GrantModel"
+            },
+            "title": "Grants",
+            "type": "array"
+          }
+        },
+        "required": [
+          "grants"
+        ],
+        "title": "GrantsResponse",
         "type": "object"
       },
       "ImportReconciliationsResponse": {
@@ -4593,6 +4658,103 @@
       }
     },
     "/entities/{entity_id}/grants": {
+      "get": {
+        "description": "Who holds which role here. Needs the capability to grant, which is what it is for.",
+        "operationId": "grants_entities__entity_id__grants_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GrantsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "List the grants in force in this entity",
+        "tags": [
+          "administration"
+        ]
+      },
       "post": {
         "operationId": "grant_entities__entity_id__grants_post",
         "parameters": [

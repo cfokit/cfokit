@@ -21,6 +21,7 @@ from http import HTTPStatus
 
 from cfokit.ledger.errors import (
     AccountNotFound,
+    AgentNotAllowed,
     AllocationInvalid,
     AlreadyOpened,
     CommodityNotPermitted,
@@ -54,6 +55,7 @@ __all__ = ["STATUS_FOR_CODE", "status_for"]
 STATUS_FOR_CODE: dict[str, int] = {
     NotAuthenticated.code: HTTPStatus.UNAUTHORIZED,
     NotAuthorized.code: HTTPStatus.FORBIDDEN,
+    AgentNotAllowed.code: HTTPStatus.FORBIDDEN,
     # 409, not 403: the caller holds the capability, and this particular revocation would
     # leave the entity unheld (`IAM-04`).
     LastOwner.code: HTTPStatus.CONFLICT,

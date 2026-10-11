@@ -108,6 +108,7 @@ class StubAuthenticator:
     def claims_for(self, credential: str | None) -> dict[str, Any]:
         claims: dict[str, Any] = {
             "sub": self._principal.id,
+            "azp": "cfokit-web",
             "iss": "http://localhost:8180/realms/cfokit",
             "aud": "cfokit-ledger",
         }

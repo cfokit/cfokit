@@ -1,4 +1,5 @@
 import { createRootRoute, createRoute, createRouter, Outlet } from "@tanstack/react-router";
+import { AgentPage } from "./agents/AgentPage";
 import { SignedIn } from "./auth/SignedIn";
 import { SignInReturn } from "./auth/SignInReturn";
 import { QuestionsPage } from "./questions/QuestionsPage";
@@ -97,6 +98,21 @@ const settings = createRoute({
   ),
 });
 
+// Allowing an agent in the person's companies (ADR-0066 § 2). Every `agent_not_allowed` refusal
+// links here, so the path is part of what the server says.
+const agents = createRoute({
+  getParentRoute: () => root,
+  path: "/agents/$agent",
+  component: function Agents() {
+    const { agent } = agents.useParams();
+    return (
+      <SignedIn>
+        <AgentPage agent={agent} />
+      </SignedIn>
+    );
+  },
+});
+
 // The issuer sends the person back here with a code; the sign-in provider exchanges it and
 // returns them to the page they started from. If the exchange fails, this page says so.
 const signedIn = createRoute({
@@ -106,7 +122,16 @@ const signedIn = createRoute({
 });
 
 export const router = createRouter({
-  routeTree: root.addChildren([start, importing, connect, ask, questions, settings, signedIn]),
+  routeTree: root.addChildren([
+    start,
+    importing,
+    connect,
+    ask,
+    questions,
+    settings,
+    agents,
+    signedIn,
+  ]),
   basepath: "/app",
 });
 

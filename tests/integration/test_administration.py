@@ -384,21 +384,23 @@ def test_revoking_a_non_owner_is_never_the_last_owner(
 # --- The catalog (IAM-01, IAM-02, ADR-0039) ---------------------------------------------
 
 
-def test_owner_is_the_only_role_this_deployment_ships(
+def test_the_roles_this_deployment_ships_are_owner_and_the_two_an_agent_is_allowed(
     owner_conn: psycopg.Connection[Any],
-    delegated_roles: dict[str, frozenset[str]],
 ) -> None:
-    """`owner` is the only role with a case for it, so it is the only one seeded.
+    """`owner`, and the two roles a person allows an agent in (ADR-0066 § 2, migration 0021).
 
-    The suite adds others itself, which is exactly how a deployment would. If this fails
-    because a role was seeded by a migration, it needed somebody to hold it first.
+    If this fails because a migration seeded another role, it needed somebody to hold it first.
     """
     with owner_conn.cursor() as cur:
         cur.execute(
-            "SELECT name FROM role WHERE name <> ALL(%s) ORDER BY name",
-            (sorted(delegated_roles),),
+            "SELECT role_name, privilege FROM role_privilege"
+            " WHERE role_name IN ('reader', 'bookkeeper')"
         )
-        assert cur.fetchall() == [("owner",)]
+        agent_roles: dict[str, set[str]] = {}
+        for role, privilege in cur.fetchall():
+            agent_roles.setdefault(str(role), set()).add(str(privilege))
+
+    assert agent_roles == {"reader": {"read"}, "bookkeeper": {"read", "record", "post"}}
 
 
 def test_owner_carries_every_privilege_the_code_defines(

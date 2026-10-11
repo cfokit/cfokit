@@ -46,8 +46,10 @@ from cfokit.ledger.api.models import (
     EntityCreatedResponse,
     EntityResponse,
     ErrorResponse,
+    GrantModel,
     GrantResponse,
     GrantRoleRequest,
+    GrantsResponse,
     IssuedStatementModel,
     IssuedStatementsResponse,
     IssueStatementRequest,
@@ -96,6 +98,7 @@ from cfokit.ledger.service.administration import (
     create_account,
     create_entity,
     grant_role,
+    list_grants,
     revoke_grant,
 )
 from cfokit.ledger.service.authentication import (
@@ -488,6 +491,32 @@ def create_app(settings: Settings, authenticator: Authenticator | None = None) -
             lapses_at=body.lapses_at,
         )
         return GrantResponse(grant_id=grant_id)
+
+    @app.get(
+        "/entities/{entity_id}/grants",
+        tags=["administration"],
+        summary="List the grants in force in this entity",
+        responses=ERRORS,
+    )
+    def grants(
+        entity_id: Annotated[str, Path()],
+        acting: Annotated[Principal, Depends(get_principal)],
+        database: Annotated[Database, Depends(get_database)],
+    ) -> GrantsResponse:
+        """Who holds which role here. Needs the capability to grant, which is what it is for."""
+        return GrantsResponse(
+            grants=[
+                GrantModel(
+                    grant_id=held.id,
+                    principal_id=held.principal_id,
+                    role=held.role,
+                    granted_by=held.granted_by,
+                    granted_at=held.granted_at,
+                    lapses_at=held.lapses_at,
+                )
+                for held in list_grants(database, entity_id=entity_id, principal=acting)
+            ]
+        )
 
     @app.delete(
         "/entities/{entity_id}/grants/{grant_id}",

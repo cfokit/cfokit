@@ -43,6 +43,7 @@ from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from http import HTTPStatus
 from typing import Any
+from urllib.parse import quote
 
 from mcp.server import MCPServer
 from mcp.server.auth.middleware.auth_context import get_access_token
@@ -53,7 +54,7 @@ from starlette.responses import JSONResponse, Response
 
 from cfokit.ledger.config import Settings
 from cfokit.ledger.engine import Entry, Posting
-from cfokit.ledger.errors import LedgerError, NotAuthenticated
+from cfokit.ledger.errors import AgentNotAllowed, LedgerError, NotAuthenticated
 from cfokit.ledger.mcp.auth import LedgerTokenVerifier
 from cfokit.ledger.presentation import (
     ComparativeLine,
@@ -101,7 +102,7 @@ from cfokit.ledger.service.write import (
     reverse_transaction,
 )
 
-__all__ = ["LedgerToolError", "create_server", "refused"]
+__all__ = ["LedgerToolError", "allow_url", "create_server", "refused"]
 
 
 class LedgerToolError(Exception):
@@ -291,12 +292,29 @@ def acting() -> Principal:
         raise LedgerToolError(exc.code, exc.message) from exc
 
 
+# Where the web client is, for the one refusal whose remedy is a page there: allowing an agent
+# (ADR-0066 § 2). Set once by `create_server` from `PUBLIC_BASE_URL`, never from a request, and
+# read by `_refusals`, which every module's tools share.
+_web_client_base: str | None = None
+
+
+def allow_url(agent: str) -> str | None:
+    """Where the person allows this agent in the web client; None before a server exists."""
+    if _web_client_base is None:
+        return None
+    return f"{_web_client_base}/agents/{quote(agent, safe='')}"
+
+
 def _refusals(work: Callable[[], dict[str, Any]]) -> dict[str, Any]:
     """Run `work`, converting any ledger refusal into the structured refusal shape."""
     try:
         return work()
     except LedgerToolError as exc:
         return refused(exc.code, exc.detail)
+    except AgentNotAllowed as exc:
+        page = allow_url(exc.agent)
+        message = f"{exc.message}: {page}" if page else exc.message
+        return refused(exc.code, message)
     except LedgerError as exc:
         return refused(exc.code, exc.message)
 
@@ -341,6 +359,9 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
     a proxy or a tunnel the headers lie, and this URL is what a client fetches metadata from
     (ADR-0004).
     """
+    global _web_client_base
+    _web_client_base = f"{settings.public_base_url.rstrip('/')}/app"
+
     database = Database(settings.database_url)
     verifier = LedgerTokenVerifier(
         authenticator or TokenAuthenticator(settings.auth_issuer_url, settings.auth_audience)
@@ -363,7 +384,9 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
             "idempotency key; replaying a key returns the original result rather than booking "
             "again. Amounts are decimal strings. A posted transaction is never edited — "
             "correct it with reverse_transaction. Every tool returns an 'ok' field: false "
-            "means the ledger refused the operation and 'code' says why. Every answer about "
+            "means the ledger refused the operation and 'code' says why; 'agent_not_allowed' "
+            "means the person has not allowed this agent in that company, and the message "
+            "gives the page where they do. Every answer about "
             "one company names it in 'company'; state that company with every figure, and "
             "keep to the company the person chose until they name another."
         ),
@@ -483,12 +506,15 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
             "The companies whose books the person can reach here, each with the entity_id "
             "every other tool takes, its name, and what it declared. Call this first when "
             "the person names a company or has not said which: match by name, and ask them "
-            "to choose only if more than one fits."
+            "to choose only if more than one fits. 'allow_url', when present, is where the "
+            "person allows this agent in more of their companies; give it to them if a "
+            "company they name is not listed."
         ),
     )
     def list_the_entities() -> dict[str, Any]:
         def work() -> dict[str, Any]:
-            return {
+            principal = acting()
+            listed = {
                 "ok": True,
                 "entities": [
                     {
@@ -501,9 +527,15 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
                         "functional_currency": found.functional_currency,
                         "time_zone": found.time_zone,
                     }
-                    for found in list_entities(database, principal=acting())
+                    for found in list_entities(database, principal=principal)
                 ],
             }
+            # An agent lists only the companies its person allowed it in (`IAM-12`), so a new
+            # connection lists none. Where it is allowed is the person's to change, there.
+            page = allow_url(principal.id) if principal.acting_for is not None else None
+            if page is not None:
+                listed["allow_url"] = page
+            return listed
 
         return _refusals(work)
 

@@ -20,7 +20,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from enum import StrEnum
 
-from cfokit.ledger.errors import NotAPerson, NotAuthorized
+from cfokit.ledger.errors import AgentNotAllowed, NotAPerson, NotAuthorized
 from cfokit.ledger.repository.unit_of_work import EntityWrite
 from cfokit.ledger.service.principal import Principal
 
@@ -131,7 +131,16 @@ def authorize(write: EntityWrite, capability: Capability, principal: Principal) 
         if principal.acting_for is not None
         else frozenset[str]()
     )
-    require(capability, principal, write.privileges_in_force(principal.id, now), acted_for)
+    own = write.privileges_in_force(principal.id, now)
+    if principal.acting_for is not None and not own and acted_for:
+        # The person holds a role here and has not allowed this agent in it. Saying so sends
+        # them to the one remedy, allowing it (ADR-0066 § 2); where the person holds nothing,
+        # the ordinary refusal says no more than it would to anyone.
+        raise AgentNotAllowed(
+            "this agent is not allowed in this company; the person allows it in CFOKit",
+            agent=principal.id,
+        )
+    require(capability, principal, own, acted_for)
 
 
 def authorize_own_act(write: EntityWrite, principal: Principal) -> None:

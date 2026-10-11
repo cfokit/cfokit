@@ -111,3 +111,25 @@ test("the frame opens settings within the app", async () => {
   fireEvent.click(settings);
   expect(navigate).toHaveBeenCalledWith({ to: "/settings" });
 });
+
+test("settings lists each agent allowed in any company once, and opens it to manage", async () => {
+  answers["/entities"] = { entities: [ACME, HARBOR] };
+  answers["/connection"] = { mcp_url: "https://mcp.example.test/mcp" };
+  answers["/entities/e-1/grants"] = {
+    grants: [{ principal_id: "user:dana" }, { principal_id: "client:claude-abc" }],
+  };
+  answers["/entities/e-2/grants"] = { grants: [{ principal_id: "client:claude-abc" }] };
+  render(<SettingsPage />);
+
+  const list = await screen.findByRole("list", { name: "Agents" });
+  expect(
+    within(list)
+      .getAllByRole("listitem")
+      .map((item) => item.firstChild?.textContent),
+  ).toEqual(["Client claude-abc"]);
+  fireEvent.click(within(list).getByRole("button", { name: "Manage" }));
+  expect(navigate).toHaveBeenCalledWith({
+    to: "/agents/$agent",
+    params: { agent: "client:claude-abc" },
+  });
+});

@@ -4,6 +4,10 @@
     "error": "AccountNotFound"
   },
   {
+    "code": "agent_not_allowed",
+    "error": "AgentNotAllowed"
+  },
+  {
     "code": "allocation_invalid",
     "error": "AllocationInvalid"
   },

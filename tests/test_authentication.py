@@ -6,19 +6,77 @@ from — is tested without a key, an issuer, or a network.
 
 from __future__ import annotations
 
+import json
+import re
+from pathlib import Path
+
 import pytest
 
 from cfokit.ledger.errors import NotAuthenticated
-from cfokit.ledger.service.authentication import DenyAll, principal_from_claims
+from cfokit.ledger.service.authentication import (
+    WEB_CLIENT_ID,
+    DenyAll,
+    principal_from_claims,
+)
 from cfokit.ledger.service.principal import ActorClass
 
+ROOT = Path(__file__).resolve().parents[1]
 
-def test_a_plain_subject_is_a_person() -> None:
-    principal = principal_from_claims({"sub": "user:geoff"})
+
+def test_a_token_issued_to_the_web_client_is_its_person() -> None:
+    principal = principal_from_claims({"sub": "user:geoff", "azp": WEB_CLIENT_ID})
 
     assert principal.id == "user:geoff"
     assert principal.actor_class is ActorClass.PERSON
     assert principal.acting_for is None
+
+
+def test_a_token_issued_to_any_other_client_is_that_client_acting_for_its_person() -> None:
+    """ADR-0066 § 1: the agent is the client the person signed in through (`IAM-11`)."""
+    principal = principal_from_claims({"sub": "user:geoff", "azp": "claude-abc"})
+
+    assert principal.id == "client:claude-abc"
+    assert principal.actor_class is ActorClass.AGENT
+    assert principal.acting_for == "user:geoff"
+
+
+def test_the_access_token_profiles_client_id_names_the_client_where_azp_is_absent() -> None:
+    """RFC 9068 names the client in `client_id`; ADR-0019 admits an issuer sending either."""
+    person = principal_from_claims({"sub": "user:geoff", "client_id": WEB_CLIENT_ID})
+    agent = principal_from_claims({"sub": "user:geoff", "client_id": "mcp-remote-1"})
+
+    assert person.actor_class is ActorClass.PERSON
+    assert agent.id == "client:mcp-remote-1"
+
+
+def test_a_token_naming_no_client_is_refused() -> None:
+    """No truthful principal to record: it could be the person or anything they signed in to."""
+    with pytest.raises(NotAuthenticated) as caught:
+        principal_from_claims({"sub": "user:geoff"})
+
+    assert caught.value.message == "token names no client"
+
+
+def test_an_act_claim_still_means_delegation_whatever_the_client() -> None:
+    principal = principal_from_claims(
+        {"sub": "skill:bookkeeper", "act": {"sub": "user:geoff"}, "azp": WEB_CLIENT_ID}
+    )
+
+    assert principal.id == "skill:bookkeeper"
+    assert principal.acting_for == "user:geoff"
+
+
+def test_the_web_client_id_is_the_one_the_realm_registers_and_the_bundle_signs_in_with() -> (
+    None
+):
+    """Three places name it, and a deployment cannot change one without the others: a second
+    enforcement point for the constant the rule above rests on."""
+    realm = json.loads((ROOT / "infra/keycloak/cfokit-realm.json").read_text())
+    registered = {client["clientId"] for client in realm["clients"]}
+    bundle = (ROOT / "web/src/auth/settings.ts").read_text()
+
+    assert WEB_CLIENT_ID in registered
+    assert re.search(rf'CLIENT_ID = "{re.escape(WEB_CLIENT_ID)}"', bundle)
 
 
 def test_an_act_claim_makes_it_an_agent_acting_for_a_person() -> None:
@@ -58,7 +116,9 @@ def test_a_rule_cannot_be_claimed_by_a_token() -> None:
     arrive bearing a token. Nothing a caller presents can produce this class, which is what
     keeps ADR-0033 § 3's cheap-to-audit path from being claimable by an agent.
     """
-    principal = principal_from_claims({"sub": "whoever", "actor_class": "rule"})
+    principal = principal_from_claims(
+        {"sub": "whoever", "azp": WEB_CLIENT_ID, "actor_class": "rule"}
+    )
 
     assert principal.actor_class is not ActorClass.RULE
 

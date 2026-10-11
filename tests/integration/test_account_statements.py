@@ -210,6 +210,7 @@ def _other_books(database: Database) -> str:
 
 CLAIMS: dict[str, Any] = {
     "sub": OWNER.id,
+    "azp": "cfokit-web",
     "iss": "http://localhost:8180/realms/cfokit",
     "aud": "cfokit-ledger",
 }
