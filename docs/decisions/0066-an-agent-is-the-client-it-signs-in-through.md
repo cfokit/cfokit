@@ -111,9 +111,19 @@ allowed without it.
 
 When an agent creates a company for its person (`IAM-06`), the same act grants that agent
 `bookkeeper` in it, with its own `audit_log` row. The person is the first owner (`IAM-05`), sees the
-agent in the company's list, and may revoke it. A company created through an agent is one the person
-asked their agent to set up, so making them visit the web client before the agent can continue would
-put a browser step in the middle of the conversation that ADR-0058's agent door keeps them in.
+agent in the company's list, and may revoke it.
+
+This is not the automatic grant rejected below, which opens companies that already exist, holding
+books, to an agent the person never chose for them. A company an agent creates did not exist until the
+person asked their agent to set it up, and holds nothing but what the two of them then put in it. The
+request to create it is the person's authorization of that agent in that company (`IAM-12`), and the
+grant is a row they see and revoke like any other (`IAM-15`). Requiring a click in the web client
+instead would put a browser step in the middle of the conversation that ADR-0058's agent door keeps
+them in, to authorize access to a company that is empty.
+
+The risk is an agent that creates a company the person did not ask for. What it gains is a new, empty
+company of its own making, held by the person, who can delete it (`PLT-13`). It gains nothing in any
+company that existed before.
 
 ### Consequences
 
@@ -129,6 +139,8 @@ put a browser step in the middle of the conversation that ADR-0058's agent door 
   removes and re-adds a connector. The new ID must be allowed again, and the old grant remains
   until it is revoked.
 * Good, because a person can see at a glance whether an agent is connected, and which.
+* Bad, because a company created through an agent has that agent in it without a click. The grant is
+  limited to the company it created, which held nothing before.
 * Bad, because a light shows that an agent connected, not that it still can: a connector removed
   on the agent's side stays green until the person revokes it.
 * Neutral, because the settings page is where the person manages this, so it is the same page
@@ -190,6 +202,11 @@ The first call from a client would create its grant.
 * Bad, because a person who connects Claude for one company gives it every company.
 
 ## More Information
+
+**Follow-on obligations.** `AUTH_WEB_CLIENT_ID` is added to the variables authentication reads in
+the same change that implements § 1: ADR-0019 § 1's "reads `AUTH_ISSUER_URL` and `AUTH_AUDIENCE` and
+nothing else", CLAUDE.md's Authentication rule, and the table in `infra/README.md`. It names a client,
+not an issuer, so ADR-0019's portability holds.
 
 ADR-0033 § 2 says delegation is the `act` claim. It is corrected to name both sources, the
 `act` claim and the token's client.
