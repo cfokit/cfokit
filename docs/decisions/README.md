@@ -112,6 +112,7 @@ nothing cites these but this repository. They are added when something breaks wi
 | [0066](0066-an-agent-is-the-client-it-signs-in-through.md) | An agent is the client it signs in through, and acts in a company once the person allows it | Proposed |
 | [0067](0067-an-agent-connection-serves-one-company.md) | An agent's connection serves one company, named in its address | Draft |
 | [0068](0068-cfokit-optimizes-for-the-persons-own-agent.md) | After getting started, where the person's own agent and the browser trade off, CFOKit optimizes for the agent | Proposed |
+| [0069](0069-commercial-operation-is-a-subscriptions-component.md) | Commercial operation is a subscriptions component that a deployment names or leaves out | Proposed |
 
 ## Deferred — decided in principle, waiting on a need
 
