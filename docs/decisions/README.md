@@ -114,6 +114,7 @@ nothing cites these but this repository. They are added when something breaks wi
 | [0068](0068-cfokit-optimizes-for-the-persons-own-agent.md) | After getting started, where the person's own agent and the browser trade off, CFOKit optimizes for the agent | Proposed |
 | [0069](0069-a-commercial-service-is-outside-the-product.md) | A commercial service is outside the product, and reaches it through general hooks | Proposed |
 | [0070](0070-suspension-is-a-set-of-holds.md) | Suspension is a set of holds, each lifted only by whoever placed it | Proposed |
+| [0071](0071-hosted-backups-are-kept-thirty-days-and-a-restore-replays-deletions.md) | Backups on GCP are kept thirty days in the US, and a restore replays every deletion since its point | Proposed |
 
 ## Deferred — decided in principle, waiting on a need
 
