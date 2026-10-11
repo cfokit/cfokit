@@ -1,5 +1,5 @@
 ---
-status: "proposed"
+status: "draft"
 kind: "requirement-driven"
 date: 2026-10-10
 decision-makers: [Geoff]
@@ -116,6 +116,12 @@ Bind the company to the client registration, so the token itself names the compa
   claim the issuer has to be configured to add, which is issuer-specific.
 
 ## More Information
+
+**Held.** Claude's directory lists a connector at one address, and a person reaching CFOKit through
+the directory (ADR-0058) connects to it once, for every company. An address per company cannot be
+listed there. This record stays a draft until the binding can live somewhere the directory allows,
+such as the Revisit triggers below, or the directory accepts a connector whose address the person
+completes.
 
 **Unverified.** That Claude accepts two custom connectors on one host with different paths, and
 runs RFC 9728 discovery per path, is not yet probed. The Confirmation's probe settles it before

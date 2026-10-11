@@ -1,7 +1,7 @@
 ---
 status: "proposed"
 kind: "requirement-driven"
-date: 2026-10-10
+date: 2026-10-11
 decision-makers: [Geoff]
 ---
 
@@ -47,6 +47,7 @@ client is software a person signed in through.
 * The token's client identifies the agent; the person allows it per company in the web client
 * Require an `act` claim, minted by token exchange
 * Keep treating every token as its person
+* Allow the agent that connects next, without a click
 * Grant the agent automatically wherever the person holds a role
 
 ## Decision Outcome
@@ -81,6 +82,39 @@ a person who can grant roles in the company can allow an agent there.
 The same page lists every agent allowed in the company, and revoking one ends its grant
 (`IAM-15`). Revoking in one company leaves every other company alone (`IAM-12`).
 
+### 3. Seeing which agents are connected
+
+Each time an agent opens an MCP session, the server records the client, the person it acts for,
+and the name and version the client reports in `initialize`, with one `audit_log` row. The
+reported name is the client's own claim, shown beside its ID and never used to decide anything.
+
+The web client shows, for each company, a light for the person viewing it:
+
+* **Green**: an agent allowed in this company has connected. The list shows each, by its reported
+  name, with when it last connected.
+* **Amber**: an agent has connected for this person but is not allowed in this company. The light
+  offers to allow it.
+* **Red**: no agent has connected for this person.
+
+Removing a connector on the agent's side tells the server nothing, so a light stays green after it.
+The last-connected time is what shows an agent has gone quiet, and revoking is the person's act.
+
+### 4. Allowing as part of connecting
+
+Where the web client sends a person to connect an agent, from the end of getting started or from
+Settings (ADR-0058), it then waits on the same page. When an agent opens its first session for that
+person after they set off, the page shows it, by name and first-connected time, with **Allow** and
+the role preselected as `bookkeeper`. The person's click writes the grant, as in § 2. Nothing is
+allowed without it.
+
+### 5. An agent that creates a company is allowed in it
+
+When an agent creates a company for its person (`IAM-06`), the same act grants that agent
+`bookkeeper` in it, with its own `audit_log` row. The person is the first owner (`IAM-05`), sees the
+agent in the company's list, and may revoke it. A company created through an agent is one the person
+asked their agent to set up, so making them visit the web client before the agent can continue would
+put a browser step in the middle of the conversation that ADR-0058's agent door keeps them in.
+
 ### Consequences
 
 * Good, because `IAM-11` and `IAM-12` hold for every client that connects today, with no change
@@ -89,13 +123,16 @@ The same page lists every agent allowed in the company, and revoking one ends it
   answers who did it (`SOC1-25`), and ADR-0034's coverage rule has the client to read.
 * Good, because the authorization is a grant like any other, so the existing check, history and
   revocation apply unchanged (ADR-0039).
-* Bad, because every new connection needs one visit to the web client before it can act, in
-  each company.
+* Bad, because every new connection needs one click in the web client before it can act in a
+  company it did not create. Connecting from the web client puts that click on the same page.
 * Bad, because a client's ID changes when it registers again, for example after a person
   removes and re-adds a connector. The new ID must be allowed again, and the old grant remains
   until it is revoked.
+* Good, because a person can see at a glance whether an agent is connected, and which.
+* Bad, because a light shows that an agent connected, not that it still can: a connector removed
+  on the agent's side stays green until the person revokes it.
 * Neutral, because the settings page is where the person manages this, so it is the same page
-  that explains how to connect (ADR-0067).
+  that explains how to connect.
 
 ### Confirmation
 
@@ -103,6 +140,10 @@ The same page lists every agent allowed in the company, and revoking one ends it
   token naming no client.
 * An integration test shows an agent refused with `agent_not_allowed`, allowed and then served,
   and refused again once revoked, in one company while unaffected in another.
+* An integration test shows an agent that creates a company holding `bookkeeper` there and nowhere
+  else, and a session's `initialize` recorded with one audit row.
+* Web client tests show each light from the recorded sessions and grants, and the waiting page
+  showing a session that arrives after the person set off, and none from before.
 * `AUTH_WEB_CLIENT_ID` joins `AUTH_ISSUER_URL` and `AUTH_AUDIENCE` as the variables
   authentication reads. CLAUDE.md's Authentication section names all three.
 
@@ -131,6 +172,14 @@ The standard shape for delegation, and what ADR-0033 assumed.
 * Good, because it costs nothing.
 * Bad, because it fails `IAM-11` and `IAM-12` outright, and leaves an agent with the full
   authority of an owner in every company the owner holds.
+
+### Allow the agent that connects next, without a click
+
+The waiting page of § 4 would grant the first new agent to arrive.
+
+* Good, because it saves one click.
+* Bad, because whichever client reaches the server first is allowed, which may not be the one the
+  person connected, and a grant nobody saw is not an authorization (`IAM-12`).
 
 ### Grant the agent automatically wherever the person holds a role
 
