@@ -27,16 +27,16 @@ conversation for others, with no rule about where each lives.
 
 Facts that bear on the answer:
 
-* **The person's agent already knows the business.** In a customer discovery interview on
-  2026-10-07, a founder setting up a two-member LLC said their Claude already holds the
+* **The person's agent already knows the business.** In a customer discovery interview, a
+  founder setting up a two-member LLC said their Claude already holds the
   business's structure, contracts, policies and the state's statutory requirements, and that not
   starting over was the attraction of bringing their own model, more than which model it is. Setting
   up books is mostly answering questions about how the business works, and that context is where
   the answers are.
 * **Setup is advice, not configuration.** In the same interview, the founder wanted to say how the
   business works and be told what applies, what the choices are and what to connect, and resented
-  features that do not apply. In their words: "I almost don't have the will to configure more enterprise
-  software." They expected the work to be conversation, with little or no custom interface.
+  features that do not apply, and had no patience left for configuring more business software. They
+  expected the work to be conversation, with little or no custom interface.
 * **Owners rarely look at their books.** They look when something forces them to, often at tax
   time. Whatever surface they use, they arrive cold and want to ask something.
 * **Some steps cannot happen in an agent.** A password, an MFA code or a bank's credential never
