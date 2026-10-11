@@ -112,6 +112,8 @@ nothing cites these but this repository. They are added when something breaks wi
 | [0066](0066-an-agent-is-the-client-it-signs-in-through.md) | An agent is the client it signs in through, and acts in a company once the person allows it | Proposed |
 | [0067](0067-an-agent-connection-serves-one-company.md) | An agent's connection serves one company, named in its address | Draft |
 | [0068](0068-cfokit-optimizes-for-the-persons-own-agent.md) | After getting started, where the person's own agent and the browser trade off, CFOKit optimizes for the agent | Proposed |
+| [0069](0069-a-commercial-service-is-outside-the-product.md) | A commercial service is outside the product, and reaches it through general hooks | Proposed |
+| [0070](0070-suspension-is-a-set-of-holds.md) | Suspension is a set of holds, each lifted only by whoever placed it | Proposed |
 
 ## Deferred — decided in principle, waiting on a need
 
