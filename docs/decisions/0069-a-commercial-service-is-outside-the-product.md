@@ -94,8 +94,11 @@ consumes it. Without a commercial service, creating a company needs no allowance
 
 The service grants allowances through the published API, as an OAuth client (ADR-0032) holding one
 deployment-scope privilege: granting an allowance. It holds no other privilege at deployment scope.
-The allowance names the client that is to hold the `commercial` role in the company it creates, and
-the creating act grants that role, so each grant has its own audit row (`IAM-13`).
+The allowance names the client that is to hold the `commercial` role in the company it creates.
+Consuming the allowance, creating the company, making the person its owner and granting the
+`commercial` role are one transaction: the creating act's audit row names the allowance it consumed
+and the roles it granted (`IAM-13`), and a creation that fails consumes nothing, so a retry finds the
+allowance unspent.
 
 A person gets an allowance by choosing a plan on the service, which takes the card, signs them in
 through the deployment's issuer (registration, for a new person), grants the allowance to that
@@ -112,6 +115,11 @@ The `commercial` role carries one privilege: placing and lifting its own suspens
 nothing else: it reads no books and posts nothing. It can see the company's state, so the service can
 tell an active company from a deleted one. An owner's own hold and the service's are independent: an
 owner cannot lift the service's, and paying does not lift the owner's.
+
+The company's owners cannot revoke the `commercial` role, or revoking it would lift a suspension for
+non-payment by another route. The client relinquishes it itself, and when it does, its holds end with
+it (ADR-0070). A person who wants to stop paying cancels the subscription, and the company stays
+readable and exportable (`PLT-11`), or they delete it (`PLT-13`).
 
 Suspension then works as for any company (`PLT-10`, `PLT-11`, `PLT-12`).
 
@@ -148,6 +156,10 @@ that can suspend companies stays inside the deployment's boundary and its contro
   own choosing.
 * Bad, because an allowance and a narrow administrative role are new authorization concepts, built for
   one kind of client.
+* Bad, because a role the company's owners cannot revoke is an exception to `IAM-03`'s ordinary
+  reading, limited to a role that reads no books and posts nothing.
+* Bad, because a service retired without relinquishing its roles leaves its holds in place. Retiring
+  a commercial service means lifting its holds first.
 * Bad, because the service is released apart from the product, so it depends on the published API's
   compatibility obligations (`NFR-13`, ADR-0015) rather than shipping with it.
 * Bad, because the Claude door has a hand-off to a web page for the plan before the first company.

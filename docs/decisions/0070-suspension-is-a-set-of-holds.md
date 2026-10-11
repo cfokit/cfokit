@@ -34,7 +34,7 @@ lift, or an owner who leaves strands it.
 * **Neither party can undo the other's suspension.**
 * **`PLT-09` stays as written.** The entity is in one of three states, and every transition is
   recorded.
-* **An owner who leaves strands nothing.**
+* **An owner who leaves strands nothing**, and neither does a client whose role ends.
 * **The owner can see why their company is suspended**, and what lifts it.
 
 ## Considered Options
@@ -63,7 +63,9 @@ The holder is one of two kinds:
   the company's own, and any identity that can administer it may lift it. Owners are equivalent, and
   one who leaves leaves nothing stranded.
 * **A client.** A hold placed by a client, through a role a deployment grants for that purpose such as
-  `commercial` (ADR-0069), is lifted only by that client.
+  `commercial` (ADR-0069), is lifted only by that client. When the client's role in the company ends,
+  its holds end with it, because nothing would remain able to lift them. Whether the company's owners
+  may end that role is the role's own rule: they cannot end `commercial`.
 
 The reason is a short code the holder chooses, such as `unpaid`, shown to the company's
 administrators with who placed the hold. A client's hold also shows the client's address, so the owner
@@ -100,6 +102,7 @@ holds with it.
 * Tests: the state transition is recorded once on the first hold and once on the last lift, and
   placing or lifting a hold writes one audit row each.
 * Tests: deleting a suspended company succeeds.
+* Tests: ending a client's role ends its holds, and resumes the company if no other hold remains.
 
 ## Pros and Cons of the Options
 
