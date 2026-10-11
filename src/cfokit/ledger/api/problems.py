@@ -31,6 +31,7 @@ from cfokit.ledger.errors import (
     IssuedStatementNotFound,
     LastOwner,
     LedgerError,
+    NotAnAgentRole,
     NotAPerson,
     NotAuthenticated,
     NotAuthorized,
@@ -60,6 +61,7 @@ STATUS_FOR_CODE: dict[str, int] = {
     # leave the entity unheld (`IAM-04`).
     LastOwner.code: HTTPStatus.CONFLICT,
     UnknownRole.code: HTTPStatus.UNPROCESSABLE_ENTITY,
+    NotAnAgentRole.code: HTTPStatus.UNPROCESSABLE_ENTITY,
     # 409: the request was well-formed and the caller may post. The period is not open
     # to anyone, and reopening it is a separate act (`LED-11`, ADR-0030).
     PeriodClosed.code: HTTPStatus.CONFLICT,

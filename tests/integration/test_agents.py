@@ -15,7 +15,7 @@ from typing import Any
 import psycopg
 import pytest
 
-from cfokit.ledger.errors import AgentNotAllowed, NotAuthorized
+from cfokit.ledger.errors import AgentNotAllowed, NotAnAgentRole, NotAuthorized
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.administration import (
     create_entity,
@@ -181,3 +181,12 @@ def test_only_someone_who_can_grant_reads_the_grants(database: Database) -> None
 
     with pytest.raises(NotAuthorized):
         list_grants(database, entity_id=company, principal=CLAUDE)
+
+
+@pytest.mark.parametrize("role", ["owner", "poster"])
+def test_an_agent_holds_only_the_roles_an_agent_may(database: Database, role: str) -> None:
+    """Through the API as through the page: an agent never owns or grants (ADR-0066 § 2)."""
+    company = new_company(database, PERSON)
+
+    with pytest.raises(NotAnAgentRole):
+        allow(database, company, CLAUDE, role)

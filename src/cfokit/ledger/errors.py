@@ -70,6 +70,17 @@ class AgentNotAllowed(NotAuthorized):
         self.agent = agent
 
 
+class NotAnAgentRole(LedgerError):
+    """A role an agent may not hold, granted to one (ADR-0066 § 2).
+
+    An agent holds `reader` or `bookkeeper`, which grant nothing and own nothing, so it can
+    never widen anyone's access. The web client offers only those; this holds the same line for
+    every other caller of the API.
+    """
+
+    code = "not_an_agent_role"
+
+
 class PeriodClosed(LedgerError):
     """The transaction's period is closed (`LED-11`, ADR-0030).
 

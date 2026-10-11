@@ -80,6 +80,10 @@
     "error": "NotAPerson"
   },
   {
+    "code": "not_an_agent_role",
+    "error": "NotAnAgentRole"
+  },
+  {
     "code": "not_authenticated",
     "error": "NotAuthenticated"
   },

@@ -25,7 +25,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from cfokit.ledger.errors import LastOwner, NotAuthorized, UnknownRole
+from cfokit.ledger.errors import LastOwner, NotAnAgentRole, NotAuthorized, UnknownRole
 from cfokit.ledger.repository.administration import Grant
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.authorization import Capability, authorize
@@ -44,6 +44,10 @@ __all__ = [
 
 # What an agent holds in an entity it created for its person (ADR-0066 § 5).
 CREATING_AGENT_ROLE = "bookkeeper"
+
+# The only roles an agent may hold: neither grants nor owns, so an agent never widens anyone's
+# access, its own included (ADR-0066 § 2, migration 0021).
+AGENT_ROLES = frozenset({"reader", "bookkeeper"})
 
 
 @dataclass(frozen=True, slots=True)
@@ -207,6 +211,8 @@ def grant_role(
     Granting a role that carries `OWN` takes `OWN`; granting anything else takes `GRANT`, so a
     role that staffs an entity cannot hand it away.
     """
+    if to_principal.startswith("client:") and role not in AGENT_ROLES:
+        raise NotAnAgentRole(f"an agent holds reader or bookkeeper, not {role!r}")
     with database.entity_write(entity_id) as write:
         definition = write.role_definition(role)
         if definition is None:

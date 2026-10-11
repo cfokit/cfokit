@@ -75,12 +75,13 @@ An `act` claim, where an issuer sends one, still means delegation as ADR-0033 re
 
 An agent with no grant in a company its person holds a role in is refused with
 `agent_not_allowed`. Where the person holds nothing, the refusal is the ordinary
-`not_authorized`, so it says nothing about a company they cannot reach. The refusal carries a
-link to the web client's page for that agent, which an agent's company list carries too, because
+`not_authorized`, so it says nothing about a company they cannot reach. On the MCP surface,
+where agents call, the refusal carries a link to the web client's page for that agent, which an agent's company list carries too, because
 a new connection lists no companies. The person opens the link, signed in as themselves. The
 page names the client and lists each of the person's companies with where the agent stands
 there, and offers a role in each: `reader`, which reads, or `bookkeeper`, which reads, records and
-posts. Both join the role catalog now that something holds them (ADR-0039). Allowing writes the
+posts. Both join the role catalog now that something holds them (ADR-0039), and they are the
+only roles an agent may be granted, through the page or the API (`not_an_agent_role`). Allowing writes the
 agent's grant, under the person's authority and in their name, with one `audit_log` row. Only
 a person who can grant roles in the company can allow an agent there.
 
