@@ -1,11 +1,11 @@
 ---
 status: "proposed"
 kind: "requirement-driven"
-date: 2026-10-10
+date: 2026-10-11
 decision-makers: [Geoff]
 ---
 
-# ADR-0068: Where the person's own agent and the browser trade off, CFOKit optimizes for the agent
+# ADR-0068: After getting started, where the person's own agent and the browser trade off, CFOKit optimizes for the agent
 
 **Requirements served:** `PLT-01`, `PLT-02`, `PLT-24`, `IAM-10`, `IMP-09`, `NFR-19`.
 
@@ -16,6 +16,10 @@ CFOKit connected (`PLT-01`, `PLT-02`); CFOKit's web pages (`PLT-24`); and, with 
 CFOKit's own runtime, which hosts the same skills, tools and panels as their agent does (ADR-0034
 § 4). All three are supported. But most capabilities fit one of them better, and each time one is
 designed the same question comes up: which comes first, and which gets the compromise.
+
+Getting started is decided separately (ADR-0058): a person who arrives on the web stays there until
+their books are in, because connecting an agent before they have seen anything of their own costs
+more people than it serves. This record covers everything after.
 
 The cost of deciding each time is that every capability splits differently and nobody can say
 which surface the product is built around. A person ends up using pages for some things and the
@@ -68,9 +72,9 @@ Chosen option: "Optimize for the person's own agent", because that is where the 
 business already is, and the standard it uses for skills, tools and panels is the one CFOKit's own
 runtime hosts too. A capability built for it serves both offerings.
 
-> When a capability cannot serve the person's own agent and the browser equally well, it is built
-> for the agent. The browser holds what an agent cannot do: sign-in, plan and payment, entering a
-> credential for another service, and granting authority.
+> After getting started, when a capability cannot serve the person's own agent and the browser
+> equally well, it is built for the agent. The browser holds what an agent cannot do: sign-in, plan
+> and payment, entering a credential for another service, and granting authority.
 
 ### 1. In what order a capability is built
 
@@ -87,7 +91,7 @@ runtime hosts too. A capability built for it serves both offerings.
 * Registration, sign-in, MFA and passkeys, on the issuer's pages (`IAM-10`).
 * Entering a credential for another service, such as connecting a bank feed.
 * Granting authority over a company: roles, and which agents may act.
-* Connecting an agent, and the company list it is reached from: the Settings page.
+* Connecting an agent: the Settings page.
 
 Each of these hands back to the agent when it is done, with a link or a drafted prompt, rather than
 continuing on the web.
@@ -104,6 +108,8 @@ continuing on the web.
 * Bad, because a person moves between the browser and the agent for the steps the browser holds.
   Nothing returns a browser tab to a specific chat (ADR-0058), so each hand-off back is a new
   chat or a copied prompt.
+* Bad, because a person who chose the browser at the end of getting started (ADR-0058) gets less
+  than one who connected an agent: what is built for the agent reaches them when they connect one.
 * Neutral, because pages do not go away. They narrow to what the browser holds.
 
 ### Confirmation
@@ -149,10 +155,9 @@ also fits the eventual need for CFOKit's own chat in managed bookkeeping.
 
 **Follow-on obligations.**
 
-* ADR-0058's getting started follows this order: the browser for what § 2 lists, then the
-  conversation.
-* The vision's "Not a dashboard" position and the out-of-scope row on the web client state where
-  getting started happens, and follow this record.
+* The agent door of ADR-0058 follows this order: the conversation, then a panel for the import.
+* The vision's "Not a dashboard" position and the out-of-scope row on the web client state where the
+  work after getting started happens, and follow this record.
 
 **Reversal cost.** Moderate. Panels are the web client's components in another shell, so moving a
 capability to a page is a new shell around the same screens. The skill's conversational flows
@@ -161,7 +166,8 @@ would carry over to CFOKit's own chat unchanged, since it hosts the same skills.
 **Evidence.** One interview, with a founder who uses AI heavily. They argued that anyone who started
 a business recently leans on AI whatever the business, which is their opinion, not data.
 
-Related: ADR-0034 (the runtime that hosts the same surface), ADR-0058 (getting started),
+Related: ADR-0034 (the runtime that hosts the same surface), ADR-0058 (getting started, which this
+record does not govern),
 ADR-0049 (the web client).
 
 ## Revisit when
