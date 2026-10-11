@@ -61,3 +61,21 @@ variable "org_policies" {
   type        = bool
   default     = true
 }
+
+variable "retained_backups" {
+  description = "Daily Cloud SQL backups kept, and so the most days a deletion takes to leave every backup (ADR-0071)."
+  type        = number
+  default     = 30
+}
+
+variable "recovery_log_days" {
+  description = "Days of point-in-time recovery logs; at most 7 on Enterprise edition (ADR-0071)."
+  type        = number
+  default     = 7
+}
+
+variable "backup_location" {
+  description = "Where Cloud SQL keeps backups: a multi-region such as \"us\", or a region (ADR-0071)."
+  type        = string
+  default     = "us"
+}

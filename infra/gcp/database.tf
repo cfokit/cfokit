@@ -74,12 +74,17 @@ resource "google_sql_database_instance" "this" {
       ssl_mode        = "ENCRYPTED_ONLY"
     }
 
+    # Thirty daily backups and seven days of recovery logs, the most Enterprise edition keeps, in a
+    # stated location. A deletion is complete when the last backup taken before it expires, so the
+    # count is also how long a deletion takes (ADR-0071).
     backup_configuration {
       enabled                        = true
       point_in_time_recovery_enabled = true
       start_time                     = "07:00"
+      location                       = var.backup_location
+      transaction_log_retention_days = var.recovery_log_days
       backup_retention_settings {
-        retained_backups = 14
+        retained_backups = var.retained_backups
       }
     }
 
