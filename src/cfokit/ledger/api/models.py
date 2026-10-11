@@ -605,6 +605,24 @@ class GrantResponse(BaseModel):
     grant_id: str
 
 
+class GrantModel(BaseModel):
+    """A grant in force: who holds which role here, since when, and from whom."""
+
+    grant_id: str
+    principal_id: str = Field(
+        description="The holder. A person's subject, or `client:<client_id>` for an agent, "
+        "the client a person signed in through (ADR-0066).",
+    )
+    role: str
+    granted_by: str
+    granted_at: datetime
+    lapses_at: datetime | None
+
+
+class GrantsResponse(BaseModel):
+    grants: list[GrantModel]
+
+
 class NotificationModel(BaseModel):
     """An open notification: identifiers and where it is answered, never a figure (ADR-0052)."""
 

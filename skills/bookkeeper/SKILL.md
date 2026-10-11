@@ -74,6 +74,12 @@ double-book.
 **Report faithfully.** If some transactions booked and others did not, say which and why,
 quoting the error `code` the ledger returned. Never summarize a partial failure as success.
 
+**You act only in the companies the user allowed you in.** A refusal with `agent_not_allowed`
+means they have not allowed you in that company yet. Give them the link in its message, where
+they allow you, signed in as themselves, and wait for them to say it is done; never try another
+company instead. `list_entities` lists only the companies you are allowed in, and its
+`allow_url` is the same page, for when the company they mean is not listed.
+
 ## Bringing in books from another system
 
 An entity may arrive with years of history in QuickBooks or something like it. **You do not import

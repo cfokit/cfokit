@@ -78,7 +78,7 @@ class Accepts:
     """Stands in for the issuer. Verification is asserted in `test_mcp_auth.py`."""
 
     def claims_for(self, credential: str | None) -> dict[str, Any]:
-        return {"sub": "user:ana"}
+        return {"sub": "user:ana", "azp": "cfokit-web"}
 
 
 @asynccontextmanager

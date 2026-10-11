@@ -57,7 +57,7 @@ def books(database: Database) -> tuple[str, dict[str, Any]]:
 
 
 def claims(who: Principal) -> dict[str, Any]:
-    return {"sub": who.id, "iss": ISSUER, "aud": "cfokit-ledger"}
+    return {"sub": who.id, "azp": "cfokit-web", "iss": ISSUER, "aud": "cfokit-ledger"}
 
 
 class StubAuthenticator:

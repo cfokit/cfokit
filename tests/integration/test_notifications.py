@@ -402,7 +402,12 @@ ISSUER = "http://localhost:8180/realms/cfokit"
 
 def claims(who: Principal) -> dict[str, Any]:
     """A verified token's claims. An agent's carries RFC 8693's `act`, naming the person."""
-    found: dict[str, Any] = {"sub": who.id, "iss": ISSUER, "aud": "cfokit-ledger"}
+    found: dict[str, Any] = {
+        "sub": who.id,
+        "azp": "cfokit-web",
+        "iss": ISSUER,
+        "aud": "cfokit-ledger",
+    }
     if who.acting_for is not None:
         found["act"] = {"sub": who.acting_for}
     return found

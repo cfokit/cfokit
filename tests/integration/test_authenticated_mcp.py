@@ -129,6 +129,19 @@ def _subject(token: str) -> str:
     return subject
 
 
+def _client(token: str) -> str:
+    """The agent a self-registered client's token makes it: `client:<azp>` (ADR-0066 § 1)."""
+    import base64
+    import json
+
+    payload = token.split(".")[1]
+    payload += "=" * (-len(payload) % 4)
+    claims = json.loads(base64.urlsafe_b64decode(payload))
+    client = claims.get("azp") or claims.get("client_id")
+    assert isinstance(client, str)
+    return f"client:{client}"
+
+
 def grant(conn: psycopg.Connection[Any], entity_id: str, principal_id: str) -> None:
     """Arranged through the owner connection: the grant path is `test_grants.py`'s subject."""
     with conn.cursor() as cur:
@@ -264,7 +277,10 @@ async def test_a_self_registered_client_reads_the_books(
     """
     entity_id, _, _ = books
     subject, token = caller
+    # A self-registered client is an agent acting for its subject, so both hold a grant: the
+    # subject's role and the agent's, intersected (ADR-0066, `IAM-11`).
     grant(owner_conn, entity_id, subject)
+    grant(owner_conn, entity_id, _client(token))
 
     async with session(settings, token=token) as client:
         await client.initialize()

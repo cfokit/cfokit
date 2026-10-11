@@ -55,6 +55,32 @@ class NotAuthorized(LedgerError):
     code = "not_authorized"
 
 
+class AgentNotAllowed(NotAuthorized):
+    """An agent with no grant in this entity, acting for a person who holds one (ADR-0066).
+
+    A kind of `not_authorized` with its own code, because the remedy is different and specific:
+    the person allows the agent, in the web client, signed in as themselves (`IAM-12`). Raised
+    only where the person holds a role, so it says nothing about an entity they cannot reach.
+    """
+
+    code = "agent_not_allowed"
+
+    def __init__(self, message: str, *, agent: str) -> None:
+        super().__init__(message)
+        self.agent = agent
+
+
+class NotAnAgentRole(LedgerError):
+    """A role an agent may not hold, granted to one (ADR-0066 § 2).
+
+    An agent holds `reader` or `bookkeeper`, which grant nothing and own nothing, so it can
+    never widen anyone's access. The web client offers only those; this holds the same line for
+    every other caller of the API.
+    """
+
+    code = "not_an_agent_role"
+
+
 class PeriodClosed(LedgerError):
     """The transaction's period is closed (`LED-11`, ADR-0030).
 

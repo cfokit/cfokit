@@ -11,6 +11,7 @@ from cfokit.ledger import api as api_module
 from cfokit.ledger.api import create_app
 from cfokit.ledger.config import Settings
 from cfokit.ledger.errors import NotAuthenticated
+from cfokit.ledger.service.authentication import WEB_CLIENT_ID
 from cfokit.ledger.service.readiness import Readiness
 
 SETTINGS = Settings(
@@ -88,7 +89,7 @@ def test_openapi_document_is_generated(client: TestClient) -> None:
 
 class _Accepts:
     def claims_for(self, credential: str | None) -> dict[str, object]:
-        return {"sub": "user:ana"}
+        return {"sub": "user:ana", "azp": WEB_CLIENT_ID}
 
 
 class _Refuses:

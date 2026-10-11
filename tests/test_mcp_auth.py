@@ -17,7 +17,7 @@ from starlette.testclient import TestClient
 
 from cfokit.ledger.config import Settings
 from cfokit.ledger.errors import NotAuthenticated
-from cfokit.ledger.mcp import create_server
+from cfokit.ledger.mcp import allow_url, create_server
 from cfokit.ledger.mcp.auth import LedgerTokenVerifier
 from cfokit.ledger.service.authentication import DenyAll, principal_from_claims
 from cfokit.ledger.service.principal import ActorClass
@@ -167,7 +167,7 @@ def test_a_token_the_verifier_accepts_is_not_refused_for_its_resource(
     required one, every token from every conforming issuer would get a 401.
     """
     app = create_server(
-        settings, authenticator=Accepts({"sub": "user:ana"})
+        settings, authenticator=Accepts({"sub": "user:ana", "azp": "cfokit-web"})
     ).streamable_http_app(stateless_http=True, json_response=True)
     with TestClient(app) as client:
         response = client.post(
@@ -247,3 +247,13 @@ def test_readiness_reports_the_tool_surface_this_instance_serves(settings: Setti
     assert surface["count"] == len(surface["names"])
     assert surface["digest"]
     assert "trial_balance" in surface["names"]
+
+
+def test_an_agent_is_sent_to_the_web_client_page_that_allows_it(settings: Settings) -> None:
+    """ADR-0066 § 2: the refusal links to the allow page, built from PUBLIC_BASE_URL and never
+    from a request (ADR-0004), with the agent's id escaped into one path segment."""
+    create_server(settings, authenticator=Accepts({"sub": "user:ana", "azp": "cfokit-web"}))
+
+    assert allow_url("client:claude-abc") == (
+        f"{settings.public_base_url}/app/agents/client%3Aclaude-abc"
+    )

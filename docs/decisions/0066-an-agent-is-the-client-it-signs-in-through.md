@@ -63,7 +63,9 @@ already send.
 
 ### 1. Which client is the person
 
-`AUTH_WEB_CLIENT_ID` names the web client. A token whose `azp`, or failing that `client_id`,
+The web client's client ID, `cfokit-web`, is a constant of the product: the web bundle is built
+with it and the realm registers it, so a deployment cannot change it without rebuilding the
+client, and a test holds the three together. A token whose `azp`, or failing that `client_id`,
 equals it is the person themselves. Every other token is an agent. A token naming no client
 is refused, because there is no truthful principal to record.
 
@@ -71,16 +73,20 @@ An `act` claim, where an issuer sends one, still means delegation as ADR-0033 re
 
 ### 2. Allowing an agent in a company
 
-An agent with no grant in the company it called is refused with `agent_not_allowed`. The
-refusal carries a link to the web client's page for allowing it. The person opens the link,
-signed in as themselves. The page names the company, the client, and when that client first
-called, and offers a role: `reader`, which reads, or `bookkeeper`, which reads, records and
-posts. Both join the role catalog now that something holds them (ADR-0039). Allowing writes the
+An agent with no grant in a company its person holds a role in is refused with
+`agent_not_allowed`. Where the person holds nothing, the refusal is the ordinary
+`not_authorized`, so it says nothing about a company they cannot reach. On the MCP surface,
+where agents call, the refusal carries a link to the web client's page for that agent, which an agent's company list carries too, because
+a new connection lists no companies. The person opens the link, signed in as themselves. The
+page names the client and lists each of the person's companies with where the agent stands
+there, and offers a role in each: `reader`, which reads, or `bookkeeper`, which reads, records and
+posts. Both join the role catalog now that something holds them (ADR-0039), and they are the
+only roles an agent may be granted, through the page or the API (`not_an_agent_role`). Allowing writes the
 agent's grant, under the person's authority and in their name, with one `audit_log` row. Only
 a person who can grant roles in the company can allow an agent there.
 
-The same page lists every agent allowed in the company, and revoking one ends its grant
-(`IAM-15`). Revoking in one company leaves every other company alone (`IAM-12`).
+The same page revokes, and Settings lists every agent allowed in any of the person's companies,
+each linking to its page. Revoking ends the grant (`IAM-15`). Revoking in one company leaves every other company alone (`IAM-12`).
 
 ### 3. Seeing which agents are connected
 
@@ -156,8 +162,7 @@ company that existed before.
   else, and a session's `initialize` recorded with one audit row.
 * Web client tests show each light from the recorded sessions and grants, and the waiting page
   showing a session that arrives after the person set off, and none from before.
-* `AUTH_WEB_CLIENT_ID` joins `AUTH_ISSUER_URL` and `AUTH_AUDIENCE` as the variables
-  authentication reads. CLAUDE.md's Authentication section names all three.
+* A unit test holds the web client's ID to the realm and the web bundle.
 
 ## Pros and Cons of the Options
 
@@ -202,11 +207,6 @@ The first call from a client would create its grant.
 * Bad, because a person who connects Claude for one company gives it every company.
 
 ## More Information
-
-**Follow-on obligations.** `AUTH_WEB_CLIENT_ID` is added to the variables authentication reads in
-the same change that implements § 1: ADR-0019 § 1's "reads `AUTH_ISSUER_URL` and `AUTH_AUDIENCE` and
-nothing else", CLAUDE.md's Authentication rule, and the table in `infra/README.md`. It names a client,
-not an issuer, so ADR-0019's portability holds.
 
 ADR-0033 § 2 says delegation is the `act` claim. It is corrected to name both sources, the
 `act` claim and the token's client.

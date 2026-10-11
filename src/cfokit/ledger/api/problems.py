@@ -21,6 +21,7 @@ from http import HTTPStatus
 
 from cfokit.ledger.errors import (
     AccountNotFound,
+    AgentNotAllowed,
     AllocationInvalid,
     AlreadyOpened,
     CommodityNotPermitted,
@@ -30,6 +31,7 @@ from cfokit.ledger.errors import (
     IssuedStatementNotFound,
     LastOwner,
     LedgerError,
+    NotAnAgentRole,
     NotAPerson,
     NotAuthenticated,
     NotAuthorized,
@@ -54,10 +56,12 @@ __all__ = ["STATUS_FOR_CODE", "status_for"]
 STATUS_FOR_CODE: dict[str, int] = {
     NotAuthenticated.code: HTTPStatus.UNAUTHORIZED,
     NotAuthorized.code: HTTPStatus.FORBIDDEN,
+    AgentNotAllowed.code: HTTPStatus.FORBIDDEN,
     # 409, not 403: the caller holds the capability, and this particular revocation would
     # leave the entity unheld (`IAM-04`).
     LastOwner.code: HTTPStatus.CONFLICT,
     UnknownRole.code: HTTPStatus.UNPROCESSABLE_ENTITY,
+    NotAnAgentRole.code: HTTPStatus.UNPROCESSABLE_ENTITY,
     # 409: the request was well-formed and the caller may post. The period is not open
     # to anyone, and reopening it is a separate act (`LED-11`, ADR-0030).
     PeriodClosed.code: HTTPStatus.CONFLICT,

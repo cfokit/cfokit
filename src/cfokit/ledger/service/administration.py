@@ -25,18 +25,29 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from cfokit.ledger.errors import LastOwner, NotAuthorized, UnknownRole
+from cfokit.ledger.errors import LastOwner, NotAnAgentRole, NotAuthorized, UnknownRole
+from cfokit.ledger.repository.administration import Grant
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.authorization import Capability, authorize
 from cfokit.ledger.service.principal import Principal
 
 __all__ = [
     "EntityCreated",
+    "Grant",
     "create_account",
     "create_entity",
     "grant_role",
+    "list_grants",
     "revoke_grant",
 ]
+
+
+# What an agent holds in an entity it created for its person (ADR-0066 § 5).
+CREATING_AGENT_ROLE = "bookkeeper"
+
+# The only roles an agent may hold: neither grants nor owns, so an agent never widens anyone's
+# access, its own included (ADR-0066 § 2, migration 0021).
+AGENT_ROLES = frozenset({"reader", "bookkeeper"})
 
 
 @dataclass(frozen=True, slots=True)
@@ -69,10 +80,16 @@ def create_entity(
     `owner` defaults to the creating principal, which is the ordinary case. Naming someone
     else is the case where one person provisions on another's behalf.
 
+    An agent creating an entity for its person makes the person the owner, never itself, and is
+    granted `bookkeeper` there in the same act, with its own audit row (ADR-0066 § 5). The
+    entity did not exist until the person asked their agent to set it up, so that request is the
+    person's authorization of that agent in it; the grant is one they see and revoke like any
+    other.
+
     Not entity-scoped, so it does not use `Database.entity_write`: there is no entity to scope
     to or lock on until this commits.
     """
-    first_owner = owner or principal.id
+    first_owner = owner or principal.acting_for or principal.id
 
     with database.unscoped_write() as write:
         entity_id = write.create_entity(
@@ -104,6 +121,23 @@ def create_entity(
             subject_id=entity_id,
             detail={"owner": first_owner},
         )
+
+        if principal.acting_for is not None:
+            agent_grant_id = write.grant_entity_role(
+                entity_id=entity_id,
+                principal_id=principal.id,
+                role=CREATING_AGENT_ROLE,
+                granted_by=principal.id,
+            )
+            write.record_audit(
+                entity_id=entity_id,
+                request_id=request_id,
+                actor=principal.audit_actor,
+                action="grant_role",
+                subject_type="entity_grant",
+                subject_id=agent_grant_id,
+                detail={"to": principal.id, "role": CREATING_AGENT_ROLE},
+            )
 
     return EntityCreated(entity_id=entity_id, owner_grant_id=grant_id)
 
@@ -177,6 +211,8 @@ def grant_role(
     Granting a role that carries `OWN` takes `OWN`; granting anything else takes `GRANT`, so a
     role that staffs an entity cannot hand it away.
     """
+    if to_principal.startswith("client:") and role not in AGENT_ROLES:
+        raise NotAnAgentRole(f"an agent holds reader or bookkeeper, not {role!r}")
     with database.entity_write(entity_id) as write:
         definition = write.role_definition(role)
         if definition is None:
@@ -244,3 +280,15 @@ def revoke_grant(
             subject_id=grant_id,
             detail=None,
         )
+
+
+def list_grants(database: Database, *, entity_id: str, principal: Principal) -> list[Grant]:
+    """Every grant in force in this entity, for someone who may grant or revoke there.
+
+    Granting is what reading the grants is for, so the same capability gates it (`IAM-03`): a
+    reader or a bookkeeper learns nothing about who else holds the books. A read, so no audit
+    row.
+    """
+    with database.entity_write(entity_id) as write:
+        authorize(write, Capability.GRANT, principal)
+        return write.grants_in_force(datetime.now(UTC))

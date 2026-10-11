@@ -15,8 +15,10 @@ import psycopg
 
 __all__ = [
     "Entity",
+    "Grant",
     "entity",
     "grant_entity_role",
+    "grants_in_force",
     "insert_entity",
     "revoke_entity_grant",
     "role_of_grant",
@@ -123,6 +125,53 @@ def grant_entity_role(
     if row is None:  # pragma: no cover
         raise RuntimeError("insert returned no id")
     return str(row[0])
+
+
+@dataclass(frozen=True, slots=True)
+class Grant:
+    """One grant in force in an entity: who holds which role, since when, from whom."""
+
+    id: str
+    principal_id: str
+    role: str
+    granted_by: str
+    granted_at: datetime
+    lapses_at: datetime | None
+
+
+def grants_in_force(
+    conn: psycopg.Connection[Any], *, entity_id: str, at: datetime
+) -> list[Grant]:
+    """Every grant in force in this entity at `at`, oldest first.
+
+    In force by the same test `privileges_in_force` applies: granted by then, not lapsed, not
+    revoked. What an administrator reviews and revokes from (`IAM-03`).
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT id, principal_id, role, granted_by, granted_at, lapses_at
+              FROM entity_grant
+             WHERE entity_id = %s
+               AND granted_at <= %s
+               AND (lapses_at IS NULL OR lapses_at > %s)
+               AND (revoked_at IS NULL OR revoked_at > %s)
+             ORDER BY granted_at, id
+            """,
+            (entity_id, at, at, at),
+        )
+        rows = cur.fetchall()
+    return [
+        Grant(
+            id=str(row[0]),
+            principal_id=str(row[1]),
+            role=str(row[2]),
+            granted_by=str(row[3]),
+            granted_at=row[4],
+            lapses_at=row[5],
+        )
+        for row in rows
+    ]
 
 
 def revoke_entity_grant(

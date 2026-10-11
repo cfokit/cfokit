@@ -4,6 +4,10 @@
     "error": "AccountNotFound"
   },
   {
+    "code": "agent_not_allowed",
+    "error": "AgentNotAllowed"
+  },
+  {
     "code": "allocation_invalid",
     "error": "AllocationInvalid"
   },
@@ -74,6 +78,10 @@
   {
     "code": "not_a_person",
     "error": "NotAPerson"
+  },
+  {
+    "code": "not_an_agent_role",
+    "error": "NotAnAgentRole"
   },
   {
     "code": "not_authenticated",
