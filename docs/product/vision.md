@@ -442,8 +442,9 @@ These are decided, and they bound what the positioning may promise:
   books, the guidance skill answers a bounded set of questions and states its limits.
 - **Not a dashboard you run the business from.** The agent is how the books are kept and
   questioned. Getting started — the account, the company and landing its books — is a few web
-  pages, and everything after happens where the agent runs: the organization's agent with the
-  hosted backend, CFOKit's runtime with managed bookkeeping. Each screen CFOKit draws is
+  pages for a person who arrives on the web, and a conversation for one who arrives through their
+  agent. The work after it happens where the agent runs: the organization's agent with the hosted
+  backend, CFOKit's runtime with managed bookkeeping. Each screen CFOKit draws is
   a deliberate decision, not a drift, and an admin console is not one of them. Rendered report
   output has not been decided either way.
 - **Not a bank.** It reads financial data and keeps books; it does not move money.
