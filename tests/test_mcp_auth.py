@@ -8,6 +8,7 @@ claims travel intact so the principal is derived by the same rule REST uses.
 
 from __future__ import annotations
 
+import dataclasses
 import warnings
 from typing import Any
 
@@ -256,4 +257,17 @@ def test_an_agent_is_sent_to_the_web_client_page_that_allows_it(settings: Settin
 
     assert allow_url("client:claude-abc") == (
         f"{settings.public_base_url}/app/agents/client%3Aclaude-abc"
+    )
+
+
+def test_where_the_web_client_has_its_own_address_the_link_goes_there(
+    settings: Settings,
+) -> None:
+    """The MCP service's own address is not the web client's where each service has its own
+    host, as on the maintained cloud target (infra/README.md)."""
+    apart = dataclasses.replace(settings, web_public_base_url="https://app.example.test")
+    create_server(apart, authenticator=Accepts({"sub": "user:ana", "azp": "cfokit-web"}))
+
+    assert allow_url("client:claude-abc") == (
+        "https://app.example.test/app/agents/client%3Aclaude-abc"
     )

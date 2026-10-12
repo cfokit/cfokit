@@ -360,7 +360,8 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
     (ADR-0004).
     """
     global _web_client_base
-    _web_client_base = f"{settings.public_base_url.rstrip('/')}/app"
+    web = settings.web_public_base_url or settings.public_base_url
+    _web_client_base = f"{web.rstrip('/')}/app"
 
     database = Database(settings.database_url)
     verifier = LedgerTokenVerifier(
