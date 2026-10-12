@@ -508,7 +508,7 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
             "the person names a company or has not said which: match by name, and ask them "
             "to choose only if more than one fits. 'allow_url', when present, is where the "
             "person allows this agent in more of their companies; give it to them if a "
-            "company they name is not listed."
+            "company they name is not listed, or if none is listed, as 'message' then says."
         ),
     )
     def list_the_entities() -> dict[str, Any]:
@@ -535,6 +535,13 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
             page = allow_url(principal.id) if principal.acting_for is not None else None
             if page is not None:
                 listed["allow_url"] = page
+                if not listed["entities"]:
+                    # Said outright, because an empty list alone reads to a model as "nothing
+                    # here" rather than as a step the person has still to take.
+                    listed["message"] = (
+                        "The person has not allowed this agent in any company yet. Give them "
+                        f"this link to allow it, and call list_entities again after: {page}"
+                    )
             return listed
 
         return _refusals(work)

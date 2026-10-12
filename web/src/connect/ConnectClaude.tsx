@@ -95,7 +95,7 @@ function configuration(mcpUrl: string): string {
   return JSON.stringify(
     {
       mcpServers: {
-        cfokit: {
+        "cfokit-local": {
           command: "npx",
           args: [
             "-y",
@@ -125,14 +125,22 @@ function Plugin() {
         </p>
         <CopyBlock label="Marketplace" text={MARKETPLACE} />
         <p className="text-body text-ink">
-          Then add the <strong>CFOKit</strong> plugin it lists. It updates by itself.
+          <strong>CFOKit</strong> then appears under <strong>From marketplaces you added</strong>.
+          Turn on <strong>Sync automatically</strong> for it, so Claude keeps it current.
         </p>
       </Card>
       <Card title="2. Connect it">
         <p className="text-body text-ink">
-          Open the CFOKit plugin&apos;s <strong>Connectors</strong> tab, choose{" "}
-          <strong>Connect</strong>, and sign in as yourself. Claude then acts only in the companies
-          you allow it in, and asks you to allow it the first time.
+          Open <strong>CFOKit</strong> and select its <strong>Connectors</strong> tab. If it says{" "}
+          <strong>Not added</strong>, add it. Then choose <strong>Connect</strong> and sign in with
+          your CFOKit account. It says <strong>Connected</strong> when it is done.
+        </p>
+      </Card>
+      <Card title="3. Allow Claude in your company">
+        <p className="text-body text-ink">
+          The first time Claude uses CFOKit, it gives you a link. Open it and choose{" "}
+          <strong>Allow to keep the books</strong> for your company. Claude acts only in the
+          companies you allow it in.
         </p>
       </Card>
     </>

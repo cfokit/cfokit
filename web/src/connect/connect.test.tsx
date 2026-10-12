@@ -96,9 +96,9 @@ test("the local configuration sends the secret the way the client is registered 
   const registered = method.exec(registration?.querySelector("pre")?.textContent ?? "")?.[1];
   expect(registered).toBe("client_secret_post");
   const config = JSON.parse(configuration.querySelector("pre")?.textContent ?? "") as {
-    mcpServers: { cfokit: { args: string[] } };
+    mcpServers: { "cfokit-local": { args: string[] } };
   };
-  expect(method.exec(config.mcpServers.cfokit.args.at(-1) ?? "")?.[1]).toBe(registered);
+  expect(method.exec(config.mcpServers["cfokit-local"].args.at(-1) ?? "")?.[1]).toBe(registered);
 });
 
 test("a deployment that does not say where Claude connects is told so, not guessed", async () => {
