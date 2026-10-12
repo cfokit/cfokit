@@ -59,12 +59,13 @@ test("a CFOKit others can reach is added to Claude as a custom connector", async
   await noViolations(container);
 });
 
-test("the hosted service is added as one plugin, from its marketplace", async () => {
+test("the hosted service is the plugin from its marketplace, and a custom connector", async () => {
   answers["/connection"] = { mcp_url: PLUGIN_MCP_URL };
   const { container } = render(<ConnectClaude />);
   const marketplace = await screen.findByRole("figure", { name: "Marketplace" });
   expect(marketplace.querySelector("pre")?.textContent).toBe("cfokit/cfokit");
-  expect(screen.queryByRole("figure", { name: "Connector address" })).toBeNull();
+  const address = screen.getByRole("figure", { name: "Connector address" });
+  expect(address.querySelector("pre")?.textContent).toBe(PLUGIN_MCP_URL);
   expect(screen.queryByRole("figure", { name: "Command" })).toBeNull();
   await noViolations(container);
 });

@@ -114,7 +114,7 @@ function configuration(mcpUrl: string): string {
   );
 }
 
-/** The hosted service: one plugin, carrying the bookkeeper skill and the connector together. */
+/** The hosted service: the plugin for the bookkeeper skill, and a custom connector for the books. */
 function Plugin() {
   return (
     <>
@@ -129,11 +129,16 @@ function Plugin() {
           Turn on <strong>Sync automatically</strong> for it, so Claude keeps it current.
         </p>
       </Card>
-      <Card title="2. Connect it">
+      <Card title="2. Add the CFOKit connector">
         <p className="text-body text-ink">
-          Open <strong>CFOKit</strong> and select its <strong>Connectors</strong> tab. If it says{" "}
-          <strong>Not added</strong>, add it. Then choose <strong>Connect</strong> and sign in with
-          your CFOKit account. It says <strong>Connected</strong> when it is done.
+          In Claude, open <strong>Customize → Connectors</strong>, choose{" "}
+          <strong>Add custom connector</strong>, name it <strong>CFOKit</strong>, and paste this
+          address. Leave the advanced settings empty.
+        </p>
+        <CopyBlock label="Connector address" text={PLUGIN_MCP_URL} />
+        <p className="text-body text-ink">
+          Choose <strong>Add</strong>, then <strong>Connect</strong>, and sign in with your CFOKit
+          account.
         </p>
       </Card>
       <Card title="3. Allow Claude in your company">
