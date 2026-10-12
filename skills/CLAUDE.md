@@ -54,14 +54,15 @@ shortcut around it.
 skills/
   cfokit/               # the CFOKit plugin for Claude (ADR-0020)
     .claude-plugin/plugin.json
-    .mcp.json           # the connector: the hosted service's MCP address
     README.md
     bookkeeper/
       SKILL.md          # the skill itself
       references/       # optional supporting material
 ```
 
-The repository root's `.claude-plugin/marketplace.json` lists the plugin, and Claude reads it from
+The plugin carries skills only: the connector is added on the person's account as a custom
+connector, and a `.mcp.json` here would offer a second one. The repository root's
+`.claude-plugin/marketplace.json` lists the plugin, and Claude reads it from
 `main`: a merge here is a release to everyone who added the plugin. One directory per skill, each
 named in `plugin.json`'s `skills`. Run `claude plugin validate skills/cfokit` after changing the
 plugin. Whether the tax, cash-flow, and compliance roles become separate

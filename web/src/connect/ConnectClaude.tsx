@@ -6,8 +6,8 @@ import { Card, CopyBlock, Notice } from "../components";
 // The port mcp-remote listens on for the sign-in's return, fixed so the client is registered once.
 const CALLBACK_PORT = 44196;
 
-/** The connector address the CFOKit plugin carries (`skills/cfokit/.mcp.json`): the hosted service's. */
-export const PLUGIN_MCP_URL = "https://mcp.cfokit.ai/mcp";
+/** The hosted service's MCP address, which a person adds to Claude as a custom connector. */
+export const HOSTED_MCP_URL = "https://mcp.cfokit.ai/mcp";
 
 /** Where Claude finds the plugin: this repository, as a marketplace. */
 const MARKETPLACE = "cfokit/cfokit";
@@ -135,7 +135,7 @@ function Plugin() {
           <strong>Add custom connector</strong>, name it <strong>CFOKit</strong>, and paste this
           address. Leave the advanced settings empty.
         </p>
-        <CopyBlock label="Connector address" text={PLUGIN_MCP_URL} />
+        <CopyBlock label="Connector address" text={HOSTED_MCP_URL} />
         <p className="text-body text-ink">
           Choose <strong>Add</strong>, then <strong>Connect</strong>, and sign in with your CFOKit
           account.
@@ -226,7 +226,7 @@ export function ConnectClaude() {
       </Notice>
     );
   }
-  if (mcpUrl === PLUGIN_MCP_URL) return <Plugin />;
+  if (mcpUrl === HOSTED_MCP_URL) return <Plugin />;
   return onThisComputer(mcpUrl) ? (
     <LocalProxy mcpUrl={mcpUrl} />
   ) : (
