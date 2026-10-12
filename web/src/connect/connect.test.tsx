@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import axe from "axe-core";
-import { ConnectClaude, onThisComputer } from "./ConnectClaude";
+import { ConnectClaude, onThisComputer, PLUGIN_MCP_URL } from "./ConnectClaude";
 
 // Connecting Claude, with the API and the issuer stood in for. What they return is a stand-in;
 // what is asserted is what the page asks for, and which instructions it gives for the address.
@@ -56,6 +56,16 @@ test("a CFOKit others can reach is added to Claude as a custom connector", async
   );
   expect(screen.queryByRole("figure", { name: "Configuration" })).toBeNull();
   expect(requests.some((request) => request.path.includes("openid-configuration"))).toBe(false);
+  await noViolations(container);
+});
+
+test("the hosted service is added as one plugin, from its marketplace", async () => {
+  answers["/connection"] = { mcp_url: PLUGIN_MCP_URL };
+  const { container } = render(<ConnectClaude />);
+  const marketplace = await screen.findByRole("figure", { name: "Marketplace" });
+  expect(marketplace.querySelector("pre")?.textContent).toBe("cfokit/cfokit");
+  expect(screen.queryByRole("figure", { name: "Connector address" })).toBeNull();
+  expect(screen.queryByRole("figure", { name: "Command" })).toBeNull();
   await noViolations(container);
 });
 

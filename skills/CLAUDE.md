@@ -52,12 +52,19 @@ shortcut around it.
 
 ```
 skills/
-  bookkeeper/
-    SKILL.md          # the skill itself
-    references/       # optional supporting material
+  cfokit/               # the CFOKit plugin for Claude (ADR-0020)
+    .claude-plugin/plugin.json
+    .mcp.json           # the connector: the hosted service's MCP address
+    README.md
+    bookkeeper/
+      SKILL.md          # the skill itself
+      references/       # optional supporting material
 ```
 
-One directory per skill. Whether the tax, cash-flow, and compliance roles become separate
+The repository root's `.claude-plugin/marketplace.json` lists the plugin, and Claude reads it from
+`main`: a merge here is a release to everyone who added the plugin. One directory per skill, each
+named in `plugin.json`'s `skills`. Run `claude plugin validate skills/cfokit` after changing the
+plugin. Whether the tax, cash-flow, and compliance roles become separate
 skills or modes of one is undecided (ADR-0020) — do not pre-emptively split them.
 
 **A `SKILL.md` cites no decision record and no requirement id.** That directory is the whole
