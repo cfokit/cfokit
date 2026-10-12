@@ -8,11 +8,18 @@ right of every page, and look under **Connect Claude**. This page explains what 
 
 ## The hosted service
 
-Add the CFOKit plugin. It carries the bookkeeper skill and the connector, and updates by itself.
+Add the CFOKit plugin. It carries the bookkeeper skill and the connector together.
 
 1. In Claude, open **Customize → Plugins**, choose **Add → Add marketplace**, and enter
-   `cfokit/cfokit`. Add the **CFOKit** plugin it lists.
-2. Open the plugin's **Connectors** tab, choose **Connect**, and sign in as yourself.
+   `cfokit/cfokit`. **CFOKit** then appears under **From marketplaces you added**. Turn on
+   **Sync automatically** for it, so Claude keeps it current.
+2. Open **CFOKit** and select its **Connectors** tab. If it says **Not added**, add it. Then choose
+   **Connect** and sign in with your CFOKit account. It says **Connected** when it is done.
+3. The first time Claude uses CFOKit, it gives you a link. Open it and choose **Allow to keep the
+   books** for your company.
+
+If you connected CFOKit before the plugin, remove the old **CFOKit** custom connector and the
+uploaded **bookkeeper** skill, so Claude has one of each.
 
 ## A CFOKit you run
 
@@ -56,7 +63,7 @@ Keep the `client_id` and `client_secret` it returns.
 ```json
 {
   "mcpServers": {
-    "cfokit": {
+    "cfokit-local": {
       "command": "npx",
       "args": ["-y", "mcp-remote@0.14.3", "https://localhost:8081/mcp", "44196",
                "--static-oauth-client-info",

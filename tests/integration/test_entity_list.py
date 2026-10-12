@@ -252,3 +252,33 @@ async def test_the_agent_finds_the_company_by_name_over_mcp(
     assert [(e["id"], e["name"]) for e in payload["entities"]] == [
         (entity_id, "Growth Lane LLC")
     ]
+
+
+@pytest.mark.anyio
+async def test_an_agent_allowed_nowhere_is_told_to_give_the_person_the_link(
+    app_dsn: str, database: Database
+) -> None:
+    """ADR-0066: a new connection is allowed in no company, and the person allows it, so the
+    empty list says what the person has to do rather than reading as "no books"."""
+    owner = person("owner")
+    company(database, owner, "Growth Lane LLC")
+    agent_claims = {**claims(owner), "azp": "claude-plugin"}
+    token = AccessToken(
+        token="stub",  # noqa: S106 — a stand-in, never validated
+        client_id="claude-plugin",
+        scopes=[],
+        subject=owner.id,
+        claims=agent_claims,
+    )
+    server: Any = mcp_server(settings(app_dsn), authenticator=StubAuthenticator(owner))
+
+    reset = auth_context_var.set(AuthenticatedUser(token))
+    try:
+        result = await server.call_tool("list_entities", {})
+    finally:
+        auth_context_var.reset(reset)
+    payload = json.loads(result.content[0].text)
+
+    assert payload["entities"] == []
+    assert payload["allow_url"] == "http://localhost:8080/app/agents/client%3Aclaude-plugin"
+    assert payload["allow_url"] in payload["message"]
