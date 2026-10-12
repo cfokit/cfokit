@@ -1,0 +1,14 @@
+{
+  "name": "cfokit",
+  "description": "CFOKit's plugin for Claude: the bookkeeper skill and the CFOKit connector.",
+  "owner": {
+    "name": "Growth Science LLC",
+    "url": "https://cfokit.ai"
+  },
+  "plugins": [
+    {
+      "name": "cfokit",
+      "source": "./skills/cfokit"
+    }
+  ]
+}

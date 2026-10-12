@@ -5,7 +5,7 @@ run on every change. Evals are slow, non-deterministic and cost tokens, so they 
 cadence and a regression here blocks a release rather than a commit. They skip unless asked
 for, the way the integration tier skips without a database.
 
-What belongs here, from ADR-0036 § 4 and the claims `skills/bookkeeper/SKILL.md` makes:
+What belongs here, from ADR-0036 § 4 and the claims `skills/cfokit/bookkeeper/SKILL.md` makes:
 
 - Did it draft rather than post directly?
 - Did it stop and ask when it met a closed period, rather than working around it (ADR-0030)?

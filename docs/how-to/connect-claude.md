@@ -6,27 +6,27 @@ once per company.
 **The web app shows these steps with your own addresses filled in.** Open **Settings**, at the top
 right of every page, and look under **Connect Claude**. This page explains what those steps do.
 
-How you connect depends on where CFOKit runs:
+## The hosted service
 
-| | Custom connector | Local proxy |
-|---|---|---|
-| When | CFOKit is reachable from the internet, like the hosted service | CFOKit runs on your computer |
-| Works in | Claude on the web and Claude Desktop | Claude Desktop |
-| Who connects | Anthropic's cloud | your computer |
+Add the CFOKit plugin. It carries the bookkeeper skill and the connector, and updates by itself.
 
-A custom connector cannot reach `localhost`, so a CFOKit on your computer uses a local proxy
-instead.
+1. In Claude, open **Customize → Plugins**, choose **Add → Add marketplace**, and enter
+   `cfokit/cfokit`. Add the **CFOKit** plugin it lists.
+2. Open the plugin's **Connectors** tab, choose **Connect**, and sign in as yourself.
 
-## A CFOKit reachable from the internet
+## A CFOKit you run
+
+The plugin connects to the hosted service only. A CFOKit you run is connected by its own address,
+and the skill is added separately, as the sections below describe. A custom connector cannot reach
+`localhost`, so a CFOKit on your computer uses a local proxy instead.
+
+### Reachable from the internet
 
 1. In Claude, open **Settings → Connectors** and choose **Add custom connector**.
-2. Name it **CFOKit**, and paste the MCP address from CFOKit's Settings page. For the hosted
-   service, it is `https://mcp.cfokit.ai/mcp`.
+2. Name it **CFOKit**, and paste the MCP address from CFOKit's Settings page.
 3. Choose **Connect**, and sign in as yourself in the window that opens.
 
-The connector then works in Claude on the web and in Claude Desktop alike.
-
-## A CFOKit on your computer
+### On your computer
 
 > **Tested on macOS only.** The config path below is macOS's.
 
@@ -78,18 +78,18 @@ Keep the `client_id` and `client_secret` it returns.
 **3. Restart Claude Desktop.** Quit it fully and open it again; closing the window is not enough.
 The first time it connects, a browser window opens. Sign in as yourself.
 
-## Add the bookkeeper skill
+### Add the bookkeeper skill
 
 The skill tells Claude how to keep books with CFOKit: which tools to call, and what never to do,
 such as guess a figure. From the folder CFOKit is in:
 
 ```bash
-cd skills && zip -r ~/Downloads/bookkeeper.zip bookkeeper
+cd skills/cfokit && zip -r ~/Downloads/bookkeeper.zip bookkeeper
 ```
 
 Then in Claude, choose **Customize → Skills → + → Create skill**, and upload the zip. Without the
 CFOKit folder, the skill's files are
-[published on GitHub](https://github.com/cfokit/cfokit/tree/main/skills/bookkeeper).
+[published on GitHub](https://github.com/cfokit/cfokit/tree/main/skills/cfokit/bookkeeper).
 
 ## Working with more than one company
 

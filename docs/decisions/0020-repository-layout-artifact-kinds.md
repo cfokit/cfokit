@@ -55,7 +55,7 @@ those are the properties that break when a directory holds two kinds at once.
 
 ```
 src/cfokit/       Python source; one package per capability, and nothing else
-skills/           Shipped SKILL.md bundles; plural
+skills/           Shipped to Claude: the CFOKit plugin at skills/cfokit/, its skills SKILL.md bundles
 docs/decisions/   Decision records
 docs/product/     vision.md, requirements.md
 infra/            OpenTofu for the one maintained cloud target
@@ -75,7 +75,8 @@ Two artifact kinds carry authority in different ways, and confusing them is what
 
 Consequent moves:
 
-- `packages/skill` becomes `skills/bookkeeper/`; Python source lives at `src/cfokit/`.
+- `packages/skill` becomes `skills/cfokit/bookkeeper/`, inside the plugin; Python source lives at
+  `src/cfokit/`.
 - The decision-record index lives at `docs/decisions/README.md`, where `CLAUDE.md` already said it was
   and where its relative links resolve.
 
@@ -145,13 +146,21 @@ Preserves one tree.
 
 ### Ship skills as a Claude plugin bundle
 
-The official layout for distributing skills, agents, and commands as one versioned, installable unit,
-and a plausible eventual answer.
+The official layout for distributing skills and connectors as one installable unit. Not an
+alternative to the layout but how `skills/` is arranged within it, and adopted: the delivery surface
+is Claude, reached through the MCP connector, and a plugin adds the bookkeeper skill and the
+connector to a person's Claude in one step.
 
-* Good, because it is the supported distribution path and would version the bundle properly.
-* Bad, because it commits to plugin installation as the distribution path, and the vision points at a
-  hosted service reached through Slack, which ADR-0014 reinforces. Choosing a distribution mechanism
-  before the delivery surface is settled is the wrong order. Rejected **for now** rather than on merit.
+* Good, because it is the supported distribution path, and a plugin added from a marketplace or
+  Anthropic's directory updates from its source with nothing for the person to do. An uploaded skill
+  never updates.
+* Good, because the plugin root is a folder of this repository, `skills/cfokit/`, and the repository
+  root's `.claude-plugin/marketplace.json` lists it, so the published plugin is whatever `main`
+  holds, with no build or release step.
+* Bad, because the plugin's connector names one address, the hosted service's. A self-hosted
+  deployment connects its own address as a custom connector and adds the skill itself.
+* `skills/CLAUDE.md` stays outside the plugin root, because Claude does not load a `CLAUDE.md` there
+  and `claude plugin validate` warns on one.
 
 ### Everything is a decision record; no separate policy document
 
@@ -198,8 +207,6 @@ of the directories above fits.
 
 ## Revisit when
 
-- The delivery surface is decided, at which point the plugin-bundle question is answerable on its
-  merits rather than deferred.
 - Agent roles are settled as separate skills or one skill with modes, which determines whether
   `skills/` needs internal structure.
 - A kind of artifact arrives that none of the directories above fits.

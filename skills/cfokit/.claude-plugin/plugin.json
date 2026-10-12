@@ -1,0 +1,11 @@
+{
+  "name": "cfokit",
+  "displayName": "CFOKit",
+  "description": "Keeps the books for your business in CFOKit: records and posts transactions, reconciles accounts, and answers what the books say.",
+  "author": { "name": "Growth Science LLC", "url": "https://cfokit.ai" },
+  "homepage": "https://cfokit.ai",
+  "repository": "https://github.com/cfokit/cfokit",
+  "license": "Apache-2.0",
+  "keywords": ["accounting", "bookkeeping", "ledger"],
+  "skills": ["./bookkeeper/"]
+}

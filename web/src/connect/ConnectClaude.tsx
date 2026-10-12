@@ -1,15 +1,16 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "react-oidc-context";
 import { useApi } from "../api";
-import { Card, CopyBlock, Notice, TextLink } from "../components";
+import { Card, CopyBlock, Notice } from "../components";
 
 // The port mcp-remote listens on for the sign-in's return, fixed so the client is registered once.
 const CALLBACK_PORT = 44196;
 
-/** Where the bookkeeper skill's source is published, for a person without the source folder. */
-export const SKILL_SOURCE = "https://github.com/cfokit/cfokit/tree/main/skills/bookkeeper";
+/** The connector address the CFOKit plugin carries (`skills/cfokit/.mcp.json`): the hosted service's. */
+export const PLUGIN_MCP_URL = "https://mcp.cfokit.ai/mcp";
 
-const SKILL = "cd skills && zip -r ~/Downloads/bookkeeper.zip bookkeeper";
+/** Where Claude finds the plugin: this repository, as a marketplace. */
+const MARKETPLACE = "cfokit/cfokit";
 
 /**
  * Where the issuer registers clients (RFC 7591), from its published metadata — never a path that
@@ -113,6 +114,31 @@ function configuration(mcpUrl: string): string {
   );
 }
 
+/** The hosted service: one plugin, carrying the bookkeeper skill and the connector together. */
+function Plugin() {
+  return (
+    <>
+      <Card title="1. Add the CFOKit plugin to Claude">
+        <p className="text-body text-ink">
+          In Claude, open <strong>Customize → Plugins</strong>, choose{" "}
+          <strong>Add → Add marketplace</strong>, and enter:
+        </p>
+        <CopyBlock label="Marketplace" text={MARKETPLACE} />
+        <p className="text-body text-ink">
+          Then add the <strong>CFOKit</strong> plugin it lists. It updates by itself.
+        </p>
+      </Card>
+      <Card title="2. Connect it">
+        <p className="text-body text-ink">
+          Open the CFOKit plugin&apos;s <strong>Connectors</strong> tab, choose{" "}
+          <strong>Connect</strong>, and sign in as yourself. Claude then acts only in the companies
+          you allow it in, and asks you to allow it the first time.
+        </p>
+      </Card>
+    </>
+  );
+}
+
 /** A CFOKit others can reach: one custom connector, in Claude on the web or Claude Desktop. */
 function CustomConnector({ mcpUrl }: { mcpUrl: string }) {
   return (
@@ -187,21 +213,10 @@ export function ConnectClaude() {
       </Notice>
     );
   }
-  const local = onThisComputer(mcpUrl);
-  return (
-    <>
-      {local ? <LocalProxy mcpUrl={mcpUrl} /> : <CustomConnector mcpUrl={mcpUrl} />}
-      <Card title={`${local ? "3" : "2"}. Add the bookkeeper skill`}>
-        <p className="text-body text-ink">
-          The skill tells Claude how to keep books with CFOKit. From the folder CFOKit is in:
-        </p>
-        <CopyBlock label="Command" text={SKILL} />
-        <p className="text-body text-ink">
-          Then in Claude, choose <strong>Customize → Skills → + → Create skill</strong>, and upload{" "}
-          <code>bookkeeper.zip</code> from your Downloads folder. Without the CFOKit folder, the
-          skill&apos;s files are <TextLink href={SKILL_SOURCE}>published on GitHub</TextLink>.
-        </p>
-      </Card>
-    </>
+  if (mcpUrl === PLUGIN_MCP_URL) return <Plugin />;
+  return onThisComputer(mcpUrl) ? (
+    <LocalProxy mcpUrl={mcpUrl} />
+  ) : (
+    <CustomConnector mcpUrl={mcpUrl} />
   );
 }
