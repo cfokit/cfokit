@@ -25,7 +25,7 @@ locals {
 resource "google_cloud_run_v2_service" "api" {
   for_each = {
     rest = { host = local.app_host, extra = { MCP_PUBLIC_BASE_URL = "https://${local.mcp_host}" } }
-    mcp  = { host = local.mcp_host, extra = {} }
+    mcp  = { host = local.mcp_host, extra = { WEB_PUBLIC_BASE_URL = "https://${local.app_host}" } }
   }
 
   name                = "cfokit-${each.key}"

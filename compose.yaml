@@ -266,6 +266,8 @@ services:
       # PUBLIC_BASE_URL is what a client fetches protected-resource metadata from, so it is
       # this service's own address rather than the REST service's (ADR-0004).
       PUBLIC_BASE_URL: ${MCP_PUBLIC_BASE_URL:-https://localhost:8081}
+      # Where the web client is, which a refusal links a person to when their agent is not allowed.
+      WEB_PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://localhost:8080}
       AUTH_ISSUER_URL: ${AUTH_ISSUER_URL:-https://keycloak.localhost:8443/realms/cfokit}
       SSL_CERT_FILE: /etc/cfokit/tls/ca.pem
       AUTH_AUDIENCE: ${AUTH_AUDIENCE:-cfokit-ledger}

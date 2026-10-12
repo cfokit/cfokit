@@ -35,6 +35,7 @@ metadata lookups, no provider SDK imports at module scope.
 | `TLS_CERT_FILE` | no | Serve HTTPS from this certificate. Set with `TLS_KEY_FILE`, where nothing in front of the service terminates TLS, as in the local stack; leave both unset behind an ingress that does. |
 | `TLS_KEY_FILE` | no | The private key for `TLS_CERT_FILE`. Both are set, or neither. |
 | `MCP_PUBLIC_BASE_URL` | no | REST service only: the MCP service's `PUBLIC_BASE_URL`, which the web client shows a person connecting their agent. Unset, it says it does not know. |
+| `WEB_PUBLIC_BASE_URL` | no | MCP service only: the REST service's `PUBLIC_BASE_URL`, where the web client is, which a refusal links a person to when their agent is not allowed. Unset, the MCP service's own `PUBLIC_BASE_URL` is used. |
 
 There is deliberately no variable selecting a cloud, a region, or a provider.
 
