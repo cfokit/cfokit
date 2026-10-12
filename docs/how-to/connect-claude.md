@@ -14,7 +14,8 @@ right of every page, and look under **Connect Claude**. This page explains what 
    for it, so Claude keeps it current.
 2. **Add the CFOKit connector.** Open **Customize → Connectors**, choose **Add custom connector**,
    name it **CFOKit**, and paste `https://mcp.cfokit.ai/mcp`. Leave the advanced settings empty.
-   Choose **Add**, then **Connect**, and sign in with your CFOKit account.3. **Allow Claude in your company.** The first time Claude uses CFOKit, it gives you a link. Open
+   Choose **Add**, then **Connect**, and sign in with your CFOKit account.
+3. **Allow Claude in your company.** The first time Claude uses CFOKit, it gives you a link. Open
    it and choose **Allow to keep the books** for your company.
 
 ## A CFOKit you run
