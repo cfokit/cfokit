@@ -146,10 +146,11 @@ Preserves one tree.
 
 ### Ship skills as a Claude plugin bundle
 
-The official layout for distributing skills and connectors as one installable unit. Not an
-alternative to the layout but how `skills/` is arranged within it, and adopted: the delivery surface
-is Claude, reached through the MCP connector, and a plugin adds the bookkeeper skill and the
-connector to a person's Claude in one step.
+The official layout for distributing skills as one installable unit. Not an alternative to the
+layout but how `skills/` is arranged within it, and adopted for the skills: the delivery surface is
+Claude, reached through the MCP connector, and a plugin keeps the bookkeeper skill current in a
+person's Claude. The connector is not in the plugin. The person adds it as a custom connector, once,
+on their account, where Claude on the web, Claude Desktop and Claude Code all reach it.
 
 * Good, because it is the supported distribution path, and a plugin added from a marketplace or
   Anthropic's directory updates from its source with nothing for the person to do. An uploaded skill
@@ -157,8 +158,10 @@ connector to a person's Claude in one step.
 * Good, because the plugin root is a folder of this repository, `skills/cfokit/`, and the repository
   root's `.claude-plugin/marketplace.json` lists it, so the published plugin is whatever `main`
   holds, with no build or release step.
-* Bad, because the plugin's connector names one address, the hosted service's. A self-hosted
-  deployment connects its own address as a custom connector and adds the skill itself.
+* Bad, because adding CFOKit takes two steps, the plugin and the connector, rather than one. A
+  connector bundled in the plugin appears on the plugin's own Connectors tab as a second CFOKit
+  beside the one on the account, and a connection made there did not reach the books in testing,
+  so the plugin declares none.
 * `skills/CLAUDE.md` stays outside the plugin root, because Claude does not load a `CLAUDE.md` there
   and `claude plugin validate` warns on one.
 

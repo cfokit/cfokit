@@ -1,6 +1,6 @@
 {
   "name": "cfokit",
-  "description": "CFOKit's plugin for Claude: the bookkeeper skill and the CFOKit connector.",
+  "description": "CFOKit's plugin for Claude: the bookkeeper skill.",
   "owner": {
     "name": "Growth Science LLC",
     "url": "https://cfokit.ai"
