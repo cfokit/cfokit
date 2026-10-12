@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { ApiError, useApi } from "../api";
 import { Button, Notice } from "../components";
 import { PersonFrame } from "../settings/PersonFrame";
@@ -37,6 +38,8 @@ function CompanyRow({ company, agent }: { company: Company; agent: string }) {
   const api = useApi();
   const [standing, setStanding] = useState<Standing>({ state: "loading" });
   const [busy, setBusy] = useState(false);
+  // Set when the person allows the agent here, on this visit: then the page says what is next.
+  const [justAllowed, setJustAllowed] = useState(false);
 
   // Bumped after each change, so the standing is read again from the server, which holds it.
   const [version, setVersion] = useState(0);
@@ -76,9 +79,15 @@ function CompanyRow({ company, agent }: { company: Company; agent: string }) {
   }
 
   const allow = (role: string) =>
-    act(() => api.post(`/entities/${company.id}/grants`, { principal_id: agent, role }));
+    act(async () => {
+      await api.post(`/entities/${company.id}/grants`, { principal_id: agent, role });
+      setJustAllowed(true);
+    });
   const revoke = (grant: Grant) =>
-    act(() => api.delete(`/entities/${company.id}/grants/${grant.grant_id}`));
+    act(async () => {
+      await api.delete(`/entities/${company.id}/grants/${grant.grant_id}`);
+      setJustAllowed(false);
+    });
 
   return (
     <li className="flex flex-col gap-3 border-b border-rule py-4">
@@ -93,6 +102,11 @@ function CompanyRow({ company, agent }: { company: Company; agent: string }) {
             Revoke
           </Button>
         </div>
+      )}
+      {standing.state === "allowed" && justAllowed && (
+        <Notice tone="success" label="Done" announce>
+          Go back to Claude and ask again. It can act in {company.name} now.
+        </Notice>
       )}
       {standing.state === "not-allowed" && (
         <div className="flex flex-col gap-2 tablet:flex-row">
@@ -125,9 +139,15 @@ function CompanyRow({ company, agent }: { company: Company; agent: string }) {
  */
 export function AgentPage({ agent }: { agent: string }) {
   const listing = useCompanies();
+  const navigate = useNavigate();
   return (
     <PersonFrame company="">
       <div className="flex max-w-reading-max flex-col gap-6">
+        <div className="-mx-3">
+          <Button variant="link" onClick={() => void navigate({ to: "/settings" })}>
+            ← Back to Settings
+          </Button>
+        </div>
         <h1 className="font-display text-display-compact text-ink tablet:text-display">
           Allow an agent
         </h1>

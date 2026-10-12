@@ -14,7 +14,8 @@ vi.mock("react-oidc-context", () => ({
     signoutRedirect: vi.fn(),
   }),
 }));
-vi.mock("@tanstack/react-router", () => ({ useNavigate: () => vi.fn() }));
+const navigate = vi.fn();
+vi.mock("@tanstack/react-router", () => ({ useNavigate: () => navigate }));
 
 const AGENT = "client:claude-abc";
 
@@ -141,4 +142,29 @@ test("revoking ends that grant and no other", async () => {
       "/entities/e-1/grants/g-8",
     ]),
   );
+});
+
+test("once allowed, the page says to go back to Claude", async () => {
+  replies["GET /entities"] = { status: 200, body: { entities: [company("e-2", "Harbor LLC")] } };
+  replies["GET /entities/e-2/grants"] = { status: 200, body: { grants: [] } };
+  replies["POST /entities/e-2/grants"] = { status: 201, body: { grant_id: "g-9" } };
+  render(<AgentPage agent={AGENT} />);
+
+  const allowing = await screen.findByRole("button", { name: "Allow to keep the books" });
+  replies["GET /entities/e-2/grants"] = {
+    status: 200,
+    body: { grants: [grant(AGENT, "bookkeeper", "g-9")] },
+  };
+  fireEvent.click(allowing);
+
+  expect(await screen.findByText(/Go back to Claude and ask again/)).toBeTruthy();
+});
+
+test("the page leads back to Settings", async () => {
+  replies["GET /entities"] = { status: 200, body: { entities: [] } };
+  render(<AgentPage agent={AGENT} />);
+
+  fireEvent.click(await screen.findByRole("button", { name: "← Back to Settings" }));
+
+  expect(navigate).toHaveBeenCalledWith({ to: "/settings" });
 });
