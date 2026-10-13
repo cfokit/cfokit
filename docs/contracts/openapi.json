@@ -220,6 +220,102 @@
         "title": "AccountEntryModel",
         "type": "object"
       },
+      "AgentConnectionModel": {
+        "description": "An agent that has connected for the caller, and what it said it was (ADR-0066 § 3).",
+        "properties": {
+          "agent_id": {
+            "description": "`client:<client_id>`, as a grant names it.",
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "client_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The name the client reported when it connected, such as `claude-ai`. Its own claim: it labels the agent and decides nothing. Null where it reported none.",
+            "title": "Client Name"
+          },
+          "client_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The version it reported, or null.",
+            "title": "Client Version"
+          },
+          "first_connected_at": {
+            "format": "date-time",
+            "title": "First Connected At",
+            "type": "string"
+          },
+          "last_connected_at": {
+            "format": "date-time",
+            "title": "Last Connected At",
+            "type": "string"
+          },
+          "person_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The email of the account the agent signed in as, or null where the issuer sent none.",
+            "title": "Person Email"
+          },
+          "person_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The name of that account, or null where the issuer sent none.",
+            "title": "Person Name"
+          }
+        },
+        "required": [
+          "agent_id",
+          "client_name",
+          "client_version",
+          "person_email",
+          "person_name",
+          "first_connected_at",
+          "last_connected_at"
+        ],
+        "title": "AgentConnectionModel",
+        "type": "object"
+      },
+      "AgentConnectionsResponse": {
+        "description": "The caller's connected agents, most recently connected first.",
+        "properties": {
+          "agents": {
+            "items": {
+              "$ref": "#/components/schemas/AgentConnectionModel"
+            },
+            "title": "Agents",
+            "type": "array"
+          }
+        },
+        "required": [
+          "agents"
+        ],
+        "title": "AgentConnectionsResponse",
+        "type": "object"
+      },
       "AnswerRequest": {
         "description": "A person's answer to a line's question. Their own act (ADR-0042).",
         "properties": {
@@ -3051,6 +3147,96 @@
         "summary": "Which issuer guards this API (RFC 9728)",
         "tags": [
           "operations"
+        ]
+      }
+    },
+    "/agents": {
+      "get": {
+        "description": "Each agent that has opened a session for the caller, with the name and version it\nreported, the account it signed in as, and when it first and last connected (ADR-0066\n§ 3). What lets a person recognize an agent they are asked to allow. A person's own\nquestion: an agent is refused with `not_a_person`.",
+        "operationId": "agents_agents_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentConnectionsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "The agents that have connected for the caller",
+        "tags": [
+          "administration"
         ]
       }
     },

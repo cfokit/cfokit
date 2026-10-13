@@ -623,6 +623,32 @@ class GrantsResponse(BaseModel):
     grants: list[GrantModel]
 
 
+class AgentConnectionModel(BaseModel):
+    """An agent that has connected for the caller, and what it said it was (ADR-0066 § 3)."""
+
+    agent_id: str = Field(description="`client:<client_id>`, as a grant names it.")
+    client_name: str | None = Field(
+        description="The name the client reported when it connected, such as `claude-ai`. Its "
+        "own claim: it labels the agent and decides nothing. Null where it reported none.",
+    )
+    client_version: str | None = Field(description="The version it reported, or null.")
+    person_email: str | None = Field(
+        description="The email of the account the agent signed in as, or null where the "
+        "issuer sent none.",
+    )
+    person_name: str | None = Field(
+        description="The name of that account, or null where the issuer sent none."
+    )
+    first_connected_at: datetime
+    last_connected_at: datetime
+
+
+class AgentConnectionsResponse(BaseModel):
+    """The caller's connected agents, most recently connected first."""
+
+    agents: list[AgentConnectionModel]
+
+
 class NotificationModel(BaseModel):
     """An open notification: identifiers and where it is answered, never a figure (ADR-0052)."""
 

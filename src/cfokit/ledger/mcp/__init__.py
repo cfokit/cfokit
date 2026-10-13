@@ -37,8 +37,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import uuid
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Mapping
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from http import HTTPStatus
@@ -48,6 +49,8 @@ from urllib.parse import quote
 from mcp.server import MCPServer
 from mcp.server.auth.middleware.auth_context import get_access_token
 from mcp.server.auth.settings import AuthSettings
+from mcp.server.context import CallNext, HandlerResult, ServerRequestContext
+from mcp.types import CLIENT_INFO_META_KEY
 from pydantic import AnyHttpUrl, BaseModel, Field
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
@@ -79,6 +82,7 @@ from cfokit.ledger.service.authentication import (
     TokenAuthenticator,
     principal_from_claims,
 )
+from cfokit.ledger.service.connections import record_connection, signed_in_as
 from cfokit.ledger.service.issuance import Issued, issue_statement, issued
 from cfokit.ledger.service.notifications import open_notifications
 from cfokit.ledger.service.opening import CarriedBalance, open_balances
@@ -103,6 +107,8 @@ from cfokit.ledger.service.write import (
 )
 
 __all__ = ["LedgerToolError", "allow_url", "create_server", "refused"]
+
+logger = logging.getLogger("cfokit.mcp")
 
 
 class LedgerToolError(Exception):
@@ -346,6 +352,69 @@ def _naming(
     return _refusals(named)
 
 
+def _client_info(method: str, params: Mapping[str, Any] | None) -> Mapping[str, Any] | None:
+    """What the client says it is, where a message opening a session carries it.
+
+    `initialize` carries it as `clientInfo`. From protocol 2026-07-28 there is no handshake, and
+    `server/discover` carries it in `_meta` instead. Any other message opens nothing.
+    """
+    if params is None:
+        return None
+    if method == "initialize":
+        info = params.get("clientInfo")
+    elif method == "server/discover":
+        meta = params.get("_meta")
+        info = meta.get(CLIENT_INFO_META_KEY) if isinstance(meta, Mapping) else None
+    else:
+        return None
+    return info if isinstance(info, Mapping) else None
+
+
+class ConnectionRecorder:
+    """Records each session an agent opens, with what it reported and who it signed in as
+    (ADR-0066 § 3).
+
+    Server middleware rather than a tool, because opening a session is the one moment the client
+    says what it is, and no tool is called then. It observes and never refuses: the session
+    opens whether or not the record is written, because a record that names an agent must not
+    be what stops it working. A failure is logged with identifiers only.
+    """
+
+    def __init__(self, database: Database) -> None:
+        self._database = database
+
+    async def __call__(
+        self, ctx: ServerRequestContext[Any, Any], call_next: CallNext
+    ) -> HandlerResult:
+        result = await call_next(ctx)
+        info = _client_info(ctx.method, ctx.params)
+        if info is not None:
+            self._record(info)
+        return result
+
+    def _record(self, info: Mapping[str, Any]) -> None:
+        token = get_access_token()
+        if token is None or token.claims is None:
+            return
+        try:
+            principal = principal_from_claims(token.claims)
+        except NotAuthenticated:
+            return
+        email, name = signed_in_as(token.claims)
+        try:
+            record_connection(
+                self._database,
+                principal=principal,
+                request_id=f"mcp-{uuid.uuid4().hex}",
+                client_name=info.get("name"),
+                client_version=info.get("version"),
+                person_email=email,
+                person_name=name,
+            )
+        except Exception:
+            logger.exception("agent connection not recorded", extra={"agent": principal.id})
+
+
 def create_server(settings: Settings, authenticator: Authenticator | None = None) -> MCPServer:
     """Build the MCP server.
 
@@ -370,6 +439,7 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
     server = MCPServer(
         name="cfokit-ledger",
         token_verifier=verifier,
+        middleware=[ConnectionRecorder(database)],
         auth=AuthSettings(
             issuer_url=AnyHttpUrl(settings.auth_issuer_url),
             resource_server_url=AnyHttpUrl(settings.public_base_url),

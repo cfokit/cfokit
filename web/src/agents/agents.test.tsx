@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import axe from "axe-core";
 import type { Company } from "../settings/SettingsPage";
 import { AgentPage, type Grant } from "./AgentPage";
-import { agentName } from "./name";
+import { agentName, describeAgent, type AgentConnection } from "./name";
 
 // The allow page (ADR-0066 § 2), with the API stood in for. Asserted: what the page shows of
 // each company's standing, and what allowing and revoking send.
@@ -71,8 +71,44 @@ beforeEach(() => {
 
 afterEach(() => vi.unstubAllGlobals());
 
+const CONNECTED: AgentConnection = {
+  agent_id: AGENT,
+  client_name: "claude-ai",
+  client_version: "0.1.0",
+  person_email: "dana@example.test",
+  person_name: "Dana Whitfield",
+  first_connected_at: "2026-10-12T15:00:00Z",
+  last_connected_at: "2026-10-13T15:00:00Z",
+};
+
 test("an agent is named by the client it signed in through", () => {
   expect(agentName(AGENT)).toBe("Client claude-abc");
+});
+
+test("an agent that connected is named by what it reported, and by its ID otherwise", () => {
+  expect(describeAgent(AGENT, CONNECTED)).toBe("claude-ai 0.1.0");
+  expect(describeAgent(AGENT, { ...CONNECTED, client_version: null })).toBe("claude-ai");
+  expect(describeAgent(AGENT, { ...CONNECTED, client_name: null })).toBe("Client claude-abc");
+  expect(describeAgent(AGENT, undefined)).toBe("Client claude-abc");
+});
+
+test("the page says what the agent reported, the account it signed in as, and its client ID", async () => {
+  replies["GET /entities"] = { status: 200, body: { entities: [] } };
+  replies["GET /agents"] = { status: 200, body: { agents: [CONNECTED] } };
+  render(<AgentPage agent={AGENT} />);
+
+  await screen.findByText(/^claude-ai 0\.1\.0 is software you signed in to CFOKit through/);
+  expect(screen.getByText("Dana Whitfield (dana@example.test)")).toBeTruthy();
+  expect(screen.getByText("claude-abc")).toBeTruthy();
+});
+
+test("an agent with no recorded connection is shown by its ID, and says so", async () => {
+  replies["GET /entities"] = { status: 200, body: { entities: [] } };
+  replies["GET /agents"] = { status: 200, body: { agents: [] } };
+  render(<AgentPage agent={AGENT} />);
+
+  await screen.findByText(/CFOKit has no record of it signing in as you/);
+  expect(screen.getByText(/^Client claude-abc is software you signed in/)).toBeTruthy();
 });
 
 test("each company shows where the agent stands, and what the person can do there", async () => {
