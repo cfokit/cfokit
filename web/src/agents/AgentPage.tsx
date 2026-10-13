@@ -188,13 +188,11 @@ export function AgentPage({ agent }: { agent: string }) {
             ← Back to Settings
           </Button>
         </div>
-        <h1 className="font-display text-display-compact text-ink tablet:text-display">
-          Allow an agent
-        </h1>
+        <h1 className="font-display text-display-compact text-ink tablet:text-display">Agent</h1>
         <p className="text-body text-ink">
           {describeAgent(agent, connection)} is software you signed in to CFOKit through, such as
-          Claude. It can act only in the companies you allow it in, and never with more authority
-          than you hold. If you did not just connect an agent, allow nothing.
+          Claude. It acts only in the companies you allow it in below, and never with more authority
+          than you hold.
         </p>
         <AgentFacts agent={agent} connection={connection} />
         {listing.state === "loading" && (
