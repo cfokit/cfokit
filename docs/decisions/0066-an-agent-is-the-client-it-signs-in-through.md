@@ -89,6 +89,13 @@ only roles an agent may be granted, through the page or the API (`not_an_agent_r
 agent's grant, under the person's authority and in their name, with one `audit_log` row. Only
 a person who can grant roles in the company can allow an agent there.
 
+An agent is allowed only where it can act. Allowing is refused with
+`agent_acts_for_no_member` unless some person the agent has connected for (§ 3) holds a role in
+that company, because an agent acts with no more than its person holds (`IAM-11`), and a grant to
+one acting for no one there confers nothing but a row that looks like access. An agent that has
+not connected is refused the same way, since nothing yet says whom it acts for: a person allows an
+agent after connecting it, from the link it gave them.
+
 The same page revokes, and Settings lists every agent allowed in any of the person's companies,
 each linking to its page. Revoking ends the grant (`IAM-15`). Revoking in one company leaves every other company alone (`IAM-12`).
 
@@ -189,9 +196,16 @@ there, whom its administrators already know.
   that explains how to connect.
 * Good, because a co-owner learns when someone else opens their company to an agent, with the
   agent's name and account, and can revoke it from the link.
+* Good, because every agent grant belongs to an agent acting for a member of the company, so the
+  roster shows no grant that can do nothing.
+* Bad, because an agent must connect before it can be allowed. One connected before CFOKit
+  recorded connections is refused until it connects again.
 
 ### Confirmation
 
+* An integration test shows allowing refused with `agent_acts_for_no_member` for an agent that
+  has connected only for a person holding no role in the company, and for one that has never
+  connected, and accepted once a member's connection is recorded.
 * Unit tests of `principal_from_claims` cover the web client, another client, `act`, and a
   token naming no client.
 * An integration test shows an agent refused with `agent_not_allowed`, allowed and then served,
