@@ -163,10 +163,9 @@ other class (ADR-0052, `PLT-07`).
 The agent's page shows a recipient what it shows the person who connected it: what the agent
 reported and the account it signed in as (§ 3). A connection record is readable, besides by its
 person, under the scope of a company in which the agent holds a grant in force, to a principal who
-can grant there. So the account an allowed agent acts for is visible to that company's
-administrators, which is the fact they need: an agent acts with no more than its person holds, so
-one whose account they do not recognize is a stranger's, and can do nothing in their company, but
-someone they trust allowed it there.
+can grant there. That discloses nothing new: an agent acts with no more than its person holds
+(`IAM-11`), so an agent that can act in the company acts for someone who already holds a role
+there, whom its administrators already know.
 
 ### Consequences
 
@@ -190,8 +189,6 @@ someone they trust allowed it there.
   that explains how to connect.
 * Good, because a co-owner learns when someone else opens their company to an agent, with the
   agent's name and account, and can revoke it from the link.
-* Bad, because the account an allowed agent signed in as is visible to the administrators of each
-  company it is allowed in, including when that person holds nothing there.
 
 ### Confirmation
 
