@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import axe from "axe-core";
 import { declared, SettingsPage, type Company } from "./SettingsPage";
 
@@ -158,4 +158,58 @@ test("an agent that has connected is named by what it reported, with the account
   expect(
     within(list).getByText(/Signed in as Dana Whitfield \(dana@example\.test\)\. Last connected/),
   ).toBeTruthy();
+});
+
+test("an agent someone else allowed is announced, to review or dismiss", async () => {
+  answers["/entities"] = { entities: [ACME] };
+  answers["/connection"] = { mcp_url: "https://mcp.example.test/mcp" };
+  answers["/entities/e-1/grants"] = { grants: [{ principal_id: "client:theirs" }] };
+  answers["/entities/e-1/notifications"] = {
+    notifications: [
+      {
+        notification_id: "n-1",
+        entity_id: "e-1",
+        notification_class: "agent_allowed",
+        subject_ref: "client:theirs",
+        link: "/app/agents/client%3Atheirs",
+        raised_at: "2026-10-13T15:00:00Z",
+      },
+    ],
+  };
+  answers["/entities/e-1/agents"] = {
+    agents: [
+      {
+        agent_id: "client:theirs",
+        client_name: "claude-ai",
+        client_version: "0.1.0",
+        person_email: "sam@example.test",
+        person_name: "Sam Ortiz",
+        first_connected_at: "2026-10-12T15:00:00Z",
+        last_connected_at: "2026-10-13T15:00:00Z",
+      },
+    ],
+  };
+  answers["/agents"] = { agents: [] };
+  const { container } = render(<SettingsPage />);
+
+  const notices = await screen.findByRole("list", { name: "Agents allowed by others" });
+  expect(notices.textContent).toContain(
+    "claude-ai 0.1.0, signed in as Sam Ortiz (sam@example.test), was allowed in Acme LLC.",
+  );
+  fireEvent.click(within(notices).getByRole("button", { name: "Review" }));
+  expect(navigate).toHaveBeenCalledWith({
+    to: "/agents/$agent",
+    params: { agent: "client:theirs" },
+  });
+
+  fireEvent.click(within(notices).getByRole("button", { name: "Dismiss" }));
+  await waitFor(() =>
+    expect(screen.queryByRole("list", { name: "Agents allowed by others" })).toBeNull(),
+  );
+  const calls = vi.mocked(fetch).mock.calls as unknown as [string, RequestInit | undefined][];
+  const dismissal = calls.find(([path]) =>
+    path.endsWith("/entities/e-1/notifications/n-1/dismissal"),
+  );
+  expect(dismissal?.[1]?.method).toBe("POST");
+  await noViolations(container);
 });

@@ -22,6 +22,8 @@ export const AGENT_ROLES: Record<string, string> = {
   bookkeeper: "Keeps the books: reads, records and posts",
 };
 
+const NO_COMPANIES: Company[] = [];
+
 type Standing =
   | { state: "loading" }
   | { state: "allowed"; grant: Grant }
@@ -149,7 +151,9 @@ function AgentFacts({
       {connection === undefined ? (
         <>
           <dt className="text-ink-muted">Connected</dt>
-          <dd className="text-ink">CFOKit has no record of it signing in as you.</dd>
+          <dd className="text-ink">
+            CFOKit has no record of it connecting for you or anyone in your companies.
+          </dd>
         </>
       ) : (
         <>
@@ -179,7 +183,9 @@ function AgentFacts({
 export function AgentPage({ agent }: { agent: string }) {
   const listing = useCompanies();
   const navigate = useNavigate();
-  const connection = useAgentConnections().get(agent);
+  const connection = useAgentConnections(
+    listing.state === "ready" ? listing.companies : NO_COMPANIES,
+  ).get(agent);
   return (
     <PersonFrame company="">
       <div className="flex max-w-reading-max flex-col gap-6">

@@ -191,6 +191,20 @@ def revoke_entity_grant(
         return cur.rowcount == 1
 
 
+def holder_of_grant(
+    conn: psycopg.Connection[Any], *, entity_id: str, grant_id: str
+) -> str | None:
+    """The principal an unrevoked grant in this entity is held by, or None if there is none."""
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT principal_id FROM entity_grant"
+            " WHERE id = %s AND entity_id = %s AND revoked_at IS NULL",
+            (grant_id, entity_id),
+        )
+        row = cur.fetchone()
+    return str(row[0]) if row is not None else None
+
+
 def role_of_grant(
     conn: psycopg.Connection[Any], *, entity_id: str, grant_id: str
 ) -> str | None:

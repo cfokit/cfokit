@@ -107,7 +107,7 @@ test("an agent with no recorded connection is shown by its ID, and says so", asy
   replies["GET /agents"] = { status: 200, body: { agents: [] } };
   render(<AgentPage agent={AGENT} />);
 
-  await screen.findByText(/CFOKit has no record of it signing in as you/);
+  await screen.findByText(/CFOKit has no record of it connecting/);
   expect(screen.getByText(/^Client claude-abc is software you signed in/)).toBeTruthy();
 });
 
@@ -203,4 +203,19 @@ test("the page leads back to Settings", async () => {
   fireEvent.click(await screen.findByRole("button", { name: "← Back to Settings" }));
 
   expect(navigate).toHaveBeenCalledWith({ to: "/settings" });
+});
+
+test("an agent a member connected is shown with their account, read from the company", async () => {
+  replies["GET /entities"] = { status: 200, body: { entities: [company("e-1", "Acme LLC")] } };
+  replies["GET /entities/e-1/grants"] = { status: 200, body: { grants: [grant(AGENT, "reader")] } };
+  replies["GET /agents"] = { status: 200, body: { agents: [] } };
+  replies["GET /entities/e-1/agents"] = {
+    status: 200,
+    body: {
+      agents: [{ ...CONNECTED, person_name: "Sam Ortiz", person_email: "sam@example.test" }],
+    },
+  };
+  render(<AgentPage agent={AGENT} />);
+
+  await screen.findByText("Sam Ortiz (sam@example.test)");
 });

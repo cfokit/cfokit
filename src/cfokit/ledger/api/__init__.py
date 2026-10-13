@@ -97,6 +97,7 @@ from cfokit.ledger.presentation import (
 from cfokit.ledger.repository.obligations import Obligation
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.administration import (
+    agents_allowed_here,
     create_account,
     create_entity,
     grant_role,
@@ -524,6 +525,38 @@ def create_app(settings: Settings, authenticator: Authenticator | None = None) -
             lapses_at=body.lapses_at,
         )
         return GrantResponse(grant_id=grant_id)
+
+    @app.get(
+        "/entities/{entity_id}/agents",
+        tags=["administration"],
+        summary="The agents allowed in this entity, as they connected",
+        responses=ERRORS,
+    )
+    def entity_agents(
+        entity_id: Annotated[str, Path()],
+        acting: Annotated[Principal, Depends(get_principal)],
+        database: Annotated[Database, Depends(get_database)],
+    ) -> AgentConnectionsResponse:
+        """Each agent allowed here, with the name and version it reported and the member account
+        it signed in as (ADR-0066 § 6). For someone who may grant or revoke here, as the grants
+        are. An agent connected for several members here is listed once for each.
+        """
+        return AgentConnectionsResponse(
+            agents=[
+                AgentConnectionModel(
+                    agent_id=found.agent_id,
+                    client_name=found.client_name,
+                    client_version=found.client_version,
+                    person_email=found.person_email,
+                    person_name=found.person_name,
+                    first_connected_at=found.first_connected_at,
+                    last_connected_at=found.last_connected_at,
+                )
+                for found in agents_allowed_here(
+                    database, entity_id=entity_id, principal=acting
+                )
+            ]
+        )
 
     @app.get(
         "/entities/{entity_id}/grants",

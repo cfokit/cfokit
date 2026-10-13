@@ -177,6 +177,17 @@ class EntityWrite:
         """Every grant in force here at `at`: who may do what in this entity."""
         return administration.grants_in_force(self._conn, entity_id=self._entity_id, at=at)
 
+    def holder_of_grant(self, grant_id: str) -> str | None:
+        return administration.holder_of_grant(
+            self._conn, entity_id=self._entity_id, grant_id=grant_id
+        )
+
+    def member_connections(self, agent_id: str | None = None) -> list[connections.Connection]:
+        """Connections made for this entity's members (migration 0023)."""
+        return connections.member_connections(
+            self._conn, entity_id=self._entity_id, agent_id=agent_id
+        )
+
     def role_of_grant(self, grant_id: str) -> str | None:
         """The role an unrevoked grant in this entity carries, or None if there is none."""
         return administration.role_of_grant(

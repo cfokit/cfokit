@@ -13,7 +13,13 @@ from typing import Any
 
 import psycopg
 
-__all__ = ["Connection", "connections_of", "declare_person", "record_connection"]
+__all__ = [
+    "Connection",
+    "connections_of",
+    "declare_person",
+    "member_connections",
+    "record_connection",
+]
 
 
 @dataclass(frozen=True, slots=True)
@@ -87,6 +93,33 @@ def connections_of(
             " WHERE acting_for = %s AND (%s::text IS NULL OR agent_id = %s)"
             " ORDER BY last_connected_at DESC, agent_id",
             (acting_for, agent_id, agent_id),
+        )
+        return [_connection(row) for row in cur.fetchall()]
+
+
+def member_connections(
+    conn: psycopg.Connection[Any], *, entity_id: str, agent_id: str | None
+) -> list[Connection]:
+    """Connections made for this entity's members, under its scope (migration 0023); one agent's
+    where it is named.
+
+    Filtered on membership here as well as by the policy: RLS misconfiguration is silent.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT c.agent_id, c.acting_for, c.client_name, c.client_version, c.person_email,"
+            "       c.person_name, c.first_connected_at, c.last_connected_at"
+            "  FROM agent_connection c"
+            " WHERE (%s::text IS NULL OR c.agent_id = %s)"
+            "   AND EXISTS ("
+            "       SELECT 1 FROM entity_grant g"
+            "        WHERE g.entity_id = %s"
+            "          AND g.principal_id = c.acting_for"
+            "          AND g.granted_at <= now()"
+            "          AND (g.lapses_at IS NULL OR g.lapses_at > now())"
+            "          AND (g.revoked_at IS NULL OR g.revoked_at > now()))"
+            " ORDER BY c.last_connected_at DESC, c.agent_id, c.acting_for",
+            (agent_id, agent_id, entity_id),
         )
         return [_connection(row) for row in cur.fetchall()]
 

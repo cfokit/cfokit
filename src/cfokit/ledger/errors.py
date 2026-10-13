@@ -81,6 +81,17 @@ class NotAnAgentRole(LedgerError):
     code = "not_an_agent_role"
 
 
+class AgentActsForNoMember(LedgerError):
+    """Allowing an agent where no person it connected for holds a role (ADR-0066 § 2).
+
+    An agent acts with no more than its person holds (`IAM-11`), so a grant to one acting for no
+    one here confers nothing but a row that looks like access. An agent that has never connected
+    is refused the same way: nothing yet says whom it acts for.
+    """
+
+    code = "agent_acts_for_no_member"
+
+
 class PeriodClosed(LedgerError):
     """The transaction's period is closed (`LED-11`, ADR-0030).
 

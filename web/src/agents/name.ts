@@ -42,24 +42,39 @@ export function when(moment: string): string {
 }
 
 /**
- * The agents that have connected for the person, by agent ID. Empty until the answer arrives,
- * and empty if it fails: a name is a label, and every agent is still shown by its ID without one.
+ * Every agent the person can know of, by agent ID: those that connected for them (`GET /agents`),
+ * then those allowed in companies they administer, as each connected for a member there
+ * (`GET /entities/{id}/agents`). Their own record wins where both have one. Empty until the
+ * answers arrive, and any that fails is left out: a name is a label, and every agent is still
+ * shown by its ID without one.
  */
-export function useAgentConnections(): Map<string, AgentConnection> {
+export function useAgentConnections(
+  companies: readonly { id: string }[] = [],
+): Map<string, AgentConnection> {
   const api = useApi();
   const [connections, setConnections] = useState<Map<string, AgentConnection>>(new Map());
   useEffect(() => {
     let current = true;
-    api
-      .get<{ agents?: AgentConnection[] }>("/agents")
-      .then((answer) => {
+    const read = (path: string) =>
+      api
+        .get<{ agents?: AgentConnection[] }>(path)
+        .then((answer) => answer.agents ?? [])
+        .catch((): AgentConnection[] => []);
+    Promise.all([
+      read("/agents"),
+      ...companies.map((company) => read(`/entities/${encodeURIComponent(company.id)}/agents`)),
+    ])
+      .then(([own = [], ...elsewhere]) => {
         if (!current) return;
-        setConnections(new Map((answer.agents ?? []).map((found) => [found.agent_id, found])));
+        const known = new Map<string, AgentConnection>();
+        for (const found of elsewhere.flat()) known.set(found.agent_id, found);
+        for (const found of own) known.set(found.agent_id, found);
+        setConnections(known);
       })
       .catch(() => undefined);
     return () => {
       current = false;
     };
-  }, [api]);
+  }, [api, companies]);
   return connections;
 }
