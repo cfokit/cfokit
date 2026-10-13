@@ -133,3 +133,29 @@ test("settings lists each agent allowed in any company once, and opens it to man
     params: { agent: "client:claude-abc" },
   });
 });
+
+test("an agent that has connected is named by what it reported, with the account it signed in as", async () => {
+  answers["/entities"] = { entities: [ACME] };
+  answers["/connection"] = { mcp_url: "https://mcp.example.test/mcp" };
+  answers["/entities/e-1/grants"] = { grants: [{ principal_id: "client:claude-abc" }] };
+  answers["/agents"] = {
+    agents: [
+      {
+        agent_id: "client:claude-abc",
+        client_name: "claude-ai",
+        client_version: "0.1.0",
+        person_email: "dana@example.test",
+        person_name: "Dana Whitfield",
+        first_connected_at: "2026-10-12T15:00:00Z",
+        last_connected_at: "2026-10-13T15:00:00Z",
+      },
+    ],
+  };
+  render(<SettingsPage />);
+
+  const list = await screen.findByRole("list", { name: "Agents" });
+  await within(list).findByText("claude-ai 0.1.0");
+  expect(
+    within(list).getByText(/Signed in as Dana Whitfield \(dana@example\.test\)\. Last connected/),
+  ).toBeTruthy();
+});

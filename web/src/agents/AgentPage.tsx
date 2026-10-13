@@ -3,7 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { ApiError, useApi } from "../api";
 import { Button, Notice } from "../components";
 import { PersonFrame } from "../settings/PersonFrame";
-import { agentName } from "./name";
+import { describeAgent, signedInAs, useAgentConnections, when, type AgentConnection } from "./name";
 import { useCompanies, type Company } from "../settings/SettingsPage";
 
 /** A grant in force, as `GET /entities/{id}/grants` lists it. */
@@ -133,6 +133,45 @@ function CompanyRow({ company, agent }: { company: Company; agent: string }) {
 }
 
 /**
+ * What is known of the agent, so the person can tell it is the one they just connected: what it
+ * reported itself as, the account it signed in as, and when (ADR-0066 § 3).
+ */
+function AgentFacts({
+  agent,
+  connection,
+}: {
+  agent: string;
+  connection: AgentConnection | undefined;
+}) {
+  const account = connection === undefined ? null : signedInAs(connection);
+  return (
+    <dl aria-label="This agent" className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-body">
+      {connection === undefined ? (
+        <>
+          <dt className="text-ink-muted">Connected</dt>
+          <dd className="text-ink">CFOKit has no record of it signing in as you.</dd>
+        </>
+      ) : (
+        <>
+          {account !== null && (
+            <>
+              <dt className="text-ink-muted">Signed in as</dt>
+              <dd className="text-ink">{account}</dd>
+            </>
+          )}
+          <dt className="text-ink-muted">First connected</dt>
+          <dd className="text-ink">{when(connection.first_connected_at)}</dd>
+          <dt className="text-ink-muted">Last connected</dt>
+          <dd className="text-ink">{when(connection.last_connected_at)}</dd>
+        </>
+      )}
+      <dt className="text-ink-muted">Client ID</dt>
+      <dd className="break-all text-ink">{agent.replace(/^client:/, "")}</dd>
+    </dl>
+  );
+}
+
+/**
  * Allowing an agent, company by company (ADR-0066 § 2). An agent acts in a company only where the
  * person allowed it there; this is where they do, signed in as themselves (`IAM-10`, `IAM-12`).
  * Every refusal an agent receives for want of it links here.
@@ -140,6 +179,7 @@ function CompanyRow({ company, agent }: { company: Company; agent: string }) {
 export function AgentPage({ agent }: { agent: string }) {
   const listing = useCompanies();
   const navigate = useNavigate();
+  const connection = useAgentConnections().get(agent);
   return (
     <PersonFrame company="">
       <div className="flex max-w-reading-max flex-col gap-6">
@@ -152,10 +192,11 @@ export function AgentPage({ agent }: { agent: string }) {
           Allow an agent
         </h1>
         <p className="text-body text-ink">
-          {agentName(agent)} is software you signed in to CFOKit through, such as Claude. It can act
-          only in the companies you allow it in, and never with more authority than you hold. If you
-          did not just connect an agent, allow nothing.
+          {describeAgent(agent, connection)} is software you signed in to CFOKit through, such as
+          Claude. It can act only in the companies you allow it in, and never with more authority
+          than you hold. If you did not just connect an agent, allow nothing.
         </p>
+        <AgentFacts agent={agent} connection={connection} />
         {listing.state === "loading" && (
           <Notice tone="neutral" label="Finding your companies">
             Reading which books you can reach…

@@ -35,6 +35,7 @@ from cfokit.ledger.repository import (
     archive,
     audit,
     closes,
+    connections,
     grants,
     idempotency,
     issuance,
@@ -53,6 +54,7 @@ __all__ = [
     "Database",
     "EntitySettings",
     "EntityWrite",
+    "PersonRecords",
     "PrincipalRead",
     "UnscopedWrite",
     "WorkQueue",
@@ -723,6 +725,64 @@ class PrincipalRead:
         return grants.entities_held(self._conn, principal_id, at)
 
 
+class PersonRecords:
+    """What is held about one person across entities: the agents that connected for them
+    (migration 0022), and the audit row each connection writes.
+
+    Separate from the other scopes so a person's connections are reachable only in a
+    transaction declared for that person, and offer no entity's books.
+    """
+
+    def __init__(self, conn: psycopg.Connection[Any], person_id: str) -> None:
+        self._conn = conn
+        self._person_id = person_id
+
+    def record_connection(
+        self,
+        *,
+        agent_id: str,
+        client_name: str | None,
+        client_version: str | None,
+        person_email: str | None,
+        person_name: str | None,
+    ) -> connections.Connection:
+        return connections.record_connection(
+            self._conn,
+            agent_id=agent_id,
+            acting_for=self._person_id,
+            client_name=client_name,
+            client_version=client_version,
+            person_email=person_email,
+            person_name=person_name,
+        )
+
+    def connections(self, agent_id: str | None = None) -> list[connections.Connection]:
+        return connections.connections_of(
+            self._conn, acting_for=self._person_id, agent_id=agent_id
+        )
+
+    def record_audit(
+        self,
+        *,
+        request_id: str,
+        actor: str,
+        action: str,
+        subject_type: str,
+        detail: dict[str, Any] | None = None,
+    ) -> None:
+        """The one audit row of an act that belongs to no entity."""
+        audit.record(
+            self._conn,
+            entity_id=None,
+            request_id=request_id,
+            actor=actor,
+            action=action,
+            subject_type=subject_type,
+            subject_id=None,
+            detail=detail,
+        )
+
+
 class WorkQueue:
     """What the pass does across entities, before it has claimed work in any one (ADR-0061).
 
@@ -778,6 +838,13 @@ class Database:
         """One transaction, scoped to no entity, for reading where a principal holds grants."""
         with connect(self._dsn) as conn, conn.transaction():
             yield PrincipalRead(conn)
+
+    @contextmanager
+    def person_records(self, person_id: str) -> Iterator[PersonRecords]:
+        """One transaction, scoped to one person's records and to no entity."""
+        with connect(self._dsn) as conn, conn.transaction():
+            connections.declare_person(conn, person_id)
+            yield PersonRecords(conn, person_id)
 
     @contextmanager
     def work_queue(self) -> Iterator[WorkQueue]:

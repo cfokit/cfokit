@@ -91,8 +91,16 @@ each linking to its page. Revoking ends the grant (`IAM-15`). Revoking in one co
 ### 3. Seeing which agents are connected
 
 Each time an agent opens an MCP session, the server records the client, the person it acts for,
-and the name and version the client reports in `initialize`, with one `audit_log` row. The
-reported name is the client's own claim, shown beside its ID and never used to decide anything.
+the name and version the client reports in `initialize` (or in `server/discover`, which replaces
+the handshake from protocol 2026-07-28), and the email and name of the account its token was
+issued for, from the standard OpenID Connect claims where the issuer sends them, with one
+`audit_log` row naming no company. The reported name is the client's own claim, shown beside its
+ID and never used to decide anything. A person reads only the connections made for them, and an
+agent reads none.
+
+The allow page and Settings name each agent by what it reported, with the account it signed in
+as and when it last connected, so the person can tell it is the one they just connected. An agent
+with no recorded connection for the viewer is named by its ID.
 
 The web client shows, for each company, a light for the person viewing it:
 
@@ -171,9 +179,10 @@ company that existed before.
 * Good, because `azp` and `client_id` are standard claims, so the rule is the same on every
   issuer.
 * Good, because the authorization happens on CFOKit's own page, where the person is signed in.
-* Bad, because the server learns only the client's ID. Its display name sits behind RFC 7592
-  management, which needs the client's own registration token. The page shows when the client
-  first called instead, which the person can match with what they just did.
+* Bad, because the token names only the client's ID. Its registered name sits behind RFC 7592
+  management, which needs the client's own registration token. The page shows what the client
+  reports when it connects instead, with the account it signed in as and when, which the person
+  can match with what they just did.
 
 ### Require an `act` claim, minted by token exchange
 

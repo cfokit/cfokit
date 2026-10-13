@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useApi } from "../api";
 import { ActionBar, Button, Notice } from "../components";
-import { agentName } from "../agents/name";
+import { describeAgent, signedInAs, useAgentConnections, when } from "../agents/name";
 import { ConnectClaude } from "../connect/ConnectClaude";
 import { PersonFrame } from "./PersonFrame";
 
@@ -178,6 +178,7 @@ function useAllowedAgents(companies: Company[]): Allowed {
 
 function Agents({ companies }: { companies: Company[] }) {
   const allowed = useAllowedAgents(companies);
+  const connections = useAgentConnections();
   const navigate = useNavigate();
   if (allowed.state === "loading") {
     return <p className="text-caption text-ink-muted">Checking which agents you allowed…</p>;
@@ -194,20 +195,32 @@ function Agents({ companies }: { companies: Company[] }) {
   }
   return (
     <ul aria-label="Agents" className="flex flex-col border-t border-rule">
-      {allowed.agents.map((agent) => (
-        <li
-          key={agent}
-          className="flex items-center justify-between gap-2 border-b border-rule py-4"
-        >
-          <span className="text-body text-ink">{agentName(agent)}</span>
-          <Button
-            variant="link"
-            onClick={() => void navigate({ to: "/agents/$agent", params: { agent } })}
+      {allowed.agents.map((agent) => {
+        const connection = connections.get(agent);
+        const account = connection === undefined ? null : signedInAs(connection);
+        return (
+          <li
+            key={agent}
+            className="flex items-center justify-between gap-2 border-b border-rule py-4"
           >
-            Manage
-          </Button>
-        </li>
-      ))}
+            <span className="flex min-w-0 flex-col">
+              <span className="text-body text-ink">{describeAgent(agent, connection)}</span>
+              {connection !== undefined && (
+                <span className="text-caption text-ink-muted">
+                  {account === null ? "" : `Signed in as ${account}. `}Last connected{" "}
+                  {when(connection.last_connected_at)}.
+                </span>
+              )}
+            </span>
+            <Button
+              variant="link"
+              onClick={() => void navigate({ to: "/agents/$agent", params: { agent } })}
+            >
+              Manage
+            </Button>
+          </li>
+        );
+      })}
     </ul>
   );
 }

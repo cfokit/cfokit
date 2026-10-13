@@ -33,6 +33,8 @@ from cfokit.ledger.api.models import (
     AccountCreatedResponse,
     AccountDetailResponse,
     AccountEntryModel,
+    AgentConnectionModel,
+    AgentConnectionsResponse,
     BalanceSheetResponse,
     ClosePeriodRequest,
     CloseYearRequest,
@@ -106,6 +108,7 @@ from cfokit.ledger.service.authentication import (
     TokenAuthenticator,
     principal_from_claims,
 )
+from cfokit.ledger.service.connections import agent_connections
 from cfokit.ledger.service.interchange import (
     ARCHIVE_FORMAT,
     export_complete,
@@ -337,6 +340,36 @@ def create_app(settings: Settings, authenticator: Authenticator | None = None) -
         (ADR-0004)."""
         base = settings.mcp_public_base_url
         return ConnectionResponse(mcp_url=None if base is None else f"{base.rstrip('/')}/mcp")
+
+    @app.get(
+        "/agents",
+        tags=["administration"],
+        summary="The agents that have connected for the caller",
+        responses=ERRORS,
+    )
+    def agents(
+        acting: Annotated[Principal, Depends(get_principal)],
+        database: Annotated[Database, Depends(get_database)],
+    ) -> AgentConnectionsResponse:
+        """Each agent that has opened a session for the caller, with the name and version it
+        reported, the account it signed in as, and when it first and last connected (ADR-0066
+        § 3). What lets a person recognize an agent they are asked to allow. A person's own
+        question: an agent is refused with `not_a_person`.
+        """
+        return AgentConnectionsResponse(
+            agents=[
+                AgentConnectionModel(
+                    agent_id=found.agent_id,
+                    client_name=found.client_name,
+                    client_version=found.client_version,
+                    person_email=found.person_email,
+                    person_name=found.person_name,
+                    first_connected_at=found.first_connected_at,
+                    last_connected_at=found.last_connected_at,
+                )
+                for found in agent_connections(database, principal=acting)
+            ]
+        )
 
     @app.get("/healthz", tags=["operations"], summary="Liveness")
     def healthz() -> dict[str, str]:

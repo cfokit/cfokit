@@ -28,9 +28,13 @@ import psycopg
 import pytest
 from mcp import ClientSession
 from mcp.client.streamable_http import streamable_http_client
+from mcp.types import Implementation
 
 from cfokit.ledger.config import Settings
 from cfokit.ledger.mcp import create_server
+from cfokit.ledger.repository.unit_of_work import Database
+from cfokit.ledger.service.authentication import WEB_CLIENT_ID, principal_from_claims
+from cfokit.ledger.service.connections import agent_connections
 
 pytestmark = [pytest.mark.integration, pytest.mark.anyio]
 
@@ -167,7 +171,9 @@ def asgi_app(settings: Settings) -> Any:
 
 
 @asynccontextmanager
-async def session(settings: Settings, *, token: str | None) -> AsyncIterator[ClientSession]:
+async def session(
+    settings: Settings, *, token: str | None, client_info: Implementation | None = None
+) -> AsyncIterator[ClientSession]:
     """A real SDK client over streamable HTTP, against the app in process.
 
     Built with `host="0.0.0.0"` because that is how the entrypoint binds it, and the SDK
@@ -182,7 +188,7 @@ async def session(settings: Settings, *, token: str | None) -> AsyncIterator[Cli
             transport=httpx.ASGITransport(app=app), base_url="http://ledger", headers=headers
         ) as http,
         streamable_http_client("http://ledger/mcp", http_client=http) as (read, write),
-        ClientSession(read, write) as client,
+        ClientSession(read, write, client_info=client_info) as client,
     ):
         yield client
 
@@ -374,6 +380,28 @@ async def test_a_valid_token_reaches_past_the_middleware(
     _, token = caller
 
     assert await post_to_mcp(settings, token=token) == 200
+
+
+# --- ADR-0066 § 3: which agent connected ---------------------------------------------------
+
+
+@pytest.mark.parametrize("opening", ["initialize", "discover"])
+async def test_opening_a_session_records_what_the_client_reported(
+    settings: Settings, caller: tuple[str, str], opening: str
+) -> None:
+    """The middleware sees the session open, with the verified token in hand, over the
+    transport a client uses: the `initialize` handshake, and `server/discover`, which replaces
+    it from protocol 2026-07-28. What it records is read back as the person would read it."""
+    subject, token = caller
+    reported = Implementation(name="claude-ai", version="0.1.0")
+
+    async with session(settings, token=token, client_info=reported) as client:
+        await (client.initialize() if opening == "initialize" else client.discover())
+
+    person = principal_from_claims({"sub": subject, "azp": WEB_CLIENT_ID})
+    [found] = agent_connections(Database(settings.database_url), principal=person)
+    assert found.agent_id == _client(token)
+    assert (found.client_name, found.client_version) == ("claude-ai", "0.1.0")
 
 
 # --- IAM-06: usable as it stands ------------------------------------------------------------
