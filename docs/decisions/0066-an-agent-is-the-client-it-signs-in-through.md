@@ -7,7 +7,7 @@ decision-makers: [Geoff]
 
 # ADR-0066: An agent is the client it signs in through, and acts in a company once the person allows it
 
-**Requirements served:** `IAM-11`, `IAM-12`, `IAM-15`, `SOC1-25`.
+**Requirements served:** `IAM-11`, `IAM-12`, `IAM-15`, `PLT-07`, `SOC1-25`.
 
 ## Context and Problem Statement
 
@@ -41,6 +41,8 @@ client is software a person signed in through.
 * The person authorizes, in a browser, signed in as themselves (`IAM-10`). A model does not
   grant itself authority.
 * A revocation takes effect on the next call (`IAM-15`).
+* The people who answer for a company learn when someone else opens it to an agent (`PLT-07`),
+  and nothing about any company they do not hold.
 
 ## Considered Options
 
@@ -49,6 +51,8 @@ client is software a person signed in through.
 * Keep treating every token as its person
 * Allow the agent that connects next, without a click
 * Grant the agent automatically wherever the person holds a role
+* Tell a company's owners when an agent connects
+* Tell no one when an agent is allowed
 
 ## Decision Outcome
 
@@ -84,6 +88,13 @@ posts. Both join the role catalog now that something holds them (ADR-0039), and 
 only roles an agent may be granted, through the page or the API (`not_an_agent_role`). Allowing writes the
 agent's grant, under the person's authority and in their name, with one `audit_log` row. Only
 a person who can grant roles in the company can allow an agent there.
+
+An agent is allowed only where it can act. Allowing is refused with
+`agent_acts_for_no_member` unless some person the agent has connected for (§ 3) holds a role in
+that company, because an agent acts with no more than its person holds (`IAM-11`), and a grant to
+one acting for no one there confers nothing but a row that looks like access. An agent that has
+not connected is refused the same way, since nothing yet says whom it acts for: a person allows an
+agent after connecting it, from the link it gave them.
 
 The same page revokes, and Settings lists every agent allowed in any of the person's companies,
 each linking to its page. Revoking ends the grant (`IAM-15`). Revoking in one company leaves every other company alone (`IAM-12`).
@@ -139,6 +150,30 @@ The risk is an agent that creates a company the person did not ask for. What it 
 company of its own making, held by the person, who can delete it (`PLT-13`). It gains nothing in any
 company that existed before.
 
+### 6. Allowing an agent tells the company's other administrators
+
+When a person allows an agent in a company, the same transaction raises a notification of class
+`agent_allowed` to every other principal there who can grant (`grant`), and so could revoke it:
+the owners and administrators, not the person who allowed it. Its subject is the agent, and its
+link is the agent's page (ADR-0052 § 1). An owner who allows their own agent in a company they
+hold alone tells no one, because no one else answers for it.
+
+It concerns one company and goes only to people who hold that company, so it says nothing about
+any other company the agent or its person reaches. A connection raises nothing: it opens no company,
+and a notification about it would have no company to belong to and no one to go to but the person
+who made it.
+
+Revoking that agent's grant in that company answers the question and closes it (ADR-0056 § 1).
+Otherwise each recipient dismisses their own. Delivery, and turning the class off, are as for any
+other class (ADR-0052, `PLT-07`).
+
+The agent's page shows a recipient what it shows the person who connected it: what the agent
+reported and the account it signed in as (§ 3). A connection record is readable, besides by its
+person, under the scope of a company in which the agent holds a grant in force, to a principal who
+can grant there. That discloses nothing new: an agent acts with no more than its person holds
+(`IAM-11`), so an agent that can act in the company acts for someone who already holds a role
+there, whom its administrators already know.
+
 ### Consequences
 
 * Good, because `IAM-11` and `IAM-12` hold for every client that connects today, with no change
@@ -159,9 +194,18 @@ company that existed before.
   on the agent's side stays green until the person revokes it.
 * Neutral, because the settings page is where the person manages this, so it is the same page
   that explains how to connect.
+* Good, because a co-owner learns when someone else opens their company to an agent, with the
+  agent's name and account, and can revoke it from the link.
+* Good, because every agent grant belongs to an agent acting for a member of the company, so the
+  roster shows no grant that can do nothing.
+* Bad, because an agent must connect before it can be allowed. One connected before CFOKit
+  recorded connections is refused until it connects again.
 
 ### Confirmation
 
+* An integration test shows allowing refused with `agent_acts_for_no_member` for an agent that
+  has connected only for a person holding no role in the company, and for one that has never
+  connected, and accepted once a member's connection is recorded.
 * Unit tests of `principal_from_claims` cover the web client, another client, `act`, and a
   token naming no client.
 * An integration test shows an agent refused with `agent_not_allowed`, allowed and then served,
@@ -171,6 +215,10 @@ company that existed before.
 * Web client tests show each light from the recorded sessions and grants, and the waiting page
   showing a session that arrives after the person set off, and none from before.
 * A unit test holds the web client's ID to the realm and the web bundle.
+* An integration test shows allowing an agent notifying each other principal who can grant in that
+  company and not the person who allowed it, nothing raised in any other company, the notification
+  closed by revoking the grant, and the connection record readable to those recipients under that
+  company's scope and to no one else.
 
 ## Pros and Cons of the Options
 
@@ -214,6 +262,20 @@ The first call from a client would create its grant.
 * Bad, because a grant nobody chose is not an authorization, so `IAM-12` is not met, only
   renamed.
 * Bad, because a person who connects Claude for one company gives it every company.
+
+### Tell a company's owners when an agent connects
+
+* Good, because it is the earliest moment anything is known.
+* Bad, because a connection belongs to no company. Telling the owners of every company the person
+  holds would tell each of them about the person's other companies' agents, and about the person's
+  activity in companies they do not share.
+* Bad, because a connection opens nothing, so there is nothing yet to answer.
+
+### Tell no one when an agent is allowed
+
+* Good, because it adds nothing.
+* Bad, because one administrator could open a company to an agent and the others would not learn of
+  it until they looked, which `PLT-07` and the owners' rare visits make unlikely.
 
 ## More Information
 
