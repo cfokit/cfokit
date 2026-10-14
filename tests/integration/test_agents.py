@@ -15,15 +15,23 @@ from typing import Any
 import psycopg
 import pytest
 
-from cfokit.ledger.errors import AgentNotAllowed, NotAnAgentRole, NotAuthorized
+from cfokit.ledger.errors import (
+    AgentActsForNoMember,
+    AgentNotAllowed,
+    NotAnAgentRole,
+    NotAuthorized,
+)
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.administration import (
+    agents_allowed_here,
     create_entity,
     grant_role,
     list_grants,
     revoke_grant,
 )
 from cfokit.ledger.service.authentication import WEB_CLIENT_ID, principal_from_claims
+from cfokit.ledger.service.connections import record_connection
+from cfokit.ledger.service.notifications import open_notifications
 from cfokit.ledger.service.principal import Principal
 from cfokit.ledger.service.read import list_entities, read_entity
 
@@ -50,11 +58,27 @@ def new_company(database: Database, principal: Principal) -> str:
     ).entity_id
 
 
-def allow(database: Database, entity_id: str, agent: Principal, role: str) -> str:
+def connected(database: Database, agent: Principal) -> None:
+    """The agent opened a session for its person, which is how it comes to be allowed (§ 3)."""
+    record_connection(
+        database,
+        principal=agent,
+        request_id=f"req-{uuid.uuid4().hex[:8]}",
+        client_name="claude-ai",
+        client_version="0.1.0",
+        person_email=None,
+        person_name=None,
+    )
+
+
+def allow(
+    database: Database, entity_id: str, agent: Principal, role: str, *, by: Principal = PERSON
+) -> str:
+    connected(database, agent)
     return grant_role(
         database,
         entity_id=entity_id,
-        principal=PERSON,
+        principal=by,
         request_id=f"req-{uuid.uuid4().hex[:8]}",
         to_principal=agent.id,
         role=role,
@@ -190,3 +214,161 @@ def test_an_agent_holds_only_the_roles_an_agent_may(database: Database, role: st
 
     with pytest.raises(NotAnAgentRole):
         allow(database, company, CLAUDE, role)
+
+
+# --- § 2: allowed only where it acts for a member --------------------------------------------
+
+
+def test_an_agent_that_never_connected_is_not_allowed(database: Database) -> None:
+    company = new_company(database, PERSON)
+    never = principal_from_claims({"sub": "user:geoff", "azp": f"never-{uuid.uuid4().hex[:8]}"})
+
+    with pytest.raises(AgentActsForNoMember) as caught:
+        grant_role(
+            database,
+            entity_id=company,
+            principal=PERSON,
+            request_id="req-never",
+            to_principal=never.id,
+            role="reader",
+        )
+    assert caught.value.code == "agent_acts_for_no_member"
+
+
+def test_an_agent_acting_for_someone_who_holds_nothing_here_is_not_allowed(
+    database: Database,
+) -> None:
+    """A stranger's agent, handed to an owner: allowing it could confer nothing (`IAM-11`)."""
+    company = new_company(database, PERSON)
+    strangers = principal_from_claims(
+        {"sub": f"user:stranger-{uuid.uuid4().hex[:8]}", "azp": f"x-{uuid.uuid4().hex[:8]}"}
+    )
+    connected(database, strangers)
+
+    with pytest.raises(AgentActsForNoMember):
+        grant_role(
+            database,
+            entity_id=company,
+            principal=PERSON,
+            request_id="req-stranger",
+            to_principal=strangers.id,
+            role="bookkeeper",
+        )
+
+
+# --- § 6: the other administrators are told ------------------------------------------------
+
+
+def colleague(database: Database, company: str) -> Principal:
+    """A second person who administers the company, with an agent of their own."""
+    person = principal_from_claims(
+        {"sub": f"user:colleague-{uuid.uuid4().hex[:8]}", "azp": WEB_CLIENT_ID}
+    )
+    grant_role(
+        database,
+        entity_id=company,
+        principal=PERSON,
+        request_id=f"req-{uuid.uuid4().hex[:8]}",
+        to_principal=person.id,
+        role="owner",
+    )
+    return person
+
+
+def notices(database: Database, who: Principal, company: str) -> list[str]:
+    return [
+        n.subject_ref
+        for n in open_notifications(database, principal=who, entity_id=company)
+        if n.notification_class == "agent_allowed"
+    ]
+
+
+def test_allowing_an_agent_tells_each_other_administrator_and_not_who_allowed_it(
+    database: Database,
+) -> None:
+    company = new_company(database, PERSON)
+    other = new_company(database, PERSON)
+    them = colleague(database, company)
+    their_agent = principal_from_claims({"sub": them.id, "azp": f"c-{uuid.uuid4().hex[:8]}"})
+
+    allow(database, company, their_agent, "bookkeeper", by=them)
+
+    assert notices(database, PERSON, company) == [their_agent.id]
+    assert notices(database, them, company) == []
+    assert notices(database, PERSON, other) == []
+
+
+def test_allowing_your_own_agent_where_you_alone_administer_tells_no_one(
+    database: Database,
+) -> None:
+    company = new_company(database, PERSON)
+
+    allow(database, company, CLAUDE, "bookkeeper")
+
+    assert notices(database, PERSON, company) == []
+
+
+def test_revoking_the_agent_answers_the_notice(database: Database) -> None:
+    company = new_company(database, PERSON)
+    them = colleague(database, company)
+    their_agent = principal_from_claims({"sub": them.id, "azp": f"c-{uuid.uuid4().hex[:8]}"})
+    grant_id = allow(database, company, their_agent, "reader", by=them)
+
+    revoke_grant(
+        database, entity_id=company, principal=PERSON, request_id="req-r", grant_id=grant_id
+    )
+
+    assert notices(database, PERSON, company) == []
+
+
+def test_administrators_see_the_account_an_allowed_agent_signed_in_as(
+    database: Database,
+) -> None:
+    company = new_company(database, PERSON)
+    them = colleague(database, company)
+    their_agent = principal_from_claims({"sub": them.id, "azp": f"c-{uuid.uuid4().hex[:8]}"})
+    unallowed = principal_from_claims({"sub": them.id, "azp": f"u-{uuid.uuid4().hex[:8]}"})
+    connected(database, unallowed)
+    allow(database, company, their_agent, "reader", by=them)
+
+    seen = agents_allowed_here(database, entity_id=company, principal=PERSON)
+
+    assert [(found.agent_id, found.acting_for) for found in seen] == [(their_agent.id, them.id)]
+    with pytest.raises(NotAuthorized):
+        agents_allowed_here(database, entity_id=company, principal=their_agent)
+
+
+def test_someone_holding_no_role_is_refused_the_agents_allowed_in_a_company(
+    database: Database,
+) -> None:
+    company = new_company(database, PERSON)
+    allow(database, company, CLAUDE, "reader")
+    stranger = principal_from_claims(
+        {"sub": f"user:stranger-{uuid.uuid4().hex[:8]}", "azp": WEB_CLIENT_ID}
+    )
+
+    with pytest.raises(NotAuthorized):
+        agents_allowed_here(database, entity_id=company, principal=stranger)
+
+
+def test_row_level_security_shows_a_company_only_the_agents_allowed_in_it(
+    database: Database, app_conn: psycopg.Connection[Any]
+) -> None:
+    """The second layer: under a company's scope the application role reads the connection of
+    an agent allowed there, and not one a member connected without allowing it here."""
+    company = new_company(database, PERSON)
+    them = colleague(database, company)
+    allowed = principal_from_claims({"sub": them.id, "azp": f"a-{uuid.uuid4().hex[:8]}"})
+    unallowed = principal_from_claims({"sub": them.id, "azp": f"u-{uuid.uuid4().hex[:8]}"})
+    connected(database, unallowed)
+    allow(database, company, allowed, "reader", by=them)
+
+    with app_conn.transaction(), app_conn.cursor() as cur:
+        cur.execute("SELECT set_config('cfokit.entity_id', %s, true)", (company,))
+        cur.execute(
+            "SELECT agent_id FROM agent_connection WHERE acting_for = %s ORDER BY agent_id",
+            (them.id,),
+        )
+        seen = [row[0] for row in cur.fetchall()]
+
+    assert seen == [allowed.id]

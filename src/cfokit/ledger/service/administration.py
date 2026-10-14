@@ -24,16 +24,27 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from urllib.parse import quote
 
-from cfokit.ledger.errors import LastOwner, NotAnAgentRole, NotAuthorized, UnknownRole
+from cfokit.ledger.errors import (
+    AgentActsForNoMember,
+    LastOwner,
+    NotAnAgentRole,
+    NotAuthorized,
+    UnknownRole,
+)
 from cfokit.ledger.repository.administration import Grant
-from cfokit.ledger.repository.unit_of_work import Database
+from cfokit.ledger.repository.connections import Connection
+from cfokit.ledger.repository.unit_of_work import Database, EntityWrite
 from cfokit.ledger.service.authorization import Capability, authorize
+from cfokit.ledger.service.notifications import answer, notify
 from cfokit.ledger.service.principal import Principal
 
 __all__ = [
+    "AGENT_ALLOWED",
     "EntityCreated",
     "Grant",
+    "agents_allowed_here",
     "create_account",
     "create_entity",
     "grant_role",
@@ -48,6 +59,10 @@ CREATING_AGENT_ROLE = "bookkeeper"
 # The only roles an agent may hold: neither grants nor owns, so an agent never widens anyone's
 # access, its own included (ADR-0066 § 2, migration 0021).
 AGENT_ROLES = frozenset({"reader", "bookkeeper"})
+
+# What a company's other administrators are told when an agent is allowed there, about
+# that agent (ADR-0066 § 6). Revoking the agent's grant there answers it.
+AGENT_ALLOWED = "agent_allowed"
 
 
 @dataclass(frozen=True, slots=True)
@@ -224,9 +239,19 @@ def grant_role(
         if definition.never_lapses and lapses_at is not None:
             # IAM-09's lapse happens without anyone acting, and must never unhold an entity.
             raise NotAuthorized(f"the {role!r} role cannot be granted for a stated period")
+        agent = to_principal.startswith("client:")
         grant_id = write.grant_role(
             principal_id=to_principal, role=role, granted_by=principal.id, lapses_at=lapses_at
         )
+        # Checked once the grant exists, because a connection is visible in a company only for
+        # an agent allowed there (migration 0023); raising rolls the grant back.
+        if agent and not write.allowed_connections(to_principal):
+            # An agent acts with no more than its person holds (`IAM-11`), so one acting for no
+            # one here could do nothing with the grant (ADR-0066 § 2).
+            raise AgentActsForNoMember(
+                "this agent has not connected for anyone who holds a role in this company; "
+                "allow it after connecting it, signed in as a member"
+            )
         write.record_audit(
             request_id=request_id,
             actor=principal.audit_actor,
@@ -237,7 +262,27 @@ def grant_role(
             # the trail — IAM-13 asks for exactly this.
             detail={"to": to_principal, "role": role},
         )
+        if agent:
+            _tell_other_administrators(write, agent=to_principal, allowed_by=principal.id)
     return grant_id
+
+
+def _tell_other_administrators(write: EntityWrite, *, agent: str, allowed_by: str) -> None:
+    """Notify all here who could revoke the agent, except whoever allowed it (ADR-0066 § 6).
+
+    Inside the act that allowed it, so the notification exists exactly when the grant does
+    (ADR-0052 § 1). It concerns this company alone and goes only to people who hold it.
+    """
+    for recipient in write.holders_of(Capability.GRANT.value, datetime.now(UTC)):
+        if recipient == allowed_by:
+            continue
+        notify(
+            write,
+            recipient=recipient,
+            notification_class=AGENT_ALLOWED,
+            subject_ref=agent,
+            link=f"/app/agents/{quote(agent, safe='')}",
+        )
 
 
 def revoke_grant(
@@ -269,6 +314,8 @@ def revoke_grant(
         if write.would_remove_last_owner(grant_id, now):
             raise LastOwner("an entity always has at least one owner; grant another first")
 
+        holder = write.holder_of_grant(grant_id)
+
         if not write.revoke_grant(grant_id, revoked_by=principal.id):
             raise NotAuthorized("no such grant in this entity, or it is already revoked")
 
@@ -280,6 +327,15 @@ def revoke_grant(
             subject_id=grant_id,
             detail=None,
         )
+        if holder is not None and holder.startswith("client:"):
+            # Revoking the agent here answers the notice that it was allowed (ADR-0066 § 6).
+            answer(
+                write,
+                notification_class=AGENT_ALLOWED,
+                subject_ref=holder,
+                principal=principal,
+                act_ref=grant_id,
+            )
 
 
 def list_grants(database: Database, *, entity_id: str, principal: Principal) -> list[Grant]:
@@ -292,3 +348,17 @@ def list_grants(database: Database, *, entity_id: str, principal: Principal) -> 
     with database.entity_write(entity_id) as write:
         authorize(write, Capability.GRANT, principal)
         return write.grants_in_force(datetime.now(UTC))
+
+
+def agents_allowed_here(
+    database: Database, *, entity_id: str, principal: Principal
+) -> list[Connection]:
+    """The connections of each agent allowed in this entity, for someone who may revoke it: what
+    each reported, and the member account it signed in as (ADR-0066 § 6).
+
+    Gated like the grants, because it is the same question with names on it. A read, so no audit
+    row.
+    """
+    with database.entity_write(entity_id) as write:
+        authorize(write, Capability.GRANT, principal)
+        return write.allowed_connections()

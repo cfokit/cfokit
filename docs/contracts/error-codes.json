@@ -4,6 +4,10 @@
     "error": "AccountNotFound"
   },
   {
+    "code": "agent_acts_for_no_member",
+    "error": "AgentActsForNoMember"
+  },
+  {
     "code": "agent_not_allowed",
     "error": "AgentNotAllowed"
   },

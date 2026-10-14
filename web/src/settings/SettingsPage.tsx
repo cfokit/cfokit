@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useApi } from "../api";
 import { ActionBar, Button, Notice } from "../components";
+import { AgentNotices } from "../agents/AgentNotices";
 import { describeAgent, signedInAs, useAgentConnections, when } from "../agents/name";
 import { ConnectClaude } from "../connect/ConnectClaude";
 import { PersonFrame } from "./PersonFrame";
@@ -178,7 +179,7 @@ function useAllowedAgents(companies: Company[]): Allowed {
 
 function Agents({ companies }: { companies: Company[] }) {
   const allowed = useAllowedAgents(companies);
-  const connections = useAgentConnections();
+  const connections = useAgentConnections(companies);
   const navigate = useNavigate();
   if (allowed.state === "loading") {
     return <p className="text-caption text-ink-muted">Checking which agents you allowed…</p>;
@@ -236,6 +237,7 @@ function AgentsSection() {
       <p className="text-body text-ink">
         An agent acts only in the companies you allowed it in. Manage one to allow or revoke it.
       </p>
+      <AgentNotices companies={listing.companies} />
       <Agents companies={listing.companies} />
     </section>
   );
