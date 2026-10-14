@@ -116,6 +116,7 @@ nothing cites these but this repository. They are added when something breaks wi
 | [0070](0070-suspension-is-a-set-of-holds.md) | Suspension is a set of holds, each lifted only by whoever placed it | Proposed |
 | [0071](0071-hosted-backups-are-kept-thirty-days-and-a-restore-replays-deletions.md) | Backups on GCP are kept thirty days in the US, and a restore replays every deletion since its point | Proposed |
 | [0072](0072-inference-usage-is-recorded-per-company-and-read-through-the-api.md) | Inference usage is recorded per company and read through the published API | Proposed |
+| [0073](0073-a-principals-roles-are-a-set-added-and-removed-one-at-a-time.md) | A principal's roles in an entity are a set, added and removed one at a time | Proposed |
 
 ## Deferred — decided in principle, waiting on a need
 
