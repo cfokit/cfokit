@@ -240,16 +240,18 @@ def grant_role(
             # IAM-09's lapse happens without anyone acting, and must never unhold an entity.
             raise NotAuthorized(f"the {role!r} role cannot be granted for a stated period")
         agent = to_principal.startswith("client:")
-        if agent and not write.member_connections(to_principal):
+        grant_id = write.grant_role(
+            principal_id=to_principal, role=role, granted_by=principal.id, lapses_at=lapses_at
+        )
+        # Checked once the grant exists, because a connection is visible in a company only for
+        # an agent allowed there (migration 0023); raising rolls the grant back.
+        if agent and not write.allowed_connections(to_principal):
             # An agent acts with no more than its person holds (`IAM-11`), so one acting for no
             # one here could do nothing with the grant (ADR-0066 § 2).
             raise AgentActsForNoMember(
                 "this agent has not connected for anyone who holds a role in this company; "
                 "allow it after connecting it, signed in as a member"
             )
-        grant_id = write.grant_role(
-            principal_id=to_principal, role=role, granted_by=principal.id, lapses_at=lapses_at
-        )
         write.record_audit(
             request_id=request_id,
             actor=principal.audit_actor,
@@ -359,9 +361,4 @@ def agents_allowed_here(
     """
     with database.entity_write(entity_id) as write:
         authorize(write, Capability.GRANT, principal)
-        allowed = {
-            grant.principal_id
-            for grant in write.grants_in_force(datetime.now(UTC))
-            if grant.principal_id.startswith("client:")
-        }
-        return [found for found in write.member_connections() if found.agent_id in allowed]
+        return write.allowed_connections()

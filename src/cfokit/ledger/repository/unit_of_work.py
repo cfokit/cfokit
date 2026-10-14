@@ -182,9 +182,9 @@ class EntityWrite:
             self._conn, entity_id=self._entity_id, grant_id=grant_id
         )
 
-    def member_connections(self, agent_id: str | None = None) -> list[connections.Connection]:
-        """Connections made for this entity's members (migration 0023)."""
-        return connections.member_connections(
+    def allowed_connections(self, agent_id: str | None = None) -> list[connections.Connection]:
+        """Connections of the agents allowed here, made for its members (migration 0023)."""
+        return connections.allowed_connections(
             self._conn, entity_id=self._entity_id, agent_id=agent_id
         )
 

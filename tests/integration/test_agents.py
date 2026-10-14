@@ -336,3 +336,39 @@ def test_administrators_see_the_account_an_allowed_agent_signed_in_as(
     assert [(found.agent_id, found.acting_for) for found in seen] == [(their_agent.id, them.id)]
     with pytest.raises(NotAuthorized):
         agents_allowed_here(database, entity_id=company, principal=their_agent)
+
+
+def test_someone_holding_no_role_is_refused_the_agents_allowed_in_a_company(
+    database: Database,
+) -> None:
+    company = new_company(database, PERSON)
+    allow(database, company, CLAUDE, "reader")
+    stranger = principal_from_claims(
+        {"sub": f"user:stranger-{uuid.uuid4().hex[:8]}", "azp": WEB_CLIENT_ID}
+    )
+
+    with pytest.raises(NotAuthorized):
+        agents_allowed_here(database, entity_id=company, principal=stranger)
+
+
+def test_row_level_security_shows_a_company_only_the_agents_allowed_in_it(
+    database: Database, app_conn: psycopg.Connection[Any]
+) -> None:
+    """The second layer: under a company's scope the application role reads the connection of
+    an agent allowed there, and not one a member connected without allowing it here."""
+    company = new_company(database, PERSON)
+    them = colleague(database, company)
+    allowed = principal_from_claims({"sub": them.id, "azp": f"a-{uuid.uuid4().hex[:8]}"})
+    unallowed = principal_from_claims({"sub": them.id, "azp": f"u-{uuid.uuid4().hex[:8]}"})
+    connected(database, unallowed)
+    allow(database, company, allowed, "reader", by=them)
+
+    with app_conn.transaction(), app_conn.cursor() as cur:
+        cur.execute("SELECT set_config('cfokit.entity_id', %s, true)", (company,))
+        cur.execute(
+            "SELECT agent_id FROM agent_connection WHERE acting_for = %s ORDER BY agent_id",
+            (them.id,),
+        )
+        seen = [row[0] for row in cur.fetchall()]
+
+    assert seen == [allowed.id]
