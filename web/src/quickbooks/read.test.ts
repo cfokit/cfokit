@@ -222,7 +222,9 @@ describe("refusals", () => {
     const understated = await refusal(bomb);
     expect(understated.code).toBe("import_too_large");
     expect(understated.message).toContain("understated");
-  });
+    // Builds and reads 300 MB twice, which takes about Vitest's five-second default on a loaded
+    // runner; the refusal under test is a size, not a speed.
+  }, 30_000);
 
   test("an archive with too many members is refused", async () => {
     const members = Object.fromEntries(Array.from({ length: 65 }, (_, i) => [`m${i}.txt`, "x"]));
