@@ -163,8 +163,10 @@ any other company the agent or its person reaches. A connection raises nothing: 
 and a notification about it would have no company to belong to and no one to go to but the person
 who made it.
 
-Revoking that agent's grant in that company answers the question and closes it (ADR-0056 § 1).
-Otherwise each recipient dismisses their own. Delivery, and turning the class off, are as for any
+The notice follows the agent's standing in the company, not its grants (ADR-0073): it is raised
+when the agent goes from holding no role there to holding one, and adding a second role raises
+nothing. Removing the agent's last role in force there answers the question and closes it
+(ADR-0056 § 1). Otherwise each recipient dismisses their own. Delivery, and turning the class off, are as for any
 other class (ADR-0052, `PLT-07`).
 
 The agent's page shows a recipient what it shows the person who connected it: what the agent
@@ -217,8 +219,8 @@ there, whom its administrators already know.
 * A unit test holds the web client's ID to the realm and the web bundle.
 * An integration test shows allowing an agent notifying each other principal who can grant in that
   company and not the person who allowed it, nothing raised in any other company, the notification
-  closed by revoking the grant, and the connection record readable to those recipients under that
-  company's scope and to no one else.
+  closed by removing the agent's last role there, and the connection record readable to those
+  recipients under that company's scope and to no one else.
 
 ## Pros and Cons of the Options
 
