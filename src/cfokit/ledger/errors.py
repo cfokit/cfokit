@@ -92,6 +92,21 @@ class AgentActsForNoMember(LedgerError):
     code = "agent_acts_for_no_member"
 
 
+class RoleAlreadyHeld(LedgerError):
+    """Adding a role the principal already holds in force here (ADR-0073).
+
+    A principal's roles are a set, so a second grant of one would change nothing it can do and
+    leave two rows that look like two things. Carries the grant that holds it, so a caller
+    retrying after a lost response has what it asked for.
+    """
+
+    code = "role_already_held"
+
+    def __init__(self, message: str, *, grant_id: str) -> None:
+        super().__init__(message)
+        self.grant_id = grant_id
+
+
 class PeriodClosed(LedgerError):
     """The transaction's period is closed (`LED-11`, ADR-0030).
 

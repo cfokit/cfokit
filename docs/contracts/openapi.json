@@ -1114,6 +1114,18 @@
             "title": "Code",
             "type": "string"
           },
+          "grant_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For `role_already_held`: the grant in force that already holds the role.",
+            "title": "Grant Id"
+          },
           "message": {
             "title": "Message",
             "type": "string"

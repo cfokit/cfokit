@@ -94,7 +94,7 @@ export function AgentNotices({ companies }: { companies: Company[] }) {
               <p>
                 {describeAgent(agent, notice.connection)}
                 {account === null ? "" : `, signed in as ${account},`} was allowed in{" "}
-                {notice.company.name}. Revoke it there if you do not recognize it.
+                {notice.company.name}. Remove it there if you do not recognize it.
               </p>
               <div className="-mx-3 flex flex-wrap gap-2">
                 <Button

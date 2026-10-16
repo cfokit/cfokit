@@ -44,6 +44,7 @@ from cfokit.ledger.errors import (
     PeriodClosed,
     PeriodNotClosed,
     RetainedEarningsUnset,
+    RoleAlreadyHeld,
     TransactionAlreadyPosted,
     TransactionIncomplete,
     TransactionNotFound,
@@ -61,6 +62,8 @@ STATUS_FOR_CODE: dict[str, int] = {
     # 409, not 403: the caller holds the capability, and this particular revocation would
     # leave the entity unheld (`IAM-04`).
     LastOwner.code: HTTPStatus.CONFLICT,
+    # 409: well-formed and permitted, and the role is already held; the body names its grant.
+    RoleAlreadyHeld.code: HTTPStatus.CONFLICT,
     UnknownRole.code: HTTPStatus.UNPROCESSABLE_ENTITY,
     NotAnAgentRole.code: HTTPStatus.UNPROCESSABLE_ENTITY,
     AgentActsForNoMember.code: HTTPStatus.UNPROCESSABLE_ENTITY,

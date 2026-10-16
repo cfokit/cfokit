@@ -144,6 +144,10 @@
     "error": "RetainedEarningsUnset"
   },
   {
+    "code": "role_already_held",
+    "error": "RoleAlreadyHeld"
+  },
+  {
     "code": "rule_not_found",
     "error": "RuleNotFound"
   },

@@ -30,6 +30,7 @@ from cfokit.ledger.service.administration import (
     revoke_grant,
 )
 from cfokit.ledger.service.authentication import WEB_CLIENT_ID, principal_from_claims
+from cfokit.ledger.service.authorization import Capability, authorize
 from cfokit.ledger.service.connections import record_connection
 from cfokit.ledger.service.notifications import open_notifications
 from cfokit.ledger.service.principal import Principal
@@ -41,6 +42,7 @@ PERSON = principal_from_claims({"sub": "user:geoff", "azp": WEB_CLIENT_ID})
 CLAUDE = principal_from_claims({"sub": "user:geoff", "azp": "claude-connector"})
 OTHER_CLIENT = principal_from_claims({"sub": "user:geoff", "azp": "mcp-remote"})
 STRANGERS_AGENT = principal_from_claims({"sub": "user:stranger", "azp": "claude-connector"})
+AGENT_ROLE_NAMES = ("reader", "bookkeeper")
 
 
 def new_company(database: Database, principal: Principal) -> str:
@@ -275,6 +277,12 @@ def colleague(database: Database, company: str) -> Principal:
     return person
 
 
+def allowed_to_record(database: Database, company: str, who: Principal) -> None:
+    """Raises unless `who` may record here now, read as every write reads it."""
+    with database.entity_write(company) as write:
+        authorize(write, Capability.RECORD, who)
+
+
 def notices(database: Database, who: Principal, company: str) -> list[str]:
     return [
         n.subject_ref
@@ -319,6 +327,54 @@ def test_revoking_the_agent_answers_the_notice(database: Database) -> None:
     )
 
     assert notices(database, PERSON, company) == []
+
+
+def test_a_second_role_for_an_allowed_agent_tells_no_one_again(database: Database) -> None:
+    """ADR-0073: the notice follows the agent's standing, not its grants."""
+    company = new_company(database, PERSON)
+    them = colleague(database, company)
+    their_agent = principal_from_claims({"sub": them.id, "azp": f"c-{uuid.uuid4().hex[:8]}"})
+    reading = allow(database, company, their_agent, "reader", by=them)
+    allow(database, company, their_agent, "bookkeeper", by=them)
+
+    assert notices(database, PERSON, company) == [their_agent.id]
+
+    revoke_grant(
+        database, entity_id=company, principal=PERSON, request_id="req-r", grant_id=reading
+    )
+
+    assert notices(database, PERSON, company) == [their_agent.id]
+
+
+def test_removing_an_agents_last_role_answers_the_notice(database: Database) -> None:
+    company = new_company(database, PERSON)
+    them = colleague(database, company)
+    their_agent = principal_from_claims({"sub": them.id, "azp": f"c-{uuid.uuid4().hex[:8]}"})
+    roles = [allow(database, company, their_agent, role, by=them) for role in AGENT_ROLE_NAMES]
+
+    for grant_id in roles:
+        revoke_grant(
+            database, entity_id=company, principal=PERSON, request_id="req-r", grant_id=grant_id
+        )
+
+    assert notices(database, PERSON, company) == []
+
+
+def test_a_role_change_reaches_an_agent_on_its_next_call(database: Database) -> None:
+    """`IAM-15` and ADR-0073: roles are read on every call, so the same token, unchanged,
+    meets the new roles."""
+    company = new_company(database, PERSON)
+    reading = allow(database, company, CLAUDE, "reader")
+
+    with pytest.raises(NotAuthorized):
+        allowed_to_record(database, company, CLAUDE)
+
+    allow(database, company, CLAUDE, "bookkeeper")
+    revoke_grant(
+        database, entity_id=company, principal=PERSON, request_id="req-r", grant_id=reading
+    )
+
+    allowed_to_record(database, company, CLAUDE)
 
 
 def test_administrators_see_the_account_an_allowed_agent_signed_in_as(

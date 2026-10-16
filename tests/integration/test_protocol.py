@@ -279,6 +279,35 @@ def test_rest_reverses_a_posted_transaction(
     assert read.json()["reverses_id"] == original
 
 
+def test_rest_refuses_a_role_already_held_and_names_its_grant(client: TestClient) -> None:
+    """ADR-0073: a principal's roles are a set. The refusal carries the grant that holds the
+    role, so a caller retrying after a lost response has what it asked for."""
+    request = {"X-Request-Id": f"req-{uuid.uuid4().hex[:8]}"}
+    created = client.post(
+        "/entities",
+        json={
+            "slug": f"roles-{uuid.uuid4().hex[:12]}",
+            "name": "Acme",
+            "accounting_basis": "accrual",
+            "fiscal_year_end_month": 12,
+            "fiscal_year_end_day": 31,
+            "functional_currency": "USD",
+            "time_zone": "UTC",
+        },
+        headers=request,
+    ).json()
+
+    response = client.post(
+        f"/entities/{created['entity_id']}/grants",
+        json={"principal_id": PERSON.id, "role": "owner"},
+        headers=request,
+    )
+
+    assert response.status_code == 409
+    assert response.json()["code"] == "role_already_held"
+    assert response.json()["grant_id"] == created["owner_grant_id"]
+
+
 def test_rest_refuses_an_entity_the_caller_holds_nothing_in(
     client: TestClient, books: tuple[str, str, str], two_entities: tuple[str, str]
 ) -> None:
