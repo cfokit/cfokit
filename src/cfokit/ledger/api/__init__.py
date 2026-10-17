@@ -81,7 +81,7 @@ from cfokit.ledger.api.problems import status_for
 from cfokit.ledger.config import Settings
 from cfokit.ledger.engine import Entry, Posting
 from cfokit.ledger.engine.periods import Period
-from cfokit.ledger.errors import LedgerError
+from cfokit.ledger.errors import LedgerError, RoleAlreadyHeld
 from cfokit.ledger.presentation import (
     ComparativeLine,
     PresentedReconciliation,
@@ -300,9 +300,10 @@ def create_app(settings: Settings, authenticator: Authenticator | None = None) -
         The message is not contractual and may be reworded; the code is what callers branch
         on, and it is identical on the MCP surface for the same condition.
         """
-        return JSONResponse(
-            status_code=status_for(exc), content={"code": exc.code, "message": exc.message}
-        )
+        content: dict[str, str] = {"code": exc.code, "message": exc.message}
+        if isinstance(exc, RoleAlreadyHeld):
+            content["grant_id"] = exc.grant_id
+        return JSONResponse(status_code=status_for(exc), content=content)
 
     @app.get(
         "/.well-known/oauth-protected-resource",

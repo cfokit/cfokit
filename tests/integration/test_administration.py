@@ -18,13 +18,13 @@ Four requirements carry this file:
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import psycopg
 import pytest
 
-from cfokit.ledger.errors import LastOwner, NotAuthorized, UnknownRole
+from cfokit.ledger.errors import LastOwner, NotAuthorized, RoleAlreadyHeld, UnknownRole
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.administration import create_entity, grant_role, revoke_grant
 from cfokit.ledger.service.authorization import Capability
@@ -453,3 +453,93 @@ def test_granting_a_role_the_catalog_does_not_define_is_refused(
         )
 
     assert caught.value.code == "unknown_role"
+
+
+# --- A principal's roles are a set (IAM-01, ADR-0073) -------------------------------------
+
+
+def privileges(database: Database, entity_id: str, principal_id: str) -> frozenset[str]:
+    with database.entity_write(entity_id) as write:
+        return write.privileges_in_force(principal_id, datetime.now(UTC))
+
+
+def test_a_second_role_adds_nothing_the_first_already_carries(database: Database) -> None:
+    """`IAM-01`: "its capability is the union of them". Reading beside owning is owning."""
+    admin = person(f"user:admin-{uuid.uuid4().hex[:8]}")
+    entity_id = new_entity(database, admin)
+    owning = privileges(database, entity_id, admin.id)
+    reader = grant_role(
+        database,
+        entity_id=entity_id,
+        principal=admin,
+        request_id="req-test",
+        to_principal=admin.id,
+        role="reader",
+    )
+
+    assert privileges(database, entity_id, admin.id) == owning
+
+    revoke_grant(
+        database, entity_id=entity_id, principal=admin, request_id="req-test", grant_id=reader
+    )
+
+    assert privileges(database, entity_id, admin.id) == owning
+
+
+def test_a_role_already_held_is_refused_and_named(database: Database) -> None:
+    admin = person(f"user:admin-{uuid.uuid4().hex[:8]}")
+    entity_id = new_entity(database, admin)
+    them = f"user:them-{uuid.uuid4().hex[:8]}"
+
+    def add() -> str:
+        return grant_role(
+            database,
+            entity_id=entity_id,
+            principal=admin,
+            request_id="req-test",
+            to_principal=them,
+            role="bookkeeper",
+        )
+
+    held = add()
+    with pytest.raises(RoleAlreadyHeld) as caught:
+        add()
+    assert caught.value.code == "role_already_held"
+    assert caught.value.grant_id == held
+
+    revoke_grant(
+        database, entity_id=entity_id, principal=admin, request_id="req-test", grant_id=held
+    )
+    assert add() != held
+
+
+def test_a_role_that_has_lapsed_can_be_added_again(
+    database: Database, owner_conn: psycopg.Connection[Any]
+) -> None:
+    admin = person(f"user:admin-{uuid.uuid4().hex[:8]}")
+    entity_id = new_entity(database, admin)
+    them = f"user:them-{uuid.uuid4().hex[:8]}"
+    with owner_conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO entity_grant"
+            " (entity_id, principal_id, role, granted_by, granted_at, lapses_at)"
+            " VALUES (%s, %s, 'reader', %s, %s, %s)",
+            (
+                entity_id,
+                them,
+                admin.id,
+                datetime.now(UTC) - timedelta(days=2),
+                datetime.now(UTC) - timedelta(days=1),
+            ),
+        )
+
+    grant_role(
+        database,
+        entity_id=entity_id,
+        principal=admin,
+        request_id="req-test",
+        to_principal=them,
+        role="reader",
+    )
+
+    assert "read" in privileges(database, entity_id, them)

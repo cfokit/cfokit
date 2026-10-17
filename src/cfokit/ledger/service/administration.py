@@ -31,6 +31,7 @@ from cfokit.ledger.errors import (
     LastOwner,
     NotAnAgentRole,
     NotAuthorized,
+    RoleAlreadyHeld,
     UnknownRole,
 )
 from cfokit.ledger.repository.administration import Grant
@@ -240,6 +241,14 @@ def grant_role(
             # IAM-09's lapse happens without anyone acting, and must never unhold an entity.
             raise NotAuthorized(f"the {role!r} role cannot be granted for a stated period")
         agent = to_principal.startswith("client:")
+        in_force = write.grants_in_force(datetime.now(UTC))
+        for held in in_force:
+            if held.principal_id == to_principal and held.role == role:
+                # A principal's roles are a set (ADR-0073): a second grant of one adds nothing.
+                raise RoleAlreadyHeld(
+                    f"{to_principal} already holds {role!r} here", grant_id=held.id
+                )
+        first_role = not any(held.principal_id == to_principal for held in in_force)
         grant_id = write.grant_role(
             principal_id=to_principal, role=role, granted_by=principal.id, lapses_at=lapses_at
         )
@@ -262,7 +271,9 @@ def grant_role(
             # the trail — IAM-13 asks for exactly this.
             detail={"to": to_principal, "role": role},
         )
-        if agent:
+        if agent and first_role:
+            # The notice follows the agent's standing, not its grants (ADR-0073): a second role
+            # for an agent already allowed here tells no one anything new.
             _tell_other_administrators(write, agent=to_principal, allowed_by=principal.id)
     return grant_id
 
@@ -327,8 +338,15 @@ def revoke_grant(
             subject_id=grant_id,
             detail=None,
         )
-        if holder is not None and holder.startswith("client:"):
-            # Revoking the agent here answers the notice that it was allowed (ADR-0066 § 6).
+        if (
+            holder is not None
+            and holder.startswith("client:")
+            and not any(
+                held.principal_id == holder for held in write.grants_in_force(datetime.now(UTC))
+            )
+        ):
+            # Removing the agent's last role here answers the notice that it was allowed
+            # (ADR-0066 § 6, ADR-0073).
             answer(
                 write,
                 notification_class=AGENT_ALLOWED,

@@ -135,7 +135,7 @@ test("each company shows where the agent stands, and what the person can do ther
   const [acme, harbor, coop] = within(
     await screen.findByRole("list", { name: "Companies" }),
   ).getAllByRole("listitem") as [HTMLElement, HTMLElement, HTMLElement];
-  await within(acme).findByRole("button", { name: "Revoke" });
+  await within(acme).findByRole("button", { name: "Remove" });
   await within(harbor).findByRole("button", { name: "Allow to keep the books" });
   await within(coop).findByText(/Only someone who administers this company/);
 
@@ -160,7 +160,7 @@ test("allowing grants the agent the chosen role in that company", async () => {
   );
 });
 
-test("revoking ends that grant and no other", async () => {
+test("removing ends that grant and no other", async () => {
   replies["GET /entities"] = { status: 200, body: { entities: [company("e-1", "Acme LLC")] } };
   replies["GET /entities/e-1/grants"] = {
     status: 200,
@@ -171,12 +171,58 @@ test("revoking ends that grant and no other", async () => {
   replies["DELETE /entities/e-1/grants/g-8"] = { status: 204 };
   render(<AgentPage agent={AGENT} />);
 
-  fireEvent.click(await screen.findByRole("button", { name: "Revoke" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Remove" }));
 
   await waitFor(() =>
     expect(sent.filter((call) => call.method === "DELETE").map((call) => call.path)).toEqual([
       "/entities/e-1/grants/g-8",
     ]),
+  );
+});
+
+test("an agent holding both roles shows each, removable, and offers neither again", async () => {
+  replies["GET /entities"] = { status: 200, body: { entities: [company("e-1", "Acme LLC")] } };
+  replies["GET /entities/e-1/grants"] = {
+    status: 200,
+    body: { grants: [grant(AGENT, "reader", "g-1"), grant(AGENT, "bookkeeper", "g-2")] },
+  };
+  replies["DELETE /entities/e-1/grants/g-1"] = { status: 204 };
+  const { container } = render(<AgentPage agent={AGENT} />);
+
+  const roles = within(await screen.findByRole("list", { name: "Roles in Acme LLC" }));
+  const [reading, keeping] = roles.getAllByRole("listitem") as [HTMLElement, HTMLElement];
+  expect(within(reading).getByText(/Reads the books/)).toBeTruthy();
+  expect(within(keeping).getByText(/Keeps the books/)).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /^Also allow/ })).toBeNull();
+
+  fireEvent.click(within(reading).getByRole("button", { name: "Remove" }));
+  await waitFor(() =>
+    expect(sent.filter((call) => call.method === "DELETE").map((call) => call.path)).toEqual([
+      "/entities/e-1/grants/g-1",
+    ]),
+  );
+
+  const result = await axe.run(container, { rules: { "color-contrast": { enabled: false } } });
+  expect(result.violations.map((violation) => violation.id)).toEqual([]);
+});
+
+test("an agent holding one role is offered only the other", async () => {
+  replies["GET /entities"] = { status: 200, body: { entities: [company("e-1", "Acme LLC")] } };
+  replies["GET /entities/e-1/grants"] = {
+    status: 200,
+    body: { grants: [grant(AGENT, "reader", "g-1")] },
+  };
+  render(<AgentPage agent={AGENT} />);
+
+  fireEvent.click(await screen.findByRole("button", { name: "Also allow to keep the books" }));
+
+  expect(screen.queryByRole("button", { name: "Also allow to read only" })).toBeNull();
+  await waitFor(() =>
+    expect(sent).toContainEqual({
+      method: "POST",
+      path: "/entities/e-1/grants",
+      body: { principal_id: AGENT, role: "bookkeeper" },
+    }),
   );
 });
 

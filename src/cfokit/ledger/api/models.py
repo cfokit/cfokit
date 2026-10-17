@@ -130,6 +130,10 @@ class ErrorResponse(BaseModel):
 
     code: str
     message: str
+    grant_id: str | None = Field(
+        default=None,
+        description="For `role_already_held`: the grant in force that already holds the role.",
+    )
 
 
 class ConnectionResponse(BaseModel):

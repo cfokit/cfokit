@@ -22,11 +22,17 @@ export const AGENT_ROLES: Record<string, string> = {
   bookkeeper: "Keeps the books: reads, records and posts",
 };
 
+/** How each role is offered once the agent holds another (ADR-0073), in the order shown. */
+const ALSO_ALLOW: [role: string, label: string][] = [
+  ["bookkeeper", "Also allow to keep the books"],
+  ["reader", "Also allow to read only"],
+];
+
 const NO_COMPANIES: Company[] = [];
 
 type Standing =
   | { state: "loading" }
-  | { state: "allowed"; grant: Grant }
+  | { state: "allowed"; grants: Grant[] }
   | { state: "not-allowed" }
   | { state: "cannot-grant" }
   | { state: "failed"; message: string };
@@ -35,7 +41,10 @@ function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-/** Where this agent stands in one company, and the person's one action on it. */
+/**
+ * Where this agent stands in one company: every role it holds there, each removable, and the
+ * roles it could be given besides (ADR-0073).
+ */
 function CompanyRow({ company, agent }: { company: Company; agent: string }) {
   const api = useApi();
   const [standing, setStanding] = useState<Standing>({ state: "loading" });
@@ -52,8 +61,8 @@ function CompanyRow({ company, agent }: { company: Company; agent: string }) {
       .get<{ grants: Grant[] }>(`/entities/${company.id}/grants`)
       .then((answer) => {
         if (!current) return;
-        const grant = answer.grants.find((held) => held.principal_id === agent);
-        setStanding(grant === undefined ? { state: "not-allowed" } : { state: "allowed", grant });
+        const grants = answer.grants.filter((held) => held.principal_id === agent);
+        setStanding(grants.length === 0 ? { state: "not-allowed" } : { state: "allowed", grants });
       })
       .catch((error: unknown) => {
         if (!current) return;
@@ -85,7 +94,7 @@ function CompanyRow({ company, agent }: { company: Company; agent: string }) {
       await api.post(`/entities/${company.id}/grants`, { principal_id: agent, role });
       setJustAllowed(true);
     });
-  const revoke = (grant: Grant) =>
+  const remove = (grant: Grant) =>
     act(async () => {
       await api.delete(`/entities/${company.id}/grants/${grant.grant_id}`);
       setJustAllowed(false);
@@ -96,13 +105,36 @@ function CompanyRow({ company, agent }: { company: Company; agent: string }) {
       <span className="text-title text-ink">{company.name}</span>
       {standing.state === "loading" && <p className="text-caption text-ink-muted">Checking…</p>}
       {standing.state === "allowed" && (
-        <div className="flex flex-col gap-2 tablet:flex-row tablet:items-center tablet:justify-between">
-          <p className="text-body text-ink">
-            Allowed. {AGENT_ROLES[standing.grant.role] ?? standing.grant.role}.
-          </p>
-          <Button variant="destructive" disabled={busy} onClick={() => void revoke(standing.grant)}>
-            Revoke
-          </Button>
+        <div className="flex flex-col gap-2">
+          <ul aria-label={`Roles in ${company.name}`} className="flex flex-col gap-2">
+            {standing.grants.map((grant) => (
+              <li
+                key={grant.grant_id}
+                className="flex flex-col gap-2 tablet:flex-row tablet:items-center tablet:justify-between"
+              >
+                <p className="text-body text-ink">
+                  Allowed. {AGENT_ROLES[grant.role] ?? grant.role}.
+                </p>
+                <Button variant="destructive" disabled={busy} onClick={() => void remove(grant)}>
+                  Remove
+                </Button>
+              </li>
+            ))}
+          </ul>
+          <div className="flex flex-col gap-2 tablet:flex-row">
+            {ALSO_ALLOW.filter(([role]) => !standing.grants.some((g) => g.role === role)).map(
+              ([role, label]) => (
+                <Button
+                  key={role}
+                  variant="secondary"
+                  disabled={busy}
+                  onClick={() => void allow(role)}
+                >
+                  {label}
+                </Button>
+              ),
+            )}
+          </div>
         </div>
       )}
       {standing.state === "allowed" && justAllowed && (
