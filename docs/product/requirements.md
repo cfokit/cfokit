@@ -203,12 +203,12 @@ Getting transactions in, deciding where they belong, and agreeing that the books
 | **BKP-19** | Where a transaction was derived from something outside the books — a feed record, an uploaded statement, a document — it records what it came from, and that link survives for the life of the transaction. | Must | Approved |
 | **BKP-20** | Content the organization did not author is marked as such when it enters the system, and the marking travels with it for as long as it is retained. It is a property of the stored record, never a judgment made when the content is read. | Must | Approved |
 | **BKP-21** | An item the system cannot process is retained along with the reason, and every ingest run records what it was expected to cover and what it actually delivered. Nothing that entered the system leaves it without a record of what became of it, and a source that silently delivers nothing is distinguishable from one that delivers an empty result. | Must | Approved |
-| **BKP-22** | What the bookkeeping agent learns about how the entity's business works belongs to the entity. It is kept as a thin summary the agent works from and the decision records the summary rests on, and every part of the summary cites its records. The agent acts on nothing about the business beyond the books, the stored rules, and this summary. | Must | Approved |
-| **BKP-23** | The operating procedures are the same whichever agent keeps the books. CFOKit's own agent and a person's own agent read them through the same interface and follow them alike. What a person's own agent knows about the person stays theirs; what concerns the entity's books belongs in the procedures. | Must | Approved |
-| **BKP-24** | Anyone who can read the entity can read its operating procedures as structured documentation a person can follow without an agent. They are part of the complete export, in a form another agent or a different model can take up without relearning the business. An owner can delete them in whole or in part, and the summary never cites a deleted record. | Must | Approved |
-| **BKP-25** | At an interval the entity sets, by default each closed period, the agent reviews the period's work — corrections, reversals, questions it had to ask, items it could not resolve — and proposes changes to the operating procedures. Every review leaves a record, including one that proposes nothing. | Must | Approved |
-| **BKP-26** | Every change to the summary is made through a decision record stating the evidence from the period that prompted it, what it changes, and who approved it. The summary can be reproduced as it stood at any earlier date. | Must | Approved |
-| **BKP-27** | No change to the operating procedures takes effect without a person's approval. A review's proposals reach the person together, in one notification, and a review proposing nothing reaches no one. | Must | Approved |
+| **BKP-22** | What the bookkeeping agent learns about how the entity's business works belongs to the entity. It is kept as a thin summary the agent works from and the decision records the summary rests on, and every part of the summary cites its records. The agent acts on nothing about the business beyond the books, the stored rules, and this summary. | Must | Proposed |
+| **BKP-23** | The operating procedures are the same whichever agent keeps the books. CFOKit's own agent and a person's own agent read them through the same interface and follow them alike. What a person's own agent knows about the person stays theirs; what concerns the entity's books belongs in the procedures. | Must | Proposed |
+| **BKP-24** | Anyone who can read the entity can read its operating procedures as structured documentation a person can follow without an agent. They are part of the complete export, in a form another agent or a different model can take up without relearning the business. An owner can remove any part of them; removal is itself a recorded change, and what was removed can still be reproduced as it stood. Only deleting the entity destroys them. | Must | Proposed |
+| **BKP-25** | At an interval the entity sets, by default each closed period, the agent reviews the period's work — corrections, reversals, questions it had to ask, items it could not resolve — and proposes changes to the operating procedures. Every review leaves a record, including one that proposes nothing. | Must | Proposed |
+| **BKP-26** | Every change to the summary is made through a decision record stating the evidence from the period that prompted it, what it changes, and who approved it. The summary can be reproduced as it stood at any earlier date. | Must | Proposed |
+| **BKP-27** | No change to the operating procedures takes effect without a person's approval. A review's proposals reach the person together, in one notification, and a review proposing nothing reaches no one. | Must | Proposed |
 
 **Acceptance, BKP-21.** A feed that skips a period is detected against the coverage it was
 expected to supply, rather than inferred from the absence of a batch.
@@ -928,8 +928,10 @@ and SOC2-33 — are retired rather than reused, so the numbering carries gaps.
 
 ## 9. Open issues
 
-Business decisions this document is waiting on. **None are outstanding.** Every requirement below
-is `Approved` or `Deferred` against a stated trigger, and nothing here waits on a decision.
+Business decisions this document is waiting on.
+
+* **The bookkeeping agent's knowledge of the business** (`BKP-22`–`BKP-27`). Agreed in intent, and
+  being worked out with the agent's design in [`bookkeeper-agent.md`](bookkeeper-agent.md).
 
 A question earns a place in this section only if it is a business decision. A design question
 never blocks a business requirement, and an operating commitment is not a requirement at all —
