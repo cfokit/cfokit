@@ -38,25 +38,58 @@ the experience they are measured against.
 
 ## What it knows about the business
 
-What the agent learns about how the company works belongs to the company (`BKP-22`). It is kept
-in the shape this repository keeps its own rules: a **thin summary** the agent works from at
-runtime, and the **decision records** each part of the summary rests on. Together they are the
-company's standard operating procedures — readable by a person without the agent, exported with
-the books, and deletable by an owner (`BKP-24`).
+The bookkeeping skill is the same for every company: versioned, shipped, and a financial control
+in its own right (`SOC1-34`). What the agent learns about how one company works extends that skill
+for that company alone, and belongs to the company (`BKP-22`). The extension is kept in the shape
+this repository keeps its own rules: a **thin summary** the agent works from at runtime, and the
+**decision records** each part of the summary rests on — as a skill keeps a short body and loads
+its reference files when it needs them. Together they are the company's operating procedures:
+readable by a person without the agent, and exported with the books (`BKP-24`).
 
-The procedures are the same whichever agent keeps the books (`BKP-23`). A person's own Claude
-keeps its general knowledge of the person; what concerns the company's books goes into the
-procedures, so switching agent or model does not start the learning over.
+* **The skill prevails.** The procedures add to how the business is handled; they never relax what
+  the skill requires or the ledger enforces (`BKP-28`).
+* **The server supplies them.** The plugin is the same for everyone and the company is chosen in the
+  conversation, so the procedures reach the agent through the tool contract once it is. That is
+  what makes them the same whichever agent keeps the books (`BKP-23`). A person's own Claude keeps
+  its general knowledge of the person; what concerns the company's books goes into the procedures,
+  so switching agent or model does not start the learning over.
+* **They are version-controlled documents.** Removing a statement is a revision like any other, and
+  the summary can be reproduced as it stood on any date. Every entry records the version in force
+  (`BKP-26`). Markdown files with their history are the natural form, and a candidate for carrying
+  the knowledge to another model.
+* **Approval turns data into instruction.** The procedures are learned from conversations and feed
+  data the company did not author. Until a person approves a change, the agent treats it as data
+  (`BKP-27`).
 
 **They improve by a continuous-improvement cycle**, run each closed period by default (`BKP-25`):
 
-1. **Check** — review the period's work: corrections, reversals, questions the agent had to ask,
-   items it could not resolve.
+1. **Check** — review the period's measures: corrections, reversals, questions the agent had to
+   ask, items it could not resolve, rules overridden, reconciliation differences (`SOC1-37`).
 2. **Plan** — propose changes to the procedures, each as a decision record carrying the evidence
    that prompted it (`BKP-26`).
 3. **Approve** — a person approves; nothing changes without one, and a period's proposals reach
    them together, once. A period with nothing to propose reaches no one (`BKP-27`).
 4. **Act** — the approved records update the summary, and the next period runs on it.
+
+## What an examiner sees
+
+The skill, the procedures and their decision records together are what a SOC 1 examiner reviews
+for how transactions come to be categorized. The report covers CFOKit as the service organization,
+so the two halves fall differently:
+
+* **CFOKit's control is the process** — how procedures are learned, reviewed, approved, versioned,
+  and kept for every company. An examiner tests that it operated, by sampling across companies.
+* **Each company's approval is the company's control** — a complementary user entity control
+  (`CUEC-6`). A company's own auditor may read its procedures; CFOKit's examiner tests that the
+  approval happened.
+
+**Evidence that it works** comes from the same measures the cycle reviews (`SOC1-37`), attributed
+to the skill, model and procedure versions in force, so a change's effect is visible on either side
+of it. The review is management's monitoring control, and its record each period — including a
+period that proposes nothing — is the evidence that monitoring operated (`BKP-25`). The rest is
+already required: what an approver was shown (`SOC1-05`), an entry explainable without re-running a
+model (`SOC1-06`), exceptions and their dispositions (`SOC1-32`), and the evidence for a period
+(`PLT-18`).
 
 ## Designing a scenario
 
@@ -172,5 +205,7 @@ that no requirement states.
 * **The procedures' format.** Whether an established convention for standard operating procedures
   fits, and what form carries the business's knowledge to another agent or model. The exported,
   human-readable procedures serve until a standard for that emerges.
+* **Erasing from the procedures.** Whether anything written in by mistake — personal data, another
+  party's information — must be erased from every version rather than revised away.
 * **A lesson and a rule.** Whether a lesson from the review cycle becomes a proposed rule
   (`BKP-09`), guidance in the procedures, or either.
