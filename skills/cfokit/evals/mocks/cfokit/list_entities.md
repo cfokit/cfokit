@@ -1,0 +1,1 @@
+{"ok": true, "entities": [{"id": "6f1c2a0e-3b7d-4c11-9a52-8e4d2f0b7c31", "slug": "acme-llc", "name": "Acme LLC", "accounting_basis": "accrual", "fiscal_year_end_month": 12, "fiscal_year_end_day": 31, "functional_currency": "USD", "time_zone": "America/New_York"}]}

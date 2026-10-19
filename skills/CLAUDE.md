@@ -88,7 +88,9 @@ inside the plugin — so they ship with it, and a merge releases them too. A cas
 CFOKit tools the agent calls, in what order and with what inputs, never on what it says. The
 tools are mocked from the committed tool descriptions and refusal codes, so a mock answers only
 what the ledger can; a mock the contract cannot produce makes an eval pass that should fail. Each
-case pins its model. (ADR-0036)
+case pins its model. `evals/mocks/cfokit/_tools.json` is the published tool list, generated with
+the contracts by `uv run task generate-contracts` and diffed by gate 5; it is never edited by
+hand. (ADR-0036)
 
 ## Review
 

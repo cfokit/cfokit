@@ -39,7 +39,14 @@ HOST: list[tuple[str, list[str], Path]] = [
     ),
     (
         "Gate 5: published interfaces unchanged",
-        ["git", "diff", "--exit-code", "--", "docs/contracts/"],
+        [
+            "git",
+            "diff",
+            "--exit-code",
+            "--",
+            "docs/contracts/",
+            "skills/cfokit/evals/mocks/cfokit/_tools.json",
+        ],
         REPO_ROOT,
     ),
     ("unit and documentation tests", [sys.executable, "-m", "pytest"], REPO_ROOT),
