@@ -134,8 +134,8 @@ parameter through which it could learn, and the decision index already lists thi
 unfixed conflict. The bookkeeper skill's "you do not decide accounting policy" and its
 untrusted-content rule are both prose in a prompt, and hold only as far as a model follows
 them. Layer 4
-evals assert on the records a turn leaves behind — that it drafted rather than posted, asked
-rather than guessed — which is evidence about behavior and not a guarantee of it. The vision
+evals assert on the calls a turn makes — that it drafted rather than posted, asked rather than
+guessed — which is evidence about behavior and not a guarantee of it. The vision
 already grades these two kinds of guardrail against each other and says only one is
 trustworthy; this record does not upgrade the weaker one.
 

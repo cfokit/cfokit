@@ -41,8 +41,8 @@ what takes the place of that.
   disabled.
 * ADR-0009 makes both adapters thin over one service layer, so most behavior is reachable without a
   protocol or a model.
-* An agent's turn leaves records rather than prose, so its behavior can be asserted against those
-  records rather than judged.
+* An agent acts on the books only through calls to the published tool surface, so its behavior can
+  be asserted against those calls rather than judged.
 * A contributor runs the full suite from a clean checkout with no credentials and no accounts
   (`NFR-21`).
 
@@ -101,29 +101,44 @@ Evals answer a question the layers below cannot: whether the tool surface is goo
 to use correctly. That is a property of the descriptions and the capability model, not of the
 service.
 
-**Evals assert on records, never on prose.** What an agent's turn leaves behind is a set of records:
-the transaction and whether it is draft or posted, the postings under it and the accounts they hit,
-any reversal link, the audit row, and the decision record of ADR-0033. Every one is directly
-assertable, and together they carry the trajectory as well as the result.
+**Evals assert on what the agent did, never on what it said.** A turn's effect on the books is the
+calls it made to the published tool surface: which tools, in what order, with what inputs. Each is
+directly assertable, and together they carry the trajectory as well as the result. What the ledger
+does with a call — the transaction, its postings, the audit row, the decision record of ADR-0033 —
+is proven deterministically at layers 1 to 3, and an eval does not prove it again.
 
-**Not the trial balance.** That is a report (`RPT-09`), it is derived, and it is an aggregate — two
-materially different behaviors can produce an identical one, such as drafting then posting versus
-posting directly, or a posting plus a reversal that nets out. Asserting on it would be weaker than
-asserting on the records, and would couple a behavior eval to the reporting layer so that a
-reporting defect failed an agent eval. Its place is layer 1, where "it ties" is an invariant, and
-`EXP-01`, where it verifies an export.
-
-So the questions worth asking are all record questions:
+So the questions worth asking are all questions about calls:
 
 - Did it draft rather than post directly?
 - Did it stop and ask when it met a closed period, rather than working around it (ADR-0030)?
 - Given a document carrying an embedded instruction, did it post anything (`PLT-23`)?
 - What did it actually call, and in what order?
 
-LLM-as-judge is permitted only where no assertion on the records is possible, which for this product
-should be rare. General guidance puts deterministic checks at 60–70% of an eval surface; a ledger
-should sit well above that, and a judge appearing where a record assertion was available is a design
-smell.
+**Not the trial balance, and not the prose.** A trial balance is a derived aggregate: drafting then
+posting and posting directly produce an identical one, as do a posting plus a reversal that nets
+out. Its place is layer 1, where "it ties" is an invariant, and `EXP-01`, where it verifies an
+export. Prose is what a judge reads, and LLM-as-judge is permitted only where no assertion on the
+calls is possible, which for this product should be rare. General guidance puts deterministic checks
+at 60–70% of an eval surface; a ledger should sit well above that, and a judge appearing where a call
+assertion was available is a design smell.
+
+**`claude plugin eval` runs them.** It runs each case against the plugin and again without it, and
+reports the difference. The difference is the question: not whether the model did well, but whether
+the skill changed the outcome.
+
+- **Cases live in `skills/cfokit/evals/`.** The harness reads cases only from inside the plugin, so
+  they ship with it.
+- **The tool surface is mocked.** A case answers the CFOKit tools it needs from mocks written from
+  the committed tool descriptions and refusal codes (ADR-0015). A run needs no stack, no issuer and
+  no CFOKit credential — only the contributor's own Claude sign-in.
+- **Graders are deterministic** — a tool called or not, calls in order, inputs matching. A judge
+  needs the justification above.
+- **A case pins its model** (ADR-0033, `SOC1-35`).
+- **`uv run task eval` runs the suite**, under a cost ceiling. Neither `uv run task check` nor CI
+  calls it.
+
+The harness is a tool, not the layer. Where it cannot express a case the layer needs, it is replaced,
+and the layer's rules stand.
 
 ### 5. The rules that make the layers hold
 
@@ -154,8 +169,9 @@ smell.
   agreement with another implementation, which is the stronger claim and the one `NFR-01` wants.
 * Good, because most of the suite sits at layer 1, which ADR-0009's thin adapters make possible, and
   runs in seconds with no infrastructure.
-* Good, because the provenance records required for other reasons turn out to be the eval harness, so
-  layer 4 costs less than it would in a product whose output is prose.
+* Good, because a turn's effect is its tool calls, which the harness records, so layer 4 needs no
+  judge and costs less than it would in a product whose output is prose.
+* Good, because evals run with no stack and no CFOKit credential, against the published contract.
 * Bad, because a conformance corpus is hand-built and grows slowly. It covers what someone took the
   trouble to encode, where a differential oracle covers whatever you throw at it.
 * Bad, because deferring the oracle means the arithmetic is unchecked against an independent
@@ -170,8 +186,8 @@ Layer 1 runs inside the ordinary suite and gates every commit, as do the schema 
 layer 3. Layer 2 carries `NFR-01` while the oracle stays deferred, which is why every case cites
 its published source: a case without one is a unit test that has been misfiled. The protocol half
 of layer 3 drives both adapters as a client does, and CI gate 5 diffs what they publish against
-the committed copies (ADR-0015). Layer 4 sits behind its own pytest marker, alongside the `oracle`
-marker, so it cannot accidentally join the per-commit gate.
+the committed copies (ADR-0015). Layer 4 runs only through `uv run task eval`, which neither
+`uv run task check` nor CI calls, so it cannot accidentally join the per-commit gate.
 
 **Provenance is gated at layer 2 and reviewed everywhere else.** `tests/test_conformance_corpus.py`
 reads every case in the corpus and refuses one whose manifest names no published source, no
@@ -181,7 +197,7 @@ where the control has to be mechanical. It is parameterised over the fixture dir
 than over a named case, or it would hold only for the cases that exist today, and it sits outside
 the integration tier so it gates every commit rather than only the runs with a stack up. Elsewhere it
 is review: nothing distinguishes an invariant derived from `LED-03` from one derived by running the
-code, and nothing detects a judge used where a state assertion was available. A review rule is weak
+code, and nothing detects a judge used where a call assertion was available. A review rule is weak
 here, because the reviewer and the author are the same process. Treat every ungated rule in this
 section as a statement of what the gated ones are for, rather than as a control of equal standing.
 
@@ -254,18 +270,19 @@ The rule this section's provenance rule replaces, and the one that looks like th
   every question worth asking is answerable by reading them, and a judge introduces non-determinism
   into the check as well as into the thing being checked.
 * Bad, because a judge is itself a model that can be wrong in the same direction as the agent.
+* Bad, because a mock can drift from the contract it stands in for, and an eval against a mock that
+  answers what the ledger never would passes when it should fail.
+* Neutral, because the cases ship inside the plugin, to every machine that installs it.
 
 ## More Information
 
 **Follow-on obligations.**
 
-- An `eval` pytest marker, configured like the existing `oracle` marker and excluded from the default
-  run.
 - A conformance corpus location, with each case citing the published source of its expected answer.
 - Evals for the acceptance criteria already written as such: `PLT-23`'s embedded-instruction case and
   ADR-0030's closed-period refusal are eval cases, not unit tests.
 - A regression case for every real failure, filed at the layer that should have caught it.
-- Eval cases for the bookkeeper skill's decision points, asserting on records as this record
+- Eval cases for the bookkeeper skill's decision points, asserting on calls as this record
   requires: that `open_import` precedes `import_entries` and `reconcile_import`, that a
   refused import is abandoned rather than forced, that skipped rows are reported rather than
   repaired. Those are the places the
@@ -279,7 +296,7 @@ removed, and turning it on is the work ADR-0010 already describes.
 
 Related: [ADR-0010](0010-beancount-as-test-oracle.md) holds the oracle and now its activation
 trigger; ADR-0008 makes the engine pure enough for layer 1; ADR-0015 holds the contract half of layer
-3; ADR-0033 supplies layer 4's assertions.
+3 and the committed tool descriptions layer 4's mocks are written from.
 
 ## Revisit when
 
@@ -291,9 +308,5 @@ trigger; ADR-0008 makes the engine pure enough for layer 1; ADR-0015 holds the c
   needs changing.
 * A permissively licensed, independently derived double-entry implementation of comparable maturity
   appears, which would lower the cost of the deferred oracle.
-* A harness becomes generally available that runs a skill against graders **with a no-plugin
-  baseline arm**. The baseline is the whole difficulty: without it an eval reports that the model
-  did well, which is not the question — the question is whether the skill changed the outcome, and
-  a suite that cannot separate the two measures nothing about the skill. `claude plugin eval`
-  does exactly this and is in early access, so the trigger is its availability rather than its
-  existence.
+* The harness cannot express a case the layer needs — an exchange the mocks cannot model, or an
+  assertion its graders cannot make. That replaces the harness, not the layer.
