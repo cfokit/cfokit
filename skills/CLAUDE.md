@@ -58,6 +58,7 @@ skills/
     bookkeeper/
       SKILL.md          # the skill itself
       references/       # optional supporting material
+    evals/              # layer 4 cases, run by `uv run task eval` (ADR-0036 § 4)
 ```
 
 The plugin carries skills only: the connector is added on the person's account as a custom
@@ -79,6 +80,15 @@ It applies to the prompt, not to code. A bundled script may cite records in its 
 `src/` does throughout: a comment is read during maintenance by someone holding the
 repository, and the interpreter never sees it. This file is not a bundle either, which is why
 it cites freely.
+
+## Evals
+
+`evals/` holds the skill's eval cases, here because `claude plugin eval` reads cases only from
+inside the plugin — so they ship with it, and a merge releases them too. A case asserts on the
+CFOKit tools the agent calls, in what order and with what inputs, never on what it says. The
+tools are mocked from the committed tool descriptions and refusal codes, so a mock answers only
+what the ledger can; a mock the contract cannot produce makes an eval pass that should fail. Each
+case pins its model. (ADR-0036)
 
 ## Review
 

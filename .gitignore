@@ -16,6 +16,9 @@ web/public/keycloakify-dev-resources/
 web/test-results/
 web/playwright-report/
 
+# What an eval run leaves: its scores and report (ADR-0036 § 4).
+skills/cfokit/evals/results/
+
 # uv / virtualenvs
 .venv/
 venv/
