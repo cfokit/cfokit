@@ -161,7 +161,7 @@ between CFOKit deployments intact.
 | | Requirement | Priority | Status |
 |---|---|---|---|
 | **EXP-01** | **Interchange export.** The books in a form another accounting system can read: chart of accounts, transactions, and balances. | Must | Approved |
-| **EXP-02** | **Complete export.** Everything the entity holds — the interchange content, plus supporting documents, attachments, raw ingested payloads, rule definitions and the attribution linking them to postings, approvals, the record of what an agent did and on what basis, and the audit trail. | Must | Approved |
+| **EXP-02** | **Complete export.** Everything the entity holds — the interchange content, plus supporting documents, attachments, raw ingested payloads, rule definitions and the attribution linking them to postings, the operating procedures, approvals, the record of what an agent did and on what basis, and the audit trail. | Must | Approved |
 | **EXP-03** | Both exports are available at any time, in any entity state short of deletion, without asking anyone and without a support request. | Must | Approved |
 | **EXP-04** | A complete export taken from one CFOKit deployment and imported into another reproduces the books, their history, and their attribution. Moving between a self-hosted and a hosted deployment is this operation in either direction. | Must | Approved |
 
