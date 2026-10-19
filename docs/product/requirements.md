@@ -934,10 +934,17 @@ and SOC2-33 — are retired rather than reused, so the numbering carries gaps.
 Business decisions this document is waiting on.
 
 * **The bookkeeping agent's knowledge of the business** (`BKP-22`–`BKP-28`, `SOC1-37`). Agreed in
-  intent, and being worked out with the agent's design in [`bookkeeper-agent.md`](bookkeeper-agent.md).
+  intent; not yet settled as stated.
 * **Erasing from the procedures.** A revision keeps what it removed reproducible. Whether anything —
   personal data, or another party's information written in by mistake — must instead be erased from
   every version, and what record of the erasure survives.
+* **Confidence in assignment.** Whether an agent's confidence has any place in assigning a
+  transaction — ordering the questions it asks, say — given that assignment is by stored rules and
+  nothing is guessed (`BKP-06`, `BKP-12`).
+* **Tax and compliance judgment.** An owner asks what is owed and when, whether a meal or a home
+  office is deductible, and whether an S-corp's distributions and pay are reasonable. Compliance
+  obligation tracking and statutory localization are out of scope, and the CFO seat is always a
+  person's. Whether the agent answers any of these, and how far.
 
 A question earns a place in this section only if it is a business decision. A design question
 never blocks a business requirement, and an operating commitment is not a requirement at all —
