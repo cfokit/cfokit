@@ -105,7 +105,6 @@ uv run task lint                 # ruff + mypy --strict + import-linter + async 
 uv run task check-money          # CI gate 4: no floats touch money
 uv run task check-decisions      # CI gate 6: decision corpus is well-formed
 uv run task migrate              # apply migrations (never runs on startup)
-uv run task eval                 # layer 4: the skill's evals; costs tokens, never per commit
 docker compose up                # local production stack, no cloud account needed
 uv run task dev                  # compose.yaml + compose.dev.yaml
 docker compose --profile test run --rm test   # the whole suite, the way CI gate 2 runs it
