@@ -161,7 +161,7 @@ between CFOKit deployments intact.
 | | Requirement | Priority | Status |
 |---|---|---|---|
 | **EXP-01** | **Interchange export.** The books in a form another accounting system can read: chart of accounts, transactions, and balances. | Must | Approved |
-| **EXP-02** | **Complete export.** Everything the entity holds — the interchange content, plus supporting documents, attachments, raw ingested payloads, rule definitions and the attribution linking them to postings, approvals, the record of what an agent did and on what basis, and the audit trail. | Must | Approved |
+| **EXP-02** | **Complete export.** Everything the entity holds — the interchange content, plus supporting documents, attachments, raw ingested payloads, rule definitions and the attribution linking them to postings, the operating procedures, approvals, the record of what an agent did and on what basis, and the audit trail. | Must | Approved |
 | **EXP-03** | Both exports are available at any time, in any entity state short of deletion, without asking anyone and without a support request. | Must | Approved |
 | **EXP-04** | A complete export taken from one CFOKit deployment and imported into another reproduces the books, their history, and their attribution. Moving between a self-hosted and a hosted deployment is this operation in either direction. | Must | Approved |
 
@@ -203,9 +203,22 @@ Getting transactions in, deciding where they belong, and agreeing that the books
 | **BKP-19** | Where a transaction was derived from something outside the books — a feed record, an uploaded statement, a document — it records what it came from, and that link survives for the life of the transaction. | Must | Approved |
 | **BKP-20** | Content the organization did not author is marked as such when it enters the system, and the marking travels with it for as long as it is retained. It is a property of the stored record, never a judgment made when the content is read. | Must | Approved |
 | **BKP-21** | An item the system cannot process is retained along with the reason, and every ingest run records what it was expected to cover and what it actually delivered. Nothing that entered the system leaves it without a record of what became of it, and a source that silently delivers nothing is distinguishable from one that delivers an empty result. | Must | Approved |
+| **BKP-22** | What the bookkeeping agent learns about how the entity's business works belongs to the entity, as its operating procedures: an extension of the bookkeeping skill for that entity alone. It is kept as a thin summary the agent works from and the decision records the summary rests on, and every part of the summary cites its records. The agent acts on nothing about the business beyond the books, the stored rules, and this summary. | Must | Proposed |
+| **BKP-23** | The operating procedures are the same whichever agent keeps the books. CFOKit's own agent and a person's own agent read them through the same interface and follow them alike. What a person's own agent knows about the person stays theirs; what concerns the entity's books belongs in the procedures. | Must | Proposed |
+| **BKP-24** | Anyone who can read the entity can read its operating procedures as structured documentation a person can follow without an agent. They are part of the complete export, in a form another agent or a different model can take up without relearning the business. | Must | Proposed |
+| **BKP-25** | At an interval the entity sets, by default each closed period, the agent reviews the period's work — corrections, reversals, questions it had to ask, items it could not resolve — and proposes changes to the operating procedures. Every review leaves a record, including one that proposes nothing. | Must | Proposed |
+| **BKP-26** | Every change to the summary is made through a decision record stating the evidence from the period that prompted it, what it changes, and who approved it. Removing a statement is a change like any other. The summary can be reproduced as it stood at any earlier date, and every entry the agent produces records the version in force. | Must | Proposed |
+| **BKP-27** | No change to the operating procedures takes effect without a person's approval. A review's proposals reach the person together, in one notification, and a review proposing nothing reaches no one. Until it is approved, a proposed change is content the organization did not author, and the agent treats it as data rather than instruction. | Must | Proposed |
+| **BKP-28** | The operating procedures extend the bookkeeping skill and never override it. No procedure relaxes what the skill requires or what the ledger enforces, and where the two conflict, the skill and the ledger prevail. | Must | Proposed |
 
 **Acceptance, BKP-21.** A feed that skips a period is detected against the coverage it was
 expected to supply, rather than inferred from the absence of a batch.
+
+**Acceptance, BKP-24.** A different agent, given only an entity's exported operating procedures
+and its books, handles the next period's recurring items as the entity's own agent would.
+
+**Acceptance, BKP-27.** A closed period whose review proposes three changes produces one
+notification, and a summary unchanged until a person approves.
 
 **Acceptance, BKP-06.** Replaying an entity's full transaction history against an unchanged
 rule set reproduces every assignment identically.
@@ -671,6 +684,7 @@ and is excluded in 7.11.
 |---|---|---|---|
 | **SOC1-34** | Skills, their prompts, and their tool definitions are versioned artifacts. Every entry an agent produces records the versions in force when it was produced. A prompt edit that changes how transactions are categorized is a change to a financial control and is treated as one. | Must | Proposed |
 | **SOC1-35** | A change of model identifier or model version is recorded as a change to the control environment, with the date it took effect and the entries produced on either side of it distinguishable. | Must | Proposed |
+| **SOC1-37** | Each period, the system records measures of the agent's work for each entity — corrections and reversals, questions it had to ask, items left unresolved and their age, rules overridden, reconciliation differences — attributed to the skill, model, and operating-procedure versions in force, so the effect of a change is visible on either side of it. The measures are retained as evidence, and are what the review of BKP-25 works from. | Must | Proposed |
 
 ### 7.9 Subservice organizations
 
@@ -700,6 +714,7 @@ adds customer burden.
 | **CUEC-3** | Review exception and reconciliation reports on a defined cadence |
 | **CUEC-4** | Verify opening balances at onboarding, and confirm that imported history agrees with the system it came from |
 | **CUEC-5** | Own the autonomy configuration and alerting thresholds in force, whether it set them or accepted the defaults, and be able to say why they are appropriate to the business |
+| **CUEC-6** | Review and approve, or decline, the changes to its operating procedures that each period's review proposes (BKP-27) |
 
 ### 7.11 Excluded from this section
 
@@ -916,8 +931,20 @@ and SOC2-33 — are retired rather than reused, so the numbering carries gaps.
 
 ## 9. Open issues
 
-Business decisions this document is waiting on. **None are outstanding.** Every requirement below
-is `Approved` or `Deferred` against a stated trigger, and nothing here waits on a decision.
+Business decisions this document is waiting on.
+
+* **The bookkeeping agent's knowledge of the business** (`BKP-22`–`BKP-28`, `SOC1-37`). Agreed in
+  intent; not yet settled as stated.
+* **Erasing from the procedures.** A revision keeps what it removed reproducible. Whether anything —
+  personal data, or another party's information written in by mistake — must instead be erased from
+  every version, and what record of the erasure survives.
+* **Confidence in assignment.** Whether an agent's confidence has any place in assigning a
+  transaction — ordering the questions it asks, say — given that assignment is by stored rules and
+  nothing is guessed (`BKP-06`, `BKP-12`).
+* **Tax and compliance judgment.** An owner asks what is owed and when, whether a meal or a home
+  office is deductible, and whether an S-corp's distributions and pay are reasonable. Compliance
+  obligation tracking and statutory localization are out of scope, and the CFO seat is always a
+  person's. Whether the agent answers any of these, and how far.
 
 A question earns a place in this section only if it is a business decision. A design question
 never blocks a business requirement, and an operating commitment is not a requirement at all —
@@ -946,6 +973,7 @@ Terms carrying a specific meaning in this document.
 | **Identity** | A person, authenticated by the organization's identity provider. |
 | **Import** | Records entering CFOKit from the system a company ran before. Validated and reconciled against the source before anything posts, and identifiable as imported, with the system it came from, for the life of the record. |
 | **Invitation** | A role granted to someone who has no identity yet. It confers nothing until they authenticate, and binds to their identity when they do. |
+| **Operating procedures** | An extension of the bookkeeping skill for one entity, holding what its agent has learned about how its business works: a thin summary the agent works from, and the decision records each part of it rests on. The entity's own, exported with its books. |
 | **Obligation** | A commitment to receive or pay, recorded when it arises, separately from its settlement. |
 | **Owner** | An identity holding an entity. Holds every privilege in it, including granting and revoking ownership and deleting the entity. An entity always has at least one. |
 | **Posting** | Committing a transaction to the books. Irreversible; the point after which corrections are new entries. |
@@ -968,15 +996,15 @@ serving no objective does not belong here.
 
 | Objective | Requirements |
 |---|---|
-| **OBJ-1** Kept without the company keeping them | BKP-01, BKP-06, BKP-09, BKP-12, RPT-15 |
+| **OBJ-1** Kept without the company keeping them | BKP-01, BKP-06, BKP-09, BKP-12, BKP-22, BKP-25, BKP-27, BKP-28, RPT-15 |
 | **OBJ-2** Current, and a close never waiting on us | BKP-16, LED-11, LED-12, PLT-07, PLT-14, NFR-15 |
 | **OBJ-3** Exact, and unchanged once posted | LED-03, LED-04, LED-05, LED-06, LED-07, LED-08, BKP-07, BKP-08, BKP-11, BKP-12, BKP-14, BKP-20, BKP-21, IMP-05, IMP-08, PLT-23, RPT-09, RPT-12, NFR-01, NFR-02, NFR-03, NFR-22, NFR-23 |
-| **OBJ-4** Every number explains itself | LED-08, LED-09, LED-20, BKP-10, BKP-19, IMP-04, IAM-13, PLT-16, PLT-20, RPT-08, RPT-11, NFR-02, NFR-23, SOC1-14, SOC1-15, SOC1-22, SOC1-23, SOC1-36 |
+| **OBJ-4** Every number explains itself | LED-08, LED-09, LED-20, BKP-10, BKP-19, BKP-26, IMP-04, IAM-13, PLT-16, PLT-20, RPT-08, RPT-11, NFR-02, NFR-23, SOC1-14, SOC1-15, SOC1-22, SOC1-23, SOC1-36 |
 | **OBJ-5** The recurring cost goes away | BKP-01–BKP-06, BKP-13–BKP-18, AR-01–AR-19, RPT-01–RPT-09, IMP-01–IMP-09, PLT-24, NFR-19, NFR-20 |
 | **OBJ-6** Output accepted as it stands | LED-01, LED-02, LED-14, LED-17, RPT-01–RPT-05, RPT-07, RPT-09, RPT-10, RPT-12, RPT-13, RPT-14, RPT-16, RPT-17, RPT-18, RPT-19, NFR-01, NFR-16, NFR-22 |
 | **OBJ-7** Never forced off by growing | LED-10, LED-13, LED-14, LED-15, LED-16, LED-17, LED-18, LED-19, RPT-19, RPT-20, RPT-21, IAM-08, IAM-09, PLT-04, PLT-08, NFR-09 |
 | **OBJ-8** Only authorized people reach the books | IAM-01–IAM-07, IAM-11, IAM-12, IAM-15, IAM-16, IAM-17, IAM-20, IAM-21, IAM-22–IAM-26, AR-08, PLT-05, PLT-23, NFR-04, NFR-05, NFR-06 |
-| **OBJ-9** Provable to an examiner | IAM-13, IAM-14, IAM-18, IAM-19, PLT-15–PLT-19, PLT-22, NFR-18, SOC1-01–SOC1-36, SOC2-01–SOC2-24, SOC2-27–SOC2-30 |
-| **OBJ-10** Leave with everything, at any time | EXP-01–EXP-04, PLT-09, PLT-10, PLT-11, PLT-12, PLT-13, PLT-21, NFR-07, NFR-17 |
+| **OBJ-9** Provable to an examiner | IAM-13, IAM-14, IAM-18, IAM-19, PLT-15–PLT-19, PLT-22, NFR-18, SOC1-01–SOC1-37, SOC2-01–SOC2-24, SOC2-27–SOC2-30 |
+| **OBJ-10** Leave with everything, at any time | BKP-23, BKP-24, EXP-01–EXP-04, PLT-09, PLT-10, PLT-11, PLT-12, PLT-13, PLT-21, NFR-07, NFR-17 |
 | **OBJ-11** Runs with no vendor relationship | BKP-03, IAM-10, PLT-01, PLT-02, PLT-03, PLT-06, NFR-10, NFR-11, NFR-14, NFR-17 |
 | **OBJ-12** Outsiders can work on it | NFR-11, NFR-12, NFR-13, NFR-14, NFR-21 |
