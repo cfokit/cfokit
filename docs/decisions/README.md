@@ -118,6 +118,7 @@ nothing cites these but this repository. They are added when something breaks wi
 | [0072](0072-inference-usage-is-recorded-per-company-and-read-through-the-api.md) | Inference usage is recorded per company and read through the published API | Proposed |
 | [0073](0073-a-principals-roles-are-a-set-added-and-removed-one-at-a-time.md) | A principal's roles in an entity are a set, added and removed one at a time | Proposed |
 | [0074](0074-a-documentation-clip-is-cut-from-a-passing-run-of-its-use-case.md) | A documentation clip is cut from a passing end-to-end run of the use case it shows | Proposed |
+| [0075](0075-a-runtime-turn-is-queued-work-calling-the-published-tools.md) | A turn in CFOKit's runtime is queued work that calls the model through the Messages API and reaches the books only through the published tools | Proposed |
 
 ## Deferred — decided in principle, waiting on a need
 
