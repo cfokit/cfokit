@@ -464,7 +464,7 @@ jobs:
       - run: uv sync --locked
       - run: uv run task generate-contracts
       # No database is touched to generate these, so this job needs no services.
-      - run: git diff --exit-code -- docs/contracts/
+      - run: git diff --exit-code -- docs/contracts/ skills/cfokit/evals/mocks/cfokit/_tools.json
 
   # A single required check, so the branch protection rule does not need editing every time
   # a gate is added.

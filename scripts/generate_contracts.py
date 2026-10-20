@@ -30,6 +30,10 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CONTRACTS = REPO_ROOT / "docs" / "contracts"
+# The eval mocks answer as the published tool surface, so they carry its real descriptions and
+# schemas: `claude plugin eval` reads a server's tool list from `_tools.json` beside its mocks
+# (ADR-0036 § 4). Generated with the contracts, and diffed by the same gate.
+EVAL_TOOLS = REPO_ROOT / "skills" / "cfokit" / "evals" / "mocks" / "cfokit" / "_tools.json"
 
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
@@ -145,6 +149,9 @@ def main() -> int:
         )
         if write(CONTRACTS / name, payload)
     ]
+    EVAL_TOOLS.parent.mkdir(parents=True, exist_ok=True)
+    if write(EVAL_TOOLS, {"tools": mcp_tools()}):
+        changed.append(str(EVAL_TOOLS.relative_to(REPO_ROOT)))
 
     if changed:
         print(f"Contracts regenerated, {len(changed)} changed: {', '.join(changed)}")
