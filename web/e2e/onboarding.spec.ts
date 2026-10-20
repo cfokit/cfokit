@@ -10,6 +10,8 @@
  * transactions, 1,200.00 and 12.50, a journal total of 1,212.50, and a general ledger stating three
  * account balances — Accounts Receivable 1,200.00, Income:Consulting −1,200.00 and Checking −12.50,
  * with Meals a subtotal rather than a balance (ADR-0036: never a value read back from a first run).
+ *
+ * Its steps are the clips in `docs/tutorials/run-cfokit-on-your-computer.md` (ADR-0074).
  */
 
 import { expect, test, type Locator, type Page } from "@playwright/test";
@@ -50,68 +52,79 @@ test("a new person goes from creating an account to their first question", async
   const stamp = Date.now();
   await page.goto("./");
 
-  // The issuer's page, in CFOKit's theme.
-  await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
-  await settle(page);
-  await page.getByRole("link", { name: "Create an account" }).click();
-  await expect(page.getByRole("heading", { name: "Create your account" })).toBeVisible();
-  await type(page.getByLabel("Email"), `sam.${stamp}@example.test`);
-  await type(page.getByLabel("First name"), "Sam");
-  await type(page.getByLabel("Last name"), "Sample");
-  await type(page.getByLabel("Password", { exact: true }), `Sample-${stamp}-password`);
-  await type(page.getByLabel("Confirm password"), `Sample-${stamp}-password`);
-  await settle(page);
-  await page.getByRole("button", { name: "Create account" }).click();
-
-  // Where the deployment requires it, a second factor before the first session exists (SOC2-19):
-  // the key an authenticator app would hold, entered by hand, and the code it would show.
-  if (SECOND_FACTOR_REQUIRED) {
-    await expect(page.getByRole("heading", { name: "Set up two-step sign-in" })).toBeVisible();
+  // Each step is a clip of the tutorial's (ADR-0074), and its title the clip's caption.
+  await test.step("Create your account", async () => {
+    // The issuer's page, in CFOKit's theme.
+    await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
     await settle(page);
-    await page.getByRole("link", { name: "Can't scan it? Enter a key instead" }).click();
-    const key = await page.locator("li code").innerText();
-    await type(page.getByLabel("Device name"), "Phone");
-    await type(page.getByLabel("Code", { exact: true }), totp(key));
+    await page.getByRole("link", { name: "Create an account" }).click();
+    await expect(page.getByRole("heading", { name: "Create your account" })).toBeVisible();
+    await type(page.getByLabel("Email"), `sam.${stamp}@example.test`);
+    await type(page.getByLabel("First name"), "Sam");
+    await type(page.getByLabel("Last name"), "Sample");
+    await type(page.getByLabel("Password", { exact: true }), `Sample-${stamp}-password`);
+    await type(page.getByLabel("Confirm password"), `Sample-${stamp}-password`);
     await settle(page);
-    await page.getByRole("button", { name: "Turn on" }).click();
-  }
+    await page.getByRole("button", { name: "Create account" }).click();
 
-  // Back in CFOKit, signed in: choose the export.
-  await expect(page.getByRole("heading", { name: "Bring in your books" })).toBeVisible();
-  await settle(page);
-  await page.locator('input[type="file"]').setInputFiles({
-    name: "quickbooks-sample.zip",
-    mimeType: "application/zip",
-    buffer: Buffer.from(await syntheticExport()),
+    // Where the deployment requires it, a second factor before the first session exists
+    // (SOC2-19): the key an authenticator app would hold, entered by hand, and the code it would
+    // show.
+    if (SECOND_FACTOR_REQUIRED) {
+      await expect(page.getByRole("heading", { name: "Set up two-step sign-in" })).toBeVisible();
+      await settle(page);
+      await page.getByRole("link", { name: "Can't scan it? Enter a key instead" }).click();
+      const key = await page.locator("li code").innerText();
+      await type(page.getByLabel("Device name"), "Phone");
+      await type(page.getByLabel("Code", { exact: true }), totp(key));
+      await settle(page);
+      await page.getByRole("button", { name: "Turn on" }).click();
+    }
   });
 
-  // The company, as the export states it.
-  await expect(page.getByRole("heading", { name: "Your company" })).toBeVisible();
-  await expect(page.getByLabel("Company name")).toHaveValue("Synthetic Co");
-  await expect(page.getByRole("button", { name: "Accrual", pressed: true })).toBeVisible();
-  await expect(page.getByLabel("Currency")).toHaveValue("USD");
-  await settle(page);
-  await page.getByRole("button", { name: "Create the company" }).click();
+  await test.step("Choose your export", async () => {
+    // Back in CFOKit, signed in.
+    await expect(page.getByRole("heading", { name: "Bring in your books" })).toBeVisible();
+    await settle(page);
+    await page.locator('input[type="file"]').setInputFiles({
+      name: "quickbooks-sample.zip",
+      mimeType: "application/zip",
+      buffer: Buffer.from(await syntheticExport()),
+    });
 
-  // What will be imported, then the import.
-  await expect(page.getByRole("heading", { name: "What will be imported" })).toBeVisible();
-  await expect(page.getByText("Transactions").locator("xpath=following-sibling::dd[1]")).toHaveText(
-    "2",
-  );
-  const entityId = /\/companies\/([^/]+)\/import/.exec(page.url())?.[1];
-  expect(entityId).toBeDefined();
-  await settle(page);
-  await page.getByRole("button", { name: "Import", exact: true }).click();
+    // The company, as the export states it.
+    await expect(page.getByRole("heading", { name: "Your company" })).toBeVisible();
+    await expect(page.getByLabel("Company name")).toHaveValue("Synthetic Co");
+    await expect(page.getByRole("button", { name: "Accrual", pressed: true })).toBeVisible();
+    await expect(page.getByLabel("Currency")).toHaveValue("USD");
+    await settle(page);
+  });
 
-  // The answer first: whether the books agree with QuickBooks.
-  await expect(page.getByRole("heading", { name: "Do the books agree?" })).toBeVisible();
-  await expect(page.getByText("3 of 3 accounts match QuickBooks exactly.")).toBeVisible();
-  await expect(
-    page.getByText(/Every transaction came across: the books total 1,212\.50/),
-  ).toBeVisible();
-  await settle(page);
+  const entityId = await test.step("Confirm the company and import", async () => {
+    await page.getByRole("button", { name: "Create the company" }).click();
 
-  // The books landed: the trial balance, read over REST as the same person.
+    // What will be imported, then the import.
+    await expect(page.getByRole("heading", { name: "What will be imported" })).toBeVisible();
+    await expect(
+      page.getByText("Transactions").locator("xpath=following-sibling::dd[1]"),
+    ).toHaveText("2");
+    const id = /\/companies\/([^/]+)\/import/.exec(page.url())?.[1];
+    expect(id).toBeDefined();
+    await settle(page);
+    await page.getByRole("button", { name: "Import", exact: true }).click();
+
+    // The answer first: whether the books agree with QuickBooks.
+    await expect(page.getByRole("heading", { name: "Do the books agree?" })).toBeVisible();
+    await expect(page.getByText("3 of 3 accounts match QuickBooks exactly.")).toBeVisible();
+    await expect(
+      page.getByText(/Every transaction came across: the books total 1,212\.50/),
+    ).toBeVisible();
+    await settle(page);
+    return id;
+  });
+
+  // The books landed: the trial balance, read over REST as the same person. Nothing on screen
+  // changes, so it is in no clip.
   expect(bearer).toBeDefined();
   const response = await request.get(`/entities/${entityId}/trial-balance`, {
     headers: { authorization: bearer ?? "" },
@@ -129,26 +142,32 @@ test("a new person goes from creating an account to their first question", async
   expect(net("Accounts Receivable")).toBe("1200.00");
   expect(net("Checking")).toBe("-12.50");
 
-  // Connecting Claude, with this deployment's own MCP address.
-  await page.getByRole("button", { name: "Next: connect Claude" }).click();
-  await expect(page.getByRole("heading", { name: "Connect Claude" })).toBeVisible();
-  await expect(page.getByRole("figure", { name: "Configuration" })).toContainText("/mcp");
-  await settle(page);
-  await page.getByRole("button", { name: "Next: your first question" }).click();
+  await test.step("Connect Claude", async () => {
+    // With this deployment's own MCP address.
+    await page.getByRole("button", { name: "Next: connect Claude" }).click();
+    await expect(page.getByRole("heading", { name: "Connect Claude" })).toBeVisible();
+    await expect(page.getByRole("figure", { name: "Configuration" })).toContainText("/mcp");
+    await settle(page);
+  });
 
-  // The first question, ready to send.
-  await expect(page.getByRole("heading", { name: "Ask Claude about your books" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Continue in Claude" })).toBeVisible();
-  await expect(page.getByRole("figure", { name: "Or paste this into Claude" })).toContainText(
-    "Confirm they match QuickBooks and explain any differences",
-  );
-  await settle(page);
+  await test.step("Ask about your books", async () => {
+    // The first question, ready to send.
+    await page.getByRole("button", { name: "Next: your first question" }).click();
+    await expect(page.getByRole("heading", { name: "Ask Claude about your books" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Continue in Claude" })).toBeVisible();
+    await expect(page.getByRole("figure", { name: "Or paste this into Claude" })).toContainText(
+      "Confirm they match QuickBooks and explain any differences",
+    );
+    await settle(page);
+  });
 
-  // Settings, from the frame: the company just made, and connecting Claude, at any time.
-  await page.getByRole("button", { name: "Settings" }).first().click();
-  await expect(page.getByRole("heading", { name: "Settings", level: 1 })).toBeVisible();
-  await expect(page.getByRole("list", { name: "Companies" })).toContainText("Synthetic Co");
-  await expect(page.getByRole("figure", { name: "Configuration" })).toContainText("/mcp");
-  await settle(page);
-  await settle(page);
+  await test.step("Find Settings", async () => {
+    // From the frame: the company just made, and connecting Claude, at any time.
+    await page.getByRole("button", { name: "Settings" }).first().click();
+    await expect(page.getByRole("heading", { name: "Settings", level: 1 })).toBeVisible();
+    await expect(page.getByRole("list", { name: "Companies" })).toContainText("Synthetic Co");
+    await expect(page.getByRole("figure", { name: "Configuration" })).toContainText("/mcp");
+    await settle(page);
+    await settle(page);
+  });
 });
