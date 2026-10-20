@@ -103,7 +103,7 @@ jobs:
             case "$path" in
               # Getting started (web/e2e/onboarding.spec.ts): signing up on the issuer's page,
               # the start pages, the sample export, the first question, and what they render with.
-              web/e2e/onboarding.spec.ts|web/src/login/*|web/src/start/*|web/src/quickbooks/*|\
+              web/e2e/onboarding.spec.ts|web/e2e/clips*.ts|web/e2e/cut-clips.ts|web/src/login/*|web/src/start/*|web/src/quickbooks/*|\
               web/src/questions/*|web/src/connect/*|web/src/settings/*|web/src/components/*|\
               web/src/*.css|infra/keycloak/*)
                 echo "recorded flow: $path"; record=true ;;
@@ -324,14 +324,9 @@ jobs:
       - name: Make the recording
         if: needs.changes.outputs.record == 'true'
         working-directory: web
+        # The whole run for the README, and a clip per step for the tutorial (ADR-0074 § 3).
         run: |
-          mkdir -p recording
-          video=$(find test-results -name video.webm | head -1)
-          ffmpeg -loglevel error -i "$video" -c:v libx264 -pix_fmt yuv420p -movflags +faststart \
-            recording/onboarding.mp4
-          ffmpeg -loglevel error -i "$video" \
-            -vf "fps=8,scale=800:-1:flags=lanczos,split[a][b];[a]palettegen[p];[b][p]paletteuse" \
-            recording/onboarding.gif
+          node e2e/cut-clips.ts recording
           ls -la recording
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: needs.changes.outputs.record == 'true'
@@ -433,7 +428,7 @@ jobs:
             gh release create onboarding-recording --prerelease --target main \
               --title "Getting started, recorded" \
               --notes "The getting-started flow, recorded by CI from main on every push. Not a release of CFOKit."
-          gh release upload onboarding-recording recording/onboarding.mp4 recording/onboarding.gif --clobber
+          gh release upload onboarding-recording recording/* --clobber
 
   # Gate 3 — differential test against the Beancount oracle, every divergence documented
   # (ADR-0010). Beancount is a CI-only dependency and never ships in the artifact.

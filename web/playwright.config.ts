@@ -15,7 +15,11 @@ export default defineConfig({
   // Signing in, reading the export and importing are each a round trip through the stack; a
   // paced run adds a pause per screen on top.
   timeout: 120_000,
-  reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
+  // The clips reporter keeps each step's span in a passing run's video, for cutting it into the
+  // tutorial's clips (ADR-0074).
+  reporter: process.env.CI
+    ? [["list"], ["html", { open: "never" }], ["./e2e/clips-reporter.ts"]]
+    : [["list"], ["./e2e/clips-reporter.ts"]],
   use: {
     baseURL: process.env.E2E_BASE_URL ?? "https://localhost:8080/app/",
     // The browser trusts the stack's CA the way a person's does: the keychain on macOS, the NSS
