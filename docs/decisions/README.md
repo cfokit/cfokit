@@ -117,6 +117,7 @@ nothing cites these but this repository. They are added when something breaks wi
 | [0071](0071-hosted-backups-are-kept-thirty-days-and-a-restore-replays-deletions.md) | Backups on GCP are kept thirty days in the US, and a restore replays every deletion since its point | Proposed |
 | [0072](0072-inference-usage-is-recorded-per-company-and-read-through-the-api.md) | Inference usage is recorded per company and read through the published API | Proposed |
 | [0073](0073-a-principals-roles-are-a-set-added-and-removed-one-at-a-time.md) | A principal's roles in an entity are a set, added and removed one at a time | Proposed |
+| [0074](0074-a-documentation-clip-is-cut-from-a-passing-run-of-its-use-case.md) | A documentation clip is cut from a passing end-to-end run of the use case it shows | Proposed |
 
 ## Deferred — decided in principle, waiting on a need
 
@@ -152,6 +153,7 @@ this shape, and they cite no requirement (ADR-0001).
 | 0048 | Merge eligibility is decided by policy, not by a reviewer |
 | 0054 | The web client lives in `web/` |
 | 0055 | On GCP the web client is served from a CDN |
+| 0074 | Documentation clips are cut from passing end-to-end runs |
 
 Every other record is `kind: requirement-driven` and must cite at least one requirement id.
 
