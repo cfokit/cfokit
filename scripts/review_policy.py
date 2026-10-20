@@ -5,13 +5,14 @@ The reviewing model can withhold approval; it cannot grant eligibility. Eligibil
 file's job, and it is deterministic so that nothing a pull request says — in its title, its
 body, its commit messages, or the release notes a reviewer fetches — can talk it into one.
 
-Three subcommands, each called by `.github/workflows/review.yml`:
+Three subcommands are called by `.github/workflows/review.yml`, and one by `eval.yml`:
 
-- ``classify``  the tier: ``auto`` (may merge on the reviewer's approval) or ``human``.
-- ``select``    which pull requests a run reviews: the one named, or, for the weekly sweep,
-                every open Dependabot pull request with no verdict at its head commit.
-- ``decide``    what to do with a verdict: ``merge``, ``fix`` or ``escalate``, and the review
-                comment that records it.
+- ``classify``     the tier: ``auto`` (may merge on the reviewer's approval) or ``human``.
+- ``select``       which pull requests a run reviews: the one named, or, for the weekly sweep,
+                   every open Dependabot pull request with no verdict at its head commit.
+- ``decide``       what to do with a verdict: ``merge``, ``fix`` or ``escalate``, and the review
+                   comment that records it.
+- ``eval-report``  the comment recording an eval run at a head commit, and whether it passed.
 
 The workflow runs this file from a checkout of ``main``, never from the pull request, so a
 pull request cannot rewrite the policy it is judged by. The pull request's files are data.
@@ -48,6 +49,12 @@ MAX_FIX_ROUNDS = 2
 # The verdict marker a review comment carries, so a head commit is never reviewed twice.
 MARKER = "<!-- cfokit-review sha={sha} -->"
 MARKER_PATTERN = re.compile(r"<!-- cfokit-review sha=([0-9a-f]{40}) -->")
+
+# The plugin, which a merge releases (skills/CLAUDE.md). A change to it merges without a person
+# only when its head commit carries a passing eval result (ADR-0036 § 4, ADR-0048).
+EVALUATED = "skills/cfokit/"
+EVAL_MARKER = "<!-- cfokit-eval sha={sha} result={result} -->"
+EVAL_PATTERN = re.compile(r"<!-- cfokit-eval sha=([0-9a-f]{40}) result=(pass|fail) -->")
 
 # A PEP 508 requirement's identity: its name and any extras. The version is what changes.
 REQUIREMENT_IDENTITY = re.compile(r"^\s*([A-Za-z0-9][A-Za-z0-9._-]*)\s*(\[[^\]]*\])?")
@@ -181,13 +188,24 @@ def classify(
     updates: list[Update],
     pyproject_reshaped: bool,
     new_runtime_packages: set[str],
+    eval_result: str | None,
 ) -> Classification:
-    """The tier. Every reason found is reported, not just the first."""
+    """The tier. Every reason found is reported, not just the first.
+
+    ``eval_result`` is the eval run recorded at the head commit: ``pass``, ``fail``, or None
+    when there is none.
+    """
     reasons: list[str] = []
 
     for path in changed:
         if pattern := protecting_pattern(path, protected):
             reasons.append(f"`{path}` is code-owned (`{pattern}`)")
+
+    if any(path.startswith(EVALUATED) for path in changed):
+        if eval_result is None:
+            reasons.append(f"`{EVALUATED}` changed and the head commit has no eval result")
+        elif eval_result != "pass":
+            reasons.append("the eval run at the head commit scored below its threshold")
 
     if pyproject_reshaped:
         reasons.append("`pyproject.toml` changes more than versions")
@@ -345,6 +363,10 @@ def cmd_classify(args: argparse.Namespace) -> None:
             _run("git", "log", "-1", "--format=%B", head, cwd=repo)
         )
     messages = _run("git", "log", "--format=%B%x00", f"{merge_base}..{head}", cwd=repo)
+    repo_name = os.environ["GITHUB_REPOSITORY"]
+    pages = _gh_json(
+        "api", "--paginate", "--slurp", f"repos/{repo_name}/issues/{args.pr}/comments"
+    )
     result = classify(
         author=author,
         branch=pr["headRefName"],
@@ -353,6 +375,7 @@ def cmd_classify(args: argparse.Namespace) -> None:
         updates=updates,
         pyproject_reshaped=reshaped,
         new_runtime_packages=new_runtime,
+        eval_result=eval_result([c for page in pages for c in page], head),
     )
     _output(
         tier=result.tier,
@@ -373,6 +396,69 @@ def reviewed_shas(comments: list[dict[str, Any]]) -> set[str]:
         if comment.get("user", {}).get("type") == "Bot":
             shas.update(MARKER_PATTERN.findall(comment.get("body", "")))
     return shas
+
+
+def eval_result(comments: list[dict[str, Any]], sha: str) -> str | None:
+    """The latest eval result recorded at ``sha``, by a bot, as reviewed_shas reads verdicts.
+    A forged ``pass`` from a person's comment would grant eligibility, so it is ignored."""
+    result: str | None = None
+    for comment in comments:
+        if comment.get("user", {}).get("type") != "Bot":
+            continue
+        for marked, outcome in EVAL_PATTERN.findall(comment.get("body", "")):
+            if marked == sha:
+                result = outcome
+    return result
+
+
+def eval_report(*, sha: str, run: dict[str, Any] | None) -> tuple[str, str]:
+    """``pass`` or ``fail``, and the comment recording it.
+
+    A run passes when it finished and every case scored at or above the suite's threshold
+    with the plugin. A missing or partial run, one stopped by the cost ceiling, fails: it
+    shows nothing about the cases it did not reach. The delta is reported, not judged.
+    """
+    lines: list[str] = []
+    if run is None:
+        result = "fail"
+        lines.append("The eval run produced no result.")
+    else:
+        threshold = float(run.get("suite", {}).get("threshold", 1))
+        cases = run.get("cases", [])
+        below = [c for c in cases if float(c["aggregates"]["score"]) < threshold]
+        partial = bool(run.get("partial"))
+        result = "fail" if partial or below or not cases else "pass"
+        lines += [
+            "| Case | Model | Runs | With | Without | Δ |",
+            "|---|---|---|---|---|---|",
+        ]
+        for case in cases:
+            agg = case["aggregates"]
+            without = agg.get("scoreWithout")
+            delta = agg.get("delta")
+            lines.append(
+                f"| `{case['name']}` | {case.get('model', '')} | {case.get('runsPerCase', '')}"
+                f" | {float(agg['score']):.2f}"
+                f" | {'' if without is None else f'{float(without):.2f}'}"
+                f" | {'' if delta is None else f'{float(delta):+.2f}'} |"
+            )
+        lines += ["", f"Threshold {threshold:.2f}. Cost ${float(run.get('costUsd', 0)):.2f}."]
+        if partial:
+            lines.append("The run stopped at its cost ceiling, so some cases did not run.")
+    verdict = "passed" if result == "pass" else "failed"
+    header = [
+        EVAL_MARKER.format(sha=sha, result=result),
+        f"### Evals at `{sha[:7]}`: {verdict}",
+    ]
+    return result, "\n".join([*header, "", *lines]) + "\n"
+
+
+def cmd_eval_report(args: argparse.Namespace) -> None:
+    path = Path(args.result)
+    run = json.loads(path.read_text()) if path.is_file() else None
+    result, body = eval_report(sha=args.sha, run=run)
+    Path(args.body).write_text(body)
+    _output(result=result)
 
 
 def cmd_select(args: argparse.Namespace) -> None:
@@ -438,6 +524,11 @@ def main() -> None:
     p = sub.add_parser("decide")
     p.add_argument("--body", required=True)
     p.set_defaults(func=cmd_decide)
+    p = sub.add_parser("eval-report")
+    p.add_argument("--result", required=True)
+    p.add_argument("--sha", required=True)
+    p.add_argument("--body", required=True)
+    p.set_defaults(func=cmd_eval_report)
     args = parser.parse_args()
     args.func(args)
 

@@ -1,0 +1,89 @@
+# The skill's evals (ADR-0036 § 4), on a pull request someone asks for them on.
+#
+# It runs only when a person adds the `eval` label, never on open or push, so inference is spent
+# on request (ADR-0048). It runs `claude plugin eval` against the pull request's plugin, with and
+# without it, under a cost ceiling, and comments the scores and the delta at the head commit. The
+# review policy reads that comment: a pull request changing `skills/cfokit/` merges without a
+# person only when its head commit carries a passing result.
+#
+# The workflow and the report renderer run from `main`, and the pull request is checked out as
+# data. Its eval cases are prompts and mocks: no case script runs (`--scaffold` is off), no real
+# server starts (mocks only), and no gated tool is granted. Forks are refused outright.
+#
+# Nothing here touches ci.yml, whose portability job must stay free of credentials (ADR-0004).
+
+name: Evals
+
+on:
+  pull_request_target:
+    types: [labeled]
+
+permissions: {}
+
+env:
+  CLAUDE_CODE_VERSION: "2.1.296"
+  MAX_COST_USD: "5"
+
+jobs:
+  eval:
+    name: Evals
+    if: >-
+      github.event.label.name == 'eval' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      pull-requests: write
+    concurrency:
+      group: eval-${{ github.event.pull_request.number }}
+    env:
+      GH_REPO: ${{ github.repository }}
+      PR: ${{ github.event.pull_request.number }}
+      SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: The pull request, as data
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: The report renderer, from main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          path: .trusted
+          persist-credentials: false
+      - run: |
+          mv .trusted "$RUNNER_TEMP/trusted"
+          npm install -g "@anthropic-ai/claude-code@$CLAUDE_CODE_VERSION"
+
+      # Exit 1 is a case below its threshold and 2 a partial run; both still leave a result,
+      # which the report judges. Each case pins its own model.
+      - name: Run the evals
+        continue-on-error: true
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          claude plugin eval skills/cfokit --trust-plugin --no-publish \
+            --max-cost-usd "$MAX_COST_USD" --json "$RUNNER_TEMP/eval.json"
+
+      - id: report
+        run: |
+          python3 "$RUNNER_TEMP/trusted/scripts/review_policy.py" eval-report \
+            --result "$RUNNER_TEMP/eval.json" --sha "$SHA" --body "$RUNNER_TEMP/eval.md"
+          cat "$RUNNER_TEMP/eval.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Record the result
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr comment "$PR" --body-file "$RUNNER_TEMP/eval.md"
+          gh pr edit "$PR" --remove-label eval || true
+
+      - if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: eval-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
+          path: ${{ runner.temp }}/eval.json
+          if-no-files-found: ignore

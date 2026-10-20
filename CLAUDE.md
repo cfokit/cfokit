@@ -236,7 +236,7 @@ Four layers, and only the top one needs a model. (ADR-0036)
 2. A conformance corpus of published worked examples. **This is where independence comes from**,
    and every case cites its source. A case with no citation is a unit test that has been misfiled.
 3. Protocol integration against REST and MCP as a client would, deterministic.
-4. Evals, which assert on records — the transaction and its status, the postings, the audit row —
+4. Evals, which assert on the calls a turn makes — which tools, in what order, with what inputs —
    never on prose.
 
 Layers 1 to 3 gate every commit; layer 4 does not. **An assertion's expected value comes from
@@ -307,5 +307,6 @@ websockets, SSE transport, or an event bus. (ADR-0012) The web client has passed
 - **Merge by labeling, not by `gh pr merge`.** Add the `merge` label and stop. That label
   runs the reviewer, which approves and auto-merges only what `scripts/review_policy.py`
   allows, and marks everything else `needs-human`. Paths in `.github/CODEOWNERS` always need
-  a person. Use `--admin` only when the user tells you to merge a pull request the reviewer
-  escalated. (ADR-0048)
+  a person. A change to `skills/cfokit/` is a release, so it also needs a passing result from
+  the `eval` label at its head commit (ADR-0036 § 4). Use `--admin` only when the user tells
+  you to merge a pull request the reviewer escalated. (ADR-0048)

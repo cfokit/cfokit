@@ -134,8 +134,14 @@ the skill changed the outcome.
 - **Graders are deterministic** — a tool called or not, calls in order, inputs matching. A judge
   needs the justification above.
 - **A case pins its model** (ADR-0033, `SOC1-35`).
-- **`uv run task eval` runs the suite**, under a cost ceiling. Neither `uv run task check` nor CI
-  calls it.
+- **`uv run task eval` runs the suite**, under a cost ceiling, and so does adding the `eval` label
+  to a pull request, which comments each case's score and delta at the head commit. Neither
+  `uv run task check` nor `ci.yml` runs it.
+- **A merge is a release.** Claude reads the plugin from `main`, so a regression is kept out of a
+  release by keeping it out of a merge. A pull request changing `skills/cfokit/` merges without a
+  person only when its head commit carries a passing result: the run finished, and every case
+  scored at or above its threshold with the plugin (ADR-0048). A result below that is not a
+  failed gate. It sends the pull request to a person, who judges whether it is a regression.
 
 The harness is a tool, not the layer. Where it cannot express a case the layer needs, it is replaced,
 and the layer's rules stand.
@@ -157,8 +163,9 @@ and the layer's rules stand.
   before a refactor and labeled as one, and it never stands in for a case at layer 2 or layer 4.
 - **Evals pin the model version** (ADR-0033, `SOC1-35`). An eval run against an unpinned model
   measures the model, not the change.
-- **Evals gate on a statistically significant regression in pass rate**, not on a fixed threshold.
-  Demanding 100% of a non-deterministic system produces a suite people disable.
+- **Evals gate on a regression in pass rate that a person judges real**, not on a fixed threshold.
+  Demanding 100% of a non-deterministic system produces a suite people disable, so a score below a
+  case's threshold routes the change to a person rather than refusing it.
 - **Every real failure becomes a permanent case**, in whichever layer would have caught it.
 
 ### Consequences
@@ -186,8 +193,11 @@ Layer 1 runs inside the ordinary suite and gates every commit, as do the schema 
 layer 3. Layer 2 carries `NFR-01` while the oracle stays deferred, which is why every case cites
 its published source: a case without one is a unit test that has been misfiled. The protocol half
 of layer 3 drives both adapters as a client does, and CI gate 5 diffs what they publish against
-the committed copies (ADR-0015). Layer 4 runs only through `uv run task eval`, which neither
-`uv run task check` nor CI calls, so it cannot accidentally join the per-commit gate.
+the committed copies (ADR-0015). Layer 4 runs only through `uv run task eval` and the `eval`
+label, which neither `uv run task check` nor `ci.yml` calls, so it cannot accidentally join the
+per-commit gate. `scripts/review_policy.py` reads the result the label leaves, and
+`tests/test_review_policy.py` holds the cases: a plugin change with no result, or a failing one,
+goes to a person.
 
 **Provenance is gated at layer 2 and reviewed everywhere else.** `tests/test_conformance_corpus.py`
 reads every case in the corpus and refuses one whose manifest names no published source, no

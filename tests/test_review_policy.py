@@ -16,6 +16,8 @@ from review_policy import (
     classify,
     decide,
     ecosystem,
+    eval_report,
+    eval_result,
     fix_rounds,
     parse_codeowners,
     parse_dependabot_updates,
@@ -37,6 +39,7 @@ def tier(**overrides: object) -> str:
         "updates": [],
         "pyproject_reshaped": False,
         "new_runtime_packages": set(),
+        "eval_result": None,
     }
     args.update(overrides)
     return classify(**args).tier  # type: ignore[arg-type]
@@ -75,7 +78,7 @@ def test_a_protected_path_goes_to_a_person(path: str) -> None:
         "src/cfokit/ledgerish/thing.py",  # a prefix of a protected name is not inside it
         "tests/test_activity.py",
         "docs/how-to/connect-claude.md",
-        "skills/cfokit/bookkeeper/SKILL.md",
+        "skills/README.md",  # outside the plugin, so a merge releases nothing
         "README.md",
     ],
 )
@@ -318,3 +321,80 @@ def test_only_a_bot_comment_marks_a_commit_reviewed() -> None:
     marker = f"<!-- cfokit-review sha={sha} -->"
     assert reviewed_shas([{"user": {"type": "Bot"}, "body": marker}]) == {sha}
     assert reviewed_shas([{"user": {"type": "User"}, "body": marker}]) == set()
+
+
+# --- The plugin: a merge releases it, so it needs a passing eval run (ADR-0036 § 4) -------
+
+SHA = "a" * 40
+SKILL = "skills/cfokit/bookkeeper/SKILL.md"
+
+
+@pytest.mark.parametrize("path", [SKILL, "skills/cfokit/evals/closed-period-refusal/prompt.md"])
+def test_a_plugin_change_with_no_eval_result_goes_to_a_person(path: str) -> None:
+    assert tier(changed=[path]) == "human"
+
+
+def test_a_plugin_change_with_a_passing_eval_result_may_merge_on_approval() -> None:
+    assert tier(changed=[SKILL], eval_result="pass") == "auto"
+
+
+def test_a_plugin_change_with_a_failing_eval_result_goes_to_a_person() -> None:
+    assert tier(changed=[SKILL], eval_result="fail") == "human"
+
+
+def test_a_passing_eval_result_does_not_lift_a_protected_path() -> None:
+    assert tier(changed=[SKILL, "skills/CLAUDE.md"], eval_result="pass") == "human"
+
+
+def _comment(body: str, kind: str = "Bot") -> dict[str, object]:
+    return {"user": {"type": kind}, "body": body}
+
+
+def test_an_eval_result_counts_only_at_the_head_and_only_from_a_bot() -> None:
+    passed = f"<!-- cfokit-eval sha={SHA} result=pass -->"
+    assert eval_result([_comment(passed)], SHA) == "pass"
+    assert eval_result([_comment(passed)], "b" * 40) is None
+    assert eval_result([_comment(passed, kind="User")], SHA) is None
+
+
+def test_the_latest_eval_result_at_the_head_wins() -> None:
+    failed = f"<!-- cfokit-eval sha={SHA} result=fail -->"
+    passed = f"<!-- cfokit-eval sha={SHA} result=pass -->"
+    assert eval_result([_comment(failed), _comment(passed)], SHA) == "pass"
+    assert eval_result([_comment(passed), _comment(failed)], SHA) == "fail"
+
+
+def _run(*scores: float, partial: bool = False) -> dict[str, object]:  # not-money: eval scores
+    return {
+        "costUsd": 0.37,
+        "partial": partial,
+        "suite": {"threshold": 1},
+        "cases": [
+            {
+                "name": f"case-{i}",
+                "model": "claude-sonnet-5-5",
+                "runsPerCase": 3,
+                "aggregates": {"score": score, "scoreWithout": 1, "delta": score - 1},
+            }
+            for i, score in enumerate(scores)
+        ],
+    }
+
+
+def test_an_eval_run_passes_only_when_every_case_meets_the_threshold() -> None:
+    result, body = eval_report(sha=SHA, run=_run(1, 1))
+    assert result == "pass"
+    assert body.startswith(f"<!-- cfokit-eval sha={SHA} result=pass -->")
+    assert eval_report(sha=SHA, run=_run(1, 0.67))[0] == "fail"
+
+
+def test_an_eval_run_that_did_not_finish_fails() -> None:
+    assert eval_report(sha=SHA, run=None)[0] == "fail"
+    assert eval_report(sha=SHA, run=_run(1, partial=True))[0] == "fail"
+    assert eval_report(sha=SHA, run=_run())[0] == "fail"
+
+
+def test_the_eval_report_is_read_back_as_its_own_result() -> None:
+    for run in (_run(1), _run(0.5)):
+        result, body = eval_report(sha=SHA, run=run)
+        assert eval_result([_comment(body)], SHA) == result
