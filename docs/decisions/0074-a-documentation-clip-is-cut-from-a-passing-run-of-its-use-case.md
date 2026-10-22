@@ -98,7 +98,7 @@ agent's prose.
 ### 3. Clips are cut at step boundaries, from a passing run only
 
 The recording run is paced (`E2E_PACE`). A reporter writes each step's start and end, and the
-recording job cuts one MP4, one GIF and one WebVTT caption track per step from the run's video,
+recording job cuts one MP4, one still and one WebVTT caption track per step from the run's video,
 after the test step has passed. A failed run publishes nothing, and the page keeps its last good
 clips.
 
@@ -218,8 +218,12 @@ Cheap, stable and searchable, and the same specs would take them.
 **Reversal cost.** Low. Clips are outputs. Dropping them leaves pages with text, and the specs stay
 as tests.
 
-**Not decided here.** Narration, and where pages are published beyond the repository. A GIF links
-to its MP4 because GitHub's Markdown shows a GIF from a release inline but not an MP4.
+**Not decided here.** Narration, and where pages are published beyond the repository.
+
+**A page shows a still, not an animation.** GitHub's Markdown shows an image from a release inline
+but does not play an MP4, so each step appears as a still of how it leaves the screen, linking to
+its MP4. A still shows the screen the text describes, and a page of looping animations is too busy
+to read. The README's one GIF of the whole run stays, where a single moving preview is the point.
 
 Related: ADR-0001 (where user documentation lives), ADR-0034 (the runtime whose chat window is
 recorded), ADR-0036 (the layers a recorded spec belongs to), ADR-0049 (the web client), ADR-0061
