@@ -24,6 +24,8 @@ from typing import Literal
 
 from synthetic_books.events import (
     HELD,
+    RECEIVABLE,
+    RETAINED_EARNINGS,
     AccountType,
     AddCustomer,
     AddService,
@@ -36,19 +38,20 @@ from synthetic_books.events import (
     Event,
     IssueCredit,
     IssueInvoice,
+    IssueQuote,
     Journal,
     Line,
     OpenAccount,
     OpenBalances,
     Pay,
     PayBills,
+    PlaceOrder,
     ReceiveBill,
     ReceivePayment,
     RefundCustomer,
     RenameAccount,
     SaleLine,
     SetFiscalYear,
-    SetReportBasis,
     Transfer,
     VendorCredit,
     Void,
@@ -59,6 +62,7 @@ START = date(2023, 7, 1)
 END = date(2026, 6, 30)
 FIRST_INVOICE = 1001
 FIRST_CHECK = 5001
+NEVER = date.max  # a payment that never comes
 
 
 def money(cents: int) -> Decimal:
@@ -84,45 +88,107 @@ def fiscal_year(day: date) -> int:
     return day.year - START.year + (1 if day.month >= 7 else 0)
 
 
+def retainer(monthly: int, day: date) -> int:
+    """A first-year monthly fee in cents, up four percent a year, to the nearest $100."""
+    for _ in range(fiscal_year(day) - 1):
+        monthly = (monthly * 104 + 500000) // 1000000 * 10000
+    return monthly
+
+
 # --- The chart ------------------------------------------------------------------------------
 
-ACCOUNTS: tuple[tuple[str, str, AccountType, str | None, tuple[str, ...]], ...] = (
-    # key, name, type, parent key, cases
-    ("checking", "Operating Checking", "bank", None, ()),
-    ("savings", "Reserve Savings", "bank", None, ()),
-    ("card", "Business Card", "credit_card", None, ()),
-    ("equipment", "Computer Equipment", "fixed_asset", None, ()),
-    ("payroll-liabilities", "Payroll Liabilities", "other_current_liability", None, ()),
-    ("loan", "Equipment Loan", "long_term_liability", None, ()),
-    ("design", "Design Services", "income", None, ()),
-    ("workshops", "Workshops", "income", None, ()),
-    ("interest-earned", "Interest Earned", "other_income", None, ("d-deposit-other-income",)),
-    ("cost-of-services", "Cost of Services", "cost_of_sales", None, ("d-same-leaf",)),
-    ("contractors", "Contractors", "cost_of_sales", "cost-of-services", ()),
-    ("render-software", "Software", "cost_of_sales", "cost-of-services", ("d-same-leaf",)),
-    ("stock", "Stock Photography", "cost_of_sales", "cost-of-services", ("d-renamed-account",)),
-    ("rent", "Rent", "expense", None, ()),
-    ("payroll", "Payroll Expenses", "expense", None, ()),
-    ("wages", "Wages", "expense", "payroll", ()),
-    ("employer-taxes", "Employer Taxes", "expense", "payroll", ()),
-    ("office", "Office Expenses", "expense", None, ("d-same-leaf",)),
-    ("office-software", "Software", "expense", "office", ("d-same-leaf",)),
-    ("supplies", "Office Supplies", "expense", None, ()),
-    ("meals", "Meals & Entertainment", "expense", None, ("d-punctuation-names",)),
-    ("repairs", "Repairs/Maintenance", "expense", None, ("d-punctuation-names",)),
-    ("professional", "Professional Fees", "expense", None, ("d-punctuation-names",)),
-    ("legal", "Legal & Accounting", "expense", "professional", ("d-punctuation-names",)),
-    ("travel", "Travel", "expense", None, ("d-parent-with-postings",)),
-    ("airfare", "Airfare", "expense", "travel", ("d-parent-with-postings",)),
-    ("telephone", "Telephone", "expense", None, ("d-inactive-account",)),
-    ("insurance", "Insurance", "expense", None, ()),
-    ("bank-fees", "Bank Fees", "expense", None, ()),
-    ("interest-expense", "Interest Expense", "other_expense", None, ()),
+type Account = tuple[str, str, str, AccountType, str | None, tuple[str, ...]]
+
+ACCOUNTS: tuple[Account, ...] = (
+    # key, number, name, type, parent key, cases
+    ("checking", "1010", "Operating Checking", "bank", None, ()),
+    ("savings", "1020", "Reserve Savings", "bank", None, ()),
+    (
+        "prepaid",
+        "1300",
+        "Prepaid Expenses",
+        "other_current_asset",
+        None,
+        ("d-prepaid-expense",),
+    ),
+    ("equipment", "1500", "Computer Equipment", "fixed_asset", None, ()),
+    (
+        "equipment-cost",
+        "1510",
+        "Original Cost Basis",
+        "fixed_asset",
+        "equipment",
+        ("d-basis-suffix-name",),
+    ),
+    ("depreciation-accum", "1520", "Accumulated Depreciation", "fixed_asset", "equipment", ()),
+    ("card", "2100", "Business Card", "credit_card", None, ()),
+    ("payroll-liabilities", "2200", "Payroll Liabilities", "other_current_liability", None, ()),
+    ("loan", "2700", "Equipment Loan", "long_term_liability", None, ()),
+    ("owner-draws", "3100", "Owner Draws", "equity", None, ("d-owner-draw",)),
+    ("design", "4000", "Design Services", "income", None, ()),
+    ("workshops", "4100", "Workshops", "income", None, ()),
+    ("cost-of-services", "5000", "Cost of Services", "cost_of_sales", None, ("d-same-leaf",)),
+    ("contractors", "5010", "Contractors", "cost_of_sales", "cost-of-services", ()),
+    (
+        "render-software",
+        "5020",
+        "Software",
+        "cost_of_sales",
+        "cost-of-services",
+        ("d-same-leaf",),
+    ),
+    (
+        "stock",
+        "5030",
+        "Stock Photography",
+        "cost_of_sales",
+        "cost-of-services",
+        ("d-renamed-account",),
+    ),
+    ("rent", "6000", "Rent", "expense", None, ()),
+    ("payroll", "6100", "Payroll Expenses", "expense", None, ()),
+    ("wages", "6110", "Wages", "expense", "payroll", ()),
+    ("employer-taxes", "6120", "Employer Taxes", "expense", "payroll", ()),
+    ("office", "6200", "Office Expenses", "expense", None, ("d-same-leaf",)),
+    ("office-software", "6210", "Software", "expense", "office", ("d-same-leaf",)),
+    ("design-tools", "6211", "Design Tools", "expense", "office-software", ("d-three-levels",)),
+    ("supplies", "6300", "Office Supplies", "expense", None, ()),
+    ("meals", "6400", "Meals & Entertainment", "expense", None, ("d-punctuation-names",)),
+    ("repairs", "6500", "Repairs/Maintenance", "expense", None, ("d-punctuation-names",)),
+    ("professional", "6600", "Professional Fees", "expense", None, ("d-punctuation-names",)),
+    (
+        "legal",
+        "6610",
+        "Legal & Accounting",
+        "expense",
+        "professional",
+        ("d-punctuation-names",),
+    ),
+    ("travel", "6700", "Travel", "expense", None, ("d-parent-with-postings",)),
+    ("airfare", "6710", "Airfare", "expense", "travel", ("d-parent-with-postings",)),
+    ("telephone", "6800", "Telephone", "expense", None, ("d-inactive-account",)),
+    ("insurance", "6900", "Insurance", "expense", None, ()),
+    ("bank-fees", "6950", "Bank Fees", "expense", None, ()),
+    ("promo", "6960", "Totally Promotional Merch", "expense", None, ("d-total-prefix-name",)),
+    ("gross-receipts", "6970", "Gross Receipts Tax", "expense", None, ("d-gross-prefix-name",)),
+    ("conferences", "6980", "Conference Fees", "expense", None, ("d-zero-balance-account",)),
+    ("bad-debts", "6990", "Bad Debts", "expense", None, ()),
+    ("depreciation", "7000", "Depreciation", "expense", None, ()),
+    (
+        "interest-earned",
+        "8000",
+        "Interest Earned",
+        "other_income",
+        None,
+        ("d-deposit-other-income",),
+    ),
+    ("interest-expense", "9000", "Interest Expense", "other_expense", None, ()),
 )
 
 # Opened when it replaces Telephone, at the start of the third fiscal year.
-INTERNET: tuple[str, str, AccountType, str | None, tuple[str, ...]] = (
+INTERNET: Account = (
     "internet",
+    "6810",
     "Internet & Phone",
     "expense",
     None,
@@ -142,6 +208,7 @@ class Client:
     lag: tuple[int, int]  # days from invoice to payment
     joins: date = START
     leaves: date = date.max
+    parent: str | None = None
 
 
 CLIENTS = (
@@ -159,6 +226,16 @@ CLIENTS = (
     Client("sable-finch", "Sable & Finch Law", 540000, "ach", (5, 15)),
     Client("glacier", "Glacier Outfitters", 260000, "ach", (10, 20), joins=date(2025, 1, 1)),
     Client("copperleaf", "Copperleaf Foods", 470000, "ach", (12, 25), leaves=date(2026, 2, 28)),
+    # A second location of Harbor Dental, billed as a sub-customer of it.
+    Client(
+        "harbor-downtown",
+        "Downtown Clinic",
+        120000,
+        "ach",
+        (8, 20),
+        joins=date(2024, 9, 1),
+        parent="harbor-dental",
+    ),
 )
 
 VENDORS = (
@@ -178,6 +255,8 @@ VENDORS = (
     ("skyway", "Skyway Air"),
     ("hotel-row", "Hotel Row"),
     ("fixit", "FixIt Building Services"),
+    ("city-revenue", "City Revenue Office"),
+    ("conference-co", "Design Forward Conference"),
 )
 
 SERVICES = (
@@ -204,7 +283,7 @@ MONTH_NAMES = (
 # Retainer payments forced into the last days of May 2024, so three are held over the month end
 # and banked together on Monday 3 June (d-undeposited-funds).
 HELD_OVER_MONTH_END = {
-    ("cafe-nandu", date(2024, 5, 1)): date(2024, 5, 28),
+    ("cafe-nandu", date(2024, 5, 1)): date(2024, 5, 28),  # and d-cash-undeposited
     ("oakline", date(2024, 5, 1)): date(2024, 5, 29),
     ("lantern", date(2024, 5, 1)): date(2024, 5, 30),
 }
@@ -255,7 +334,6 @@ class Business:
         """By date; on one day, the company's setup comes before anything posted against it."""
         setup = (
             SetFiscalYear,
-            SetReportBasis,
             OpenAccount,
             RenameAccount,
             DeactivateAccount,
@@ -285,10 +363,17 @@ class Business:
 
     def _setup(self) -> None:
         self.add(SetFiscalYear(on=START, start_month=7, cases=("d-fiscal-year-july",)))
-        self.add(SetReportBasis(on=START, basis="cash", cases=("d-cash-basis-reports",)))
-        for key, name, kind, parent, tags in ACCOUNTS:
+        for key, number, name, kind, parent, tags in ACCOUNTS:
             self.add(
-                OpenAccount(on=START, key=key, name=name, type=kind, parent=parent, cases=tags)
+                OpenAccount(
+                    on=START,
+                    key=key,
+                    number=number,
+                    name=name,
+                    type=kind,
+                    parent=parent,
+                    cases=tags,
+                )
             )
         for key, name, service_account in SERVICES:
             self.add(AddService(on=START, key=key, name=name, income_account=service_account))
@@ -298,8 +383,16 @@ class Business:
                 cases = ("d-unicode-commas",)
             elif client.key == "northwind":
                 cases = ("d-name-both-sides",)
+            elif client.parent is not None:
+                cases = ("d-sub-customer",)
             self.add(
-                AddCustomer(on=client.joins, key=client.key, name=client.name, cases=cases)
+                AddCustomer(
+                    on=client.joins,
+                    key=client.key,
+                    name=client.name,
+                    parent=client.parent,
+                    cases=cases,
+                )
             )
         for key, name in VENDORS:
             cases = ("d-name-both-sides",) if key == "northwind-v" else ()
@@ -310,10 +403,10 @@ class Business:
                 lines=(
                     Line("checking", money(4200000), "Opening balance"),
                     Line("savings", money(2500000), "Opening balance"),
-                    Line("equipment", money(1800000), "Opening balance"),
+                    Line("equipment-cost", money(1800000), "Opening balance"),
                     Line("loan", money(-2400000), "Opening balance"),
                 ),
-                cases=("d-opening-balance-equity",),
+                cases=("d-opening-balance-equity", "d-basis-suffix-name"),
             )
         )
         # Stock Photography becomes Stock Media halfway through the second fiscal year.
@@ -326,9 +419,13 @@ class Business:
             )
         )
         # Telephone is replaced by Internet & Phone, and retired, when the third year opens.
-        key, name, kind, parent, cases = INTERNET
+        key, number, name, kind, parent, cases = INTERNET
         third_year = date(2025, 7, 1)
-        self.add(OpenAccount(on=third_year, key=key, name=name, type="expense", cases=cases))
+        self.add(
+            OpenAccount(
+                on=third_year, key=key, number=number, name=name, type=kind, cases=cases
+            )
+        )
         self.add(DeactivateAccount(on=third_year, account="telephone", cases=cases))
 
     # --- an ordinary month -------------------------------------------------------------------
@@ -338,15 +435,14 @@ class Business:
         year = fiscal_year(first)
         for client in CLIENTS:
             if client.joins <= first <= client.leaves:
-                self._retainer(client, first, year)
+                self._retainer(client, first)
         if first.month in (10, 11, 12):
             for client in self.rng.sample(self._active(first), 3):
+                memo = f"Holiday campaign — {MONTH_NAMES[first.month - 1]} deliverables"
                 self._invoice(
                     client,
                     first + timedelta(days=self.rng.randint(4, 20)),
-                    "project",
-                    self.cents(300000, 1200000),
-                    f"Holiday campaign — {MONTH_NAMES[first.month - 1]} deliverables",
+                    (("project", self.cents(300000, 1200000), memo),),
                 )
         if first.month in (3, 4, 5):
             for _ in range(self.rng.randint(2, 4)):
@@ -360,6 +456,67 @@ class Business:
         self._loan(first)
         self._everyday(first)
         self._bills(first)
+        self.add(
+            Journal(
+                on=last,
+                key=self.key("depr"),
+                memo="Monthly depreciation, computer equipment",
+                lines=(
+                    Line("depreciation", money(50000)),
+                    Line("depreciation-accum", money(-50000)),
+                ),
+            )
+        )
+        if first.month in (3, 6, 9, 12):
+            self.add(
+                Pay(
+                    on=first.replace(day=28),
+                    key=self.key("draw"),
+                    by="debit",
+                    out_of="checking",
+                    payee=None,
+                    lines=(Line("owner-draws", money(1500000), "Owner draw"),),
+                    cases=("d-owner-draw",) if first == date(2023, 9, 1) else (),
+                )
+            )
+        if first.month == 4:
+            self.add(
+                Pay(
+                    on=first.replace(day=15),
+                    key=self.key("pay"),
+                    by="debit",
+                    out_of="checking",
+                    payee="city-revenue",
+                    lines=(
+                        Line(
+                            "gross-receipts", money(self.cents(90000, 140000)), "Annual return"
+                        ),
+                    ),
+                    cases=("d-gross-prefix-name",) if first == date(2024, 4, 1) else (),
+                )
+            )
+        if first.month == 11:
+            self._card_charge(
+                first.replace(day=14),
+                "paper-co",
+                "promo",
+                self.cents(60000, 110000),
+                "Branded tote bags",
+                ("d-total-prefix-name",) if first == date(2023, 11, 1) else (),
+            )
+        if date(2024, 7, 1) <= first <= date(2025, 6, 1):
+            self.add(
+                Journal(
+                    on=last,
+                    key=self.key("prepaid"),
+                    memo="Release one month of the creative suite license",
+                    lines=(
+                        Line("office-software", money(40000)),
+                        Line("prepaid", money(-40000)),
+                    ),
+                    cases=("d-prepaid-expense",) if first == date(2024, 7, 1) else (),
+                )
+            )
 
         interest = self.cents(1800, 3200)
         self.add(
@@ -385,51 +542,79 @@ class Business:
     def _active(self, first: date) -> list[Client]:
         return [c for c in CLIENTS if c.joins <= first <= c.leaves]
 
-    def _retainer(self, client: Client, first: date, year: int) -> None:
-        amount = client.retainer
-        for _ in range(year - 1):  # four percent a year, to the nearest hundred dollars
-            amount = (amount * 104 + 500000) // 1000000 * 10000
+    def _retainer(self, client: Client, first: date) -> None:
+        amount = retainer(client.retainer, first)
         memo = f"{MONTH_NAMES[first.month - 1]} {first.year} retainer"
         cases: tuple[str, ...] = ()
         if client.key == "cafe-nandu" and first == date(2024, 3, 1):
             memo = "Q3 retainer — 東京 office, phase 2"
             cases = ("d-unicode-commas",)
+        paid: date | None = HELD_OVER_MONTH_END.get((client.key, first))
+        payment_cases: tuple[str, ...] = ()
+        if paid is not None:
+            payment_cases = ("d-undeposited-funds", "d-cash-undeposited")
         if client.key == "tidewater" and first == START:
             cases = ("d-invoice",)  # a late payer: still open on July 31
+        if client.key == "tidewater" and first == date(2024, 6, 1):
+            cases = payment_cases = ("d-cash-year-boundary",)  # June work, paid after July 1
+        if client.key == "tidewater" and first == date(2026, 6, 1):
+            cases = ("d-cash-open-at-end",)
+        if client.key == "meridian" and first == date(2025, 3, 1):
+            cases, paid = (
+                ("d-cash-journal-to-receivable",),
+                NEVER,
+            )  # disputed, later written off
+        if client.parent is not None and first == client.joins:
+            cases = ("d-sub-customer",)
+        if client.key == "copperleaf" and first == date(2025, 8, 1):
+            self._bounced(client, first, amount, memo)
+            return
         if client.key == "harbor-dental" and first == date(2024, 2, 1):
             self._overpaid(client, first, amount, memo)
             return
         if client.key == "juniper" and first == date(2024, 11, 1):
             self._credited(client, first, amount, memo)
             return
-        paid = HELD_OVER_MONTH_END.get((client.key, first))
-        self._invoice(client, first, "retainer", amount, memo, cases=cases, paid_on=paid)
+        self._invoice(
+            client,
+            first,
+            (
+                (
+                    "retainer",
+                    amount,
+                    memo,
+                ),
+            ),
+            cases=cases,
+            paid_on=paid,
+            payment_cases=payment_cases,
+        )
 
     def _invoice(
         self,
         client: Client,
         on: date,
-        service: str,
-        cents: int,
-        memo: str,
+        lines: tuple[tuple[str, int, str], ...],
         *,
         cases: tuple[str, ...] = (),
         paid_on: date | None = None,
+        payment_cases: tuple[str, ...] = (),
     ) -> str:
-        key = f"inv-{client.key}-{on.isoformat()}-{service}"
+        """An invoice of (service, cents, memo) lines, paid in full after the client's lag."""
+        key = f"inv-{client.key}-{on.isoformat()}-{lines[0][0]}"
         self.add(
             IssueInvoice(
                 on=on,
                 key=key,
                 customer=client.key,
                 due=on + timedelta(days=30),
-                lines=(SaleLine(service, money(cents), memo),),
+                lines=tuple(SaleLine(service, money(c), memo) for service, c, memo in lines),
                 cases=cases,
             )
         )
+        total = sum(c for _, c, _ in lines)
         received = paid_on or on + timedelta(days=self.rng.randint(*client.lag))
-        payment_cases = ("d-undeposited-funds",) if paid_on is not None else ()
-        self._payment(client, received, ((key, cents),), cents, cases=payment_cases)
+        self._payment(client, received, ((key, total),), total, cases=payment_cases)
         return key
 
     def _payment(
@@ -440,9 +625,9 @@ class Business:
         cents: int,
         *,
         cases: tuple[str, ...] = (),
-    ) -> None:
+    ) -> str | None:
         if on > END:
-            return  # still owed when the books end
+            return None  # still owed when the books end
         key = self.key("pmt")
         into = HELD if client.pays == "check" else "checking"
         self.add(
@@ -458,6 +643,7 @@ class Business:
         )
         if into == HELD:
             self._held.append((on, key, client.key, cents))
+        return key
 
     def _workshop(self, on: date, cases: tuple[str, ...] = ()) -> None:
         seats = self.rng.randint(4, 12)
@@ -489,7 +675,7 @@ class Business:
         )
 
     def _payroll(self, day: date, year: int) -> None:
-        gross = (1900000, 2050000, 2200000)[year - 1]
+        gross = (1250000, 1350000, 1450000)[year - 1]
         employer_tax = gross * 765 // 10000
         withheld = gross * 22 // 100
         self.add(
@@ -530,6 +716,22 @@ class Business:
         )
         self._card[on.replace(day=1)] += cents
 
+    def _card_split(
+        self, on: date, payee: str, lines: tuple[Line, ...], cases: tuple[str, ...] = ()
+    ) -> None:
+        self.add(
+            Pay(
+                on=on,
+                key=self.key("card"),
+                by="card",
+                out_of="card",
+                payee=payee,
+                lines=lines,
+                cases=cases,
+            )
+        )
+        self._card[on.replace(day=1)] += sum(int(line.amount * 100) for line in lines)
+
     def _subscriptions(self, first: date) -> None:
         # The first month posts to both accounts named Software; the months either side of the
         # rename give Stock Photography history under each of its names.
@@ -538,7 +740,15 @@ class Business:
             ("d-renamed-account",) if first in (date(2024, 12, 1), date(2025, 1, 1)) else ()
         )
         self._card_charge(
-            first.replace(day=3), "vectorly", "office-software", 5400, "Vectorly", same_leaf
+            first.replace(day=3),
+            "vectorly",
+            "design-tools",
+            5400,
+            "Vectorly",
+            ("d-three-levels",) if first == START else (),
+        )
+        self._card_charge(
+            first.replace(day=4), "vectorly", "office-software", 1500, "Cloud Docs", same_leaf
         )
         self._card_charge(
             first.replace(day=7),
@@ -586,6 +796,9 @@ class Business:
     def _everyday(self, first: date) -> None:
         day = first + timedelta(days=self.rng.randint(5, 25))
         supplies = self.cents(3000, 15000)
+        memo, cases = "Paper, ink, mounting board", ("d-expense",) if first == START else ()
+        if first == date(2024, 2, 1):
+            day, memo, cases = date(2024, 2, 29), "Leap-day restock", ("d-leap-day",)
         self.add(
             Pay(
                 on=day,
@@ -593,8 +806,8 @@ class Business:
                 by="debit",
                 out_of="checking",
                 payee="paper-co",
-                lines=(Line("supplies", money(supplies), "Paper, ink, mounting board"),),
-                cases=("d-expense",) if first == START else (),
+                lines=(Line("supplies", money(supplies), memo),),
+                cases=cases,
             )
         )
         for _ in range(self.rng.randint(1, 2)):
@@ -675,6 +888,8 @@ class Business:
                 cases = ("d-name-both-sides",) if on == date(2024, 1, 12) else ()
                 if first == date(2023, 10, 1):
                     cases = ("d-bill-payment-multi",)
+                if on == date(2026, 6, 12):
+                    cases = ("d-cash-open-at-end",)  # paid on July 10, after the books end
                 self.add(
                     ReceiveBill(
                         on=on,
@@ -716,7 +931,7 @@ class Business:
                 customer=client.key,
                 due=first + timedelta(days=30),
                 lines=(SaleLine("retainer", money(cents), memo),),
-                cases=("d-overpayment",),
+                cases=("d-overpayment", "d-cash-unapplied-credit"),
             )
         )
         self._payment(
@@ -724,7 +939,7 @@ class Business:
             first + timedelta(days=14),
             ((key, cents),),
             cents + 40000,
-            cases=("d-overpayment",),
+            cases=("d-overpayment", "d-cash-unapplied-credit"),
         )
 
     def _credited(self, client: Client, first: date, cents: int, memo: str) -> None:
@@ -738,7 +953,7 @@ class Business:
                 customer=client.key,
                 due=first + timedelta(days=30),
                 lines=(SaleLine("retainer", money(cents), memo),),
-                cases=("d-credit-memo",),
+                cases=("d-credit-memo", "d-cash-credit-memo"),
             )
         )
         self.add(
@@ -748,7 +963,7 @@ class Business:
                 customer=client.key,
                 lines=(SaleLine("retainer", money(credit), "Credit — missed launch deadline"),),
                 applies_to=key,
-                cases=("d-credit-memo",),
+                cases=("d-credit-memo", "d-cash-credit-memo"),
             )
         )
         self._payment(
@@ -756,12 +971,195 @@ class Business:
             date(2024, 11, 26),
             ((key, cents - credit),),
             cents - credit,
-            cases=("d-credit-memo",),
+            cases=("d-credit-memo", "d-cash-credit-memo"),
         )
+
+    def _bounced(self, client: Client, first: date, cents: int, memo: str) -> None:
+        """A payment that bounces: voided four days later, then paid again."""
+        key = f"inv-{client.key}-{first.isoformat()}-retainer"
+        tag = ("d-cash-void-after-payment",)
+        self.add(
+            IssueInvoice(
+                on=first,
+                key=key,
+                customer=client.key,
+                due=first + timedelta(days=30),
+                lines=(SaleLine("retainer", money(cents), memo),),
+                cases=tag,
+            )
+        )
+        bounced = self._payment(client, date(2025, 8, 15), ((key, cents),), cents, cases=tag)
+        if bounced is None:
+            raise ValueError("the bounced payment falls after the books end")
+        self.add(Void(on=date(2025, 8, 19), target=bounced, cases=tag))
+        self._payment(client, date(2025, 9, 2), ((key, cents),), cents, cases=tag)
 
     def _cases(self) -> None:
         juniper = next(c for c in CLIENTS if c.key == "juniper")
         oakline = next(c for c in CLIENTS if c.key == "oakline")
+        sable = next(c for c in CLIENTS if c.key == "sable-finch")
+        meridian = next(c for c in CLIENTS if c.key == "meridian")
+
+        # A two-line invoice paid in two parts; the first part splits across both lines to the
+        # cent only in proportion, which is the rounding the cash basis has to settle.
+        multiline = "inv-juniper-2025-10-06-campaign"
+        tag = ("d-cash-partial-multiline",)
+        self.add(
+            IssueInvoice(
+                on=date(2025, 10, 6),
+                key=multiline,
+                customer="juniper",
+                due=date(2025, 11, 5),
+                lines=(
+                    SaleLine("project", money(700000), "Campaign design"),
+                    SaleLine("workshop-seat", money(225000), "Team workshop, 5 seats"),
+                ),
+                cases=tag,
+            )
+        )
+        for on, part in ((date(2025, 10, 30), 333333), (date(2025, 12, 2), 591667)):
+            self._payment(juniper, on, ((multiline, part),), part, cases=tag)
+
+        # The same on the payable side: a two-line repair bill paid in two parts.
+        repair = "bill-fixit-2025-09-08"
+        tag = ("d-cash-bill-partial-multiline",)
+        self.add(
+            ReceiveBill(
+                on=date(2025, 9, 8),
+                key=repair,
+                vendor="fixit",
+                number="FX-4471",
+                due=date(2025, 10, 8),
+                lines=(
+                    Line("repairs", money(180000), "Roof leak repair"),
+                    Line("supplies", money(65000), "Replacement ceiling tiles"),
+                ),
+                cases=tag,
+            )
+        )
+        self._pay_bills("fixit", date(2025, 9, 30), repair, 100000, tag)
+        self._pay_bills("fixit", date(2025, 10, 28), repair, 145000, tag)
+
+        # An invoice with a negative line: a loyalty discount against the fee.
+        self._invoice(
+            sable,
+            date(2025, 11, 5),
+            (
+                ("project", 850000, "Annual report design"),
+                ("project", -42500, "Loyalty discount (5%)"),
+            ),
+            cases=("d-negative-line",),
+        )
+
+        disputed = retainer(meridian.retainer, date(2025, 3, 1))
+        # Meridian's March 2025 invoice is disputed and, in December, written off by journal
+        # straight to A/R. The invoice itself stays open; nothing links the two.
+        self.add(
+            Journal(
+                on=date(2025, 12, 15),
+                key=self.key("writeoff"),
+                memo="Write off disputed March retainer",
+                lines=(
+                    Line("bad-debts", money(disputed)),
+                    Line(RECEIVABLE, money(-disputed), customer=meridian.key),
+                ),
+                cases=("d-cash-journal-to-receivable",),
+            )
+        )
+
+        # A prior-year correction straight to Retained Earnings.
+        self.add(
+            Journal(
+                on=date(2024, 8, 20),
+                key=self.key("correction"),
+                memo="Prior-year payroll tax understatement",
+                lines=(
+                    Line(RETAINED_EARNINGS, money(61200)),
+                    Line("payroll-liabilities", money(-61200)),
+                ),
+                cases=("d-retained-earnings-entry",),
+            )
+        )
+
+        # One card charge split three ways.
+        self._card_split(
+            date(2024, 6, 12),
+            "hotel-row",
+            (
+                Line("meals", money(18400), "Team lunch with the client"),
+                Line("travel", money(9200), "Taxi to the site"),
+                Line("supplies", money(4300), "Foam board"),
+            ),
+            ("d-split-purchase",),
+        )
+
+        # Memos in the shapes that break naive text handling.
+        long_memo = ("Archival box, acid-free, 15 x 12 x 3 in. " * 25)[:1000]
+        self.add(
+            Pay(
+                on=date(2025, 5, 14),
+                key=self.key("pay"),
+                by="debit",
+                out_of="checking",
+                payee="paper-co",
+                lines=(
+                    # First, because the journal's first line carries the entry's description.
+                    Line("supplies", money(800), "=SUM(B2:B9) is what the client asked for"),
+                    Line("supplies", money(1200), "First line of the order\nSecond line"),
+                    Line("supplies", money(500), ""),
+                    Line("supplies", money(300), long_memo),
+                ),
+                cases=("d-memo-shapes",),
+            )
+        )
+
+        # An annual license paid up front, released monthly (see `_month`).
+        self._card_charge(
+            date(2024, 7, 5),
+            "vectorly",
+            "prepaid",
+            480000,
+            "Creative suite annual license",
+            ("d-prepaid-expense",),
+        )
+
+        # A conference pass bought and refunded: Conference Fees nets to zero.
+        tag = ("d-zero-balance-account",)
+        self._card_charge(
+            date(2024, 10, 3), "conference-co", "conferences", 59500, "Conference pass", tag
+        )
+        self.add(
+            CardRefund(
+                on=date(2024, 10, 21),
+                key=self.key("cardrefund"),
+                card="card",
+                payee="conference-co",
+                lines=(Line("conferences", money(59500), "Conference canceled — refunded"),),
+                cases=tag,
+            )
+        )
+        self._card[date(2024, 10, 1)] -= 59500
+
+        # An estimate and a purchase order: documents that post nothing.
+        tag = ("d-non-posting",)
+        self.add(
+            IssueQuote(
+                on=date(2025, 2, 10),
+                key="quote-glacier-2025-02-10",
+                customer="glacier",
+                lines=(SaleLine("project", money(1500000), "Estimate — rebrand proposal"),),
+                cases=tag,
+            )
+        )
+        self.add(
+            PlaceOrder(
+                on=date(2025, 3, 3),
+                key="po-paper-co-2025-03-03",
+                vendor="paper-co",
+                lines=(Line("supplies", money(120000), "Purchase order — exhibition prints"),),
+                cases=tag,
+            )
+        )
 
         # A project invoice paid in two parts, one each side of December 31.
         project = f"inv-juniper-{date(2023, 12, 1).isoformat()}-milestone"
@@ -802,7 +1200,7 @@ class Business:
                 key=self.key("refund"),
                 customer=None,
                 out_of="checking",
-                lines=(SaleLine("workshop-seat", money(45000), "Refund — cancelled seat"),),
+                lines=(SaleLine("workshop-seat", money(45000), "Refund — canceled seat"),),
                 cases=("d-refund-receipt",),
             )
         )
@@ -850,7 +1248,7 @@ class Business:
                 lines=(
                     Line("contractors", money(45000), "Reshoot credit — misprinted proofs"),
                 ),
-                cases=("d-vendor-credit",),
+                cases=("d-vendor-credit", "d-cash-vendor-credit"),
             )
         )
 
@@ -922,7 +1320,7 @@ class Business:
             cases: tuple[str, ...] = ()
             if not credit_taken and first == date(2025, 3, 1):
                 taken = (Applied("vcredit-northwind-2025-02-18", money(45000)),)
-                cases = ("d-vendor-credit",)
+                cases = ("d-vendor-credit", "d-cash-vendor-credit")
                 credit_taken = True
             if first == date(2023, 11, 1):
                 cases = ("d-bill-payment-multi",)

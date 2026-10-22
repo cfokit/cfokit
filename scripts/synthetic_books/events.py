@@ -19,6 +19,7 @@ from typing import ClassVar, Literal
 
 AccountType = Literal[
     "bank",
+    "other_current_asset",
     "credit_card",
     "fixed_asset",
     "other_current_liability",
@@ -34,16 +35,22 @@ AccountType = Literal[
 # A payment from a customer goes into a bank account, or is held to be banked later with others.
 HELD = "held"
 
+# Accounts every set of books has without opening them, named by what they are for.
+RECEIVABLE = "receivable"
+PAYABLE = "payable"
+RETAINED_EARNINGS = "retained-earnings"
+
 type Json = bool | int | str | Decimal | list[Json] | dict[str, Json] | None
 
 
 @dataclass(frozen=True, slots=True)
 class Line:
-    """An amount against an account, with what it was for."""
+    """An amount against an account, what it was for, and whose it is where that matters."""
 
     account: str
     amount: Decimal
     memo: str = ""
+    customer: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -81,19 +88,12 @@ class SetFiscalYear(Event):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
-class SetReportBasis(Event):
-    """The basis the company's own reports are run on. The journal is the record either way."""
-
-    KIND = "set_report_basis"
-    basis: Literal["accrual", "cash"]
-
-
-@dataclass(frozen=True, slots=True, kw_only=True)
 class OpenAccount(Event):
     KIND = "open_account"
     key: str
     name: str
     type: AccountType
+    number: str = ""
     parent: str | None = None
 
 
@@ -115,6 +115,7 @@ class AddCustomer(Event):
     KIND = "add_customer"
     key: str
     name: str
+    parent: str | None = None
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -154,8 +155,18 @@ class IssueInvoice(Event):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class IssueQuote(Event):
+    """An estimate offered to a customer. Nothing is owed, so nothing is booked."""
+
+    KIND = "issue_quote"
+    key: str
+    customer: str
+    lines: tuple[SaleLine, ...]
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class Void(Event):
-    """A document cancelled in place: it stays on record, worth nothing."""
+    """An invoice or payment canceled in place: it stays on record, worth nothing."""
 
     KIND = "void"
     target: str
@@ -223,6 +234,16 @@ class ReceiveBill(Event):
     vendor: str
     number: str
     due: date
+    lines: tuple[Line, ...]
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class PlaceOrder(Event):
+    """A purchase order to a supplier. Nothing is owed until the bill, so nothing is booked."""
+
+    KIND = "place_order"
+    key: str
+    vendor: str
     lines: tuple[Line, ...]
 
 

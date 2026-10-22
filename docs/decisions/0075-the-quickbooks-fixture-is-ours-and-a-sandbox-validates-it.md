@@ -81,9 +81,17 @@ names every case the company must contain, and each event carries the catalog id
 
 ### 2. The fixture is written by us
 
-The committed archive — Journal, General Ledger, Profit and Loss, Balance Sheet, Trial Balance — and
-the month-end trial balances beside it are written by our own code from the events. They are our
+The committed archives — Journal, General Ledger, Profit and Loss, Balance Sheet, Trial Balance — and
+the month-end trial balances beside them are written by our own code from the events. They are our
 expression; nothing in them was produced by QuickBooks.
+
+**One company's events, several renderings.** A setting QuickBooks applies only when it prints —
+the accounting basis, account numbers, the date range exported, the month a fiscal year starts —
+is another archive of the same events, not another company. A setting that changes what every
+transaction carries, or that QuickBooks will not turn off — sales tax, inventory, multicurrency, a
+non-US edition — is another company. Damage done to a file after export — re-zipping, re-saving in
+Excel, truncation — is a mutation of the accrual archive, made when a test needs it rather than
+committed.
 
 ### 3. QuickBooks validates content through the API, and layout once by hand
 
@@ -131,10 +139,12 @@ accounting is right; that stays with the conformance corpus (ADR-0050 § 3).
 
 ### Confirmation
 
-A unit test regenerates the events, payloads and manifest and requires them identical to what is
-committed; the same test fails when a catalog id has no event, or a data case's events reached no
-payload. A test fails when the committed archive's hash differs from the last validation record's,
-so a generator change without a validation run is visible.
+A unit test regenerates the events, payloads, manifest and archives and requires them identical to
+what is committed — an archive by its members' contents, since a zip's bytes depend on the zlib that
+wrote it; the same tests fail when a catalog id has no event, rendering or mutation. A test fails
+when an archive's content differs from the one the last validation record names, so a generator
+change without a validation run is visible; until the first validation that test is skipped, and
+says why.
 
 **Not gated:** that the sandbox started empty, and that no QuickBooks output was committed. Both are
 review at validation time.

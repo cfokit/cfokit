@@ -1,4 +1,4 @@
-"""Write the synthetic company's events, payloads and manifest, or check they are current.
+"""Write the synthetic company's events, payloads, manifest and archives, or check them.
 
 PYTHONPATH=scripts uv run python -m synthetic_books           # rewrite generated/
 PYTHONPATH=scripts uv run python -m synthetic_books --check   # exit 1 if generated/ is stale
@@ -10,7 +10,7 @@ import sys
 import tomllib
 from pathlib import Path
 
-from synthetic_books import business, quickbooks
+from synthetic_books import business, quickbooks, quickbooks_books, quickbooks_export, xlsx
 from synthetic_books.events import Event, Json, dumps, record
 
 FIXTURE = Path(__file__).resolve().parents[2] / "tests" / "fixtures" / "quickbooks"
@@ -51,43 +51,66 @@ def manifest(
             "events": list(tagged),
             "payloads": [p for event_id in tagged for p in by_event.get(event_id, [])],
         }
+        if case["category"] == "archive":
+            entry["rendering"] = case_id.removeprefix("a-")
         if case["category"] == "file":
-            # A mutation of the export, written when the export exists (ADR-0075).
+            # A mutation of the accrual archive, made from it at test time (ADR-0075).
             entry["mutation"] = case_id
         out[case_id] = entry
     return out
 
 
-def render() -> dict[str, str]:
-    """Every generated file's name and content."""
+def render() -> dict[str, bytes]:
+    """Every generated file, by its path under the fixture directory."""
     events = business.write()
     payloads = quickbooks.payloads(events)
-    return {
-        "events.jsonl": "".join(dumps(record(i, e)) + "\n" for i, e in events),
-        "payloads.jsonl": "".join(dumps(p.record()) + "\n" for p in payloads),
-        "manifest.json": dumps(
-            {"seed": business.SEED, "cases": manifest(catalog(), events, payloads)}
-        )
-        + "\n",
+    books = quickbooks_books.record(quickbooks_export.COMPANY, events)
+    files: dict[str, bytes] = {
+        "generated/events.jsonl": "".join(
+            dumps(record(i, e)) + "\n" for i, e in events
+        ).encode(),
+        "generated/payloads.jsonl": "".join(
+            dumps(p.record()) + "\n" for p in payloads
+        ).encode(),
+        "generated/manifest.json": (
+            dumps({"seed": business.SEED, "cases": manifest(catalog(), events, payloads)})
+            + "\n"
+        ).encode(),
     }
+    for rendering in quickbooks_export.RENDERINGS:
+        directory = f"archives/{rendering.name}"
+        files[f"{directory}/export.zip"] = quickbooks_export.export(books, rendering)
+        if rendering.name in quickbooks_export.OWN_TRIAL_BALANCES:
+            files[f"{directory}/trial_balances.json"] = quickbooks_export.trial_balances(
+                books, rendering
+            ).encode()
+    return files
+
+
+def same(name: str, content: bytes) -> bool:
+    """Whether the committed file says what `content` says. An archive is compared by its
+    members' contents, because a zip's bytes depend on the zlib that wrote it."""
+    path = FIXTURE / name
+    if not path.exists():
+        return False
+    if name.endswith(".zip"):
+        return xlsx.contents(path.read_bytes()) == xlsx.contents(content)
+    return path.read_bytes() == content
 
 
 def main(argv: list[str]) -> int:
     files = render()
     if "--check" in argv:
-        stale = [
-            name
-            for name, content in files.items()
-            if not (GENERATED / name).exists()
-            or (GENERATED / name).read_text(encoding="utf-8") != content
-        ]
+        stale = [name for name, content in files.items() if not same(name, content)]
         for name in stale:
-            print(f"stale: {GENERATED / name}; regenerate with python -m synthetic_books")
+            print(f"stale: {FIXTURE / name}; regenerate with python -m synthetic_books")
         return 1 if stale else 0
-    GENERATED.mkdir(parents=True, exist_ok=True)
     for name, content in files.items():
-        (GENERATED / name).write_text(content, encoding="utf-8")
-        print(f"wrote {GENERATED / name} ({len(content.encode()):,} bytes)")
+        path = FIXTURE / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if not same(name, content):
+            path.write_bytes(content)
+        print(f"{FIXTURE / name} ({len(content):,} bytes)")
     return 0
 
 

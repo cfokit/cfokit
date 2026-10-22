@@ -27,6 +27,9 @@ from decimal import Decimal
 
 from synthetic_books.events import (
     HELD,
+    PAYABLE,
+    RECEIVABLE,
+    RETAINED_EARNINGS,
     AccountType,
     AddCustomer,
     AddService,
@@ -39,6 +42,7 @@ from synthetic_books.events import (
     Event,
     IssueCredit,
     IssueInvoice,
+    IssueQuote,
     Journal,
     Json,
     Line,
@@ -46,13 +50,13 @@ from synthetic_books.events import (
     OpenBalances,
     Pay,
     PayBills,
+    PlaceOrder,
     ReceiveBill,
     ReceivePayment,
     RefundCustomer,
     RenameAccount,
     SaleLine,
     SetFiscalYear,
-    SetReportBasis,
     Transfer,
     VendorCredit,
     Void,
@@ -60,6 +64,7 @@ from synthetic_books.events import (
 
 ACCOUNT_TYPES: dict[AccountType, str] = {
     "bank": "Bank",
+    "other_current_asset": "Other Current Asset",
     "credit_card": "Credit Card",
     "fixed_asset": "Fixed Asset",
     "other_current_liability": "Other Current Liability",
@@ -90,9 +95,15 @@ MONTHS = (
 # Accounts QuickBooks creates for itself, found by subtype rather than created here.
 UNDEPOSITED_FUNDS = "system:UndepositedFunds"
 OPENING_BALANCE_EQUITY = "system:OpeningBalanceEquity"
+SYSTEM = {
+    HELD: UNDEPOSITED_FUNDS,
+    RECEIVABLE: "system:AccountsReceivable",
+    PAYABLE: "system:AccountsPayable",
+    RETAINED_EARNINGS: "system:RetainedEarnings",
+}
 
 # The entity a voided document was created as, from its key's prefix.
-VOIDABLE = {"inv": "Invoice"}
+VOIDABLE = {"inv": "Invoice", "pmt": "Payment"}
 
 
 @dataclass(frozen=True, slots=True)
@@ -124,8 +135,8 @@ def txn(target: str) -> dict[str, Json]:
 
 
 def account(key: str) -> dict[str, Json]:
-    if key == HELD:
-        return ref(UNDEPOSITED_FUNDS)
+    if key in SYSTEM:
+        return ref(SYSTEM[key])
     return ref(key if key.startswith("system:") else f"account:{key}")
 
 
@@ -158,18 +169,27 @@ def _expense_lines(lines: Sequence[Line]) -> list[Json]:
 
 
 def _journal_lines(lines: Sequence[Line]) -> list[Json]:
-    return [
-        {
-            "DetailType": "JournalEntryLineDetail",
-            "Amount": abs(line.amount),
-            "Description": line.memo,
-            "JournalEntryLineDetail": {
-                "PostingType": "Debit" if line.amount > 0 else "Credit",
-                "AccountRef": account(line.account),
-            },
+    out: list[Json] = []
+    for line in lines:
+        detail: dict[str, Json] = {
+            "PostingType": "Debit" if line.amount > 0 else "Credit",
+            "AccountRef": account(line.account),
         }
-        for line in lines
-    ]
+        if line.customer is not None:
+            # A line on A/R must name whose receivable it is.
+            detail["Entity"] = {
+                "Type": "Customer",
+                "EntityRef": ref(f"customer:{line.customer}"),
+            }
+        out.append(
+            {
+                "DetailType": "JournalEntryLineDetail",
+                "Amount": abs(line.amount),
+                "Description": line.memo,
+                "JournalEntryLineDetail": detail,
+            }
+        )
+    return out
 
 
 def _linked(applied: Sequence[Applied], kind: str, txn_type: str) -> list[Json]:
@@ -197,10 +217,10 @@ def _calls(event: Event) -> Iterator[tuple[str, str, dict[str, Json], str | None
                 {"AccountingInfoPrefs": {"FiscalYearStartMonth": MONTHS[month - 1]}},
                 None,
             )
-        case SetReportBasis(basis=basis):
-            yield "Preferences", "update", {"ReportPrefs": {"ReportBasis": basis.title()}}, None
-        case OpenAccount(key=key, name=name, type=kind, parent=parent):
+        case OpenAccount(key=key, name=name, type=kind, number=number, parent=parent):
             body: dict[str, Json] = {"Name": name, "AccountType": ACCOUNT_TYPES[kind]}
+            if number:
+                body["AcctNum"] = number
             if parent is not None:
                 body |= {"SubAccount": True, "ParentRef": ref(f"account:{parent}")}
             yield "Account", "create", body, f"account:{key}"
@@ -208,8 +228,11 @@ def _calls(event: Event) -> Iterator[tuple[str, str, dict[str, Json], str | None
             yield "Account", "update", {"Id": txn(f"account:{key}"), "Name": name}, None
         case DeactivateAccount(account=key):
             yield "Account", "update", {"Id": txn(f"account:{key}"), "Active": False}, None
-        case AddCustomer(key=key, name=name):
-            yield "Customer", "create", {"DisplayName": name}, f"customer:{key}"
+        case AddCustomer(key=key, name=name, parent=parent):
+            body = {"DisplayName": name}
+            if parent is not None:
+                body |= {"Job": True, "ParentRef": ref(f"customer:{parent}")}
+            yield "Customer", "create", body, f"customer:{key}"
         case AddVendor(key=key, name=name):
             yield "Vendor", "create", {"DisplayName": name}, f"vendor:{key}"
         case AddService(key=key, name=name, income_account=income):
@@ -240,6 +263,28 @@ def _calls(event: Event) -> Iterator[tuple[str, str, dict[str, Json], str | None
                     "Line": _sale_lines(lines),
                 },
                 f"invoice:{key}",
+            )
+        case IssueQuote(key=key, customer=customer, lines=lines):
+            yield (
+                "Estimate",
+                "create",
+                {
+                    "CustomerRef": ref(f"customer:{customer}"),
+                    "TxnDate": day,
+                    "Line": _sale_lines(lines),
+                },
+                f"estimate:{key}",
+            )
+        case PlaceOrder(key=key, vendor=vendor, lines=lines):
+            yield (
+                "PurchaseOrder",
+                "create",
+                {
+                    "VendorRef": ref(f"vendor:{vendor}"),
+                    "TxnDate": day,
+                    "Line": _expense_lines(lines),
+                },
+                f"purchaseorder:{key}",
             )
         case Void(target=target):
             entity = VOIDABLE[target.split("-", 1)[0]]
