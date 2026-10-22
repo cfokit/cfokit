@@ -1,0 +1,458 @@
+"""The QuickBooks Online adapter: business events in, API payloads out. Nothing else.
+
+Each payload is one call against the QuickBooks Online Accounting API (v3):
+
+* `entity` — the API entity, as in `POST /v3/company/{realm}/{entity lowercased}`.
+* `operation` — `create`, `update` (a sparse update) or `void`. An update or void needs the
+  entity's current `SyncToken`, which whoever posts the payload reads first; none is written
+  here.
+* `defines` — the reference a created entity answers to from then on, such as `"invoice:inv-…"`.
+* `body` — the request body, with two placeholders for identifiers QuickBooks assigns: an object
+  carrying `"$ref": "kind:key"` becomes a reference, its `$ref` key replaced by `"value": <id>`
+  and its other keys kept; a bare `{"$id": "kind:key"}` becomes the id itself, as a linked
+  transaction's `TxnId` needs. `system:<AccountSubType>` names an account QuickBooks creates
+  itself, found by its subtype.
+
+The payload's `id` is sent as QuickBooks' `requestid`, so posting the same payload twice is a
+replay rather than a second transaction.
+
+Amounts are `Decimal` and are written as JSON numbers with their exact digits.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Iterator, Sequence
+from dataclasses import dataclass
+from decimal import Decimal
+
+from synthetic_books.events import (
+    HELD,
+    AccountType,
+    AddCustomer,
+    AddService,
+    AddVendor,
+    Applied,
+    BankDeposit,
+    CardRefund,
+    CashSale,
+    DeactivateAccount,
+    Event,
+    IssueCredit,
+    IssueInvoice,
+    Journal,
+    Json,
+    Line,
+    OpenAccount,
+    OpenBalances,
+    Pay,
+    PayBills,
+    ReceiveBill,
+    ReceivePayment,
+    RefundCustomer,
+    RenameAccount,
+    SaleLine,
+    SetFiscalYear,
+    SetReportBasis,
+    Transfer,
+    VendorCredit,
+    Void,
+)
+
+ACCOUNT_TYPES: dict[AccountType, str] = {
+    "bank": "Bank",
+    "credit_card": "Credit Card",
+    "fixed_asset": "Fixed Asset",
+    "other_current_liability": "Other Current Liability",
+    "long_term_liability": "Long Term Liability",
+    "equity": "Equity",
+    "income": "Income",
+    "other_income": "Other Income",
+    "cost_of_sales": "Cost of Goods Sold",
+    "expense": "Expense",
+    "other_expense": "Other Expense",
+}
+
+MONTHS = (
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+)
+
+# Accounts QuickBooks creates for itself, found by subtype rather than created here.
+UNDEPOSITED_FUNDS = "system:UndepositedFunds"
+OPENING_BALANCE_EQUITY = "system:OpeningBalanceEquity"
+
+# The entity a voided document was created as, from its key's prefix.
+VOIDABLE = {"inv": "Invoice"}
+
+
+@dataclass(frozen=True, slots=True)
+class Payload:
+    id: str
+    event: str
+    entity: str
+    operation: str
+    body: dict[str, Json]
+    defines: str | None = None
+
+    def record(self) -> dict[str, Json]:
+        return {
+            "id": self.id,
+            "event": self.event,
+            "entity": self.entity,
+            "operation": self.operation,
+            "defines": self.defines,
+            "body": self.body,
+        }
+
+
+def ref(target: str, **extra: Json) -> dict[str, Json]:
+    return {"$ref": target, **extra}
+
+
+def txn(target: str) -> dict[str, Json]:
+    return {"$id": target}
+
+
+def account(key: str) -> dict[str, Json]:
+    if key == HELD:
+        return ref(UNDEPOSITED_FUNDS)
+    return ref(key if key.startswith("system:") else f"account:{key}")
+
+
+def _sale_lines(lines: Sequence[SaleLine]) -> list[Json]:
+    return [
+        {
+            "DetailType": "SalesItemLineDetail",
+            "Amount": line.amount,
+            "Description": line.memo,
+            "SalesItemLineDetail": {
+                "ItemRef": ref(f"item:{line.service}"),
+                "Qty": 1,
+                "UnitPrice": line.amount,
+            },
+        }
+        for line in lines
+    ]
+
+
+def _expense_lines(lines: Sequence[Line]) -> list[Json]:
+    return [
+        {
+            "DetailType": "AccountBasedExpenseLineDetail",
+            "Amount": line.amount,
+            "Description": line.memo,
+            "AccountBasedExpenseLineDetail": {"AccountRef": account(line.account)},
+        }
+        for line in lines
+    ]
+
+
+def _journal_lines(lines: Sequence[Line]) -> list[Json]:
+    return [
+        {
+            "DetailType": "JournalEntryLineDetail",
+            "Amount": abs(line.amount),
+            "Description": line.memo,
+            "JournalEntryLineDetail": {
+                "PostingType": "Debit" if line.amount > 0 else "Credit",
+                "AccountRef": account(line.account),
+            },
+        }
+        for line in lines
+    ]
+
+
+def _linked(applied: Sequence[Applied], kind: str, txn_type: str) -> list[Json]:
+    return [
+        {
+            "Amount": item.amount,
+            "LinkedTxn": [{"TxnId": txn(f"{kind}:{item.target}"), "TxnType": txn_type}],
+        }
+        for item in applied
+    ]
+
+
+def _vendor(payee: str | None) -> dict[str, Json]:
+    return {} if payee is None else {"EntityRef": ref(f"vendor:{payee}", type="Vendor")}
+
+
+def _calls(event: Event) -> Iterator[tuple[str, str, dict[str, Json], str | None]]:
+    """The calls one event becomes: (entity, operation, body, the reference it defines)."""
+    day = event.on.isoformat()
+    match event:
+        case SetFiscalYear(start_month=month):
+            yield (
+                "Preferences",
+                "update",
+                {"AccountingInfoPrefs": {"FiscalYearStartMonth": MONTHS[month - 1]}},
+                None,
+            )
+        case SetReportBasis(basis=basis):
+            yield "Preferences", "update", {"ReportPrefs": {"ReportBasis": basis.title()}}, None
+        case OpenAccount(key=key, name=name, type=kind, parent=parent):
+            body: dict[str, Json] = {"Name": name, "AccountType": ACCOUNT_TYPES[kind]}
+            if parent is not None:
+                body |= {"SubAccount": True, "ParentRef": ref(f"account:{parent}")}
+            yield "Account", "create", body, f"account:{key}"
+        case RenameAccount(account=key, name=name):
+            yield "Account", "update", {"Id": txn(f"account:{key}"), "Name": name}, None
+        case DeactivateAccount(account=key):
+            yield "Account", "update", {"Id": txn(f"account:{key}"), "Active": False}, None
+        case AddCustomer(key=key, name=name):
+            yield "Customer", "create", {"DisplayName": name}, f"customer:{key}"
+        case AddVendor(key=key, name=name):
+            yield "Vendor", "create", {"DisplayName": name}, f"vendor:{key}"
+        case AddService(key=key, name=name, income_account=income):
+            yield (
+                "Item",
+                "create",
+                {"Name": name, "Type": "Service", "IncomeAccountRef": account(income)},
+                f"item:{key}",
+            )
+        case OpenBalances(lines=lines):
+            equity = -sum((line.amount for line in lines), Decimal(0))
+            balanced = (*lines, Line(OPENING_BALANCE_EQUITY, equity, "Opening balance"))
+            yield (
+                "JournalEntry",
+                "create",
+                {"TxnDate": day, "Line": _journal_lines(balanced)},
+                None,
+            )
+        case IssueInvoice(key=key, customer=customer, due=due, lines=lines, number=number):
+            yield (
+                "Invoice",
+                "create",
+                {
+                    "CustomerRef": ref(f"customer:{customer}"),
+                    "TxnDate": day,
+                    "DueDate": due.isoformat(),
+                    "DocNumber": number,
+                    "Line": _sale_lines(lines),
+                },
+                f"invoice:{key}",
+            )
+        case Void(target=target):
+            entity = VOIDABLE[target.split("-", 1)[0]]
+            yield entity, "void", {"Id": txn(f"{entity.lower()}:{target}")}, None
+        case ReceivePayment(
+            key=key, customer=customer, amount=amount, applies=applies, into=into
+        ):
+            yield (
+                "Payment",
+                "create",
+                {
+                    "CustomerRef": ref(f"customer:{customer}"),
+                    "TxnDate": day,
+                    "TotalAmt": amount,
+                    "DepositToAccountRef": account(into),
+                    "Line": _linked(applies, "invoice", "Invoice"),
+                },
+                f"payment:{key}",
+            )
+        case BankDeposit(into=into, payments=payments, lines=lines):
+            deposit_lines: list[Json] = [
+                {
+                    "Amount": item.amount,
+                    "LinkedTxn": [
+                        {
+                            "TxnId": txn(f"payment:{item.target}"),
+                            "TxnType": "Payment",
+                            "TxnLineId": "0",
+                        }
+                    ],
+                }
+                for item in payments
+            ]
+            deposit_lines += [
+                {
+                    "DetailType": "DepositLineDetail",
+                    "Amount": line.amount,
+                    "Description": line.memo,
+                    "DepositLineDetail": {"AccountRef": account(line.account)},
+                }
+                for line in lines
+            ]
+            yield (
+                "Deposit",
+                "create",
+                {"TxnDate": day, "DepositToAccountRef": account(into), "Line": deposit_lines},
+                None,
+            )
+        case CashSale(customer=customer, into=into, lines=lines):
+            yield (
+                "SalesReceipt",
+                "create",
+                {
+                    **_customer(customer),
+                    "TxnDate": day,
+                    "DepositToAccountRef": account(into),
+                    "Line": _sale_lines(lines),
+                },
+                None,
+            )
+        case IssueCredit(key=key, customer=customer, lines=lines, applies_to=invoice):
+            yield (
+                "CreditMemo",
+                "create",
+                {
+                    "CustomerRef": ref(f"customer:{customer}"),
+                    "TxnDate": day,
+                    "Line": _sale_lines(lines),
+                },
+                f"creditmemo:{key}",
+            )
+            if invoice is not None:
+                # QuickBooks applies a credit memo to an invoice through a payment of nothing.
+                credited = sum((line.amount for line in lines), Decimal(0))
+                yield (
+                    "Payment",
+                    "create",
+                    {
+                        "CustomerRef": ref(f"customer:{customer}"),
+                        "TxnDate": day,
+                        "TotalAmt": Decimal(0),
+                        "Line": [
+                            *_linked([Applied(invoice, credited)], "invoice", "Invoice"),
+                            *_linked([Applied(key, credited)], "creditmemo", "CreditMemo"),
+                        ],
+                    },
+                    None,
+                )
+        case RefundCustomer(customer=customer, out_of=out_of, lines=lines):
+            yield (
+                "RefundReceipt",
+                "create",
+                {
+                    **_customer(customer),
+                    "TxnDate": day,
+                    "DepositToAccountRef": account(out_of),
+                    "Line": _sale_lines(lines),
+                },
+                None,
+            )
+        case ReceiveBill(key=key, vendor=vendor, number=number, due=due, lines=lines):
+            yield (
+                "Bill",
+                "create",
+                {
+                    "VendorRef": ref(f"vendor:{vendor}"),
+                    "TxnDate": day,
+                    "DueDate": due.isoformat(),
+                    "DocNumber": number,
+                    "Line": _expense_lines(lines),
+                },
+                f"bill:{key}",
+            )
+        case VendorCredit(key=key, vendor=vendor, lines=lines):
+            yield (
+                "VendorCredit",
+                "create",
+                {
+                    "VendorRef": ref(f"vendor:{vendor}"),
+                    "TxnDate": day,
+                    "Line": _expense_lines(lines),
+                },
+                f"vendorcredit:{key}",
+            )
+        case PayBills(
+            vendor=vendor, out_of=out_of, bills=bills, credits=credits, number=number
+        ):
+            total = sum((b.amount for b in bills), Decimal(0)) - sum(
+                (c.amount for c in credits), Decimal(0)
+            )
+            yield (
+                "BillPayment",
+                "create",
+                {
+                    "VendorRef": ref(f"vendor:{vendor}"),
+                    "TxnDate": day,
+                    "DocNumber": number,
+                    "PayType": "Check",
+                    "TotalAmt": total,
+                    "CheckPayment": {"BankAccountRef": account(out_of)},
+                    "Line": [
+                        *_linked(bills, "bill", "Bill"),
+                        *_linked(credits, "vendorcredit", "VendorCredit"),
+                    ],
+                },
+                None,
+            )
+        case Pay(by=by, out_of=out_of, payee=payee, lines=lines, number=number):
+            body = {
+                "PaymentType": {"check": "Check", "debit": "Cash", "card": "CreditCard"}[by],
+                "AccountRef": account(out_of),
+                **_vendor(payee),
+                "TxnDate": day,
+                "Line": _expense_lines(lines),
+            }
+            if number:
+                body["DocNumber"] = number
+            yield "Purchase", "create", body, None
+        case CardRefund(card=card, payee=payee, lines=lines):
+            yield (
+                "Purchase",
+                "create",
+                {
+                    "PaymentType": "CreditCard",
+                    "Credit": True,
+                    "AccountRef": account(card),
+                    **_vendor(payee),
+                    "TxnDate": day,
+                    "Line": _expense_lines(lines),
+                },
+                None,
+            )
+        case Transfer(out_of=out_of, into=into, amount=amount, memo=memo):
+            yield (
+                "Transfer",
+                "create",
+                {
+                    "FromAccountRef": account(out_of),
+                    "ToAccountRef": account(into),
+                    "Amount": amount,
+                    "TxnDate": day,
+                    "PrivateNote": memo,
+                },
+                None,
+            )
+        case Journal(memo=memo, lines=lines):
+            yield (
+                "JournalEntry",
+                "create",
+                {"TxnDate": day, "PrivateNote": memo, "Line": _journal_lines(lines)},
+                None,
+            )
+        case _:
+            raise TypeError(f"the QuickBooks adapter has no mapping for {event.KIND}")
+
+
+def _customer(customer: str | None) -> dict[str, Json]:
+    return {} if customer is None else {"CustomerRef": ref(f"customer:{customer}")}
+
+
+def payloads(events: Sequence[tuple[str, Event]]) -> list[Payload]:
+    """Every call the events become, in the order they must be made."""
+    out: list[Payload] = []
+    for event_id, event in events:
+        for entity, operation, body, defines in _calls(event):
+            out.append(
+                Payload(
+                    id=f"qbo-{len(out) + 1:05d}",
+                    event=event_id,
+                    entity=entity,
+                    operation=operation,
+                    body=body,
+                    defines=defines,
+                )
+            )
+    return out
