@@ -25,7 +25,7 @@ from typing import Any
 
 import psycopg
 
-__all__ = ["TABLES", "read", "schema_version"]
+__all__ = ["TABLES", "file_contents", "read", "schema_version"]
 
 # Ordered so a reader can create rows in the order it reads them: a row naming another arrives
 # after the one it names. `account` is self-referencing, so it is additionally ordered
@@ -225,6 +225,30 @@ TABLES: tuple[tuple[str, str], ...] = (
         " FROM work_attempt WHERE entity_id = %(entity_id)s ORDER BY run_id, attempt",
     ),
     (
+        # Conversations with CFOKit's runtime: the record of what an agent was given and did
+        # (`EXP-02`, `SOC1-06`, ADR-0076). A file's row here carries its identity, not its
+        # bytes; the bytes travel beside the tables, named by their digest (`file_contents`).
+        "conversation",
+        "SELECT id, person, started_by, started_at FROM conversation"
+        " WHERE entity_id = %(entity_id)s ORDER BY started_at, id",
+    ),
+    (
+        "conversation_file",
+        "SELECT id, sha256, media_type, size, classification, uploaded_by, uploaded_at"
+        " FROM conversation_file WHERE entity_id = %(entity_id)s ORDER BY uploaded_at, id",
+    ),
+    (
+        "conversation_message",
+        "SELECT id, conversation_id, position, kind, content, model, model_version,"
+        " skill_version, recorded_by, recorded_at FROM conversation_message"
+        " WHERE entity_id = %(entity_id)s ORDER BY conversation_id, position",
+    ),
+    (
+        "conversation_message_file",
+        "SELECT message_id, file_id FROM conversation_message_file"
+        " WHERE entity_id = %(entity_id)s ORDER BY message_id, file_id",
+    ),
+    (
         "audit_log",
         "SELECT id, request_id, actor, action, subject_type, subject_id, occurred_at, detail"
         " FROM audit_log WHERE entity_id = %(entity_id)s ORDER BY occurred_at, id",
@@ -246,6 +270,21 @@ def read(
         cur.execute(statement, {"entity_id": entity_id})
         columns = [column.name for column in cur.description or ()]
         return columns, cur.fetchall()
+
+
+def file_contents(conn: psycopg.Connection[Any], *, entity_id: str) -> list[tuple[str, bytes]]:
+    """Every file the entity holds, as (sha256, bytes), in digest order.
+
+    Beside the tables rather than in them: a file is a document, and a JSON line is the wrong
+    place for 32 MB of a PDF. The digest names it, so it is the same name in every export.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT sha256, content FROM conversation_file"
+            " WHERE entity_id = %(entity_id)s ORDER BY sha256",
+            {"entity_id": entity_id},
+        )
+        return [(str(row[0]), bytes(row[1])) for row in cur.fetchall()]
 
 
 def schema_version(conn: psycopg.Connection[Any]) -> str:
