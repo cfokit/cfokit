@@ -7,7 +7,7 @@ decision-makers: [Geoff]
 
 # ADR-0075: CFOKit's runtime is an async component built on Pydantic AI, streaming AG-UI to an assistant-ui chat window
 
-**Requirements served:** `PLT-04`, `PLT-24`, `IAM-11`, `SOC1-06`, `SOC1-35`, `SOC2-03`.
+**Requirements served:** `PLT-04`, `PLT-24`, `PLT-23`, `BKP-20`, `IAM-11`, `SOC1-06`, `SOC1-35`.
 
 ## Context and Problem Statement
 
@@ -111,9 +111,21 @@ recorded for the company (ADR-0072). Its tools are the published MCP tools, list
 own MCP endpoint, and no others: no file, shell or web tool. The bookkeeper skill's `SKILL.md`, at
 the version the image carries, is the instructions, and its version is recorded too (`SOC1-06`).
 
-**A turn that reads an untrusted document is offered the read-only tools only** (`SOC2-03`). A
-message carrying a receipt or a statement is untrusted content, so that turn cannot write to the
-ledger; what it read is acted on in a later turn, by the person's instruction.
+**Once a conversation holds content the organization did not author, the model is offered no
+tool that posts, for the rest of that conversation** (`PLT-23`, `BKP-20`). A receipt or a
+statement the person attaches is such content, and it stays in the history every later turn
+sends, so bounding the rule to one turn would be defeated by reading in one turn and posting in
+the next. The model may still read the books and draft, and an uploaded line is drafted whatever
+resolves it (ADR-0047). A draft from such a conversation is posted only by the person, as
+themselves, outside the model: a posting act in the web client that calls the published API with
+their own token, never a tool the model holds.
+
+The runtime enforces this by what it offers, not by an instruction: it knows what each
+conversation holds, because the conversation is stored with each part's classification
+(ADR-0076), and a model cannot call a tool it was not offered. This is the boundary the
+bookkeeper skill otherwise has to keep in its own instructions, built where CFOKit runs the agent.
+The person's own agent, which CFOKit does not run, still relies on the skill's rule until the
+published surface can enforce it.
 
 With no inference credential configured, the runtime is off and the chat window says so. The suite
 drives the runtime with Pydantic AI's test model, so a turn's messages, tool calls and refusals are
@@ -137,6 +149,10 @@ backend if it were.
 * Good, because the runtime holds no state and no database credential, so it scales to zero and
   reaches the books only as a client.
 * Good, because the reply streams as it is written, as people expect of a chat.
+* Good, because `PLT-23` is enforced by capability wherever CFOKit runs the agent, rather than
+  only by the skill's instruction.
+* Bad, because a conversation that has read a document needs the person to post its drafts
+  themselves, one more step than asking the agent to.
 * Bad, because three projects, pre-1.0 in assistant-ui's case, now carry a main surface, and their
   releases are CFOKit's to follow.
 * Bad, because a turn cut off mid-way stops, and the person continues it by asking again.
@@ -148,8 +164,9 @@ backend if it were.
 
 * The runtime is its own package and entrypoint, with an `import-linter` contract forbidding it
   every capability package, so the books are reachable only through the published surface.
-* Pydantic AI's test model drives a turn in the suite: its stream, its appended messages, and that
-  a turn carrying an untrusted document is offered no write tool.
+* Pydantic AI's test model drives a turn in the suite: its stream, its appended messages, and
+  that once a conversation holds an untrusted file no later turn in it is offered a posting tool,
+  including when the model is scripted to try (`PLT-23`'s acceptance).
 * Review: no tool is offered that the published MCP surface does not publish.
 
 ## Pros and Cons of the Options
@@ -170,8 +187,8 @@ The most widely used chat stack in TypeScript, with resumable streams and file p
 ### The Claude Agent SDK in the component
 
 * Good, because it loads the `SKILL.md` as written and brings Claude Code's harness.
-* Bad, because it brings file, shell and web tools the bookkeeper must not have, which `SOC2-03`
-  makes worse than unused.
+* Bad, because it brings file, shell and web tools the bookkeeper must not have, which make
+  `PLT-23`'s boundary harder to hold rather than merely unused.
 * Bad, because each platform's wheel is about 114 MB, carrying a program whose license is stated
   only by reference, in a runtime ADR-0034 § 1 ships as Apache 2.0.
 

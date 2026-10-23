@@ -138,7 +138,7 @@ The cleanest separation: the runtime's data apart from the books, its schema fre
 * The module, its migration, its row-level security and its endpoints in the published API.
 * Export covers conversations and files; deletion reaches them.
 * A file's classification travels with it into the model's context (`SOC2-01`), which is what lets
-  ADR-0075 offer a turn carrying it read-only tools.
+  ADR-0075 withhold every posting tool from a conversation that holds it (`PLT-23`).
 
 **Reversal cost.** Low for files, moderate for messages: files can move to a store a later record
 admits by copying bytes; messages in Pydantic AI's form are converted once if the framework changes.
