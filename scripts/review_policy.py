@@ -79,7 +79,9 @@ SKILL_PATH = re.compile(r"\./([A-Za-z0-9_-]+)/?")
 # `SKILL.md` key beyond these could declare a hook or grant a tool the run does not.
 PLUGIN_FILE_SUFFIXES = {".md", ".json", ".yaml", ".yml", ".txt"}
 SKILL_FRONTMATTER_KEYS = {"name", "description", "license", "metadata", "version"}
-FRONTMATTER_KEY = re.compile(r"^([A-Za-z0-9_-]+)\s*:", re.MULTILINE)
+# Read fail-closed rather than parsed: a top-level line is a bare allowed key or it is refused,
+# so a quoted key, a `? key` entry or a flow mapping that YAML reads as a key is refused too.
+FRONTMATTER_LINE = re.compile(r"([a-z][a-z-]*):(?: .*)?")
 
 # A PEP 508 requirement's identity: its name and any extras. The version is what changes.
 REQUIREMENT_IDENTITY = re.compile(r"^\s*([A-Za-z0-9][A-Za-z0-9._-]*)\s*(\[[^\]]*\])?")
@@ -466,12 +468,30 @@ def plugin_refusals(plugin: Path) -> list[str]:
     for name in sorted(allowed - {".claude-plugin", "README.md"}):
         refusals += _contents_refusals(plugin, plugin / name)
     for skill_md in sorted(plugin.glob("*/SKILL.md")):
-        text = skill_md.read_text()
-        if text.startswith("---\n") and (end := text.find("\n---", 4)) != -1:
-            keys = set(FRONTMATTER_KEY.findall(text[4:end])) - SKILL_FRONTMATTER_KEYS
-            refusals += [
-                f"`{skill_md.relative_to(plugin)}` declares `{k}`" for k in sorted(keys)
-            ]
+        where = skill_md.relative_to(plugin)
+        refusals += [f"`{where}` {r}" for r in frontmatter_refusals(skill_md.read_text())]
+    return refusals
+
+
+def frontmatter_refusals(text: str) -> list[str]:
+    """Why a ``SKILL.md``'s frontmatter may declare more than its description; empty if it
+    cannot. Anything this reader is unsure of is refused, never skipped."""
+    if "\r" in text or text.startswith("\ufeff"):
+        return ["is not plain text with LF line endings"]
+    lines = text.split("\n")
+    if lines[0] != "---":
+        return ["does not open with frontmatter"]
+    if "---" not in lines[1:]:
+        return ["does not close its frontmatter"]
+    refusals: list[str] = []
+    for line in lines[1 : lines.index("---", 1)]:
+        if not line.strip() or line.startswith(" "):
+            continue  # a blank line, or the continuation of an allowed key's value
+        match = FRONTMATTER_LINE.fullmatch(line)
+        if match is None:
+            refusals.append(f"has a frontmatter line that is not a bare key: `{line[:40]}`")
+        elif match.group(1) not in SKILL_FRONTMATTER_KEYS:
+            refusals.append(f"declares `{match.group(1)}`")
     return refusals
 
 

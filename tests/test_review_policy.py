@@ -21,6 +21,7 @@ from review_policy import (
     eval_report,
     eval_result,
     fix_rounds,
+    frontmatter_refusals,
     parse_codeowners,
     parse_dependabot_updates,
     plugin_refusals,
@@ -505,3 +506,25 @@ def test_a_link_inside_a_skill_is_not_evaluated(tmp_path: Path) -> None:
     plugin = _skill(tmp_path)
     (plugin / "bookkeeper" / "env.md").symlink_to("/proc/self/environ")
     assert plugin_refusals(plugin) == ["`bookkeeper/env.md` is a link"]
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        '---\nname: b\n"allowed-tools": Bash\n---\n',  # a quoted key
+        "---\nname: b\n? hooks\n: x\n---\n",  # an explicit key
+        "---\n{name: b, hooks: x}\n---\n",  # a flow mapping
+        "---\r\nname: b\r\nhooks: x\r\n---\r\n",  # CRLF
+        "\ufeff---\nname: b\nhooks: x\n---\n",  # a byte-order mark
+        "---\nname: b\nhooks: x\n",  # never closed
+        "# Bookkeeper\n---\nhooks: x\n---\n",  # frontmatter not first
+        "---\nname: b\n\thooks: x\n---\n",  # a tab is not a continuation
+    ],
+)
+def test_frontmatter_this_reader_is_unsure_of_is_refused(text: str) -> None:
+    assert frontmatter_refusals(text)
+
+
+def test_frontmatter_with_a_folded_description_is_read() -> None:
+    text = "---\nname: b\ndescription: >\n  Keeps the books.\n  ---\nmetadata:\n  a: b\n---\n"
+    assert frontmatter_refusals(text) == []
