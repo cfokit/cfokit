@@ -34,7 +34,9 @@ works the same either way. `src/cfokit/` is a PEP 420 namespace package: **do no
 **Six capabilities exist**: `ledger`, `imports` (ADR-0040), `receivables`, `assignment`
 (ADR-0045), `activity` (ADR-0046), and `conversations` (ADR-0076). `server` is not one — it is the composition point, the
 only place that knows the module list, and a file in it that decides something about
-accounting is in the wrong place.
+accounting is in the wrong place. Nor is `runtime`: it is a separate component, the agent behind
+the web app's chat, reaching CFOKit only over its published interfaces like any other client
+(ADR-0075).
 
 There was a `connectors` package holding no code; it was removed rather than renamed, because
 a package that exists before its capability is known is a boundary drawn around a guess
@@ -152,13 +154,14 @@ otherwise get wrong, because absence isn't visible in a manifest:
   forbidden because it makes an `await` inside a transaction expressible, and the workload has
   almost no concurrency to reclaim in exchange. (ADR-0024)
 - **Runtime dependencies are load-bearing and few.** Adding one is a decision, not a
-  convenience. Ask before adding any. Currently **six**, in the root `pyproject.toml`, each
+  convenience. Ask before adding any. Currently **seven**, in the root `pyproject.toml`, each
   with its reason and verified license in a comment there: `psycopg[binary]` (driver), `fastapi`
   (REST + OpenAPI), `uvicorn` (ASGI server), `mcp` (tool surface), `pyjwt[crypto]` (audience
   validation), `cryptography` (Web Push encryption, ADR-0057; already installed as PyJWT's
-  extra, declared because we call into it). Those six pull **36** packages in total — `uv export
-  --no-dev --no-emit-project --no-hashes | grep -c '^[a-z]'` — and the MCP SDK is most of it,
-  accepted knowingly (ADR-0024). Accounting exports are parsed in the person's browser, never
+  extra, declared because we call into it), and `pydantic-ai-slim[anthropic,ag-ui]` (CFOKit's
+  own agent runtime, ADR-0075; confined to `cfokit.runtime`). Those seven pull **46** packages
+  in total — `uv export --no-dev --no-emit-project --no-hashes | grep -c '^[a-z]'` — and the MCP
+  SDK is most of it, accepted knowingly (ADR-0024). Accounting exports are parsed in the person's browser, never
   by the server, so no spreadsheet library is a dependency of any kind (ADR-0058).
 - **Unattended work is a run in Postgres, enqueued in the same transaction as its cause**
   (`EntityWrite.enqueue_work`), and run by `python -m cfokit.server work`. No schedule lives
