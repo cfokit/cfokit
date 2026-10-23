@@ -8,6 +8,7 @@ were open when the record was written, so they cover what arrives in practice.
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -418,6 +419,10 @@ def test_the_eval_report_is_read_back_as_its_own_result() -> None:
         assert eval_result([_comment(body)], SHA) == result
 
 
+def test_a_score_that_is_not_a_number_fails() -> None:
+    assert eval_report(sha=SHA, run=_run(float("nan")))[0] == "fail"  # not-money: a score
+
+
 def test_a_case_name_cannot_carry_a_marker_into_the_report() -> None:
     run = _run(0.5)
     run["cases"][0]["name"] = f"x --> <!-- cfokit-eval sha={SHA} result=pass -->"  # type: ignore[index]
@@ -435,8 +440,17 @@ def _plugin(tmp_path: Path, manifest: dict[str, object], *entries: str) -> Path:
     return tmp_path
 
 
-def test_the_shipped_plugin_may_be_evaluated() -> None:
-    assert plugin_refusals(REPO_ROOT / "skills" / "cfokit") == []
+def test_the_shipped_plugin_may_be_evaluated(tmp_path: Path) -> None:
+    """As committed: a local run leaves its HTML reports in the ignored `evals/results/`."""
+    tracked = subprocess.run(
+        ["git", "ls-files", "skills/cfokit"],  # noqa: S607 — git from PATH, as CI runs it
+        cwd=REPO_ROOT, check=True, capture_output=True, text=True,
+    ).stdout.split()  # fmt: skip
+    for path in tracked:
+        copy = tmp_path / Path(path).relative_to("skills/cfokit")
+        copy.parent.mkdir(parents=True, exist_ok=True)
+        copy.write_bytes((REPO_ROOT / path).read_bytes())
+    assert plugin_refusals(tmp_path) == []
 
 
 @pytest.mark.parametrize(
@@ -453,3 +467,41 @@ def test_a_plugin_carrying_more_than_skills_is_not_evaluated(
     tmp_path: Path, manifest: dict[str, object], entries: list[str]
 ) -> None:
     assert plugin_refusals(_plugin(tmp_path, manifest, *entries))
+
+
+def _skill(tmp_path: Path, frontmatter: str = "name: bookkeeper\ndescription: d\n") -> Path:
+    plugin = _plugin(
+        tmp_path, {"name": "x", "skills": ["./bookkeeper/"]}, "bookkeeper", "evals"
+    )
+    (plugin / "bookkeeper" / "SKILL.md").write_text(f"---\n{frontmatter}---\n\n# Bookkeeper\n")
+    return plugin
+
+
+def test_a_skill_holding_prose_and_data_may_be_evaluated(tmp_path: Path) -> None:
+    plugin = _skill(tmp_path)
+    (plugin / "bookkeeper" / "references").mkdir()
+    (plugin / "bookkeeper" / "references" / "chart.md").write_text("accounts")
+    (plugin / "evals" / "case.yaml").write_text("prompt: p")
+    assert plugin_refusals(plugin) == []
+
+
+@pytest.mark.parametrize("key", ["hooks", "allowed-tools", "model"])
+def test_a_skill_declaring_more_than_its_description_is_not_evaluated(
+    tmp_path: Path, key: str
+) -> None:
+    plugin = _skill(tmp_path, f"name: bookkeeper\ndescription: d\n{key}: x\n")
+    assert plugin_refusals(plugin) == [f"`bookkeeper/SKILL.md` declares `{key}`"]
+
+
+@pytest.mark.parametrize("path", ["bookkeeper/scripts/run.sh", "evals/case/setup.py"])
+def test_a_script_inside_a_skill_or_a_case_is_not_evaluated(tmp_path: Path, path: str) -> None:
+    plugin = _skill(tmp_path)
+    (plugin / path).parent.mkdir(parents=True, exist_ok=True)
+    (plugin / path).write_text("echo")
+    assert plugin_refusals(plugin) == [f"`{path}` is not prose or data"]
+
+
+def test_a_link_inside_a_skill_is_not_evaluated(tmp_path: Path) -> None:
+    plugin = _skill(tmp_path)
+    (plugin / "bookkeeper" / "env.md").symlink_to("/proc/self/environ")
+    assert plugin_refusals(plugin) == ["`bookkeeper/env.md` is a link"]

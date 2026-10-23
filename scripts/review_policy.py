@@ -75,6 +75,11 @@ PLUGIN_MANIFEST_KEYS = {
     "keywords", "version", "skills",
 }  # fmt: skip
 SKILL_PATH = re.compile(r"\./([A-Za-z0-9_-]+)/?")
+# Inside a skill and its cases: prose and data only. A script could be run by a tool, and a
+# `SKILL.md` key beyond these could declare a hook or grant a tool the run does not.
+PLUGIN_FILE_SUFFIXES = {".md", ".json", ".yaml", ".yml", ".txt"}
+SKILL_FRONTMATTER_KEYS = {"name", "description", "license", "metadata", "version"}
+FRONTMATTER_KEY = re.compile(r"^([A-Za-z0-9_-]+)\s*:", re.MULTILINE)
 
 # A PEP 508 requirement's identity: its name and any extras. The version is what changes.
 REQUIREMENT_IDENTITY = re.compile(r"^\s*([A-Za-z0-9][A-Za-z0-9._-]*)\s*(\[[^\]]*\])?")
@@ -458,6 +463,28 @@ def plugin_refusals(plugin: Path) -> list[str]:
     for entry in sorted(plugin.iterdir()):
         if entry.name not in allowed:
             refusals.append(f"`{entry.name}` is not a skill, the manifest, the README or evals")
+    for name in sorted(allowed - {".claude-plugin", "README.md"}):
+        refusals += _contents_refusals(plugin, plugin / name)
+    for skill_md in sorted(plugin.glob("*/SKILL.md")):
+        text = skill_md.read_text()
+        if text.startswith("---\n") and (end := text.find("\n---", 4)) != -1:
+            keys = set(FRONTMATTER_KEY.findall(text[4:end])) - SKILL_FRONTMATTER_KEYS
+            refusals += [
+                f"`{skill_md.relative_to(plugin)}` declares `{k}`" for k in sorted(keys)
+            ]
+    return refusals
+
+
+def _contents_refusals(plugin: Path, directory: Path) -> list[str]:
+    if not directory.exists():
+        return []
+    refusals: list[str] = []
+    for path in sorted(directory.rglob("*")):
+        where = path.relative_to(plugin)
+        if path.is_symlink():
+            refusals.append(f"`{where}` is a link")
+        elif path.is_file() and path.suffix not in PLUGIN_FILE_SUFFIXES:
+            refusals.append(f"`{where}` is not prose or data")
     return refusals
 
 
@@ -475,7 +502,8 @@ def eval_report(*, sha: str, run: dict[str, Any] | None) -> tuple[str, str]:
         lines.append("The eval run produced no result.")
     else:
         cases = run.get("cases", [])
-        below = [c for c in cases if float(c["aggregates"]["score"]) < PASS_THRESHOLD]
+        # `not >=` rather than `<`, so a NaN score, which JSON allows, fails.
+        below = [c for c in cases if not float(c["aggregates"]["score"]) >= PASS_THRESHOLD]
         partial = bool(run.get("partial"))
         result = "fail" if partial or below or not cases else "pass"
         lines += [

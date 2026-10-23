@@ -144,9 +144,12 @@ the skill changed the outcome.
   failed gate. It sends the pull request to a person, who judges whether it is a regression.
   The threshold is the policy's, never the run's, and a pull request that changes the cases
   goes to a person whatever they score, because it moves the bar it is measured against.
-- **A labeled run holds a credential, so it runs skills and nothing else.** It refuses a plugin
-  carrying anything but its manifest, its README, its cases and the skills the manifest names,
-  evaluates a copy from outside the checkout, and publishes only the scores.
+- **A labeled run holds a credential, so it runs prose and data and nothing else.** It refuses a
+  plugin carrying more than its manifest, its README, its cases and the skills the manifest
+  names, a skill declaring more than its name and description, and any script or link. It
+  evaluates a copy from outside the checkout, and publishes only the scores. That keeps the pull
+  request's code out of the run. The boundary on the credential itself is who can run it: only a
+  person with write access can add a label, and forks are refused.
 
 The harness is a tool, not the layer. Where it cannot express a case the layer needs, it is replaced,
 and the layer's rules stand.

@@ -6,15 +6,17 @@
 # review policy reads that comment: a pull request changing `skills/cfokit/` merges without a
 # person only when its head commit carries a passing result.
 #
-# The workflow and the policy run from `main`, and the pull request is checked out as data. Before
-# any credential is present, the policy refuses a plugin holding anything but skills, its manifest,
-# its README and its eval cases: a hook, a command or an MCP server would be the pull request's
-# code running as this workflow. The plugin is then copied out of the checkout and evaluated from
-# an empty directory, so no project settings or hooks the pull request carries are loaded. Its
-# cases are prompts and mocks: no case script runs (`--scaffold` is off), no real server starts,
-# and no gated tool is granted. The bar it must meet is the policy's, not the run's. The run's
-# transcripts stay on the runner: only the report, which prints scores and sanitized names, leaves
-# it. Forks are refused outright.
+# Only a person with write access can add a label, and forks are refused outright: that is the
+# boundary on the credential. Within it, the pull request's code is kept out of the run. The
+# workflow and the policy run from `main`, and the pull request is checked out as data. Before any
+# credential is present, the policy refuses a plugin holding more than prose and data: a hook, a
+# command, an MCP server, a tool grant in a skill, a script or a link would each let the pull
+# request's code run as this workflow. The plugin is then copied out of the checkout and evaluated
+# from an empty directory, so no project settings or hooks the pull request carries are loaded.
+# Its cases are prompts and mocks: no case script runs (`--scaffold` is off), no real server
+# starts, and no gated tool is granted. The bar it must meet is the policy's, not the run's. The
+# run's transcripts stay on the runner: only the report, which prints scores and sanitized names,
+# leaves it.
 #
 # Nothing here touches ci.yml, whose portability job must stay free of credentials (ADR-0004).
 
