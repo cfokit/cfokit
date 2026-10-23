@@ -49,7 +49,20 @@ COPY --from=maven /usr/share/maven /usr/share/maven
 ENV JAVA_HOME=/opt/java/openjdk \
     MAVEN_HOME=/usr/share/maven \
     PATH=/opt/java/openjdk/bin:/usr/share/maven/bin:$PATH
-RUN --mount=type=cache,target=/root/.m2 corepack pnpm exec keycloakify build
+# The optional build CA, as for the stages above. Maven reads the JDK's trust store, not a PEM
+# file, so each certificate in the bundle is imported into a copy of it for this build only.
+RUN --mount=type=cache,target=/root/.m2 \
+    --mount=type=secret,id=build_ca,required=false \
+    if [ -s /run/secrets/build_ca ]; then \
+      cp "$JAVA_HOME/lib/security/cacerts" /tmp/build-cacerts; \
+      csplit -s -z -f /tmp/build-ca- /run/secrets/build_ca '/-----BEGIN CERTIFICATE-----/' '{*}'; \
+      for cert in /tmp/build-ca-*; do \
+        keytool -importcert -noprompt -keystore /tmp/build-cacerts -storepass changeit \
+          -alias "$(basename "$cert")" -file "$cert" >/dev/null 2>&1 || true; \
+      done; \
+      export JAVA_TOOL_OPTIONS="-Djavax.net.ssl.trustStore=/tmp/build-cacerts -Djavax.net.ssl.trustStorePassword=changeit"; \
+    fi; \
+    corepack pnpm exec keycloakify build
 
 # Passwords the issuer refuses because they are in public breach compilations
 # (infra/keycloak/README.md). The ten million most common, from SecLists (MIT), pinned by commit

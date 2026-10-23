@@ -408,6 +408,11 @@ class EntityWrite:
         """One table's rows for this entity, as stored (`EXP-02`)."""
         return archive.read(self._conn, entity_id=self._entity_id, table=table)
 
+    def archived_files(self) -> list[tuple[str, bytes]]:
+        """Every file this entity holds, as (sha256, bytes), for the complete export
+        (`EXP-02`)."""
+        return archive.file_contents(self._conn, entity_id=self._entity_id)
+
     def schema_version(self) -> str:
         """The highest migration version this database has applied (`EXP-02`, `EXP-04`)."""
         return archive.schema_version(self._conn)

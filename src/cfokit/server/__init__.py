@@ -23,6 +23,7 @@ from cfokit.activity import api as activity_api
 from cfokit.activity import mcp as activity_mcp
 from cfokit.assignment import api as assignment_api
 from cfokit.assignment import mcp as assignment_mcp
+from cfokit.conversations import api as conversations_api
 from cfokit.imports import api as imports_api
 from cfokit.imports import mcp as imports_mcp
 from cfokit.ledger.api import create_app
@@ -69,6 +70,7 @@ def rest_app(
     app.include_router(imports_api.router)
     app.include_router(assignment_api.router)
     app.include_router(activity_api.router)
+    app.include_router(conversations_api.router)
     if web_root is not None:
         mount_web_client(app, web_root, settings.auth_issuer_url)
     return app
