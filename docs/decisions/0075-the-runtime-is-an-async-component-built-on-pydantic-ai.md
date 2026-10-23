@@ -100,9 +100,9 @@ A turn cut off mid-way leaves what it completed. Every write it made carried an 
 and a conversation to continue, never a half-booked transaction. Rejoining a turn's stream while it
 runs, which AG-UI and assistant-ui support, is not built until a person needs it.
 
-**Unattended work starts a turn the same way.** A run in the work queue (ADR-0061) that leaves
-something for the person calls the runtime's endpoint and keeps the result, and the queue retries a
-call that fails.
+**Unattended work does not start a turn.** A run in the work queue (ADR-0061) that leaves
+something for the person appends it to the company's conversation, and the model works on it in the
+person's next turn, with their token (ADR-0077).
 
 ### 2. What the model is offered
 
@@ -212,9 +212,7 @@ The most widely used chat stack in TypeScript, with resumable streams and file p
 
 **Follow-on obligations.**
 
-* A record on how the runtime holds a token for a person, for a request and for a queued run. It
-  bears on `SOC1-25`'s conflict in `docs/decisions/README.md`, and on authentication, so it needs a
-  person's review, and the runtime cannot act until it exists.
+* How the runtime holds a token for a person is ADR-0077.
 * `pydantic-ai-slim` with its `anthropic`, `mcp` and `ag-ui` extras, added to the runtime
   dependencies with license and reason, and `CLAUDE.md`'s count of them updated.
 * `@assistant-ui/react`, its Markdown and AG-UI packages, added to the web client, checked against
