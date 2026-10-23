@@ -8,6 +8,7 @@
 #   docker run … python -m cfokit.ledger.migrations    migrations, explicit only
 #   docker run … python -m cfokit.server rest         REST service (default)
 #   docker run … python -m cfokit.server mcp          MCP service, streamable HTTP
+#   docker run … python -m cfokit.runtime             the chat's agent runtime (ADR-0075)
 #
 # The REST service also serves the web client's static build at /app/ (ADR-0049 § 5). It is
 # built from web/ in a Node stage below; the final image carries the files and no Node.
@@ -149,6 +150,10 @@ WORKDIR /app
 COPY --from=builder --chown=cfokit:cfokit /app /app
 # Where cfokit.server looks for it (WEB_ROOT); read-only to the service.
 COPY --from=web /web/dist /app/web
+# The bookkeeper skill, which the runtime gives the model as its instructions (ADR-0075 § 2): the
+# same file the CFOKit plugin for Claude carries, so the chat and a person's own agent are told
+# the same thing. Where cfokit.runtime looks (CFOKIT_RUNTIME_SKILL).
+COPY skills/cfokit/bookkeeper/SKILL.md /opt/cfokit/skills/cfokit/bookkeeper/SKILL.md
 
 ENV PATH="/app/.venv/bin:${PATH}" \
     PYTHONUNBUFFERED=1 \

@@ -21,7 +21,7 @@ Layout under the output directory, one directory per consumer so each mounts onl
     ca-key/ca-key.pem           the CA private key: read only by this script
     keycloak/cert.pem           the issuer's certificate
     keycloak/key.pem            the issuer's private key
-    cfokit/cert.pem             the REST and MCP services' certificate
+    cfokit/cert.pem             the REST, MCP and runtime services' certificate
     cfokit/key.pem              their private key
 
 Local-only material. A deployment reachable by anything else uses a certificate from its own
@@ -43,10 +43,11 @@ from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
 # Each certificate, by the directory its consumer mounts, and the names it answers to. The
 # issuer's is `keycloak.localhost`, the one name every party uses; `localhost` is there so a
 # person probing the port directly is not also debugging a name mismatch. CFOKit's services are
-# reached at `localhost`, and at the loopback address by a client that resolves it first.
+# reached at `localhost`, and at the loopback address by a client that resolves it first; and at
+# their service names by the chat's runtime, which calls them inside the compose network.
 LEAVES: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
     "keycloak": (("keycloak.localhost", "localhost"), ()),
-    "cfokit": (("localhost",), ("127.0.0.1",)),
+    "cfokit": (("localhost", "ledger", "mcp"), ("127.0.0.1",)),
 }
 
 CA_LIFETIME = datetime.timedelta(days=3650)
@@ -117,11 +118,19 @@ def _authority(
     return cert, key
 
 
-def _needs_leaf(path: Path, ca: x509.Certificate, now: datetime.datetime) -> bool:
+def _needs_leaf(
+    path: Path, ca: x509.Certificate, names: tuple[str, ...], now: datetime.datetime
+) -> bool:
     if not path.exists():
         return True
     leaf = x509.load_pem_x509_certificate(path.read_bytes())
-    return leaf.issuer != ca.subject or leaf.not_valid_after_utc - now < REISSUE_WITHIN
+    # A name added since it was issued, so a stack made before the addition picks it up.
+    carried = leaf.extensions.get_extension_for_class(x509.SubjectAlternativeName).value
+    return (
+        leaf.issuer != ca.subject
+        or leaf.not_valid_after_utc - now < REISSUE_WITHIN
+        or set(carried.get_values_for_type(x509.DNSName)) != set(names)
+    )
 
 
 def _issue(
@@ -133,9 +142,9 @@ def _issue(
     ca_key: ec.EllipticCurvePrivateKey,
     now: datetime.datetime,
 ) -> bool:
-    """Issue ``folder``'s certificate if it is missing, foreign or near expiry."""
+    """Issue ``folder``'s certificate if it is missing, foreign, near expiry or misnamed."""
     cert_path = root / folder / "cert.pem"
-    if not _needs_leaf(cert_path, ca, now):
+    if not _needs_leaf(cert_path, ca, names, now):
         return False
 
     key = ec.generate_private_key(ec.SECP256R1())

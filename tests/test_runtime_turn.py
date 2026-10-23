@@ -31,6 +31,7 @@ CONVERSATION = "5f1e2d3c-4b5a-4968-8778-695a4b3c2d1e"
 TURN = f"/entities/{ENTITY}/conversations/{CONVERSATION}/turn"
 PERSON = "geoff-token"
 STRANGER = "someone-else"
+WEB = "https://books.example"
 SKILL = Skill(name="bookkeeper", instructions="You keep the books.", version="bookkeeper@abc")
 
 books = MCPServer("cfokit")
@@ -134,7 +135,8 @@ def app(core: Core, model: Bookkeeper | None) -> TestClient:
                 tokens=Tokens(),
                 core=core,
                 connect=connect,
-            )
+            ),
+            web_origin=WEB,
         )
     )
 
@@ -239,3 +241,27 @@ def test_core_s_refusal_is_passed_on() -> None:
     """Another person's conversation is not found in core, and so not found here."""
     response = post(app(Core(missing=True), Bookkeeper()), asked())
     assert (response.status_code, response.json()["code"]) == (404, "conversation_not_found")
+
+
+def preflight(origin: str) -> Any:
+    return app(Core(), Bookkeeper()).options(
+        TURN,
+        headers={
+            "Origin": origin,
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "authorization,content-type",
+        },
+    )
+
+
+def test_the_web_client_s_origin_may_call_the_runtime() -> None:
+    """The runtime has its own address, so the chat window's call is cross-origin (ADR-0075 §
+    1); the Fetch standard's CORS preflight is what lets the browser make it."""
+    response = preflight(WEB)
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == WEB
+
+
+def test_no_other_origin_may() -> None:
+    response = preflight("https://elsewhere.example")
+    assert "access-control-allow-origin" not in response.headers

@@ -30,8 +30,8 @@ Facts that bear on the answer:
   (ADR-0019). Credentials never pass through an agent or a model (`IAM-10`).
 * **Keycloak, the default issuer, at 26.8.0**: standard token exchange (RFC 8693, its "V2") has been
   fully supported since 26.2, for exchanging one of the realm's access tokens for another, with the
-  `audience` parameter narrowing the result. The requesting client must be confidential and named
-  in the subject token's audience. Impersonation is not part of standard exchange, and delegation
+  `audience` parameter narrowing the result to named clients. The requesting client must be
+  confidential and named in the subject token's audience. Impersonation is not part of standard exchange, and delegation
   with consent, which marks the client with an `act` claim, is a preview in 26.8.0.
 * **The realm's access tokens last eight hours by default** (`CFOKIT_ACCESS_TOKEN_LIFESPAN`), longer
   than any turn.
@@ -76,7 +76,10 @@ person's credential stored anywhere.
 The web client's tokens carry the runtime's client in their audience, so the issuer will exchange
 them. At the start of a turn the runtime makes one exchange and holds the result in memory for the
 turn only. It never stores a token, and never sees a password (`IAM-10`). The exchanged token's
-audience is CFOKit's API (`NFR-06`), so it is validated exactly as every other token is.
+audience is CFOKit's API (`NFR-06`), so it is validated exactly as every other token is. The
+runtime asks for no audience, which RFC 8693 leaves optional: the realm binds CFOKit's API to every
+token it issues, and Keycloak's `audience` parameter names clients, which the API's audience is
+not.
 
 The runtime is an agent like any other: the first time a person uses the chat in a company, the
 server refuses with `agent_not_allowed` and its link, and the chat window offers that link, where

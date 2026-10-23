@@ -7,7 +7,6 @@ runtime is a separate component that reaches them only over HTTP (ADR-0022, ADR-
 from __future__ import annotations
 
 import logging
-import os
 import sys
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -67,7 +66,6 @@ def main() -> int:
         skill=read_skill(settings.skill_path.read_text(encoding="utf-8")),
         tokens=Exchange(
             issuer_url=settings.issuer_url,
-            audience=settings.audience,
             client_id=settings.client_id,
             client_secret=settings.client_secret,
             http=http,
@@ -76,9 +74,11 @@ def main() -> int:
         connect=connect,
     )
     uvicorn.run(
-        create_app(runtime),
-        host="0.0.0.0",  # noqa: S104 - inside a container, behind the load balancer
-        port=int(os.environ.get("PORT", "8082")),
+        create_app(runtime, web_origin=settings.web_origin),
+        host="0.0.0.0",  # noqa: S104 - inside a container
+        port=settings.port,
+        ssl_certfile=settings.tls_cert_file,
+        ssl_keyfile=settings.tls_key_file,
     )
     return 0
 

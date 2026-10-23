@@ -31,6 +31,8 @@ from pydantic_ai.messages import (
 from pydantic_ai.models import Model
 from pydantic_ai.ui.ag_ui import AGUIAdapter
 from starlette.applications import Starlette
+from starlette.middleware import Middleware
+from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 from starlette.routing import Route
@@ -83,7 +85,9 @@ def _dump(message: ModelMessage) -> Any:
     return ModelMessagesTypeAdapter.dump_python([message], mode="json")[0]
 
 
-def create_app(runtime: Runtime) -> Starlette:
+def create_app(runtime: Runtime, *, web_origin: str | None = None) -> Starlette:
+    """The runtime's app. `web_origin` is the one browser origin allowed to call it, the web
+    client's; None allows none, as for a caller that is not a browser."""
     agent: Agent[None, str] | None = (
         None
         if runtime.model is None
@@ -173,5 +177,13 @@ def create_app(runtime: Runtime) -> Starlette:
                 methods=["POST"],
             ),
             Route("/healthz", healthz, methods=["GET"]),
-        ]
+        ],
+        middleware=[
+            Middleware(
+                CORSMiddleware,
+                allow_origins=[] if web_origin is None else [web_origin],
+                allow_methods=["POST"],
+                allow_headers=["authorization", "content-type", "accept"],
+            )
+        ],
     )

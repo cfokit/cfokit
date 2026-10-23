@@ -2,7 +2,8 @@
 
 RFC 8693 standard token exchange, at the token endpoint the issuer's own metadata names. The
 runtime authenticates as its confidential client and presents the person's access token; what
-comes back is issued to the runtime, for the person, with CFOKit's API as its audience. The
+comes back is issued to the runtime, for the person, with the audience the issuer binds every
+token to, which is CFOKit's API; the request names none (RFC 8693 § 2.1). The
 server then sees the agent `client:<runtime>` acting for that person, allowed per company like
 any agent (ADR-0066).
 
@@ -42,13 +43,11 @@ class Exchange:
         self,
         *,
         issuer_url: str,
-        audience: str,
         client_id: str,
         client_secret: str,
         http: httpx2.AsyncClient,
     ) -> None:
         self._metadata_url = f"{issuer_url.rstrip('/')}/.well-known/openid-configuration"
-        self._audience = audience
         self._client = (client_id, client_secret)
         self._http = http
         self._token_endpoint: str | None = None
@@ -68,7 +67,6 @@ class Exchange:
                 "subject_token": person_token,
                 "subject_token_type": ACCESS_TOKEN,
                 "requested_token_type": ACCESS_TOKEN,
-                "audience": self._audience,
             },
             auth=self._client,
         )

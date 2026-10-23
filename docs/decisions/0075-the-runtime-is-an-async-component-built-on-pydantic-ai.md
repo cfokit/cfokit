@@ -89,8 +89,11 @@ is CFOKit's own.
 
 ### 1. A turn is one streamed request
 
-The chat window sends the person's message to the runtime, at a path on the API's origin the load
-balancer routes to it, so the CSP's `default-src 'self'` holds. The runtime reads the
+The chat window sends the person's message to the runtime, at the runtime's own address, as the
+MCP service has its own: the local stack has no load balancer to route a path on the web client's
+origin, and a second way of reaching the runtime would be a second thing to keep working. The web
+client is told the address, its CSP allows that one origin to be connected to, and the runtime
+allows that one browser origin, the web client's, by CORS. The runtime reads the
 conversation's history from core, runs the turn, and streams its AG-UI events in the response. As
 each message completes, it is appended to the conversation in core, so a reload or a reconnect
 shows everything up to the last completed message.
@@ -220,7 +223,8 @@ The most widely used chat stack in TypeScript, with resumable streams and file p
 * `@assistant-ui/react`, its Markdown and AG-UI packages, added to the web client, checked against
   ADR-0049 § 9.
 * A provider registry entry before the provider receives customer data (`SOC2-10`, ADR-0035).
-* The load balancer routes the runtime's path to its service (ADR-0060); `compose.yaml` adds it.
+* The runtime is a service with its own address on each target: a port in `compose.yaml`, a host
+  behind the load balancer (ADR-0060).
 
 **Reversal cost.** Moderate. Replacing assistant-ui changes the chat window only; replacing
 Pydantic AI replaces the runtime's loop but not the stored conversations, which are its message
