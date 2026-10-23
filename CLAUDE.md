@@ -152,13 +152,14 @@ otherwise get wrong, because absence isn't visible in a manifest:
   forbidden because it makes an `await` inside a transaction expressible, and the workload has
   almost no concurrency to reclaim in exchange. (ADR-0024)
 - **Runtime dependencies are load-bearing and few.** Adding one is a decision, not a
-  convenience. Ask before adding any. Currently **six**, in the root `pyproject.toml`, each
+  convenience. Ask before adding any. Currently **seven**, in the root `pyproject.toml`, each
   with its reason and verified license in a comment there: `psycopg[binary]` (driver), `fastapi`
   (REST + OpenAPI), `uvicorn` (ASGI server), `mcp` (tool surface), `pyjwt[crypto]` (audience
   validation), `cryptography` (Web Push encryption, ADR-0057; already installed as PyJWT's
-  extra, declared because we call into it). Those six pull **36** packages in total — `uv export
-  --no-dev --no-emit-project --no-hashes | grep -c '^[a-z]'` — and the MCP SDK is most of it,
-  accepted knowingly (ADR-0024). Accounting exports are parsed in the person's browser, never
+  extra, declared because we call into it), and `pydantic-ai-slim[anthropic,ag-ui]` (CFOKit's
+  own agent runtime, ADR-0075; confined to `cfokit.runtime`). Those seven pull **46** packages
+  in total — `uv export --no-dev --no-emit-project --no-hashes | grep -c '^[a-z]'` — and the MCP
+  SDK is most of it, accepted knowingly (ADR-0024). Accounting exports are parsed in the person's browser, never
   by the server, so no spreadsheet library is a dependency of any kind (ADR-0058).
 - **Unattended work is a run in Postgres, enqueued in the same transaction as its cause**
   (`EntityWrite.enqueue_work`), and run by `python -m cfokit.server work`. No schedule lives

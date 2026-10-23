@@ -37,6 +37,12 @@ dependencies = [
     # (ADR-0057). Already installed as PyJWT's crypto extra; declared directly because we
     # call into it, for the same reason as PyJWT above. Apache-2.0 OR BSD-3-Clause.
     "cryptography>=50",
+    # CFOKit's own agent runtime (ADR-0075): the agent loop, Claude through the `anthropic`
+    # SDK, and AG-UI for the chat window's stream. Confined to `cfokit.runtime`, a separate
+    # component. Without the `mcp` extra, which needs fastmcp and would double the dependency
+    # tree; the runtime reaches CFOKit's tools through the official `mcp` SDK above instead.
+    # MIT; `anthropic` MIT; `ag-ui-protocol` MIT.
+    "pydantic-ai-slim[anthropic,ag-ui]>=2.59",
 ]
 
 [build-system]
@@ -226,6 +232,22 @@ forbidden_modules = [
     "cfokit.assignment",
     "cfokit.activity",
     "cfokit.conversations",
+]
+
+[[tool.importlinter.contracts]]
+# The runtime is a separate component (ADR-0075): it reaches the books and its conversations only
+# through the published interfaces, as a client, so it imports neither the ledger nor any module.
+name = "The runtime reaches CFOKit only through its published interfaces (ADR-0075)"
+type = "forbidden"
+source_modules = ["cfokit.runtime"]
+forbidden_modules = [
+    "cfokit.ledger",
+    "cfokit.imports",
+    "cfokit.receivables",
+    "cfokit.assignment",
+    "cfokit.activity",
+    "cfokit.conversations",
+    "cfokit.server",
 ]
 
 [[tool.importlinter.contracts]]

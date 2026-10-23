@@ -1,0 +1,241 @@
+"""A turn through the runtime, end to end in-process (ADR-0075, ADR-0077).
+
+ADR-0036 layer 3, with no infrastructure and no credential: the runtime's real Starlette app, a
+real MCP server from the official SDK standing in for CFOKit's tool surface, Pydantic AI's
+`FunctionModel` standing in for Claude, and in-memory stand-ins for core and the issuer. What is
+asserted is what a turn leaves behind — the messages kept and the tools offered — never prose.
+"""
+
+from __future__ import annotations
+
+import json
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+from dataclasses import dataclass, field
+from typing import Any
+
+import httpx2
+from mcp import Client
+from mcp.server import MCPServer
+from pydantic_ai.messages import ModelMessage
+from pydantic_ai.models.function import AgentInfo, DeltaToolCall, DeltaToolCalls, FunctionModel
+from starlette.testclient import TestClient
+
+from cfokit.runtime import Skill
+from cfokit.runtime.app import Runtime, create_app
+from cfokit.runtime.core import Stored, Thread
+from cfokit.runtime.tokens import TokenRefused
+
+ENTITY = "0b9a6c86-2a7e-4f43-8f4a-1f0d6c2c1e11"
+CONVERSATION = "5f1e2d3c-4b5a-4968-8778-695a4b3c2d1e"
+TURN = f"/entities/{ENTITY}/conversations/{CONVERSATION}/turn"
+PERSON = "geoff-token"
+STRANGER = "someone-else"
+SKILL = Skill(name="bookkeeper", instructions="You keep the books.", version="bookkeeper@abc")
+
+books = MCPServer("cfokit")
+
+
+@books.tool()
+def profit_and_loss(entity_id: str) -> str:
+    """The profit and loss for a period."""
+    return "Revenue 1200.00"
+
+
+@books.tool()
+def post_transaction(entity_id: str, transaction_id: str) -> str:
+    """Post a draft."""
+    return "posted"
+
+
+@dataclass
+class Core:
+    """Core's conversation, in memory: what the runtime reads and appends over REST."""
+
+    holds_untrusted: bool = False
+    kept: list[dict[str, Any]] = field(default_factory=list)
+    keys: set[str] = field(default_factory=set)
+    missing: bool = False
+
+    async def thread(self, token: str, entity_id: str, conversation_id: str) -> Thread:
+        assert token == "runtime-token-for-geoff"  # noqa: S105 - a fixture's stand-in
+        if self.missing:
+            request = httpx2.Request("GET", "http://core")
+            raise httpx2.HTTPStatusError(
+                "not found",
+                request=request,
+                response=httpx2.Response(
+                    404, json={"code": "conversation_not_found"}, request=request
+                ),
+            )
+        return Thread(
+            holds_untrusted=self.holds_untrusted,
+            messages=[Stored(i + 1, kept["content"]) for i, kept in enumerate(self.kept)],
+        )
+
+    async def append(
+        self,
+        token: str,
+        entity_id: str,
+        conversation_id: str,
+        *,
+        key: str,
+        kind: str,
+        content: Any,
+        model: str | None = None,
+        skill_version: str | None = None,
+    ) -> int:
+        assert key not in self.keys, "a key is used once per message"
+        self.keys.add(key)
+        self.kept.append(
+            {"kind": kind, "content": content, "model": model, "skill_version": skill_version}
+        )
+        return len(self.kept)
+
+
+class Tokens:
+    async def for_person(self, person_token: str) -> str:
+        if person_token != PERSON:
+            raise TokenRefused("the issuer refused the exchange (400)")
+        return "runtime-token-for-geoff"
+
+
+@asynccontextmanager
+async def connect(token: str) -> AsyncIterator[Client]:
+    async with Client(books) as client:
+        yield client
+
+
+@dataclass
+class Bookkeeper:
+    """A model that asks for the profit and loss, then answers, noting what it was offered."""
+
+    offered: list[list[str]] = field(default_factory=list)
+
+    async def __call__(
+        self, messages: list[ModelMessage], info: AgentInfo
+    ) -> AsyncIterator[str | DeltaToolCalls]:
+        self.offered.append(sorted(tool.name for tool in info.function_tools))
+        if any(part.part_kind == "tool-return" for part in messages[-1].parts):
+            yield "Revenue was "
+            yield "1,200.00."
+        else:
+            yield {0: DeltaToolCall("profit_and_loss", json.dumps({"entity_id": ENTITY}))}
+
+
+def app(core: Core, model: Bookkeeper | None) -> TestClient:
+    return TestClient(
+        create_app(
+            Runtime(
+                model=None
+                if model is None
+                else FunctionModel(stream_function=model, model_name="claude-opus-5-5"),
+                skill=SKILL,
+                tokens=Tokens(),
+                core=core,
+                connect=connect,
+            )
+        )
+    )
+
+
+def asked(text: str = "How did we do last quarter?") -> dict[str, Any]:
+    return {
+        "threadId": CONVERSATION,
+        "runId": "run-1",
+        "state": {},
+        "messages": [{"id": "m1", "role": "user", "content": text}],
+        "tools": [],
+        "context": [],
+        "forwardedProps": {},
+    }
+
+
+def post(client: TestClient, body: dict[str, Any], token: str | None = PERSON) -> Any:
+    headers = {"Accept": "text/event-stream"}
+    if token is not None:
+        headers["Authorization"] = f"Bearer {token}"
+    return client.post(TURN, json=body, headers=headers)
+
+
+def test_a_turn_streams_its_answer_and_keeps_every_message() -> None:
+    core, model = Core(), Bookkeeper()
+    response = post(app(core, model), asked())
+
+    assert response.status_code == 200
+    events = [
+        json.loads(line.removeprefix("data: "))
+        for line in response.text.splitlines()
+        if line.startswith("data: ")
+    ]
+    assert "RUN_FINISHED" in [event["type"] for event in events]
+    assert "Revenue was 1,200.00." in "".join(
+        event.get("delta", "") for event in events if event["type"] == "TEXT_MESSAGE_CONTENT"
+    )
+
+    # The person's message first, kept before the model saw it; then the model's call, the
+    # tool's answer, and the reply.
+    assert [kept["kind"] for kept in core.kept] == [
+        "request",
+        "response",
+        "request",
+        "response",
+    ]
+    responses = [kept for kept in core.kept if kept["kind"] == "response"]
+    assert {(r["model"], r["skill_version"]) for r in responses} == {
+        ("claude-opus-5-5", "bookkeeper@abc")
+    }
+    assert all(kept["skill_version"] is None for kept in core.kept if kept["kind"] == "request")
+
+
+def test_the_stored_conversation_is_the_history_the_model_is_given() -> None:
+    """A second turn continues from what core kept, not what the window sends (ADR-0076)."""
+    core, model = Core(), Bookkeeper()
+    client = app(core, model)
+    post(client, asked())
+    kept_after_first = len(core.kept)
+
+    second = asked("And the quarter before?")
+    second["runId"] = "run-2"
+    post(client, second)
+
+    assert len(core.kept) == kept_after_first + 4
+
+
+def test_every_tool_is_offered_while_nothing_untrusted_is_held() -> None:
+    core, model = Core(), Bookkeeper()
+    post(app(core, model), asked())
+    assert model.offered[0] == ["post_transaction", "profit_and_loss"]
+
+
+def test_a_conversation_holding_untrusted_content_is_offered_nothing_that_posts() -> None:
+    """`PLT-23`, by what the model is offered rather than by what it is told."""
+    core, model = Core(holds_untrusted=True), Bookkeeper()
+    post(app(core, model), asked())
+    assert all("post_transaction" not in tools for tools in model.offered)
+    assert model.offered[0] == ["profit_and_loss"]
+
+
+def test_with_no_inference_credential_the_chat_is_off() -> None:
+    core = Core()
+    response = post(app(core, None), asked())
+    assert (response.status_code, response.json()["code"]) == (503, "runtime_off")
+    assert core.kept == []
+
+
+def test_a_turn_needs_the_person_s_token() -> None:
+    response = post(app(Core(), Bookkeeper()), asked(), token=None)
+    assert (response.status_code, response.json()["code"]) == (401, "not_authenticated")
+
+
+def test_a_token_the_issuer_will_not_exchange_acts_for_nobody() -> None:
+    core = Core()
+    response = post(app(core, Bookkeeper()), asked(), token=STRANGER)
+    assert (response.status_code, response.json()["code"]) == (403, "token_refused")
+    assert core.kept == []
+
+
+def test_core_s_refusal_is_passed_on() -> None:
+    """Another person's conversation is not found in core, and so not found here."""
+    response = post(app(Core(missing=True), Bookkeeper()), asked())
+    assert (response.status_code, response.json()["code"]) == (404, "conversation_not_found")
