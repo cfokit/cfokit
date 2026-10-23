@@ -118,6 +118,8 @@ nothing cites these but this repository. They are added when something breaks wi
 | [0072](0072-inference-usage-is-recorded-per-company-and-read-through-the-api.md) | Inference usage is recorded per company and read through the published API | Proposed |
 | [0073](0073-a-principals-roles-are-a-set-added-and-removed-one-at-a-time.md) | A principal's roles in an entity are a set, added and removed one at a time | Proposed |
 | [0074](0074-a-documentation-clip-is-cut-from-a-passing-run-of-its-use-case.md) | A documentation clip is cut from a passing end-to-end run of the use case it shows | Proposed |
+| [0075](0075-the-runtime-is-an-async-component-built-on-pydantic-ai.md) | CFOKit's runtime is an async component built on Pydantic AI, streaming AG-UI to an assistant-ui chat window | Proposed |
+| [0076](0076-conversations-and-their-files-are-stored-in-core.md) | Conversations and the files in them are the company's records, stored in core's database | Proposed |
 
 ## Deferred — decided in principle, waiting on a need
 
