@@ -163,10 +163,11 @@ What other components do (ADR-0032).
 
 **Follow-on obligations.**
 
-* ADR-0019's conformance contract adds standard token exchange.
 * The realm adds the runtime's confidential client and the audience on the web client's tokens;
   its secret is a container populated out of band (ADR-0016).
-* ADR-0075 § 1's unattended start is replaced by § 2 here.
+
+This record adds standard token exchange to ADR-0019's conformance contract, and replaces ADR-0075
+§ 1's unattended start with § 2 here.
 
 **Reversal cost.** Low. The token is held for a turn and never stored, so moving to another
 mechanism changes how the runtime obtains it and nothing the server keeps.
