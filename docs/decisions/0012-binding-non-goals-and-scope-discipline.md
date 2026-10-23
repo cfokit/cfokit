@@ -164,7 +164,8 @@ They are product boundaries, so arguably they belong with the vision rather than
 - `vision.md` states the outward-facing version, and must not overstate it as a prohibition.
   **Already in place.**
 - An ADR that lifts the gate for an item updates the list to record that it passed, and when.
-- Slack has passed (ADR-0021), and the web client (ADR-0049). Rendered report output, which RPT-13 requires, is still queued.
+- Slack has passed (ADR-0021), the web client (ADR-0049), the work queue (ADR-0061), and SSE for
+  the runtime's stream (ADR-0075). Rendered report output, which RPT-13 requires, is still queued.
 
 **Reversal cost. Low.** The list is a rule, not an architecture. Removing it costs nothing
 mechanically and costs the forcing function entirely.

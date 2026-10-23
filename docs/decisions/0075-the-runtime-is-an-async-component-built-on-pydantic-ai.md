@@ -29,7 +29,8 @@ Facts that bear on the answer:
   is long turns and long-lived streams, unlike the API's; it holds the one credential worth
   isolating, the inference key; and any MCP client is already a third party's version of it. A
   component chooses its own execution model (ADR-0024).
-* **It reaches the books through the published tool surface and no other** (ADR-0034), as its own
+* **It reaches CFOKit through the published interfaces and no other** (ADR-0034): the books
+  through the MCP tools, and its conversations through the REST API (ADR-0076), as its own
   registered client acting for a person, within the intersection of their grants (`IAM-11`,
   ADR-0066).
 * **On Cloud Run, a stream is a request.** An open SSE or websocket stream keeps its instance
@@ -163,7 +164,8 @@ backend if it were.
 ### Confirmation
 
 * The runtime is its own package and entrypoint, with an `import-linter` contract forbidding it
-  every capability package, so the books are reachable only through the published surface.
+  every capability package, so it reaches the books and its conversations only through the
+  published MCP and REST interfaces.
 * Pydantic AI's test model drives a turn in the suite: its stream, its appended messages, and
   that once a conversation holds an untrusted file no later turn in it is offered a posting tool,
   including when the model is scripted to try (`PLT-23`'s acceptance).
