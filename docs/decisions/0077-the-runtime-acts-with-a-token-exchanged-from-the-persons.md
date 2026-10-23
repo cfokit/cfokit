@@ -89,9 +89,12 @@ A run in the work queue that leaves something for the person appends it to the c
 conversation itself, through core's own module (ADR-0076), and the person meets it when they next
 open the chat. The model works on it then, in that person's turn and with their token.
 
-Running the model with nobody there, as managed bookkeeping will want, needs a credential that
-outlives a request. That is decided when it is needed, with the issuer's delegation support as it
-then stands.
+Running the model with nobody there, as managed bookkeeping will want, takes the same shape as any
+unattended work: a schedule in core's work queue (ADR-0061), whose run calls the runtime, which
+uses the model and reaches the ledger through MCP like a turn does. What that run lacks is a
+person's token to exchange. Whether it holds one through the owner's offline consent, or acts as
+CFOKit's bookkeeping service with a role the owner grants, is decided with managed bookkeeping,
+against the issuer's delegation support as it then stands.
 
 ### Consequences
 
@@ -173,6 +176,7 @@ Related: ADR-0019 (the issuer), ADR-0032 (components' credentials), ADR-0033 (de
 
 ## Revisit when
 
-* A use case needs the model to work while the person is away.
+* A use case needs the model to work while the person is away, such as a scheduled run for
+  managed bookkeeping.
 * Keycloak's delegation with consent is fully supported, and a second issuer offers the same.
 * An issuer CFOKit must support lacks standard token exchange.
