@@ -1,7 +1,7 @@
 """Conversations and their files, against a real database (ADR-0075, ADR-0076, ADR-0077).
 
 ADR-0036 layer 3. The rules a message and a file must meet are covered without infrastructure
-in `tests/test_conversations.py`; what is new here is storage, order, who can see what, the
+in `tests/test_conversation_rules.py`; what is new here is storage, order, who can see what, the
 company boundary, append-only, replay, the audit trail and the complete export. Expected values
 are the records' stated rules: a conversation is its person's (`PLT-04`), a company's rows reach
 no other company (`SOC2-16`), and nothing stored is ever changed (`SOC1-06`).
