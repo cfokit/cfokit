@@ -34,7 +34,9 @@ works the same either way. `src/cfokit/` is a PEP 420 namespace package: **do no
 **Six capabilities exist**: `ledger`, `imports` (ADR-0040), `receivables`, `assignment`
 (ADR-0045), `activity` (ADR-0046), and `conversations` (ADR-0076). `server` is not one — it is the composition point, the
 only place that knows the module list, and a file in it that decides something about
-accounting is in the wrong place.
+accounting is in the wrong place. Nor is `runtime`: it is a separate component, the agent behind
+the web app's chat, reaching CFOKit only over its published interfaces like any other client
+(ADR-0075).
 
 There was a `connectors` package holding no code; it was removed rather than renamed, because
 a package that exists before its capability is known is a boundary drawn around a guess

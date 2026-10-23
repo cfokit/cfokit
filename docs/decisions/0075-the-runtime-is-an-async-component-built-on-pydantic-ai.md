@@ -213,8 +213,10 @@ The most widely used chat stack in TypeScript, with resumable streams and file p
 **Follow-on obligations.**
 
 * How the runtime holds a token for a person is ADR-0077.
-* `pydantic-ai-slim` with its `anthropic`, `mcp` and `ag-ui` extras, added to the runtime
-  dependencies with license and reason, and `CLAUDE.md`'s count of them updated.
+* `pydantic-ai-slim` with its `anthropic` and `ag-ui` extras, added to the runtime
+  dependencies with license and reason, and `CLAUDE.md`'s count of them updated. Not its `mcp`
+  extra, which needs fastmcp and would double the dependency tree: the runtime reaches the tools
+  through a small toolset over the official `mcp` SDK it already depends on.
 * `@assistant-ui/react`, its Markdown and AG-UI packages, added to the web client, checked against
   ADR-0049 § 9.
 * A provider registry entry before the provider receives customer data (`SOC2-10`, ADR-0035).
