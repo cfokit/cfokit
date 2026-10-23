@@ -75,6 +75,7 @@ The policy's parts:
   | Dependabot `github_actions` or `docker_compose` (Postgres, Keycloak), any size | human |
   | Any Dependabot update with no update type, or a major | human |
   | Changes `skills/cfokit/`, and the head commit has no passing eval result (ADR-0036 § 4) | human |
+  | Changes the eval cases, `skills/cfokit/evals/`, whatever they score | human |
   | Any other bot | human |
   | A person's pull request touching none of the above | auto |
 
@@ -86,7 +87,7 @@ The policy's parts:
 
   It never runs on open or push. A head commit that already carries a verdict is not
   reviewed again. The `eval` label runs the evals the same way, on request, and comments a
-  result at the head commit that the policy reads; only a bot's comment counts.
+  result at the head commit that the policy reads; only the eval workflow's comment counts.
 * **Verdicts.** The verdict is `approve`, `changes` or `escalate`, with findings graded Important
   or Nit (`REVIEW.md`).
   * An approval with no Important finding, in the `auto` tier, becomes the app's approval
