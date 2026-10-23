@@ -225,6 +225,7 @@ forbidden_modules = [
     "cfokit.receivables",
     "cfokit.assignment",
     "cfokit.activity",
+    "cfokit.conversations",
 ]
 
 [[tool.importlinter.contracts]]
@@ -236,7 +237,13 @@ forbidden_modules = [
 # direction is the thing forbidden.
 name = "Modules depend on the ledger, never on each other (ADR-0022)"
 type = "independence"
-modules = ["cfokit.imports", "cfokit.receivables", "cfokit.assignment", "cfokit.activity"]
+modules = [
+    "cfokit.imports",
+    "cfokit.receivables",
+    "cfokit.assignment",
+    "cfokit.activity",
+    "cfokit.conversations",
+]
 
 # NOTE: a contract forbidding provider SDKs at module scope (ADR-0004) is added when
 # the first provider SDK is introduced — import-linter errors on modules it cannot find.

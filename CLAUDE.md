@@ -31,8 +31,8 @@ buys. Boundaries between capabilities are enforced by `import-linter` on module 
 works the same either way. `src/cfokit/` is a PEP 420 namespace package: **do not add
 `src/cfokit/__init__.py`**. A skill is not a package and never goes here (ADR-0014, ADR-0020).
 
-**Five capabilities exist**: `ledger`, `imports` (ADR-0040), `receivables`, `assignment`
-(ADR-0045), and `activity` (ADR-0046). `server` is not one — it is the composition point, the
+**Six capabilities exist**: `ledger`, `imports` (ADR-0040), `receivables`, `assignment`
+(ADR-0045), `activity` (ADR-0046), and `conversations` (ADR-0076). `server` is not one — it is the composition point, the
 only place that knows the module list, and a file in it that decides something about
 accounting is in the wrong place.
 

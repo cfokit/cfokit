@@ -202,7 +202,8 @@ class Complete:
 def export_complete(
     database: Database, *, entity_id: str, principal: Principal, request_id: str
 ) -> Complete:
-    """Everything the entity holds, as a zip of JSON Lines plus the interchange files.
+    """Everything the entity holds, as a zip of JSON Lines, the files people attached, and the
+    interchange files.
 
     No `as_of` and no watermark. `EXP-02` is "everything the entity holds", and a complete
     export that took a position on which moment counts would be a report rather than the books.
@@ -221,6 +222,7 @@ def export_complete(
     with database.entity_write(entity_id) as write:
         authorize(write, Capability.READ, principal)
         tables = {name: write.archived(name) for name, _ in archive.TABLES}
+        files = write.archived_files()
         schema_version = write.schema_version()
 
     # From the archive rather than from `EntitySettings`, which does not carry it and should
@@ -257,6 +259,10 @@ def export_complete(
         )
         for name, (columns, rows) in tables.items():
             bundle.writestr(_entry(f"tables/{name}.jsonl"), _jsonl(columns, rows))
+        # The files people attached, named by digest (ADR-0076). `conversation_file` says
+        # which is which, and of what type.
+        for sha256, content in files:
+            bundle.writestr(_entry(f"files/{sha256}"), content)
         with zipfile.ZipFile(io.BytesIO(interchange.archive)) as inner:
             for member in sorted(inner.namelist()):
                 bundle.writestr(_entry(f"interchange/{member}"), inner.read(member))
