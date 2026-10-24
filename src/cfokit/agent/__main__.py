@@ -1,7 +1,7 @@
-"""``python -m cfokit.runtime`` — serve the runtime (ADR-0023: one image, many entrypoints).
+"""``python -m cfokit.agent`` — serve the agent (ADR-0023: one image, many entrypoints).
 
 Composed here rather than in `cfokit.server`, which composes the ledger and its modules: the
-runtime is a separate component that reaches them only over HTTP (ADR-0022, ADR-0075).
+agent is a separate component that reaches them only over HTTP (ADR-0022, ADR-0075).
 """
 
 from __future__ import annotations
@@ -17,16 +17,16 @@ from mcp import Client
 from mcp.client.streamable_http import streamable_http_client
 from pydantic_ai.models import Model
 
-from cfokit.runtime import read_skill
-from cfokit.runtime.app import Runtime, create_app
-from cfokit.runtime.config import ConfigError, RuntimeSettings
-from cfokit.runtime.core import CoreAPI
-from cfokit.runtime.tokens import Exchange
+from cfokit.agent import read_skill
+from cfokit.agent.app import Services, create_app
+from cfokit.agent.config import AgentSettings, ConfigError
+from cfokit.agent.core import CoreAPI
+from cfokit.agent.tokens import Exchange
 
-log = logging.getLogger("cfokit.runtime")
+log = logging.getLogger("cfokit.agent")
 
 
-def _model(settings: RuntimeSettings) -> Model | None:
+def _model(settings: AgentSettings) -> Model | None:
     """Claude through Pydantic AI, or None when no inference credential is configured.
 
     Imported here, not at module scope, so the provider's SDK loads only where it is used
@@ -46,7 +46,7 @@ def _model(settings: RuntimeSettings) -> Model | None:
 def main() -> int:
     logging.basicConfig(level=logging.INFO)
     try:
-        settings = RuntimeSettings.from_env()
+        settings = AgentSettings.from_env()
     except ConfigError as missing:
         log.error("%s: %s", missing.code, missing)
         return 2
@@ -61,7 +61,7 @@ def main() -> int:
         ):
             yield client
 
-    runtime = Runtime(
+    services = Services(
         model=_model(settings),
         skill=read_skill(settings.skill_path.read_text(encoding="utf-8")),
         tokens=Exchange(
@@ -74,7 +74,7 @@ def main() -> int:
         connect=connect,
     )
     uvicorn.run(
-        create_app(runtime, web_origin=settings.web_origin),
+        create_app(services, web_origin=settings.web_origin),
         host="0.0.0.0",  # noqa: S104 - inside a container
         port=settings.port,
         ssl_certfile=settings.tls_cert_file,

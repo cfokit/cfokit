@@ -1,14 +1,14 @@
-"""The chat's runtime exchanges a person's token for its own, against the shipped realm
+"""CFOKit's agent exchanges a person's token for its own, against the shipped realm
 (ADR-0077).
 
 ADR-0036 layer 3. What is measured is the realm CFOKit ships
-(`infra/keycloak/cfokit-realm.json`) and the runtime's own exchange code together: a person
+(`infra/keycloak/cfokit-realm.json`) and the agent's own exchange code together: a person
 signs in through the web client exactly as a browser does, with authorization code and PKCE, and
-the runtime presents that token.
+the agent presents that token.
 
 Expected values come from outside the implementation: RFC 8693 § 2.2.1 (the token is issued to
 the client that asked, for the subject of the token presented), ADR-0077 (the server sees the
-agent `client:cfokit-runtime` acting for that person) read through the ledger's own principal
+agent `client:cfokit-agent` acting for that person) read through the ledger's own principal
 derivation as a second enforcement point, and `AUTH_AUDIENCE`, which the API validates.
 
 This file knows the issuer is Keycloak, which the issuer conformance suite deliberately does
@@ -31,9 +31,9 @@ from typing import Any
 import httpx2 as httpx
 import pytest
 
+from cfokit.agent.tokens import Exchange, TokenRefused
 from cfokit.ledger.service.authentication import principal_from_claims
 from cfokit.ledger.service.principal import ActorClass
-from cfokit.runtime.tokens import Exchange, TokenRefused
 
 pytestmark = pytest.mark.integration
 
@@ -42,13 +42,13 @@ AUDIENCE = os.environ.get("AUTH_AUDIENCE", "")
 WEB = os.environ.get("PUBLIC_BASE_URL", "").rstrip("/")
 ADMIN = os.environ.get("KEYCLOAK_ADMIN", "")
 ADMIN_PASSWORD = os.environ.get("KEYCLOAK_ADMIN_PASSWORD", "")
-RUNTIME_SECRET = os.environ.get("CFOKIT_RUNTIME_CLIENT_SECRET", "")
+AGENT_SECRET = os.environ.get("CFOKIT_AGENT_CLIENT_SECRET", "")
 TIMEOUT = 10
 
 
 @pytest.fixture(autouse=True)
 def _requires_the_shipped_issuer() -> None:
-    if not (ISSUER and WEB and ADMIN and ADMIN_PASSWORD and RUNTIME_SECRET):
+    if not (ISSUER and WEB and ADMIN and ADMIN_PASSWORD and AGENT_SECRET):
         pytest.skip("needs the compose issuer: docker compose --profile test run --rm test")
 
 
@@ -77,7 +77,7 @@ def person() -> Iterator[str]:
         )
         admin.raise_for_status()
         signed_in = {"authorization": f"Bearer {admin.json()['access_token']}"}
-        email = f"runtime-{secrets.token_hex(4)}@example.com"
+        email = f"agent-{secrets.token_hex(4)}@example.com"
         password = secrets.token_urlsafe(24)
         created = http.post(
             f"{origin}/admin/realms/{realm}/users",
@@ -87,7 +87,7 @@ def person() -> Iterator[str]:
                 "email": email,
                 "emailVerified": True,
                 "enabled": True,
-                "firstName": "Runtime",
+                "firstName": "Services",
                 "lastName": "Exchange",
                 "credentials": [{"type": "password", "value": password, "temporary": False}],
             },
@@ -118,7 +118,7 @@ def _sign_in(http: httpx.Client, email: str, password: str) -> str:
             "scope": "openid",
             "code_challenge": challenge,
             "code_challenge_method": "S256",
-            "state": "runtime-exchange",
+            "state": "agent-exchange",
         },
     )
     action = re.search(r'"loginAction":\s*"([^"]+)"', page.text)
@@ -140,12 +140,12 @@ def _sign_in(http: httpx.Client, email: str, password: str) -> str:
     return str(token.json()["access_token"])
 
 
-def exchange(person_token: str, *, secret: str = RUNTIME_SECRET) -> str:
+def exchange(person_token: str, *, secret: str = AGENT_SECRET) -> str:
     async def run() -> str:
         async with httpx.AsyncClient(timeout=TIMEOUT) as http:
             return await Exchange(
                 issuer_url=ISSUER,
-                client_id="cfokit-runtime",
+                client_id="cfokit-agent",
                 client_secret=secret,
                 http=http,
             ).for_person(person_token)
@@ -153,32 +153,32 @@ def exchange(person_token: str, *, secret: str = RUNTIME_SECRET) -> str:
     return asyncio.run(run())
 
 
-def test_the_runtime_receives_a_token_of_its_own_for_the_person(person: str) -> None:
+def test_the_agent_receives_a_token_of_its_own_for_the_person(person: str) -> None:
     """RFC 8693 § 2.2.1: issued to the client that asked, for the subject it presented."""
     theirs, ours = claims(person), claims(exchange(person))
     assert ours["sub"] == theirs["sub"]
-    assert ours["azp"] == "cfokit-runtime"
+    assert ours["azp"] == "cfokit-agent"
     assert AUDIENCE in ours["aud"]
 
 
-def test_the_api_sees_the_runtime_acting_for_the_person(person: str) -> None:
+def test_the_api_sees_the_agent_acting_for_the_person(person: str) -> None:
     """ADR-0077: an agent, allowed per company like any other, never the person themselves."""
     theirs, ours = claims(person), claims(exchange(person))
     principal = principal_from_claims(ours)
     assert principal.actor_class is ActorClass.AGENT
-    assert principal.id == "client:cfokit-runtime"
+    assert principal.id == "client:cfokit-agent"
     assert principal.acting_for == theirs["sub"]
 
 
-def test_a_token_not_meant_for_the_runtime_is_not_exchanged() -> None:
-    """A token another client holds, such as a person's own agent's, does not name the runtime
-    in its audience, so the runtime cannot turn it into one of its own (ADR-0077)."""
+def test_a_token_not_meant_for_the_agent_is_not_exchanged() -> None:
+    """A token another client holds, such as a person's own agent's, does not name the agent
+    in its audience, so the agent cannot turn it into one of its own (ADR-0077)."""
     with httpx.Client(timeout=TIMEOUT) as http:
         metadata = http.get(f"{ISSUER}/.well-known/openid-configuration").json()
         registered = http.post(
             metadata["registration_endpoint"],
             json={
-                "client_name": "runtime exchange test",
+                "client_name": "agent exchange test",
                 "grant_types": ["client_credentials"],
                 "token_endpoint_auth_method": "client_secret_basic",
             },
@@ -192,7 +192,7 @@ def test_a_token_not_meant_for_the_runtime_is_not_exchanged() -> None:
                 auth=(client["client_id"], client["client_secret"]),
             )
             other.raise_for_status()
-            assert "cfokit-runtime" not in claims(other.json()["access_token"])["aud"]
+            assert "cfokit-agent" not in claims(other.json()["access_token"])["aud"]
             with pytest.raises(TokenRefused):
                 exchange(other.json()["access_token"])
         finally:

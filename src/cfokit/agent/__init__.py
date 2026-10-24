@@ -1,4 +1,4 @@
-"""CFOKit's own agent runtime, the chat behind the web app (ADR-0034 § 4, ADR-0075).
+"""CFOKit's own agent, the chat behind the web app (ADR-0034 § 4, ADR-0075).
 
 **A component, not a module** (ADR-0022 § 3): it holds the inference credential and long-lived
 streams, and it reaches CFOKit only through the published interfaces, the MCP tools for the

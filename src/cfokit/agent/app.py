@@ -1,6 +1,6 @@
-"""The runtime's HTTP surface: one turn, streamed as AG-UI events (ADR-0075 § 1).
+"""The agent's HTTP surface: one turn, streamed as AG-UI events (ADR-0075 § 1).
 
-The chat window posts the person's message with their access token. The runtime exchanges the
+The chat window posts the person's message with their access token. The agent exchanges the
 token for its own (ADR-0077), reads the conversation from core, keeps the person's message, runs
 the turn, streams it back, and keeps what the turn produced. It holds nothing between turns.
 
@@ -37,20 +37,20 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 from starlette.routing import Route
 
-from cfokit.runtime import Skill
-from cfokit.runtime.core import Core
-from cfokit.runtime.tokens import TokenRefused, TokenSource
-from cfokit.runtime.tools import PublishedTools
+from cfokit.agent import Skill
+from cfokit.agent.core import Core
+from cfokit.agent.tokens import TokenRefused, TokenSource
+from cfokit.agent.tools import PublishedTools
 
-__all__ = ["Runtime", "create_app"]
+__all__ = ["Services", "create_app"]
 
-log = logging.getLogger("cfokit.runtime")
+log = logging.getLogger("cfokit.agent")
 
 Connect = Callable[[str], AbstractAsyncContextManager[Client]]
 
 
 @dataclass(frozen=True, slots=True)
-class Runtime:
+class Services:
     """What a turn needs. `model` is None when no inference credential is configured."""
 
     model: Model | None
@@ -85,19 +85,19 @@ def _dump(message: ModelMessage) -> Any:
     return ModelMessagesTypeAdapter.dump_python([message], mode="json")[0]
 
 
-def create_app(runtime: Runtime, *, web_origin: str | None = None) -> Starlette:
-    """The runtime's app. `web_origin` is the one browser origin allowed to call it, the web
+def create_app(services: Services, *, web_origin: str | None = None) -> Starlette:
+    """The agent's app. `web_origin` is the one browser origin allowed to call it, the web
     client's; None allows none, as for a caller that is not a browser."""
     agent: Agent[None, str] | None = (
         None
-        if runtime.model is None
-        else Agent(runtime.model, instructions=runtime.skill.instructions, name="cfokit")
+        if services.model is None
+        else Agent(services.model, instructions=services.skill.instructions, name="cfokit")
     )
 
     async def turn(request: Request) -> Response:
         if agent is None:
             return _refusal(
-                503, "runtime_off", "no inference credential is configured, so the chat is off"
+                503, "agent_off", "no inference credential is configured, so the chat is off"
             )
         person_token = _bearer(request)
         if person_token is None:
@@ -106,11 +106,11 @@ def create_app(runtime: Runtime, *, web_origin: str | None = None) -> Starlette:
         conversation_id = request.path_params["conversation_id"]
 
         try:
-            token = await runtime.tokens.for_person(person_token)
+            token = await services.tokens.for_person(person_token)
         except TokenRefused as refused:
             return _refusal(403, refused.code, str(refused))
         try:
-            thread = await runtime.core.thread(token, entity_id, conversation_id)
+            thread = await services.core.thread(token, entity_id, conversation_id)
         except httpx2.HTTPStatusError as failed:
             # Core's own refusal, passed on: `agent_not_allowed` with its link, or not found.
             return Response(
@@ -127,7 +127,7 @@ def create_app(runtime: Runtime, *, web_origin: str | None = None) -> Starlette:
         run_id = adapter.run_input.run_id
 
         # Kept before the model sees it, so a turn that fails never loses what the person said.
-        await runtime.core.append(
+        await services.core.append(
             token,
             entity_id,
             conversation_id,
@@ -138,7 +138,7 @@ def create_app(runtime: Runtime, *, web_origin: str | None = None) -> Starlette:
 
         async def keep(result: AgentRunResult[Any]) -> None:
             for index, message in enumerate(result.new_messages()):
-                await runtime.core.append(
+                await services.core.append(
                     token,
                     entity_id,
                     conversation_id,
@@ -146,7 +146,9 @@ def create_app(runtime: Runtime, *, web_origin: str | None = None) -> Starlette:
                     kind=message.kind,
                     content=_dump(message),
                     model=getattr(message, "model_name", None),
-                    skill_version=runtime.skill.version if message.kind == "response" else None,
+                    skill_version=services.skill.version
+                    if message.kind == "response"
+                    else None,
                 )
             log.info(
                 "turn complete",
@@ -157,7 +159,7 @@ def create_app(runtime: Runtime, *, web_origin: str | None = None) -> Starlette:
             )
 
         async def events() -> AsyncIterator[BaseEvent]:
-            async with runtime.connect(token) as client:
+            async with services.connect(token) as client:
                 tools = PublishedTools(client, holds_untrusted=thread.holds_untrusted)
                 async for event in adapter.run_stream(
                     message_history=[*history, prompt], toolsets=[tools], on_complete=keep

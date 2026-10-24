@@ -43,7 +43,7 @@ pytestmark = pytest.mark.integration
 
 OWNER = Principal(id="user:geoff", actor_class=ActorClass.PERSON)
 COLLEAGUE = Principal(id="user:sam", actor_class=ActorClass.PERSON)
-RUNTIME = Principal(id="skill:runtime", actor_class=ActorClass.AGENT, acting_for=OWNER.id)
+AGENT = Principal(id="skill:agent", actor_class=ActorClass.AGENT, acting_for=OWNER.id)
 STRANGER = Principal(id="user:nobody", actor_class=ActorClass.PERSON)
 
 ASKED = {"parts": [{"part_kind": "user-prompt", "content": "How did we do last quarter?"}]}
@@ -208,20 +208,20 @@ def test_a_conversation_is_its_person_s_alone(
 def test_an_agent_acting_for_the_person_works_in_their_conversation(
     database: Database, owned_books: tuple[str, str, str]
 ) -> None:
-    """The runtime appends to the conversation of whoever it serves (ADR-0077)."""
+    """The agent appends to the conversation of whoever it serves (ADR-0077)."""
     entity, _, _ = owned_books
     grant_role(
         database,
         entity_id=entity,
         principal=OWNER,
         request_id="req",
-        to_principal=RUNTIME.id,
+        to_principal=AGENT.id,
         role="owner",
     )
-    conversation_id = start(database, entity, RUNTIME)
+    conversation_id = start(database, entity, AGENT)
 
     append_message(
-        database, context(entity, RUNTIME), conversation_id=conversation_id, message=answered()
+        database, context(entity, AGENT), conversation_id=conversation_id, message=answered()
     )
 
     mine = list_conversations(database, entity_id=entity, principal=OWNER)
@@ -229,7 +229,7 @@ def test_an_agent_acting_for_the_person_works_in_their_conversation(
     thread = read_conversation(
         database, entity_id=entity, principal=OWNER, conversation_id=conversation_id
     )
-    assert thread.messages[0].recorded_by == f"{RUNTIME.id} for {OWNER.id}"
+    assert thread.messages[0].recorded_by == f"{AGENT.id} for {OWNER.id}"
 
 
 def test_a_stranger_is_refused(database: Database, owned_books: tuple[str, str, str]) -> None:
@@ -265,7 +265,7 @@ def test_a_message_needs_an_idempotency_key(
 def test_the_same_key_replays_the_place_and_adds_nothing(
     database: Database, owned_books: tuple[str, str, str], app_conn: psycopg.Connection[Any]
 ) -> None:
-    """ADR-0029: a runtime retrying after a dropped response must not add the message twice."""
+    """ADR-0029: an agent retrying after a dropped response must not add the message twice."""
     entity, _, _ = owned_books
     conversation_id = start(database, entity)
     once = context(entity, key="retry-me")

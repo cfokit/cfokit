@@ -1,4 +1,4 @@
-"""Which tools the runtime offers, and how it reads a skill (ADR-0075 § 2, `PLT-23`).
+"""Which tools the agent offers, and how it reads a skill (ADR-0075 § 2, `PLT-23`).
 
 ADR-0036 layer 1. Expected values come from `PLT-23` ("cannot post to the books in that
 session"), from the published tool descriptions committed in `_tools.json`, and from FIPS
@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from cfokit.runtime import POSTS_NOTHING, offered, read_skill
+from cfokit.agent import POSTS_NOTHING, offered, read_skill
 
 ROOT = Path(__file__).resolve().parents[1]
 PUBLISHED = [

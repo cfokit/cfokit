@@ -21,7 +21,7 @@ Layout under the output directory, one directory per consumer so each mounts onl
     ca-key/ca-key.pem           the CA private key: read only by this script
     keycloak/cert.pem           the issuer's certificate
     keycloak/key.pem            the issuer's private key
-    cfokit/cert.pem             the REST, MCP and runtime services' certificate
+    cfokit/cert.pem             the REST, MCP and agent services' certificate
     cfokit/key.pem              their private key
 
 Local-only material. A deployment reachable by anything else uses a certificate from its own
@@ -44,7 +44,7 @@ from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
 # issuer's is `keycloak.localhost`, the one name every party uses; `localhost` is there so a
 # person probing the port directly is not also debugging a name mismatch. CFOKit's services are
 # reached at `localhost`, and at the loopback address by a client that resolves it first; and at
-# their service names by the chat's runtime, which calls them inside the compose network.
+# their service names by CFOKit's agent, which calls them inside the compose network.
 LEAVES: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
     "keycloak": (("keycloak.localhost", "localhost"), ()),
     "cfokit": (("localhost", "ledger", "mcp"), ("127.0.0.1",)),

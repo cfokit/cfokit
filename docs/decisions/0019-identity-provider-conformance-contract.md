@@ -90,7 +90,7 @@ Any conforming issuer must provide:
 - RFC 7591 Dynamic Client Registration **or** Client ID Metadata Documents
 - The **client credentials grant**, for separate components authenticating as machine callers
   (ADR-0032)
-- **Standard token exchange** (RFC 8693) between clients of the same issuer, for CFOKit's runtime
+- **Standard token exchange** (RFC 8693) between clients of the same issuer, for CFOKit's agent
   acting for the person it serves (ADR-0077)
 
 The application reads `AUTH_ISSUER_URL` and `AUTH_AUDIENCE` and nothing else. No issuer-specific
