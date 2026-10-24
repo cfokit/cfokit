@@ -13,3 +13,14 @@ if (
     this.dispatchEvent(new Event("close"));
   };
 }
+
+// jsdom does no layout, so it has no ResizeObserver; the chat's viewport observes its size to keep
+// the newest message in view. Nothing under test depends on a size.
+globalThis.ResizeObserver ??= class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};
+
+// Nor does it scroll; the viewport scrolls to the newest message.
+if (typeof Element !== "undefined") Element.prototype.scrollTo ??= () => {};

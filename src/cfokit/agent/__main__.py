@@ -15,6 +15,7 @@ import httpx2
 import uvicorn
 from mcp import Client
 from mcp.client.streamable_http import streamable_http_client
+from mcp.types import Implementation
 from pydantic_ai.models import Model
 
 from cfokit.agent import read_skill
@@ -24,6 +25,10 @@ from cfokit.agent.core import CoreAPI
 from cfokit.agent.tokens import Exchange
 
 log = logging.getLogger("cfokit.agent")
+
+# What the agent reports when it opens a session, which is how a person recognizes it among the
+# agents connected for them (ADR-0066 § 3).
+CLIENT_INFO = Implementation(name="CFOKit", version="1")
 
 
 def _model(settings: AgentSettings) -> Model | None:
@@ -57,7 +62,10 @@ def main() -> int:
     async def connect(token: str) -> AsyncIterator[Client]:
         async with (
             httpx2.AsyncClient(headers={"Authorization": f"Bearer {token}"}) as signed_in,
-            Client(streamable_http_client(settings.mcp_url, http_client=signed_in)) as client,
+            Client(
+                streamable_http_client(settings.mcp_url, http_client=signed_in),
+                client_info=CLIENT_INFO,
+            ) as client,
         ):
             yield client
 

@@ -5,6 +5,7 @@ import {
   AppFrame,
   Button,
   Card,
+  Conversation,
   CopyBlock,
   Dialog,
   DropZone,
@@ -408,5 +409,42 @@ describe("ActionBar", () => {
     const bar = screen.getByRole("button", { name: "Import" }).parentElement;
     expect((bar?.nextElementSibling as HTMLElement).style.height).toBe("124px");
     height.mockRestore();
+  });
+});
+
+describe("Conversation", () => {
+  const messages = [
+    { role: "user" as const, content: "How did we do last quarter?" },
+    {
+      role: "assistant" as const,
+      content: [
+        {
+          type: "tool-call" as const,
+          toolCallId: "call-1",
+          toolName: "profit_and_loss",
+          args: {},
+          result: "",
+        },
+        { type: "text" as const, text: "A **profit**.\n\n<script>alert(1)</script>" },
+      ],
+    },
+  ];
+
+  test("shows the person's question, each tool used, and the answer", async () => {
+    render(<Conversation placeholder="Ask about your books" messages={messages} />);
+    expect(await screen.findByText("How did we do last quarter?")).toBeTruthy();
+    expect(screen.getByText("Read profit and loss")).toBeTruthy();
+    expect(screen.getByText("profit").tagName).toBe("STRONG");
+  });
+
+  test("renders the model's Markdown as elements and never its HTML (ADR-0049 § 6)", async () => {
+    const { container } = render(<Conversation placeholder="Ask" messages={messages} />);
+    await screen.findByText("profit");
+    expect(container.querySelector("script")).toBeNull();
+  });
+
+  test("has no composer without a live conversation to send to", () => {
+    render(<Conversation placeholder="Ask about your books" messages={messages} />);
+    expect(screen.queryByRole("textbox", { name: "Ask about your books" })).toBeNull();
   });
 });

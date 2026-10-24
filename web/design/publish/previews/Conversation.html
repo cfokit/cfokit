@@ -1,0 +1,42 @@
+<!-- @dsCard group="Content" height=480 -->
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Conversation — preview</title>
+  </head>
+  <body>
+    <div
+      id="root"
+      style="padding: 24px; height: 432px; display: flex; flex-direction: column"
+    ></div>
+    <script>
+      var C = window.CFOKit,
+        h = React.createElement;
+      ReactDOM.createRoot(document.getElementById("root")).render(
+        h(C.Conversation, {
+          placeholder: "Ask about your books",
+          messages: [
+            { role: "user", content: "How did we do last quarter?" },
+            {
+              role: "assistant",
+              content: [
+                {
+                  type: "tool-call",
+                  toolCallId: "call-1",
+                  toolName: "profit_and_loss",
+                  args: {},
+                  result: "",
+                },
+                {
+                  type: "text",
+                  text: "Northwind made **a profit** last quarter.\n\n| Line | Q3 |\n|---|---|\n| Revenue | 48,200.00 |\n| Expenses | 39,950.00 |",
+                },
+              ],
+            },
+          ],
+        }),
+      );
+    </script>
+  </body>
+</html>

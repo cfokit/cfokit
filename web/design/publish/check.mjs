@@ -37,15 +37,29 @@ for (const name of names) {
   const virtualConsole = new VirtualConsole();
   virtualConsole.on("jsdomError", (error) => errors.push(error.message));
   virtualConsole.on("error", (...args) => errors.push(args.join(" ")));
+  // A function, not a string: a replacement string reads `$&` and its kin as patterns, and the
+  // bundled code holds them, as in a regular expression's character class.
   const html = preview.replace(
     "<head>",
-    `<head><script>${dialog}</script><script>${react}</script><script>${reactDom}</script>` +
+    () =>
+      `<head><script>${dialog}</script><script>${react}</script><script>${reactDom}</script>` +
       `<script>${bundle}</script>`,
   );
   const dom = new JSDOM(html, {
     runScripts: "dangerously",
     pretendToBeVisual: true,
     virtualConsole,
+    // What every browser the canvas runs in has and jsdom does not: the streams the chat's
+    // runtime builds on at load, and the observer and the scrolling its viewport uses.
+    beforeParse(window) {
+      Object.assign(window, { ReadableStream, WritableStream, TransformStream, TextDecoderStream });
+      window.ResizeObserver ??= class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      };
+      window.Element.prototype.scrollTo ??= () => {};
+    },
   });
   await new Promise((resolve) => setTimeout(resolve, 100));
   const root = dom.window.document.getElementById("root");
