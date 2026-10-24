@@ -85,12 +85,15 @@ it cites freely.
 
 `evals/` holds the skill's eval cases, here because `claude plugin eval` reads cases only from
 inside the plugin — so they ship with it, and a merge releases them too. A case asserts on the
-CFOKit tools the agent calls, in what order and with what inputs, never on what it says. The
-tools are mocked from the committed tool descriptions and refusal codes, so a mock answers only
-what the ledger can; a mock the contract cannot produce makes an eval pass that should fail. Each
-case pins its model. `evals/mocks/cfokit/_tools.json` is the published tool list, generated with
-the contracts by `uv run task generate-contracts` and diffed by gate 5; it is never edited by
-hand. (ADR-0036)
+CFOKit tools the agent calls, in what order and with what inputs, never on what it says. The tools
+are mocked from the committed tool descriptions and refusal codes, so a mock answers only what the
+ledger can; a mock the contract cannot produce makes an eval pass that should fail. Each case pins
+its model. The `eval` label runs the suite on a pull request, and a change here merges without a
+person only when its head commit carries a passing result; a change to the cases always goes to a
+person. The labeled run refuses a plugin holding anything but its skills, its manifest, its README
+and `evals/`. `evals/mocks/cfokit/_tools.json` is the published tool list, generated with the
+contracts by `uv run task generate-contracts` and diffed by gate 5; it is never edited by hand.
+(ADR-0036)
 
 ## Review
 

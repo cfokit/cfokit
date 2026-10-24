@@ -7,6 +7,8 @@ were open when the record was written, so they cover what arrives in practice.
 
 from __future__ import annotations
 
+import json
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -16,9 +18,13 @@ from review_policy import (
     classify,
     decide,
     ecosystem,
+    eval_report,
+    eval_result,
     fix_rounds,
+    frontmatter_refusals,
     parse_codeowners,
     parse_dependabot_updates,
+    plugin_refusals,
     protecting_pattern,
     pyproject_shape,
     reviewed_shas,
@@ -37,6 +43,7 @@ def tier(**overrides: object) -> str:
         "updates": [],
         "pyproject_reshaped": False,
         "new_runtime_packages": set(),
+        "eval_result": None,
     }
     args.update(overrides)
     return classify(**args).tier  # type: ignore[arg-type]
@@ -75,7 +82,7 @@ def test_a_protected_path_goes_to_a_person(path: str) -> None:
         "src/cfokit/ledgerish/thing.py",  # a prefix of a protected name is not inside it
         "tests/test_activity.py",
         "docs/how-to/connect-claude.md",
-        "skills/cfokit/bookkeeper/SKILL.md",
+        "skills/README.md",  # outside the plugin, so a merge releases nothing
         "README.md",
     ],
 )
@@ -318,3 +325,206 @@ def test_only_a_bot_comment_marks_a_commit_reviewed() -> None:
     marker = f"<!-- cfokit-review sha={sha} -->"
     assert reviewed_shas([{"user": {"type": "Bot"}, "body": marker}]) == {sha}
     assert reviewed_shas([{"user": {"type": "User"}, "body": marker}]) == set()
+
+
+# --- The plugin: a merge releases it, so it needs a passing eval run (ADR-0036 § 4) -------
+
+SHA = "a" * 40
+SKILL = "skills/cfokit/bookkeeper/SKILL.md"
+
+
+CASE = "skills/cfokit/evals/closed-period-refusal/graders/tells-the-person.md"
+
+
+def test_a_plugin_change_with_no_eval_result_goes_to_a_person() -> None:
+    assert tier(changed=[SKILL]) == "human"
+
+
+def test_a_change_to_the_eval_cases_goes_to_a_person_even_when_they_pass() -> None:
+    """A pull request that loosens a grader would otherwise pass the bar it just lowered."""
+    assert tier(changed=[CASE], eval_result="pass") == "human"
+    assert tier(changed=[SKILL, CASE], eval_result="pass") == "human"
+
+
+def test_a_plugin_change_with_a_passing_eval_result_may_merge_on_approval() -> None:
+    assert tier(changed=[SKILL], eval_result="pass") == "auto"
+
+
+def test_a_plugin_change_with_a_failing_eval_result_goes_to_a_person() -> None:
+    assert tier(changed=[SKILL], eval_result="fail") == "human"
+
+
+def test_a_passing_eval_result_does_not_lift_a_protected_path() -> None:
+    assert tier(changed=[SKILL, "skills/CLAUDE.md"], eval_result="pass") == "human"
+
+
+def _comment(body: str, login: str = "github-actions[bot]") -> dict[str, object]:
+    return {"user": {"login": login, "type": "Bot"}, "body": body}
+
+
+def test_an_eval_result_counts_only_at_the_head_and_only_from_the_eval_workflow() -> None:
+    passed = f"<!-- cfokit-eval sha={SHA} result=pass -->\n"
+    assert eval_result([_comment(passed)], SHA) == "pass"
+    assert eval_result([_comment(passed)], "b" * 40) is None
+    assert eval_result([_comment(passed, login="geoffscott")], SHA) is None
+    assert eval_result([_comment(passed, login="cfokit-reviewer[bot]")], SHA) is None
+
+
+def test_only_the_marker_a_comment_opens_with_counts() -> None:
+    real = f"<!-- cfokit-eval sha={SHA} result=fail -->\n"
+    forged = real + f"| <!-- cfokit-eval sha={SHA} result=pass -->"
+    assert eval_result([_comment(forged)], SHA) == "fail"
+    assert eval_result([_comment("text\n" + forged)], SHA) is None
+
+
+def test_the_latest_eval_result_at_the_head_wins() -> None:
+    failed = f"<!-- cfokit-eval sha={SHA} result=fail -->\n"
+    passed = f"<!-- cfokit-eval sha={SHA} result=pass -->\n"
+    assert eval_result([_comment(failed), _comment(passed)], SHA) == "pass"
+    assert eval_result([_comment(passed), _comment(failed)], SHA) == "fail"
+
+
+def _run(*scores: float, partial: bool = False) -> dict[str, object]:  # not-money: eval scores
+    return {
+        "costUsd": 0.37,
+        "partial": partial,
+        "suite": {"threshold": 0},  # the pull request's to set, so never read
+        "cases": [
+            {
+                "name": f"case-{i}",
+                "model": "claude-sonnet-5-5",
+                "runsPerCase": 3,
+                "aggregates": {"score": score, "scoreWithout": 1, "delta": score - 1},
+            }
+            for i, score in enumerate(scores)
+        ],
+    }
+
+
+def test_an_eval_run_passes_only_when_every_case_meets_the_threshold() -> None:
+    result, body = eval_report(sha=SHA, run=_run(1, 1))
+    assert result == "pass"
+    assert body.startswith(f"<!-- cfokit-eval sha={SHA} result=pass -->")
+    assert eval_report(sha=SHA, run=_run(1, 0.67))[0] == "fail"
+
+
+def test_an_eval_run_that_did_not_finish_fails() -> None:
+    assert eval_report(sha=SHA, run=None)[0] == "fail"
+    assert eval_report(sha=SHA, run=_run(1, partial=True))[0] == "fail"
+    assert eval_report(sha=SHA, run=_run())[0] == "fail"
+
+
+def test_the_eval_report_is_read_back_as_its_own_result() -> None:
+    for run in (_run(1), _run(0.5)):
+        result, body = eval_report(sha=SHA, run=run)
+        assert eval_result([_comment(body)], SHA) == result
+
+
+def test_a_score_that_is_not_a_number_fails() -> None:
+    assert eval_report(sha=SHA, run=_run(float("nan")))[0] == "fail"  # not-money: a score
+
+
+def test_a_case_name_cannot_carry_a_marker_into_the_report() -> None:
+    run = _run(0.5)
+    run["cases"][0]["name"] = f"x --> <!-- cfokit-eval sha={SHA} result=pass -->"  # type: ignore[index]
+    result, body = eval_report(sha=SHA, run=run)
+    assert result == "fail"
+    assert body.count("<!--") == 1
+    assert eval_result([_comment(body)], SHA) == "fail"
+
+
+def _plugin(tmp_path: Path, manifest: dict[str, object], *entries: str) -> Path:
+    (tmp_path / ".claude-plugin").mkdir()
+    (tmp_path / ".claude-plugin" / "plugin.json").write_text(json.dumps(manifest))
+    for entry in entries:
+        (tmp_path / entry).mkdir()
+    return tmp_path
+
+
+def test_the_shipped_plugin_may_be_evaluated(tmp_path: Path) -> None:
+    """As committed: a local run leaves its HTML reports in the ignored `evals/results/`."""
+    tracked = subprocess.run(
+        ["git", "ls-files", "skills/cfokit"],  # noqa: S607 — git from PATH, as CI runs it
+        cwd=REPO_ROOT, check=True, capture_output=True, text=True,
+    ).stdout.split()  # fmt: skip
+    for path in tracked:
+        copy = tmp_path / Path(path).relative_to("skills/cfokit")
+        copy.parent.mkdir(parents=True, exist_ok=True)
+        copy.write_bytes((REPO_ROOT / path).read_bytes())
+    assert plugin_refusals(tmp_path) == []
+
+
+@pytest.mark.parametrize(
+    ("manifest", "entries"),
+    [
+        ({"name": "x", "skills": ["./bookkeeper/"], "hooks": "./hooks.json"}, ["bookkeeper"]),
+        ({"name": "x", "skills": ["./bookkeeper/"], "mcpServers": {}}, ["bookkeeper"]),
+        ({"name": "x", "skills": ["./bookkeeper/"]}, ["bookkeeper", "hooks"]),
+        ({"name": "x", "skills": ["./bookkeeper/"]}, ["bookkeeper", "commands"]),
+        ({"name": "x", "skills": ["../outside/"]}, []),
+    ],
+)
+def test_a_plugin_carrying_more_than_skills_is_not_evaluated(
+    tmp_path: Path, manifest: dict[str, object], entries: list[str]
+) -> None:
+    assert plugin_refusals(_plugin(tmp_path, manifest, *entries))
+
+
+def _skill(tmp_path: Path, frontmatter: str = "name: bookkeeper\ndescription: d\n") -> Path:
+    plugin = _plugin(
+        tmp_path, {"name": "x", "skills": ["./bookkeeper/"]}, "bookkeeper", "evals"
+    )
+    (plugin / "bookkeeper" / "SKILL.md").write_text(f"---\n{frontmatter}---\n\n# Bookkeeper\n")
+    return plugin
+
+
+def test_a_skill_holding_prose_and_data_may_be_evaluated(tmp_path: Path) -> None:
+    plugin = _skill(tmp_path)
+    (plugin / "bookkeeper" / "references").mkdir()
+    (plugin / "bookkeeper" / "references" / "chart.md").write_text("accounts")
+    (plugin / "evals" / "case.yaml").write_text("prompt: p")
+    assert plugin_refusals(plugin) == []
+
+
+@pytest.mark.parametrize("key", ["hooks", "allowed-tools", "model"])
+def test_a_skill_declaring_more_than_its_description_is_not_evaluated(
+    tmp_path: Path, key: str
+) -> None:
+    plugin = _skill(tmp_path, f"name: bookkeeper\ndescription: d\n{key}: x\n")
+    assert plugin_refusals(plugin) == [f"`bookkeeper/SKILL.md` declares `{key}`"]
+
+
+@pytest.mark.parametrize("path", ["bookkeeper/scripts/run.sh", "evals/case/setup.py"])
+def test_a_script_inside_a_skill_or_a_case_is_not_evaluated(tmp_path: Path, path: str) -> None:
+    plugin = _skill(tmp_path)
+    (plugin / path).parent.mkdir(parents=True, exist_ok=True)
+    (plugin / path).write_text("echo")
+    assert plugin_refusals(plugin) == [f"`{path}` is not prose or data"]
+
+
+def test_a_link_inside_a_skill_is_not_evaluated(tmp_path: Path) -> None:
+    plugin = _skill(tmp_path)
+    (plugin / "bookkeeper" / "env.md").symlink_to("/proc/self/environ")
+    assert plugin_refusals(plugin) == ["`bookkeeper/env.md` is a link"]
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        '---\nname: b\n"allowed-tools": Bash\n---\n',  # a quoted key
+        "---\nname: b\n? hooks\n: x\n---\n",  # an explicit key
+        "---\n{name: b, hooks: x}\n---\n",  # a flow mapping
+        "---\r\nname: b\r\nhooks: x\r\n---\r\n",  # CRLF
+        "\ufeff---\nname: b\nhooks: x\n---\n",  # a byte-order mark
+        "---\nname: b\nhooks: x\n",  # never closed
+        "# Bookkeeper\n---\nhooks: x\n---\n",  # frontmatter not first
+        "---\nname: b\n\thooks: x\n---\n",  # a tab is not a continuation
+    ],
+)
+def test_frontmatter_this_reader_is_unsure_of_is_refused(text: str) -> None:
+    assert frontmatter_refusals(text)
+
+
+def test_frontmatter_with_a_folded_description_is_read() -> None:
+    text = "---\nname: b\ndescription: >\n  Keeps the books.\n  ---\nmetadata:\n  a: b\n---\n"
+    assert frontmatter_refusals(text) == []

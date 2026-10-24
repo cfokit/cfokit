@@ -1,0 +1,97 @@
+# The skill's evals (ADR-0036 § 4), on a pull request someone asks for them on.
+#
+# It runs only when a person adds the `eval` label, never on open or push, so inference is spent
+# on request (ADR-0048). It runs `claude plugin eval` against the pull request's plugin, with and
+# without it, under a cost ceiling, and comments the scores and the delta at the head commit. The
+# review policy reads that comment: a pull request changing `skills/cfokit/` merges without a
+# person only when its head commit carries a passing result.
+#
+# Only a person with write access can add a label, and forks are refused outright: that is the
+# boundary on the credential. Within it, the pull request's code is kept out of the run. The
+# workflow and the policy run from `main`, and the pull request is checked out as data. Before any
+# credential is present, the policy refuses a plugin holding more than prose and data: a hook, a
+# command, an MCP server, a tool grant in a skill, a script or a link would each let the pull
+# request's code run as this workflow. The plugin is then copied out of the checkout and evaluated
+# from an empty directory, so no project settings or hooks the pull request carries are loaded.
+# Its cases are prompts and mocks: no case script runs (`--scaffold` is off), no real server
+# starts, and no gated tool is granted. The bar it must meet is the policy's, not the run's. The
+# run's transcripts stay on the runner: only the report, which prints scores and sanitized names,
+# leaves it.
+#
+# Nothing here touches ci.yml, whose portability job must stay free of credentials (ADR-0004).
+
+name: Evals
+
+on:
+  pull_request_target:
+    types: [labeled]
+
+permissions: {}
+
+env:
+  CLAUDE_CODE_VERSION: "2.1.296"
+  MAX_COST_USD: "5"
+
+jobs:
+  eval:
+    name: Evals
+    if: >-
+      github.event.label.name == 'eval' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      pull-requests: write
+    concurrency:
+      group: eval-${{ github.event.pull_request.number }}
+    env:
+      GH_REPO: ${{ github.repository }}
+      PR: ${{ github.event.pull_request.number }}
+      SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: The pull request, as data
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: pr
+          persist-credentials: false
+      - name: The policy, from main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          path: .trusted
+          persist-credentials: false
+      - name: The plugin holds only skills
+        run: |
+          mv .trusted "$RUNNER_TEMP/trusted"
+          python3 "$RUNNER_TEMP/trusted/scripts/review_policy.py" eval-scope --plugin pr/skills/cfokit
+          cp -R pr/skills/cfokit "$RUNNER_TEMP/plugin"
+          mkdir "$RUNNER_TEMP/work"
+          npm install -g "@anthropic-ai/claude-code@$CLAUDE_CODE_VERSION"
+
+      # Exit 1 is a case below its threshold and 2 a partial run; both still leave a result,
+      # which the report judges against the policy's bar. Each case pins its own model.
+      - name: Run the evals
+        continue-on-error: true
+        working-directory: ${{ runner.temp }}/work
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          claude plugin eval "$RUNNER_TEMP/plugin" --trust-plugin --no-publish \
+            --max-cost-usd "$MAX_COST_USD" --json "$RUNNER_TEMP/eval.json"
+
+      - id: report
+        run: |
+          python3 "$RUNNER_TEMP/trusted/scripts/review_policy.py" eval-report \
+            --result "$RUNNER_TEMP/eval.json" --sha "$SHA" --body "$RUNNER_TEMP/eval.md"
+          cat "$RUNNER_TEMP/eval.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Record the result
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr comment "$PR" --body-file "$RUNNER_TEMP/eval.md"
+          gh pr edit "$PR" --remove-label eval || true
+
