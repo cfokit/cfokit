@@ -210,7 +210,7 @@ def test_every_reference_is_defined_before_it_is_used(payloads: list[dict[str, A
     defined: set[str] = set()
     for payload in payloads:
         for target in references(payload["body"]):
-            assert target.startswith("system:") or target in defined, (
+            assert target.startswith(("system:", "default:")) or target in defined, (
                 f"{payload['id']} uses {target} before anything defines it"
             )
         if payload["defines"] is not None:

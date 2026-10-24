@@ -3,15 +3,17 @@
 Each payload is one call against the QuickBooks Online Accounting API (v3):
 
 * `entity` — the API entity, as in `POST /v3/company/{realm}/{entity lowercased}`.
-* `operation` — `create`, `update` (a sparse update) or `void`. An update or void needs the
-  entity's current `SyncToken`, which whoever posts the payload reads first; none is written
-  here.
+* `operation` — `create`, `update` (a sparse update), `void`, or `require`: settings the API
+  accepts and ignores, which a person makes in QuickBooks and whoever posts checks before going
+  on. An update or void needs the entity's current `SyncToken`, which whoever posts the payload
+  reads first; none is written here.
 * `defines` — the reference a created entity answers to from then on, such as `"invoice:inv-…"`.
 * `body` — the request body, with two placeholders for identifiers QuickBooks assigns: an object
   carrying `"$ref": "kind:key"` becomes a reference, its `$ref` key replaced by `"value": <id>`
   and its other keys kept; a bare `{"$id": "kind:key"}` becomes the id itself, as a linked
   transaction's `TxnId` needs. `system:<AccountSubType>` names an account QuickBooks creates
-  itself, found by its subtype.
+  itself, found by its subtype; `default:<Name>` names one a new company starts with, found by
+  its name.
 
 The payload's `id` is sent as QuickBooks' `requestid`, so posting the same payload twice is a
 replay rather than a second transaction.
@@ -91,6 +93,46 @@ MONTHS = (
     "November",
     "December",
 )
+
+# The chart a new company starts with, as a cleared US sandbox company holds it, less the two
+# accounts found by subtype. An account the events open under one of these names is this one,
+# numbered, because QuickBooks refuses a second account of the same name.
+DEFAULT_CHART: dict[str, AccountType] = {
+    "Prepaid Expenses": "other_current_asset",
+    "Uncategorized Asset": "other_current_asset",
+    "Billable Expense Income": "income",
+    "Discounts": "income",
+    "Gross Receipts": "income",
+    "Refunds-Allowances": "income",
+    "Sales": "income",
+    "Services": "income",
+    "Uncategorized Income": "income",
+    "Advertising": "expense",
+    "Bank Charges": "expense",
+    "Commissions & fees": "expense",
+    "Disposal Fees": "expense",
+    "Dues & Subscriptions": "expense",
+    "Insurance": "expense",
+    "Insurance - Liability": "expense",
+    "Legal & Professional Fees": "expense",
+    "Meals and Entertainment": "expense",
+    "Office Expenses": "expense",
+    "Promotional": "expense",
+    "Rent or Lease": "expense",
+    "Repair & Maintenance": "expense",
+    "Stationery & Printing": "expense",
+    "Supplies": "expense",
+    "Taxes & Licenses": "expense",
+    "Tools": "expense",
+    "Travel": "expense",
+    "Travel Meals": "expense",
+    "Uncategorized Expense": "expense",
+    "Utilities": "expense",
+    "Interest Earned": "other_income",
+    "Other Portfolio Income": "other_income",
+    "Miscellaneous": "other_expense",
+    "Penalties & Settlements": "other_expense",
+}
 
 # Accounts QuickBooks creates for itself, found by subtype rather than created here.
 UNDEPOSITED_FUNDS = "system:UndepositedFunds"
@@ -211,14 +253,35 @@ def _calls(event: Event) -> Iterator[tuple[str, str, dict[str, Json], str | None
     day = event.on.isoformat()
     match event:
         case SetFiscalYear(start_month=month):
+            # The company's settings. Beside the fiscal year the event names, QuickBooks is made
+            # to keep what the events say and add nothing of its own: the numbers they give
+            # accounts and documents, and no credit applied unless an event applies it. Whether
+            # numbers print is a rendering's choice, made when a report is run. The API ignores
+            # all of these but custom numbering, so the rest are required, not sent.
             yield (
                 "Preferences",
-                "update",
-                {"AccountingInfoPrefs": {"FiscalYearStartMonth": MONTHS[month - 1]}},
+                "require",
+                {
+                    "AccountingInfoPrefs": {
+                        "FirstMonthOfFiscalYear": MONTHS[month - 1],
+                        "UseAccountNumbers": True,
+                    },
+                    "SalesFormsPrefs": {"AutoApplyCredit": False},
+                },
                 None,
             )
+            yield "Preferences", "update", {"SalesFormsPrefs": {"CustomTxnNumbers": True}}, None
+        case OpenAccount(key=key, name=name, type=kind, number=number, parent=None) if (
+            name in DEFAULT_CHART
+        ):
+            if DEFAULT_CHART[name] != kind:
+                raise ValueError(f"{name} is a QuickBooks default of another type; escalate")
+            body: dict[str, Json] = {"Id": txn(f"default:{name}"), "Name": name}
+            if number:
+                body["AcctNum"] = number
+            yield "Account", "update", body, f"account:{key}"
         case OpenAccount(key=key, name=name, type=kind, number=number, parent=parent):
-            body: dict[str, Json] = {"Name": name, "AccountType": ACCOUNT_TYPES[kind]}
+            body = {"Name": name, "AccountType": ACCOUNT_TYPES[kind]}
             if number:
                 body["AcctNum"] = number
             if parent is not None:
@@ -245,6 +308,18 @@ def _calls(event: Event) -> Iterator[tuple[str, str, dict[str, Json], str | None
         case OpenBalances(lines=lines):
             equity = -sum((line.amount for line in lines), Decimal(0))
             balanced = (*lines, Line(OPENING_BALANCE_EQUITY, equity, "Opening balance"))
+            # QuickBooks creates this account when an opening balance is first entered; a new
+            # company has none, so it is created here, as QuickBooks would type it.
+            yield (
+                "Account",
+                "create",
+                {
+                    "Name": "Opening Balance Equity",
+                    "AccountType": "Equity",
+                    "AccountSubType": "OpeningBalanceEquity",
+                },
+                OPENING_BALANCE_EQUITY,
+            )
             yield (
                 "JournalEntry",
                 "create",

@@ -103,8 +103,9 @@ def test_our_archive_against_itself_is_the_same_cells(tmp_path: Path) -> None:
 
 
 def test_without_credentials_it_stops_and_names_what_is_missing(
-    monkeypatch: pytest.MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
+    monkeypatch.setattr(sandbox, "STATE", tmp_path)
     for name in ("QBO_ACCESS_TOKEN", "QBO_REALM_ID", *sandbox.REFRESHING):
         monkeypatch.delenv(name, raising=False)
     with pytest.raises(SystemExit, match="QBO_REALM_ID is not set"):

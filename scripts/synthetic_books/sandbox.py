@@ -5,16 +5,24 @@
 
 `post` sends every payload, in order, to an **empty** sandbox company. A payload QuickBooks
 rejects stops the run: it means an event was modeled wrong, and the generator is fixed, never
-the post. It resumes where it stopped: each payload's id is QuickBooks' `requestid`, and the ids
-QuickBooks assigned are kept under `.local/qbo-sandbox/`.
+the post. So does one QuickBooks accepts but keeps differently from how it was sent — a field
+it dropped or changed, a void that left an amount — since that is a rejection made silently.
+It resumes where it stopped: the ids QuickBooks assigned, and a digest of each payload posted,
+are kept under `.local/qbo-sandbox/`. A payload that changed after it was posted stops the
+run, because the company holds the old one: clear the company, delete that state, post again.
+Each payload's id, with a token drawn when the state is first written, is QuickBooks'
+`requestid`, so a retry is a replay rather than a second transaction, and a cleared company
+never receives an answer QuickBooks remembers from before.
 
-`validate` asks the Reports API what QuickBooks makes of those postings — the journal, the
-general ledger's totals, both statements, and the trial balance at every month end, on each
-basis and under each rendering's settings — and compares it with what our writer put in the
-archives. QuickBooks' answers and the differences are written under `.local/qbo-sandbox/`, which
-git ignores: **nothing QuickBooks returns is ever committed**. What is committed is the record
-that it agreed, `tests/fixtures/quickbooks/validation.json`, written only when every comparison
-does.
+`validate` asks the Reports API what QuickBooks makes of those postings — the journal, both
+statements, and the trial balance at every month end, on each basis and under each rendering's
+settings — and compares it with what our writer put in the archives. The API accepts the fiscal
+year and account numbers and ignores them, so a person changes them in QuickBooks between runs:
+each run compares the renderings the company's settings allow, remembers those that agreed,
+and names the setting the next one needs. QuickBooks' answers and the differences are written
+under `.local/qbo-sandbox/`, which git ignores: **nothing QuickBooks returns is ever
+committed**. What is committed is the record that it agreed,
+`tests/fixtures/quickbooks/validation.json`, written only when every rendering has.
 
 Setting up a sandbox, and where the values below come from, is in `CONTRIBUTING.md`, under "The
 synthetic QuickBooks fixture". Credentials come from the environment and are never printed or
@@ -37,6 +45,7 @@ import difflib
 import hashlib
 import json
 import os
+import secrets
 import sys
 import time
 import urllib.error
@@ -50,6 +59,7 @@ from typing import Any
 
 from synthetic_books.business import END, START
 from synthetic_books.events import dumps
+from synthetic_books.quickbooks import MONTHS
 from synthetic_books.quickbooks_export import RENDERINGS, Rendering, month_ends
 from synthetic_books.xlsx import contents, rows
 
@@ -171,10 +181,13 @@ class Sandbox:
         time.sleep(PAUSE)
         try:
             with urllib.request.urlopen(request, timeout=60) as response:  # noqa: S310
-                return json.loads(response.read(), parse_float=Decimal)
+                answer = json.loads(response.read(), parse_float=Decimal)
         except urllib.error.HTTPError as error:
             detail = error.read().decode(errors="replace")[:2000]
             raise SystemExit(f"{method} {path}: HTTP {error.code}\n{detail}") from None
+        if "Fault" in answer:  # QuickBooks refuses some requests with a 200
+            raise SystemExit(f"{method} {path}: {json.dumps(answer['Fault'], default=str)}")
+        return answer
 
     def query(self, statement: str) -> Json:
         return self.call("GET", "query", {"query": statement})
@@ -195,44 +208,142 @@ def system_account(sandbox: Sandbox, subtype: str) -> str:
     return str(accounts[0]["Id"])
 
 
+def default_account(sandbox: Sandbox, name: str) -> str:
+    # The name comes from our own payloads, never from input.
+    found = sandbox.query(f"select * from Account where Name = '{name}'")  # noqa: S608
+    accounts = [a for a in found["QueryResponse"].get("Account", []) if not a["SubAccount"]]
+    if not accounts:
+        raise SystemExit(f"the company has no default account {name}; escalate (ADR-0075)")
+    return str(accounts[0]["Id"])
+
+
 def current(sandbox: Sandbox, entity: str, entity_id: str | None) -> Json:
     if entity == "Preferences":
         return sandbox.call("GET", "preferences", {})["Preferences"]
     return sandbox.call("GET", f"{entity.lower()}/{entity_id}", {})[entity]
 
 
-def post(sandbox: Sandbox) -> None:
-    ids_file = sandbox.state / "ids.json"
-    ids: dict[str, str] = json.loads(ids_file.read_text()) if ids_file.exists() else {}
-    done: set[str] = set(ids.pop("$done", "").split(",")) - {""}
-    payloads = [
+# Where a person makes each setting the API ignores: Settings, Account and settings, Advanced.
+BY_HAND = {
+    "FirstMonthOfFiscalYear": "Accounting, First month of fiscal year",
+    "UseAccountNumbers": "Chart of accounts, Enable account numbers",
+    "AutoApplyCredit": "Automation, Automatically apply credits",
+}
+
+
+def require(sandbox: Sandbox, settings: Json) -> list[str]:
+    """What a person must still change in QuickBooks for the company to have `settings`."""
+    have = current(sandbox, "Preferences", None)
+    return [
+        f"{BY_HAND[field]}: {value}"
+        for section, fields in settings.items()
+        for field, value in fields.items()
+        if have[section][field] != value
+    ]
+
+
+def by_hand(needed: list[str]) -> str:
+    return (
+        "the API ignores these settings, so set them in the sandbox company "
+        "(Settings, Account and settings, Advanced), then run this again:\n  "
+        + "\n  ".join(needed)
+    )
+
+
+def digest(payload: Json) -> str:
+    return hashlib.sha256(encode(payload)).hexdigest()[:16]
+
+
+def disagreements(sent: Json, kept: Json, where: str = "") -> list[str]:
+    """The fields QuickBooks did not keep as sent. Lines are left to the reports to judge:
+    QuickBooks numbers them and adds its own subtotal line."""
+    out: list[str] = []
+    for key, value in sent.items():
+        if key in ("sparse", "SyncToken") or isinstance(value, list):
+            continue
+        if key not in kept:
+            out.append(f"{where}{key} was dropped")
+        elif isinstance(value, dict):
+            out += disagreements(value, kept[key], f"{where}{key}.")
+        elif isinstance(value, bool) or isinstance(kept[key], bool):
+            if value != kept[key]:
+                out.append(f"{where}{key} sent {value}, kept {kept[key]}")
+        elif isinstance(value, int | Decimal):
+            if Decimal(str(value)) != Decimal(str(kept[key])):
+                out.append(f"{where}{key} sent {value}, kept {kept[key]}")
+        elif str(value) != str(kept[key]):
+            out.append(f"{where}{key} sent {value!r}, kept {kept[key]!r}")
+    return out
+
+
+def payloads() -> list[Json]:
+    return [
         json.loads(line, parse_float=Decimal)
         for line in (FIXTURE / "generated" / "payloads.jsonl").read_text().splitlines()
     ]
-    for payload in payloads:
-        if payload["id"] in done:
+
+
+def post(sandbox: Sandbox) -> None:
+    ids_file = sandbox.state / "ids.json"
+    state: Json = (
+        json.loads(ids_file.read_text())
+        if ids_file.exists()
+        else {"run": secrets.token_hex(4), "ids": {}, "posted": {}}
+    )
+    ids: dict[str, str] = state["ids"]
+    posted: dict[str, str] = state["posted"]
+    stream = payloads()
+    for payload in stream:
+        if payload["id"] in posted:
+            if posted[payload["id"]] != digest(payload):
+                raise SystemExit(
+                    f"{payload['id']} changed after it was posted, so the company holds the "
+                    f"old one: clear the company, delete {sandbox.state}, and post again"
+                )
+            continue
+        if payload["operation"] == "require":
+            needed = require(sandbox, payload["body"])
+            if needed:
+                raise SystemExit(f"{payload['id']}: {by_hand(needed)}")
+            posted[payload["id"]] = digest(payload)
+            ids_file.write_text(json.dumps(state))
+            print(f"{payload['id']} {payload['entity']} require: ok")
             continue
         for target in _references(payload["body"]):
             if target.startswith("system:") and target not in ids:
                 ids[target] = system_account(sandbox, target.removeprefix("system:"))
+            if target.startswith("default:") and target not in ids:
+                ids[target] = default_account(sandbox, target.removeprefix("default:"))
         body = resolve(payload["body"], ids)
         entity, operation = payload["entity"], payload["operation"]
-        query = {"requestid": payload["id"]}
+        query = {"requestid": f"{state['run']}-{payload['id']}"}
         if operation in ("update", "void"):
             existing = current(sandbox, entity, body.get("Id"))
             body = {"Id": existing["Id"], "SyncToken": existing["SyncToken"], **body}
             if operation == "update":
                 body["sparse"] = True
-            else:
+            elif entity == "Invoice":
                 query["operation"] = "void"
+            else:  # a payment is voided by an update that includes the void
+                body["sparse"] = True
+                query |= {"operation": "update", "include": "void"}
         path = "preferences" if entity == "Preferences" else entity.lower()
-        answer = sandbox.call("POST", path, query, encode(body))
+        kept = sandbox.call("POST", path, query, encode(body))[entity]
         if payload["defines"]:
-            ids[payload["defines"]] = str(answer[entity]["Id"])
-        done.add(payload["id"])
-        ids_file.write_text(json.dumps({**ids, "$done": ",".join(sorted(done))}))
+            ids[payload["defines"]] = str(kept["Id"])
+        posted[payload["id"]] = digest(payload)
+        ids_file.write_text(json.dumps(state))
+        problems = disagreements(body, kept)
+        if operation == "void" and Decimal(str(kept.get("TotalAmt", 0))) != 0:
+            problems.append(f"the void left TotalAmt {kept['TotalAmt']}")
+        if problems:
+            raise SystemExit(
+                f"{payload['id']} {entity} {operation}: QuickBooks accepted it but kept it "
+                f"differently; the event is modeled wrong, so fix the generator:\n  "
+                + "\n  ".join(problems)
+            )
         print(f"{payload['id']} {entity} {operation}: ok")
-    print(f"posted {len(done)} of {len(payloads)} payloads")
+    print(f"posted {len(posted)} of {len(stream)} payloads")
 
 
 def _references(value: Json) -> Iterator[str]:
@@ -335,86 +446,122 @@ def differences(
     )
 
 
-def set_preferences(sandbox: Sandbox, rendering: Rendering) -> None:
-    """The company's settings for this rendering: its fiscal year and its account numbers."""
-    prefs = current(sandbox, "Preferences", None)
-    body = {
-        "Id": prefs["Id"],
-        "SyncToken": prefs["SyncToken"],
-        "sparse": True,
+def settings(rendering: Rendering) -> Json:
+    """The settings QuickBooks must have to print this rendering: the company's own, as the
+    adapter requires them, with the rendering's fiscal year and account numbers."""
+    company = next(p for p in payloads() if p["operation"] == "require")["body"]
+    month = rendering.fiscal_start_month
+    own = company["AccountingInfoPrefs"]["FirstMonthOfFiscalYear"]
+    fiscal = MONTHS[month - 1] if month else own
+    return {
         "AccountingInfoPrefs": {
-            "FiscalYearStartMonth": "January" if rendering.fiscal_start_month == 1 else "July",
+            "FirstMonthOfFiscalYear": fiscal,
             "UseAccountNumbers": rendering.numbers,
-        },
+        }
     }
-    sandbox.call("POST", "preferences", {}, encode(body))
 
 
 def validate(sandbox: Sandbox) -> int:
-    comparisons: dict[str, int] = {}
-    failed: dict[str, int] = {}
+    """Compare every rendering the company's settings allow now, and remember those that agree.
+
+    The API cannot change the settings a rendering prints under, so a person changes them
+    between runs; `validation.json` is written once every rendering, as it is now, has agreed.
+    """
+    progress_file = sandbox.state / "validated.json"
+    progress: dict[str, Json] = (
+        json.loads(progress_file.read_text()) if progress_file.exists() else {}
+    )
     raw = sandbox.state / "reports"
     raw.mkdir(exist_ok=True)
+    waiting: list[tuple[Rendering, list[str]]] = []
+    failed: dict[str, int] = {}
 
-    def check(name: str, expected: list[tuple[str, ...]], answer: Json) -> None:
+    def compare(
+        name: str, expected: list[tuple[str, ...]], answer: Json, counted: dict[str, int]
+    ) -> None:
         (raw / f"{name}.json").write_text(json.dumps(answer, default=str, indent=1))
         actual = [comparable(row) for row in flatten(answer)]
         diff = differences(name, expected, actual)
-        comparisons[name] = len(expected)
+        counted[name] = len(expected)
         (raw / f"{name}.diff").write_text("\n".join(diff))
         if diff:
             failed[name] = sum(1 for line in diff if line.startswith(("+", "-")))
         print(f"{name}: {'agrees' if not diff else f'{failed[name]} lines differ'}")
 
     for rendering in RENDERINGS:
-        set_preferences(sandbox, rendering)
+        archive = archive_digest(rendering)
+        if progress.get(rendering.name, {}).get("archive") == archive:
+            print(f"{rendering.name}: agreed already")
+            continue
+        needed = require(sandbox, settings(rendering))
+        if needed:
+            waiting.append((rendering, needed))
+            continue
+        comparisons: dict[str, int] = {}
         method = rendering.basis.title()
         start = (rendering.start or START).isoformat()
         span = {"start_date": start, "end_date": END.isoformat(), "accounting_method": method}
-        check(
+        compare(
             f"{rendering.name}-journal",
             ours(rendering, "Journal.xlsx"),
             sandbox.report("JournalReport", **span),
+            comparisons,
         )
-        check(
+        compare(
             f"{rendering.name}-profit-and-loss",
             ours(rendering, "Profit_and_loss.xlsx"),
             sandbox.report("ProfitAndLoss", **span),
+            comparisons,
         )
         as_of = {
             "start_date": START.isoformat(),
             "end_date": END.isoformat(),
             "accounting_method": method,
         }
-        check(
+        compare(
             f"{rendering.name}-balance-sheet",
             ours(rendering, "Balance_sheet.xlsx"),
             sandbox.report("BalanceSheet", **as_of),
+            comparisons,
         )
         if rendering.start is None:
             months = our_trial_balances(rendering)
             for day in month_ends():
-                check(
+                compare(
                     f"{rendering.name}-trial-balance-{day.isoformat()}",
                     months[day.isoformat()],
                     sandbox.report(
                         "TrialBalance", end_date=day.isoformat(), accounting_method=method
                     ),
+                    comparisons,
                 )
-    set_preferences(sandbox, RENDERINGS[0])
+        if not any(name in failed for name in comparisons):
+            progress[rendering.name] = {
+                "archive": archive,
+                "comparisons": len(comparisons),
+                "rows": sum(comparisons.values()),
+            }
+            progress_file.write_text(json.dumps(progress, indent=1))
 
     if failed:
-        print(f"{len(failed)} of {len(comparisons)} comparisons differ; diffs in {raw}")
+        print(f"{len(failed)} comparisons differ; diffs in {raw}")
+        return 1
+    if waiting:
+        rendering, needed = waiting[0]
+        others = ", ".join(r.name for r, _ in waiting[1:])
+        print(f"{rendering.name} waits on its settings: {by_hand(needed)}")
+        if others:
+            print(f"after it: {others}")
         return 1
     record = {
         "validated_on": datetime.now(UTC).date().isoformat(),
-        "archives": {r.name: archive_digest(r) for r in RENDERINGS},
-        "comparisons": len(comparisons),
-        "rows_compared": sum(comparisons.values()),
+        "archives": {r.name: progress[r.name]["archive"] for r in RENDERINGS},
+        "comparisons": sum(progress[r.name]["comparisons"] for r in RENDERINGS),
+        "rows_compared": sum(progress[r.name]["rows"] for r in RENDERINGS),
         "result": "agrees",
     }
     (FIXTURE / "validation.json").write_text(json.dumps(record, indent=1) + "\n")
-    print(f"all {len(comparisons)} comparisons agree; wrote {FIXTURE / 'validation.json'}")
+    print(f"every rendering agrees; wrote {FIXTURE / 'validation.json'}")
     return 0
 
 
