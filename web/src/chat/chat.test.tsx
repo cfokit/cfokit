@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { StartedProvider } from "../start/state";
 import { AGENT, ChatPage, refusalOf, thread } from "./ChatPage";
 
@@ -60,6 +60,8 @@ beforeEach(() => {
         idempotencyKey: headers.get("idempotency-key"),
         auth: headers.get("authorization"),
       });
+      // A turn that is still answering: the run stays in progress.
+      if (method === "POST" && url.endsWith("/turn")) return new Promise<Response>(() => {});
       const answer =
         method === "POST" && url.endsWith("/conversations")
           ? { status: 201, body: { conversation_id: "c-new", replayed: false } }
@@ -145,4 +147,21 @@ test("a deployment running no agent says so instead of offering a chat", async (
   page(CONVERSATION);
   expect(await screen.findByText("No chat here")).toBeTruthy();
   expect(screen.queryByRole("textbox")).toBeNull();
+});
+
+test("a refusal clears when the person tries again", async () => {
+  answers[`${AGENT_URL}/entities/${ENTITY}/conversations/${CONVERSATION}`] = {
+    status: 403,
+    body: { code: "agent_not_allowed", message: "Allow this agent" },
+  };
+  page(CONVERSATION);
+  expect(await screen.findByText("Not allowed yet")).toBeTruthy();
+
+  fireEvent.change(screen.getByRole("textbox", { name: "Ask about your books" }), {
+    target: { value: "How did we do?" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Send" }));
+
+  await waitFor(() => expect(screen.queryByText("Not allowed yet")).toBeNull());
+  expect(requests.some((r) => r.method === "POST" && r.url.endsWith("/turn"))).toBe(true);
 });

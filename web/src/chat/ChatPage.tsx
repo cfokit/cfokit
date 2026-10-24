@@ -141,6 +141,16 @@ function Live({
     },
   });
 
+  // A refusal stands until the person tries again: a new turn clears it, and refuses afresh if it
+  // still applies.
+  useEffect(
+    () =>
+      runtime.thread.subscribe(() => {
+        if (runtime.thread.getState().isRunning) setRefused(null);
+      }),
+    [runtime],
+  );
+
   // A stream keeps the agent's instance billed while it is open, so a hidden tab stops its turn
   // (ADR-0075, Consequences); what completed is kept, and the person asks again to go on.
   useEffect(() => {

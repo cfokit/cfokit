@@ -112,9 +112,10 @@ def create_app(services: Services, *, web_origin: str | None = None) -> Starlett
             token = await services.tokens.for_person(person_token)
         except TokenRefused as refused:
             return _refusal(403, refused.code, str(refused))
+        entity_id = request.path_params["entity_id"]
         try:
             thread = await services.core.thread(
-                token, request.path_params["entity_id"], request.path_params["conversation_id"]
+                token, entity_id, request.path_params["conversation_id"]
             )
         except httpx2.HTTPStatusError as failed:
             if _code(failed.response) == "agent_not_allowed":
@@ -122,8 +123,12 @@ def create_app(services: Services, *, web_origin: str | None = None) -> Starlett
                 # by opening a session on the MCP surface, which records it (ADR-0066 § 3). The
                 # agent opens one only to work, which it may not do yet, so it opens one now:
                 # without it the person's allowing would be refused, and the chat never start.
-                async with services.connect(token):
-                    pass
+                # Best effort: the refusal and its link still reach the person if it fails.
+                try:
+                    async with services.connect(token):
+                        pass
+                except Exception:
+                    log.exception("agent connection not opened", extra={"entity_id": entity_id})
             # Core's own refusal, passed on: `agent_not_allowed` with its link, or not found.
             return Response(
                 failed.response.content,

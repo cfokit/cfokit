@@ -323,3 +323,33 @@ def test_no_other_refusal_opens_a_session() -> None:
     SESSIONS.clear()
     history(app(Core(missing=True), Bookkeeper()))
     assert SESSIONS == []
+
+
+def test_the_refusal_still_reaches_the_person_when_connecting_fails() -> None:
+    """The session is opened so the person can allow the agent; failing to open it must not hide
+    the refusal and its link, which is how they find where to allow it (ADR-0077 § 1)."""
+
+    class Unreachable:
+        async def __aenter__(self) -> Client:
+            raise httpx2.ConnectError("the MCP service is down")
+
+        async def __aexit__(self, *exc: object) -> None:
+            return None
+
+    def unreachable(token: str) -> Unreachable:
+        return Unreachable()
+
+    client = TestClient(
+        create_app(
+            Services(
+                model=None,
+                skill=SKILL,
+                tokens=Tokens(),
+                core=Core(not_allowed=True),
+                connect=unreachable,
+            ),
+            web_origin=WEB,
+        )
+    )
+    response = history(client)
+    assert (response.status_code, response.json()["code"]) == (403, "agent_not_allowed")
