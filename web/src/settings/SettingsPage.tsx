@@ -103,17 +103,30 @@ function Companies() {
                 <span className="text-title text-ink">{company.name}</span>
                 <span className="text-caption text-ink-muted">{declared(company)}</span>
               </div>
-              <Button
-                variant="link"
-                onClick={() =>
-                  void navigate({
-                    to: "/companies/$entityId/questions",
-                    params: { entityId: company.id },
-                  })
-                }
-              >
-                Questions
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="link"
+                  onClick={() =>
+                    void navigate({
+                      to: "/companies/$entityId/chat",
+                      params: { entityId: company.id },
+                    })
+                  }
+                >
+                  Ask CFOKit
+                </Button>
+                <Button
+                  variant="link"
+                  onClick={() =>
+                    void navigate({
+                      to: "/companies/$entityId/questions",
+                      params: { entityId: company.id },
+                    })
+                  }
+                >
+                  Questions
+                </Button>
+              </div>
             </li>
           ))}
         </ul>
@@ -123,7 +136,7 @@ function Companies() {
           variant="secondary"
           fullWidth
           className="tablet:w-auto"
-          onClick={() => void navigate({ to: "/" })}
+          onClick={() => void navigate({ to: "/start" })}
         >
           Add a company
         </Button>

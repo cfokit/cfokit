@@ -93,7 +93,7 @@ test("a company's questions, and adding a company, are a click away", async () =
   });
 
   fireEvent.click(screen.getByRole("button", { name: "Add a company" }));
-  expect(navigate).toHaveBeenCalledWith({ to: "/" });
+  expect(navigate).toHaveBeenCalledWith({ to: "/start" });
 });
 
 test("a person holding no books is told so, and can add a company", async () => {

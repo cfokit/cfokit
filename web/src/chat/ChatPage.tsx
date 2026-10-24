@@ -9,33 +9,10 @@ import { Button, Conversation, Notice, TextLink } from "../components";
 import { useCompanyName } from "../questions/QuestionsPage";
 import { PersonFrame } from "../settings/PersonFrame";
 import { useStarted } from "../start/state";
+import { useAgentUrl } from "./agentUrl";
 
 /** CFOKit's agent as the API records it acting for a person (ADR-0077), for the allow page. */
 export const AGENT = "client:cfokit-agent";
-
-/**
- * Where this deployment's agent is, as its operator configured it: `null` while asking,
- * `undefined` when the deployment runs none (ADR-0075 § 1).
- */
-function useAgentUrl(): string | null | undefined {
-  const api = useApi();
-  const [url, setUrl] = useState<string | null | undefined>(null);
-  useEffect(() => {
-    let current = true;
-    api
-      .get<{ agent_url?: string | null }>("/connection")
-      .then((connection) => {
-        if (current) setUrl(connection.agent_url ?? undefined);
-      })
-      .catch(() => {
-        if (current) setUrl(undefined);
-      });
-    return () => {
-      current = false;
-    };
-  }, [api]);
-  return url;
-}
 
 /** The agent's history as assistant-ui's repository: each message after the one before it. */
 export function thread(
@@ -102,10 +79,12 @@ function Live({
   agentUrl,
   entityId,
   conversationId,
+  draft,
 }: {
   agentUrl: string;
   entityId: string;
   conversationId: string;
+  draft: string | undefined;
 }) {
   const token = useAuth().user?.access_token;
   const [refused, setRefused] = useState<{ code: string; message: string } | null>(null);
@@ -140,6 +119,11 @@ function Live({
       },
     },
   });
+
+  // A question handed over by another page waits in the composer for the person to send.
+  useEffect(() => {
+    if (draft !== undefined) runtime.thread.composer.setText(draft);
+  }, [runtime, draft]);
 
   // A refusal stands until the person tries again: a new turn clears it, and refuses afresh if it
   // still applies.
@@ -177,9 +161,12 @@ function Live({
 export function ChatPage({
   entityId,
   conversationId,
+  draft,
 }: {
   entityId: string;
   conversationId?: string | undefined;
+  /** A question to leave in the composer, unsent, such as getting started's first question. */
+  draft?: string | undefined;
 }) {
   const api = useApi();
   const navigate = useNavigate();
@@ -210,6 +197,7 @@ export function ChatPage({
         void navigate({
           to: "/companies/$entityId/chat/$conversationId",
           params: { entityId, conversationId: id },
+          search: draft === undefined ? {} : { draft },
           replace: true,
         });
       }
@@ -219,7 +207,7 @@ export function ChatPage({
     return () => {
       current = false;
     };
-  }, [api, entityId, conversationId, navigate]);
+  }, [api, entityId, conversationId, draft, navigate]);
 
   let body;
   if (agentUrl === undefined) {
@@ -244,6 +232,7 @@ export function ChatPage({
         agentUrl={agentUrl}
         entityId={entityId}
         conversationId={conversationId}
+        draft={draft}
       />
     );
   }
