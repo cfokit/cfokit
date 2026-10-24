@@ -51,6 +51,22 @@ database (ADR-0022) — read three more (ADR-0032):
 A component started without credentials fails immediately with a stable error code. It does not hang
 or retry, because the CI portability gate runs with no credentials present.
 
+**CFOKit's agent** (`python -m cfokit.agent`, ADR-0075) is such a component. Its client is
+`cfokit-agent`, and it holds no database credential. It reads the three above, `AUTH_ISSUER_URL`,
+`LOG_LEVEL`, `PORT` (default `8082`) and the TLS pair, and these:
+
+| Variable | Required | Purpose |
+|---|---|---|
+| `CFOKIT_MCP_URL` | yes | The MCP endpoint reachable from the agent, ending `/mcp`: the only way it reaches the books. |
+| `WEB_PUBLIC_BASE_URL` | yes | The web client's origin, the one browser origin allowed to call the agent (CORS). |
+| `ANTHROPIC_API_KEY` | no | The inference credential. Unset, the agent starts and answers every turn `503 agent_off`. |
+| `CFOKIT_AGENT_MODEL` | no | The Claude model, recorded with every response (`SOC1-35`). Defaults to the one `cfokit.agent.config` pins. |
+| `CFOKIT_AGENT_SKILL` | no | The skill given as instructions. Defaults to the bookkeeper skill the image carries. |
+
+It asks for no audience: the token it gets by exchange carries the one the issuer binds every token
+to (ADR-0077). The issuer has to allow its client to exchange the web client's tokens, which the
+shipped realm does when `CFOKIT_AGENT_ENABLED` is true (`infra/keycloak/README.md`).
+
 ### 2. A PostgreSQL database
 
 Reachable at `DATABASE_URL`, supporting deferred constraint triggers (ADR-0006), advisory
@@ -178,16 +194,17 @@ Any target must provide all three (ADR-0023):
 | **Job** | One-shot execution, invoked explicitly, **with no request timeout**. |
 | **Worker** | Unattended work, run with no request behind it (ADR-0061): either a job the target starts on a timer and on request, running `python -m cfokit.server work --once`, or one always-running process with no ingress, running `python -m cfokit.server work`. |
 
-Two services run from this image, and each needs its own ingress and its own
-`PUBLIC_BASE_URL`:
+Three services run from this image, and each needs its own ingress:
 
 | Command | Surface |
 |---|---|
 | `python -m cfokit.server rest` | REST, with the OpenAPI document |
 | `python -m cfokit.server mcp` | MCP over streamable HTTP at `/mcp`, stateless |
+| `python -m cfokit.agent` | The chat: one streamed turn per request, as AG-UI events (ADR-0075) |
 
-Both validate bearer tokens against the same `AUTH_ISSUER_URL` and `AUTH_AUDIENCE`, so a
-deployment configures one issuer and both surfaces accept its tokens (ADR-0019). The MCP
+REST and MCP validate bearer tokens against the same `AUTH_ISSUER_URL` and `AUTH_AUDIENCE`, so a
+deployment configures one issuer and both surfaces accept its tokens (ADR-0019). The agent
+validates none itself: it exchanges the person's token and the API validates what it is sent. The MCP
 service publishes OAuth protected-resource metadata at
 `/.well-known/oauth-protected-resource`, derived from its own `PUBLIC_BASE_URL` — an MCP
 client reads it from the `WWW-Authenticate` challenge on an unauthenticated request to find

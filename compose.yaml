@@ -107,6 +107,11 @@ services:
       # Whether a client that registers itself may send a sign-in only to Claude or back to this
       # machine. Off here, where nothing outside can reach the issuer (ADR-0064).
       CFOKIT_RESTRICT_REGISTERED_REDIRECTS: ${CFOKIT_RESTRICT_REGISTERED_REDIRECTS:-false}
+      # CFOKit's agent as a client of the issuer, allowed only to exchange a person's token
+      # for its own (ADR-0077). Off unless enabled; on here, with a local-only secret like the
+      # administrator's below, because the `agent` service presents it.
+      CFOKIT_AGENT_ENABLED: ${CFOKIT_AGENT_ENABLED:-true}
+      CFOKIT_AGENT_CLIENT_SECRET: ${CFOKIT_AGENT_CLIENT_SECRET:-cfokit-agent}
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
       KC_DB_USERNAME: cfokit
@@ -290,6 +295,56 @@ services:
       timeout: 3s
       retries: 5
 
+  # The agent behind the web app's chat (ADR-0075): a separate component, reaching the books only
+  # through the MCP service and its conversations only through the REST service, as its own
+  # client acting for the person signed in (ADR-0077). It holds no database credential.
+  #
+  # Off until ANTHROPIC_API_KEY is set: it starts, answers that the chat is off, and nothing
+  # else changes. Its own address, as the MCP service has one, because nothing here routes a
+  # path on the web client's origin to it (ADR-0075 § 1).
+  agent:
+    build:
+      context: .
+      target: runtime
+      secrets: [build_ca]
+    command: ["python", "-m", "cfokit.agent"]
+    restart: unless-stopped
+    depends_on:
+      keycloak:
+        condition: service_healthy
+      ledger:
+        condition: service_healthy
+      mcp:
+        condition: service_healthy
+    environment:
+      # Inside the network, by service name; the certificate names both (infra/tls/generate.py).
+      CFOKIT_API_URL: https://ledger:8080
+      CFOKIT_MCP_URL: https://mcp:8081/mcp
+      AUTH_ISSUER_URL: ${AUTH_ISSUER_URL:-https://keycloak.localhost:8443/realms/cfokit}
+      # Its client at the issuer, and the same local-only secret the issuer is given above.
+      AUTH_CLIENT_ID: cfokit-agent
+      AUTH_CLIENT_SECRET: ${CFOKIT_AGENT_CLIENT_SECRET:-cfokit-agent}
+      # The one browser origin allowed to call it: the web client's.
+      WEB_PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://localhost:8080}
+      # The inference credential, the self-hoster's own. Unset, the chat is off.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      CFOKIT_AGENT_MODEL: ${CFOKIT_AGENT_MODEL:-}
+      SSL_CERT_FILE: /etc/cfokit/tls/ca.pem
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      PORT: "8082"
+      TLS_CERT_FILE: /etc/cfokit/tls-server/cert.pem
+      TLS_KEY_FILE: /etc/cfokit/tls-server/key.pem
+    volumes:
+      - ./.local/tls/ca:/etc/cfokit/tls:ro
+      - ./.local/tls/cfokit:/etc/cfokit/tls-server:ro
+    ports:
+      - "${AGENT_PORT:-8082}:8082"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('https://localhost:8082/healthz')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
   # Unattended work (ADR-0061): one pass after another, a few seconds apart, for as long as the
   # stack runs. On by default, because a deployment with a feed has to sync and a laptop has no
   # tick to start a pass. It serves nothing and publishes no port. Until migrations are applied
@@ -352,6 +407,14 @@ services:
       # is measured instead of skipped behind that failure. Not part of the application's
       # configuration surface, and not read by anything that serves traffic.
       AUTH_REGISTRATION_ENDPOINT: ${AUTH_REGISTRATION_ENDPOINT:-}
+      # What the agent's exchange test needs from the shipped issuer: where the web client
+      # returns a sign-in to, the local administrator who makes a person for it, and the
+      # agent's local-only secret (tests/integration/test_agent_exchange.py). Test-only, like
+      # the registration endpoint above.
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://localhost:8080}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      CFOKIT_AGENT_CLIENT_SECRET: ${CFOKIT_AGENT_CLIENT_SECRET:-cfokit-agent}
     volumes:
       - ./.local/tls/ca:/etc/cfokit/tls:ro
 

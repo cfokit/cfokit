@@ -5,16 +5,16 @@ date: 2026-10-22
 decision-makers: [Geoff]
 ---
 
-# ADR-0075: CFOKit's runtime is an async component built on Pydantic AI, streaming AG-UI to an assistant-ui chat window
+# ADR-0075: CFOKit's agent is an async component built on Pydantic AI, streaming AG-UI to an assistant-ui chat window
 
 **Requirements served:** `PLT-04`, `PLT-24`, `PLT-23`, `BKP-20`, `IAM-11`, `SOC1-06`, `SOC1-35`.
 
 ## Context and Problem Statement
 
-CFOKit ships its own agent runtime, and the runtime is the web app (ADR-0034 § 4). It hosts the
+CFOKit ships its own agent runtime, and the agent is the web app (ADR-0034 § 4). It hosts the
 same bookkeeper skill and published MCP tools as the person's own agent. With managed bookkeeping
 CFOKit supplies the inference (ADR-0035); a self-hoster supplies their own credential (ADR-0034
-§ 1). This record decides what the runtime is built from and how a turn reaches the person.
+§ 1). This record decides what the agent is built from and how a turn reaches the person.
 
 Four use cases define the first version, each recorded end to end as a documentation clip
 (ADR-0074): reconcile from a statement, answer the agent's questions after unattended work, ask
@@ -25,7 +25,7 @@ open-source frameworks for each part, so the question is which to build on, not 
 
 Facts that bear on the answer:
 
-* **By ADR-0022 § 3 the runtime is a component.** It commits nothing with a ledger write; its shape
+* **By ADR-0022 § 3 the agent is a component.** It commits nothing with a ledger write; its shape
   is long turns and long-lived streams, unlike the API's; it holds the one credential worth
   isolating, the inference key; and any MCP client is already a third party's version of it. A
   component chooses its own execution model (ADR-0024).
@@ -81,16 +81,19 @@ because each part is a maintained, MIT-licensed project that already does its pi
 between them is an open standard rather than one vendor's, and together they leave CFOKit only what
 is CFOKit's own.
 
-> The runtime is an async component, an entrypoint of the one image, built on Pydantic AI. A turn
+> The agent is an async component, an entrypoint of the one image, built on Pydantic AI. A turn
 > is a Pydantic AI run with the bookkeeper skill as its instructions and the published MCP tools as
-> its only tools, called as the runtime's own client acting for the person. It streams AG-UI events
-> over SSE to a chat window built from assistant-ui. The runtime stores nothing: it reads and
+> its only tools, called as the agent's own client acting for the person. It streams AG-UI events
+> over SSE to a chat window built from assistant-ui. The agent stores nothing: it reads and
 > appends the conversation through the published API (ADR-0076).
 
 ### 1. A turn is one streamed request
 
-The chat window sends the person's message to the runtime, at a path on the API's origin the load
-balancer routes to it, so the CSP's `default-src 'self'` holds. The runtime reads the
+The chat window sends the person's message to the agent, at the agent's own address, as the
+MCP service has its own: the local stack has no load balancer to route a path on the web client's
+origin, and a second way of reaching the agent would be a second thing to keep working. The web
+client is told the address, its CSP allows that one origin to be connected to, and the agent
+allows that one browser origin, the web client's, by CORS. The agent reads the
 conversation's history from core, runs the turn, and streams its AG-UI events in the response. As
 each message completes, it is appended to the conversation in core, so a reload or a reconnect
 shows everything up to the last completed message.
@@ -121,15 +124,15 @@ resolves it (ADR-0047). A draft from such a conversation is posted only by the p
 themselves, outside the model: a posting act in the web client that calls the published API with
 their own token, never a tool the model holds.
 
-The runtime enforces this by what it offers, not by an instruction: it knows what each
+The agent enforces this by what it offers, not by an instruction: it knows what each
 conversation holds, because the conversation is stored with each part's classification
 (ADR-0076), and a model cannot call a tool it was not offered. This is the boundary the
 bookkeeper skill otherwise has to keep in its own instructions, built where CFOKit runs the agent.
 The person's own agent, which CFOKit does not run, still relies on the skill's rule until the
 published surface can enforce it.
 
-With no inference credential configured, the runtime is off and the chat window says so. The suite
-drives the runtime with Pydantic AI's test model, so a turn's messages, tool calls and refusals are
+With no inference credential configured, the agent is off and the chat window says so. The suite
+drives the agent with Pydantic AI's test model, so a turn's messages, tool calls and refusals are
 asserted on with no credential.
 
 ### 3. The chat window
@@ -146,8 +149,8 @@ backend if it were.
   model are maintained by others, and CFOKit writes what is its own: the skill, the tools, storage
   and authority.
 * Good, because AG-UI is a standard, so another client can follow a conversation, and moving from
-  assistant-ui changes the window without touching the runtime.
-* Good, because the runtime holds no state and no database credential, so it scales to zero and
+  assistant-ui changes the window without touching the agent.
+* Good, because the agent holds no state and no database credential, so it scales to zero and
   reaches the books only as a client.
 * Good, because the reply streams as it is written, as people expect of a chat.
 * Good, because `PLT-23` is enforced by capability wherever CFOKit runs the agent, rather than
@@ -163,7 +166,7 @@ backend if it were.
 
 ### Confirmation
 
-* The runtime is its own package and entrypoint, with an `import-linter` contract forbidding it
+* The agent is its own package and entrypoint, with an `import-linter` contract forbidding it
   every capability package, so it reaches the books and its conversations only through the
   published MCP and REST interfaces.
 * Pydantic AI's test model drives a turn in the suite: its stream, its appended messages, and
@@ -192,7 +195,7 @@ The most widely used chat stack in TypeScript, with resumable streams and file p
 * Bad, because it brings file, shell and web tools the bookkeeper must not have, which make
   `PLT-23`'s boundary harder to hold rather than merely unused.
 * Bad, because each platform's wheel is about 114 MB, carrying a program whose license is stated
-  only by reference, in a runtime ADR-0034 § 1 ships as Apache 2.0.
+  only by reference, in an agent runtime ADR-0034 § 1 ships as Apache 2.0.
 
 ### Managed Agents, or the Messages API's MCP connector with the Skills API
 
@@ -212,21 +215,22 @@ The most widely used chat stack in TypeScript, with resumable streams and file p
 
 **Follow-on obligations.**
 
-* How the runtime holds a token for a person is ADR-0077.
-* `pydantic-ai-slim` with its `anthropic` and `ag-ui` extras, added to the runtime
+* How the agent holds a token for a person is ADR-0077.
+* `pydantic-ai-slim` with its `anthropic` and `ag-ui` extras, added to the agent
   dependencies with license and reason, and `CLAUDE.md`'s count of them updated. Not its `mcp`
-  extra, which needs fastmcp and would double the dependency tree: the runtime reaches the tools
+  extra, which needs fastmcp and would double the dependency tree: the agent reaches the tools
   through a small toolset over the official `mcp` SDK it already depends on.
 * `@assistant-ui/react`, its Markdown and AG-UI packages, added to the web client, checked against
   ADR-0049 § 9.
 * A provider registry entry before the provider receives customer data (`SOC2-10`, ADR-0035).
-* The load balancer routes the runtime's path to its service (ADR-0060); `compose.yaml` adds it.
+* The agent is a service with its own address on each target: a port in `compose.yaml`, a host
+  behind the load balancer (ADR-0060).
 
 **Reversal cost.** Moderate. Replacing assistant-ui changes the chat window only; replacing
-Pydantic AI replaces the runtime's loop but not the stored conversations, which are its message
+Pydantic AI replaces the agent's loop but not the stored conversations, which are its message
 JSON (ADR-0076) and would be converted once.
 
-Related: ADR-0022 (components), ADR-0034 (the runtime), ADR-0035 (inference), ADR-0061 (the work
+Related: ADR-0022 (components), ADR-0034 (the agent runtime), ADR-0035 (inference), ADR-0061 (the work
 queue), ADR-0066 (an agent acts for a person), ADR-0068 (conversation first), ADR-0072 (usage),
 ADR-0074 (the use cases as clips), ADR-0076 (where conversations are stored).
 

@@ -1,10 +1,10 @@
 """The conversations module's REST surface: a router it owns, included by `cfokit.server`.
 
 The ledger's adapter cannot mount it — "the ledger depends on no module" is an `import-linter`
-contract (ADR-0022). The runtime reads and appends conversations here, as its own client acting
+contract (ADR-0022). The agent reads and appends conversations here, as its own client acting
 for the person (ADR-0075, ADR-0077); the web client reads them here too.
 
-There is no MCP tool for any of this. A conversation is what the runtime keeps about a model's
+There is no MCP tool for any of this. A conversation is what the agent keeps about a model's
 turn, not something the model itself is offered to change.
 """
 
@@ -50,7 +50,7 @@ class MessageModel(BaseModel):
     position: int
     kind: Literal["request", "response"]
     content: dict[str, Any] | list[Any] = Described(
-        description="The runtime's own serialized message, stored as sent and never reshaped."
+        description="The agent's own serialized message, stored as sent and never reshaped."
     )
     file_ids: list[str]
     model: str | None

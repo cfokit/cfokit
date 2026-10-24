@@ -34,7 +34,7 @@ works the same either way. `src/cfokit/` is a PEP 420 namespace package: **do no
 **Six capabilities exist**: `ledger`, `imports` (ADR-0040), `receivables`, `assignment`
 (ADR-0045), `activity` (ADR-0046), and `conversations` (ADR-0076). `server` is not one — it is the composition point, the
 only place that knows the module list, and a file in it that decides something about
-accounting is in the wrong place. Nor is `runtime`: it is a separate component, the agent behind
+accounting is in the wrong place. Nor is `agent`: it is a separate component, the agent behind
 the web app's chat, reaching CFOKit only over its published interfaces like any other client
 (ADR-0075).
 
@@ -159,7 +159,7 @@ otherwise get wrong, because absence isn't visible in a manifest:
   (REST + OpenAPI), `uvicorn` (ASGI server), `mcp` (tool surface), `pyjwt[crypto]` (audience
   validation), `cryptography` (Web Push encryption, ADR-0057; already installed as PyJWT's
   extra, declared because we call into it), and `pydantic-ai-slim[anthropic,ag-ui]` (CFOKit's
-  own agent runtime, ADR-0075; confined to `cfokit.runtime`). Those seven pull **46** packages
+  own agent, ADR-0075; confined to `cfokit.agent`). Those seven pull **46** packages
   in total — `uv export --no-dev --no-emit-project --no-hashes | grep -c '^[a-z]'` — and the MCP
   SDK is most of it, accepted knowingly (ADR-0024). Accounting exports are parsed in the person's browser, never
   by the server, so no spreadsheet library is a dependency of any kind (ADR-0058).

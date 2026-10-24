@@ -196,3 +196,44 @@ def test_a_running_issuer_receives_the_same_redirect_patterns() -> None:
     patterns = re.findall(r"'([^']+)'", block.group(1))
     assert patterns == [CLAUDE_CALLBACK, LOOPBACK]
     assert '"enabled":${CFOKIT_RESTRICT_REGISTERED_REDIRECTS}' in script
+
+
+def _client(client_id: str) -> dict[str, Any]:
+    return next(c for c in _realm()["clients"] if c["clientId"] == client_id)
+
+
+def test_cfokit_s_agent_can_only_exchange_a_person_s_token() -> None:
+    """ADR-0077: a confidential client allowed standard token exchange and no other grant, so it
+    acts only for a person whose token it was handed, never as itself (`IAM-10`)."""
+    agent = _client("cfokit-agent")
+    assert agent["publicClient"] is False
+    assert agent["attributes"]["standard.token.exchange.enabled"] == "true"
+    for grant in (
+        "standardFlowEnabled",
+        "implicitFlowEnabled",
+        "directAccessGrantsEnabled",
+        "serviceAccountsEnabled",
+    ):
+        assert agent[grant] is False, grant
+
+
+def test_cfokit_s_agent_is_off_and_holds_no_secret_unless_a_deployment_gives_one() -> None:
+    """A deployment that does not run the chat has no exchange to protect, and the realm file
+    names no secret: IaC creates the container, the value is populated out of band
+    (ADR-0016)."""
+    agent = _client("cfokit-agent")
+    assert agent["enabled"] == "${CFOKIT_AGENT_ENABLED:false}"
+    assert agent["secret"] == "${CFOKIT_AGENT_CLIENT_SECRET}"  # noqa: S105 - a placeholder
+
+
+def test_only_the_web_client_s_tokens_name_the_agent() -> None:
+    """Keycloak exchanges a token only for a client its audience names (ADR-0077 § 1), so the
+    web client's tokens name the agent and no client scope a registered agent receives
+    does."""
+    web = _client("cfokit-web")
+    assert {
+        m["config"].get("included.client.audience") for m in web.get("protocolMappers", [])
+    } == {"cfokit-agent"}
+    for scope in _realm()["clientScopes"]:
+        for mapper in scope.get("protocolMappers", []):
+            assert mapper["config"].get("included.client.audience") != "cfokit-agent"

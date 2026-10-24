@@ -1,7 +1,7 @@
 """Starting, appending to and reading a person's conversations, and their files (ADR-0076).
 
 **A conversation is one person's** (`PLT-04`). The person is the principal itself when it is a
-person, and the person an agent acts for when it is an agent, which is how CFOKit's runtime
+person, and the person an agent acts for when it is an agent, which is how CFOKit's agent
 appends to the conversation of whoever it is serving (ADR-0077). Another person's conversation
 is not found, never refused, so a caller cannot learn that it exists.
 
@@ -204,7 +204,7 @@ def append_message(
     """Add a message at the end of one of the person's conversations.
 
     Refused whole if a file it names is not this entity's. The same key replays the place the
-    message was given, so a runtime retrying after a dropped response does not add it twice.
+    message was given, so an agent retrying after a dropped response does not add it twice.
     """
     if not context.idempotency_key:
         raise IdempotencyKeyRequired("every write requires an idempotency key")

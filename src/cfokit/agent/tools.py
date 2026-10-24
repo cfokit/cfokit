@@ -21,7 +21,7 @@ from pydantic_ai.tools import RunContext, ToolDefinition
 from pydantic_ai.toolsets import AbstractToolset
 from pydantic_ai.toolsets.abstract import ToolsetTool
 
-from cfokit.runtime import offered
+from cfokit.agent import offered
 
 __all__ = ["PublishedTools", "ToolWithheld"]
 
@@ -39,7 +39,7 @@ class ToolWithheld(Exception):
 
 
 class PublishedTools(AbstractToolset[Any]):
-    """CFOKit's MCP tools, through a client already signed in as the runtime acting for a
+    """CFOKit's MCP tools, through a client already signed in as the agent acting for a
     person."""
 
     def __init__(self, client: Client, *, holds_untrusted: bool) -> None:

@@ -124,9 +124,9 @@ def test_a_person_s_conversation_is_their_own() -> None:
 
 
 def test_an_agent_s_conversation_is_its_person_s() -> None:
-    """The runtime appends to the conversation of whoever it serves (ADR-0077)."""
+    """The agent appends to the conversation of whoever it serves (ADR-0077)."""
     agent = Principal(
-        id="client:cfokit-runtime", actor_class=ActorClass.AGENT, acting_for="user:geoff"
+        id="client:cfokit-agent", actor_class=ActorClass.AGENT, acting_for="user:geoff"
     )
     assert person_of(agent) == "user:geoff"
 

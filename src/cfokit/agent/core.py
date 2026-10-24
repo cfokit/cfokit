@@ -1,8 +1,8 @@
 """The conversation, read and appended through the published REST API (ADR-0076).
 
-The runtime holds no database credential and no state: at the start of a turn it reads the
+The agent holds no database credential and no state: at the start of a turn it reads the
 conversation from core, and it appends each message it means to keep. Every call carries the
-token exchanged for the person (ADR-0077), so core sees the runtime acting for them.
+token exchanged for the person (ADR-0077), so core sees the agent acting for them.
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ __all__ = ["Core", "CoreAPI", "Stored", "Thread"]
 
 @dataclass(frozen=True, slots=True)
 class Stored:
-    """One stored message: its place and its content, the runtime's own serialized form."""
+    """One stored message: its place and its content, the agent's own serialized form."""
 
     position: int
     content: Any

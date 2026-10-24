@@ -11,7 +11,7 @@ decision-makers: [Geoff]
 
 ## Context and Problem Statement
 
-CFOKit's runtime is a stateless component (ADR-0075). A conversation still has to be kept: the
+CFOKit's agent is a stateless component (ADR-0075). A conversation still has to be kept: the
 person's messages, the agent's replies, each tool call and its result, and the files the person
 attaches, such as receipts and bank statement PDFs. This record decides where and in what form.
 
@@ -38,12 +38,12 @@ Facts that bear on the answer:
   deletion and the audit row, built once.
 * **Exactly what the model saw is recoverable.**
 * **No second store, and no second copy with the provider.**
-* **The runtime stays stateless and reaches no database.**
+* **The agent stays stateless and reaches no database.**
 
 ## Considered Options
 
 * In core's database, behind the published API, as Pydantic AI's message JSON with files as rows
-* In a separate database the runtime owns
+* In a separate database the agent owns
 * An object store for files, beside Postgres
 * Text or Markdown transcripts
 
@@ -80,7 +80,7 @@ still deferred; nothing here builds it, and the row is what it would attach.
 ### 3. Where it lives
 
 The conversation and file tables are a module in core, scoped by row-level security like every
-company's rows, writing one `audit_log` row per change. The runtime and the web client reach them
+company's rows, writing one `audit_log` row per change. The agent and the web client reach them
 through the published API, a contract change reviewed at Gate 5.
 
 ### Consequences
@@ -88,7 +88,7 @@ through the published API, a contract change reviewed at Gate 5.
 * Good, because export, retention, deletion, isolation and the audit row hold for conversations
   without being built again.
 * Good, because a file and the transaction drafted from it are linked by a key Postgres enforces.
-* Good, because the runtime holds no state, and nothing is kept with the provider.
+* Good, because the agent holds no state, and nothing is kept with the provider.
 * Bad, because files make the database larger, and its backups with it.
 * Bad, because the stored form is Pydantic AI's, so leaving Pydantic AI means converting stored
   messages once.
@@ -107,15 +107,15 @@ through the published API, a contract change reviewed at Gate 5.
 * Good, because it meets every driver.
 * Bad, because the database carries the files' bytes.
 
-### In a separate database the runtime owns
+### In a separate database the agent owns
 
-The cleanest separation: the runtime's data apart from the books, its schema free to change alone.
+The cleanest separation: the agent's data apart from the books, its schema free to change alone.
 
-* Good, because the runtime's tables could change without a migration in core.
+* Good, because the agent's tables could change without a migration in core.
 * Bad, because row-level security needs the company's grants, which are core's, so the second
   database would hold a copy that drifts, and export, retention and deletion would be built twice.
 * Bad, because a file cannot be referenced by a transaction across databases (`BKP-19`).
-* Bad, because the runtime would hold a database credential, which ADR-0022 keeps components from.
+* Bad, because the agent would hold a database credential, which ADR-0022 keeps components from.
 
 ### An object store for files, beside Postgres
 
@@ -144,7 +144,7 @@ The cleanest separation: the runtime's data apart from the books, its schema fre
 admits by copying bytes; messages in Pydantic AI's form are converted once if the framework changes.
 
 Related: ADR-0003 (Postgres only), ADR-0022 (components hold no database), ADR-0047 (an uploaded
-line is drafted), ADR-0075 (the runtime).
+line is drafted), ADR-0075 (CFOKit's agent).
 
 ## Revisit when
 

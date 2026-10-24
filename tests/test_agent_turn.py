@@ -1,6 +1,6 @@
-"""A turn through the runtime, end to end in-process (ADR-0075, ADR-0077).
+"""A turn through the agent, end to end in-process (ADR-0075, ADR-0077).
 
-ADR-0036 layer 3, with no infrastructure and no credential: the runtime's real Starlette app, a
+ADR-0036 layer 3, with no infrastructure and no credential: the agent's real Starlette app, a
 real MCP server from the official SDK standing in for CFOKit's tool surface, Pydantic AI's
 `FunctionModel` standing in for Claude, and in-memory stand-ins for core and the issuer. What is
 asserted is what a turn leaves behind — the messages kept and the tools offered — never prose.
@@ -21,16 +21,17 @@ from pydantic_ai.messages import ModelMessage
 from pydantic_ai.models.function import AgentInfo, DeltaToolCall, DeltaToolCalls, FunctionModel
 from starlette.testclient import TestClient
 
-from cfokit.runtime import Skill
-from cfokit.runtime.app import Runtime, create_app
-from cfokit.runtime.core import Stored, Thread
-from cfokit.runtime.tokens import TokenRefused
+from cfokit.agent import Skill
+from cfokit.agent.app import Services, create_app
+from cfokit.agent.core import Stored, Thread
+from cfokit.agent.tokens import TokenRefused
 
 ENTITY = "0b9a6c86-2a7e-4f43-8f4a-1f0d6c2c1e11"
 CONVERSATION = "5f1e2d3c-4b5a-4968-8778-695a4b3c2d1e"
 TURN = f"/entities/{ENTITY}/conversations/{CONVERSATION}/turn"
 PERSON = "geoff-token"
 STRANGER = "someone-else"
+WEB = "https://books.example"
 SKILL = Skill(name="bookkeeper", instructions="You keep the books.", version="bookkeeper@abc")
 
 books = MCPServer("cfokit")
@@ -50,7 +51,7 @@ def post_transaction(entity_id: str, transaction_id: str) -> str:
 
 @dataclass
 class Core:
-    """Core's conversation, in memory: what the runtime reads and appends over REST."""
+    """Core's conversation, in memory: what the agent reads and appends over REST."""
 
     holds_untrusted: bool = False
     kept: list[dict[str, Any]] = field(default_factory=list)
@@ -58,7 +59,7 @@ class Core:
     missing: bool = False
 
     async def thread(self, token: str, entity_id: str, conversation_id: str) -> Thread:
-        assert token == "runtime-token-for-geoff"  # noqa: S105 - a fixture's stand-in
+        assert token == "agent-token-for-geoff"  # noqa: S105 - a fixture's stand-in
         if self.missing:
             request = httpx2.Request("GET", "http://core")
             raise httpx2.HTTPStatusError(
@@ -97,7 +98,7 @@ class Tokens:
     async def for_person(self, person_token: str) -> str:
         if person_token != PERSON:
             raise TokenRefused("the issuer refused the exchange (400)")
-        return "runtime-token-for-geoff"
+        return "agent-token-for-geoff"
 
 
 @asynccontextmanager
@@ -126,7 +127,7 @@ class Bookkeeper:
 def app(core: Core, model: Bookkeeper | None) -> TestClient:
     return TestClient(
         create_app(
-            Runtime(
+            Services(
                 model=None
                 if model is None
                 else FunctionModel(stream_function=model, model_name="claude-opus-5-5"),
@@ -134,7 +135,8 @@ def app(core: Core, model: Bookkeeper | None) -> TestClient:
                 tokens=Tokens(),
                 core=core,
                 connect=connect,
-            )
+            ),
+            web_origin=WEB,
         )
     )
 
@@ -219,7 +221,7 @@ def test_a_conversation_holding_untrusted_content_is_offered_nothing_that_posts(
 def test_with_no_inference_credential_the_chat_is_off() -> None:
     core = Core()
     response = post(app(core, None), asked())
-    assert (response.status_code, response.json()["code"]) == (503, "runtime_off")
+    assert (response.status_code, response.json()["code"]) == (503, "agent_off")
     assert core.kept == []
 
 
@@ -239,3 +241,27 @@ def test_core_s_refusal_is_passed_on() -> None:
     """Another person's conversation is not found in core, and so not found here."""
     response = post(app(Core(missing=True), Bookkeeper()), asked())
     assert (response.status_code, response.json()["code"]) == (404, "conversation_not_found")
+
+
+def preflight(origin: str) -> Any:
+    return app(Core(), Bookkeeper()).options(
+        TURN,
+        headers={
+            "Origin": origin,
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "authorization,content-type",
+        },
+    )
+
+
+def test_the_web_client_s_origin_may_call_the_agent() -> None:
+    """The agent has its own address, so the chat window's call is cross-origin (ADR-0075 §
+    1); the Fetch standard's CORS preflight is what lets the browser make it."""
+    response = preflight(WEB)
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == WEB
+
+
+def test_no_other_origin_may() -> None:
+    response = preflight("https://elsewhere.example")
+    assert "access-control-allow-origin" not in response.headers

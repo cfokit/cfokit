@@ -1,14 +1,14 @@
-"""Conversations with CFOKit's runtime, and the files people attach to them.
+"""Conversations with CFOKit's agent, and the files people attach to them.
 
-ADR-0075 decides the runtime, ADR-0076 where its conversations are kept.
+ADR-0075 decides the agent, ADR-0076 where its conversations are kept.
 
-The runtime is a stateless component (ADR-0075); what it and the person said is kept here, in
+The agent is a stateless component (ADR-0075); what it and the person said is kept here, in
 core, because it is the company's record. A conversation is evidence of what the model was given
 and what it did (`SOC1-06`), so it is appended to and never rewritten. Its files are content the
 organization did not author (`BKP-20`), and are marked so (`SOC2-01`).
 
 **This module stores messages and interprets none of them.** A message's content is the
-runtime's own serialized form, Pydantic AI's provider-neutral JSON, and nothing here reads
+agent's own serialized form, Pydantic AI's provider-neutral JSON, and nothing here reads
 inside it; the model and the skill that wrote a response are columns beside it, not fields
 fished out of it. The module knows nothing of the ledger's books and never imports another
 module (ADR-0022).
@@ -62,7 +62,7 @@ class Kind(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class Message:
-    """One message as the runtime hands it over.
+    """One message as the agent hands it over.
 
     `content` is opaque here. `file_ids` are the files a request carried, which is what tells
     whether a conversation holds content the organization did not author (ADR-0075 § 2).

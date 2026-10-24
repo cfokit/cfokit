@@ -1498,7 +1498,7 @@
                 "type": "array"
               }
             ],
-            "description": "The runtime's own serialized message, stored as sent and never reshaped.",
+            "description": "The agent's own serialized message, stored as sent and never reshaped.",
             "title": "Content"
           },
           "file_ids": {

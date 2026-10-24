@@ -630,6 +630,35 @@
       "attributes": {
         "pkce.code.challenge.method": "S256",
         "post.logout.redirect.uris": "${PUBLIC_BASE_URL}/app/*"
+      },
+      "protocolMappers": [
+        {
+          "name": "cfokit-agent-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "cfokit-agent",
+            "access.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "cfokit-agent",
+      "name": "CFOKit's agent",
+      "description": "The agent behind the web app's chat (ADR-0075). Confidential, and allowed nothing but standard token exchange: it presents a person's web-client token and receives one issued to itself, for that person (ADR-0077).",
+      "enabled": "${CFOKIT_AGENT_ENABLED:false}",
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${CFOKIT_AGENT_CLIENT_SECRET}",
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "attributes": {
+        "standard.token.exchange.enabled": "true"
       }
     }
   ],
