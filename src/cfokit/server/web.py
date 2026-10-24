@@ -26,19 +26,26 @@ PREFIX = "/app"
 # The client's security headers, in one place: the REST service sends these for /app/, and the
 # CDN on GCP is configured with the same values (ADR-0049 § 6, ADR-0055 § 2). Everything the
 # client loads is bundled, so its own origin is the only source it needs — except that signing
-# in fetches the issuer's metadata and exchanges a code at its token endpoint, so the page may
-# connect to the issuer's origin and nowhere else.
-def security_headers(issuer_url: str) -> dict[str, str]:
-    """The headers for every response under ``/app/``, given the issuer it signs in with."""
-    issuer = urlsplit(issuer_url)
+# in fetches the issuer's metadata and exchanges a code at its token endpoint, and the chat
+# window streams a turn from CFOKit's agent at its own address (ADR-0075 § 1), so the page may
+# connect to those two origins and nowhere else.
+def security_headers(issuer_url: str, agent_url: str | None = None) -> dict[str, str]:
+    """The headers for every response under ``/app/``, given the issuer it signs in with and,
+    where the deployment runs one, CFOKit's agent."""
+    origins = [_origin(issuer_url)] + ([] if agent_url is None else [_origin(agent_url)])
     return {
         "Content-Security-Policy": (
-            f"default-src 'self'; connect-src 'self' {issuer.scheme}://{issuer.netloc}; "
+            f"default-src 'self'; connect-src 'self' {' '.join(origins)}; "
             "base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'"
         ),
         "X-Content-Type-Options": "nosniff",
         "Referrer-Policy": "same-origin",
     }
+
+
+def _origin(url: str) -> str:
+    parts = urlsplit(url)
+    return f"{parts.scheme}://{parts.netloc}"
 
 
 # Vite names every file under assets/ by its content hash, so a name never changes meaning and
@@ -48,10 +55,12 @@ IMMUTABLE = "public, max-age=31536000, immutable"
 REVALIDATE = "no-cache"
 
 
-def mount_web_client(app: FastAPI, root: Path, issuer_url: str) -> None:
+def mount_web_client(
+    app: FastAPI, root: Path, issuer_url: str, agent_url: str | None = None
+) -> None:
     """Serve the build in ``root`` at ``/app/``, and send ``/`` there."""
     root = root.resolve()
-    headers = security_headers(issuer_url)
+    headers = security_headers(issuer_url, agent_url)
     index = root / "index.html"
 
     def respond(path: Path) -> Response:

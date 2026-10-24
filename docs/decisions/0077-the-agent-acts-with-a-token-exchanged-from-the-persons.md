@@ -84,7 +84,9 @@ not.
 CFOKit's agent is allowed like any other: the first time a person uses the chat in a company, the
 server refuses with `agent_not_allowed` and its link, and the chat window offers that link, where
 the person allows it as `bookkeeper` or `reader` (ADR-0066). What it may do is the intersection of
-that grant and the person's own.
+that grant and the person's own. Refused, the agent first opens a session on the MCP surface, which
+is what records an agent as connected for a person (ADR-0066 § 3): otherwise it would never have
+connected, since it opens one only to work, and the allowing the link leads to would be refused.
 
 ### 2. Nothing unattended runs the model
 

@@ -72,5 +72,7 @@ def rest_app(
     app.include_router(activity_api.router)
     app.include_router(conversations_api.router)
     if web_root is not None:
-        mount_web_client(app, web_root, settings.auth_issuer_url)
+        mount_web_client(
+            app, web_root, settings.auth_issuer_url, settings.agent_public_base_url
+        )
     return app

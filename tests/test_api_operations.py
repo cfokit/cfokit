@@ -105,13 +105,13 @@ def test_connection_names_the_configured_mcp_address() -> None:
     response = client.get("/connection", headers={"Authorization": "Bearer t"})
 
     assert response.status_code == 200
-    assert response.json() == {"mcp_url": "https://mcp.example.test/mcp"}
+    assert response.json()["mcp_url"] == "https://mcp.example.test/mcp"
 
 
 def test_connection_says_so_when_it_is_not_told() -> None:
     client = TestClient(create_app(SETTINGS, authenticator=_Accepts()))
 
-    assert client.get("/connection").json() == {"mcp_url": None}
+    assert client.get("/connection").json() == {"mcp_url": None, "agent_url": None}
 
 
 def test_connection_ignores_the_host_it_was_reached_at() -> None:
@@ -121,7 +121,16 @@ def test_connection_ignores_the_host_it_was_reached_at() -> None:
 
     body = client.get("/connection", headers={"Host": "attacker.test"}).json()
 
-    assert body == {"mcp_url": "https://mcp.example.test/mcp"}
+    assert body["mcp_url"] == "https://mcp.example.test/mcp"
+
+
+def test_connection_names_where_the_chat_reaches_cfokit_s_agent() -> None:
+    """ADR-0075 § 1: the agent has its own address, which the window is told rather than
+    guessing, from AGENT_PUBLIC_BASE_URL."""
+    settings = replace(SETTINGS, agent_public_base_url="https://agent.example.test/")
+    client = TestClient(create_app(settings, authenticator=_Accepts()))
+
+    assert client.get("/connection").json()["agent_url"] == "https://agent.example.test"
 
 
 def test_connection_needs_a_signed_in_person() -> None:

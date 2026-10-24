@@ -38,7 +38,7 @@ from starlette.responses import JSONResponse, Response
 from starlette.routing import Route
 
 from cfokit.agent import Skill
-from cfokit.agent.core import Core
+from cfokit.agent.core import Core, Thread
 from cfokit.agent.tokens import TokenRefused, TokenSource
 from cfokit.agent.tools import PublishedTools
 
@@ -81,6 +81,14 @@ def _prompt(messages: list[ModelMessage]) -> ModelRequest | None:
     return ModelRequest(parts=parts) if parts else None
 
 
+def _code(response: httpx2.Response) -> str | None:
+    try:
+        body = response.json()
+    except ValueError:
+        return None
+    return body.get("code") if isinstance(body, dict) else None
+
+
 def _dump(message: ModelMessage) -> Any:
     return ModelMessagesTypeAdapter.dump_python([message], mode="json")[0]
 
@@ -94,30 +102,73 @@ def create_app(services: Services, *, web_origin: str | None = None) -> Starlett
         else Agent(services.model, instructions=services.skill.instructions, name="cfokit")
     )
 
-    async def turn(request: Request) -> Response:
-        if agent is None:
-            return _refusal(
-                503, "agent_off", "no inference credential is configured, so the chat is off"
-            )
+    async def opened(request: Request) -> tuple[str, Thread] | Response:
+        """The agent's token for the person asking, and the conversation they named; or the
+        refusal to answer with."""
         person_token = _bearer(request)
         if person_token is None:
-            return _refusal(401, "not_authenticated", "a turn needs the person's bearer token")
-        entity_id = request.path_params["entity_id"]
-        conversation_id = request.path_params["conversation_id"]
-
+            return _refusal(401, "not_authenticated", "the person's bearer token is required")
         try:
             token = await services.tokens.for_person(person_token)
         except TokenRefused as refused:
             return _refusal(403, refused.code, str(refused))
+        entity_id = request.path_params["entity_id"]
         try:
-            thread = await services.core.thread(token, entity_id, conversation_id)
+            thread = await services.core.thread(
+                token, entity_id, request.path_params["conversation_id"]
+            )
         except httpx2.HTTPStatusError as failed:
+            if _code(failed.response) == "agent_not_allowed":
+                # The person allows an agent that has connected for them, and an agent connects
+                # by opening a session on the MCP surface, which records it (ADR-0066 § 3). The
+                # agent opens one only to work, which it may not do yet, so it opens one now:
+                # without it the person's allowing would be refused, and the chat never start.
+                # Best effort: the refusal and its link still reach the person if it fails.
+                try:
+                    async with services.connect(token):
+                        pass
+                except Exception:
+                    log.exception("agent connection not opened", extra={"entity_id": entity_id})
             # Core's own refusal, passed on: `agent_not_allowed` with its link, or not found.
             return Response(
                 failed.response.content,
                 status_code=failed.response.status_code,
                 media_type="application/json",
             )
+        return token, thread
+
+    async def history(request: Request) -> Response:
+        """The conversation so far, as AG-UI messages, for the window to show on opening.
+
+        Converted here, by the same library that wrote it, so the window reads the protocol it
+        already speaks and never the stored form (ADR-0076). Served with the chat off too: what
+        was said stays readable without an inference credential.
+        """
+        found = await opened(request)
+        if isinstance(found, Response):
+            return found
+        _, thread = found
+        stored = ModelMessagesTypeAdapter.validate_python([m.content for m in thread.messages])
+        return JSONResponse(
+            {
+                "messages": [
+                    message.model_dump(mode="json", by_alias=True, exclude_none=True)
+                    for message in AGUIAdapter.dump_messages(stored)
+                ]
+            }
+        )
+
+    async def turn(request: Request) -> Response:
+        if agent is None:
+            return _refusal(
+                503, "agent_off", "no inference credential is configured, so the chat is off"
+            )
+        found = await opened(request)
+        if isinstance(found, Response):
+            return found
+        token, thread = found
+        entity_id = request.path_params["entity_id"]
+        conversation_id = request.path_params["conversation_id"]
 
         adapter = await AGUIAdapter.from_request(request, agent=agent)
         prompt = _prompt(adapter.messages)
@@ -178,13 +229,18 @@ def create_app(services: Services, *, web_origin: str | None = None) -> Starlett
                 turn,
                 methods=["POST"],
             ),
+            Route(
+                "/entities/{entity_id}/conversations/{conversation_id}",
+                history,
+                methods=["GET"],
+            ),
             Route("/healthz", healthz, methods=["GET"]),
         ],
         middleware=[
             Middleware(
                 CORSMiddleware,
                 allow_origins=[] if web_origin is None else [web_origin],
-                allow_methods=["POST"],
+                allow_methods=["GET", "POST"],
                 allow_headers=["authorization", "content-type", "accept"],
             )
         ],

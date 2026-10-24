@@ -141,6 +141,11 @@ class ConnectionResponse(BaseModel):
         description="Where an agent connects to this deployment's MCP surface, or null when "
         "the REST service is not told (MCP_PUBLIC_BASE_URL)."
     )
+    agent_url: str | None = Field(
+        default=None,
+        description="Where the web client's chat window reaches CFOKit's agent, or null when "
+        "the REST service is not told (AGENT_PUBLIC_BASE_URL) and the client has no chat.",
+    )
 
 
 class CreateEntityRequest(BaseModel):

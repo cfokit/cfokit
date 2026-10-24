@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { createRootRoute, createRoute, createRouter, Outlet } from "@tanstack/react-router";
 import { AgentPage } from "./agents/AgentPage";
 import { SignedIn } from "./auth/SignedIn";
@@ -98,6 +99,42 @@ const settings = createRoute({
   ),
 });
 
+// The chat and the libraries it is built on load only when it is opened, so no other page waits
+// for them.
+const ChatPage = lazy(() => import("./chat/ChatPage").then((m) => ({ default: m.ChatPage })));
+
+// The chat with CFOKit's agent in a company (ADR-0075). Without a conversation named, the page opens
+// the person's newest or starts one, and replaces the address with that conversation's.
+const chat = createRoute({
+  getParentRoute: () => root,
+  path: "/companies/$entityId/chat",
+  component: function Chat() {
+    const { entityId } = chat.useParams();
+    return (
+      <SignedIn>
+        <Suspense>
+          <ChatPage entityId={entityId} />
+        </Suspense>
+      </SignedIn>
+    );
+  },
+});
+
+const conversation = createRoute({
+  getParentRoute: () => root,
+  path: "/companies/$entityId/chat/$conversationId",
+  component: function Conversation() {
+    const { entityId, conversationId } = conversation.useParams();
+    return (
+      <SignedIn>
+        <Suspense>
+          <ChatPage entityId={entityId} conversationId={conversationId} />
+        </Suspense>
+      </SignedIn>
+    );
+  },
+});
+
 // Allowing an agent in the person's companies (ADR-0066 § 2). Every `agent_not_allowed` refusal
 // links here, so the path is part of what the server says.
 const agents = createRoute({
@@ -128,6 +165,8 @@ export const router = createRouter({
     connect,
     ask,
     questions,
+    chat,
+    conversation,
     settings,
     agents,
     signedIn,

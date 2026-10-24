@@ -17,6 +17,7 @@
 // Run with `pnpm design-system`. Publishing the output to the artifact is a separate step.
 
 import { copyFile, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import tailwindcss from "@tailwindcss/vite";
@@ -72,12 +73,48 @@ for (const [what, names] of [
   }
 }
 
+// React comes from the page, as Claude Design provides it on React 18, so the bundle must never
+// carry its own. Declaring "react" external is not enough: a dependency built as CommonJS keeps a
+// bare `require("react")` an IIFE cannot satisfy, and react-dom and the JSX runtime would be
+// bundled at our version beside the page's. So each resolves to a module reading the page's
+// globals, with the same named exports.
+const requireHere = createRequire(import.meta.url);
+function reactFromThePage() {
+  const globals = { react: "React", "react-dom": "ReactDOM", "react-dom/client": "ReactDOM" };
+  const prefix = "\0page:";
+  return {
+    name: "react-from-the-page",
+    enforce: "pre",
+    resolveId(id) {
+      if (id in globals || id === "react/jsx-runtime") return prefix + id;
+    },
+    load(id) {
+      if (!id.startsWith(prefix)) return undefined;
+      const name = id.slice(prefix.length);
+      if (name === "react/jsx-runtime") {
+        return (
+          "const R = globalThis.React;" +
+          "const jsx = (type, props, key) => R.createElement(type, key === undefined ? props : { ...props, key });" +
+          "export { jsx, jsx as jsxs }; export const Fragment = R.Fragment;"
+        );
+      }
+      const names = Object.keys(requireHere(name)).filter(
+        (n) => /^[A-Za-z_$][\w$]*$/.test(n) && n !== "default",
+      );
+      return (
+        `const M = globalThis.${globals[name]}; export default M;` +
+        names.map((n) => `export const ${n} = M.${n};`).join("")
+      );
+    },
+  };
+}
+
 await build({
   configFile: false,
   root: web,
   publicDir: false,
   logLevel: "warn",
-  plugins: [tailwindcss()],
+  plugins: [reactFromThePage(), tailwindcss()],
   oxc: { jsx: { runtime: "classic", pragma: "React.createElement", pragmaFrag: "React.Fragment" } },
   define: { "process.env.NODE_ENV": JSON.stringify("production") },
   build: {
@@ -91,7 +128,6 @@ await build({
       fileName: () => "bundle.js",
       cssFileName: "bundle",
     },
-    rollupOptions: { external: ["react"], output: { globals: { react: "React" } } },
   },
 });
 

@@ -799,6 +799,18 @@
       },
       "ConnectionResponse": {
         "properties": {
+          "agent_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where the web client's chat window reaches CFOKit's agent, or null when the REST service is not told (AGENT_PUBLIC_BASE_URL) and the client has no chat.",
+            "title": "Agent Url"
+          },
           "mcp_url": {
             "anyOf": [
               {
@@ -3497,7 +3509,7 @@
     },
     "/connection": {
       "get": {
-        "description": "The MCP surface's address, from configuration, for the web client to show a person\nconnecting their agent. Configured rather than derived: the REST service cannot know\nwhere another service is reachable, and request headers lie behind a proxy\n(ADR-0004).",
+        "description": "The MCP surface's address, from configuration, for the web client to show a person\nconnecting their agent, and CFOKit's own agent's, where its chat window sends a turn.\nConfigured rather than derived: the REST service cannot know where another service is\nreachable, and request headers lie behind a proxy (ADR-0004).",
         "operationId": "connection_connection_get",
         "parameters": [
           {
