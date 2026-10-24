@@ -16,7 +16,9 @@ git ignores: **nothing QuickBooks returns is ever committed**. What is committed
 that it agreed, `tests/fixtures/quickbooks/validation.json`, written only when every comparison
 does.
 
-Credentials come from the environment and are never printed or committed: `QBO_REALM_ID` (the
+Setting up a sandbox, and where the values below come from, is in `CONTRIBUTING.md`, under "The
+synthetic QuickBooks fixture". Credentials come from the environment and are never printed or
+committed: `QBO_REALM_ID` (the
 sandbox company's id) and either `QBO_ACCESS_TOKEN`, an access token good for an hour, or
 `QBO_CLIENT_ID`, `QBO_CLIENT_SECRET` and `QBO_REFRESH_TOKEN`, from which the tool gets access
 tokens itself as each one expires. A refresh token lasts about 100 days, which suits a variable
