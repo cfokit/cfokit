@@ -337,11 +337,14 @@ def create_app(settings: Settings, authenticator: Authenticator | None = None) -
         _acting: Annotated[Principal, Depends(get_principal)],
     ) -> ConnectionResponse:
         """The MCP surface's address, from configuration, for the web client to show a person
-        connecting their agent. Configured rather than derived: the REST service cannot know
-        where another service is reachable, and request headers lie behind a proxy
-        (ADR-0004)."""
-        base = settings.mcp_public_base_url
-        return ConnectionResponse(mcp_url=None if base is None else f"{base.rstrip('/')}/mcp")
+        connecting their agent, and CFOKit's own agent's, where its chat window sends a turn.
+        Configured rather than derived: the REST service cannot know where another service is
+        reachable, and request headers lie behind a proxy (ADR-0004)."""
+        base, agent = settings.mcp_public_base_url, settings.agent_public_base_url
+        return ConnectionResponse(
+            mcp_url=None if base is None else f"{base.rstrip('/')}/mcp",
+            agent_url=None if agent is None else agent.rstrip("/"),
+        )
 
     @app.get(
         "/agents",

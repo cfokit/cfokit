@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient
 
 from cfokit.ledger.config import Settings
 from cfokit.server import rest_app
+from cfokit.server.web import security_headers
 
 INDEX = "<!doctype html><title>CFOKit</title>"
 SCRIPT = "console.log('client')"
@@ -89,6 +90,16 @@ def test_the_page_may_connect_to_the_issuer_and_nowhere_else(client: TestClient)
     csp = client.get("/app/").headers["content-security-policy"]
     directives = dict(d.strip().split(" ", 1) for d in csp.split(";"))
     assert directives["connect-src"] == "'self' http://localhost:8180"
+
+
+def test_the_page_may_also_connect_to_cfokit_s_agent_where_one_runs() -> None:
+    """ADR-0075 § 1: the chat window streams a turn from the agent's own address, so connect-src
+    names that origin too, and still no other."""
+    headers = security_headers("http://localhost:8180/realms/cfokit", "https://localhost:8082/")
+    directives = dict(
+        d.strip().split(" ", 1) for d in headers["Content-Security-Policy"].split(";")
+    )
+    assert directives["connect-src"] == "'self' http://localhost:8180 https://localhost:8082"
 
 
 def test_hashed_assets_are_immutable_and_the_index_revalidates(client: TestClient) -> None:

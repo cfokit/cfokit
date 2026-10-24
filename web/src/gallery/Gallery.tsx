@@ -4,6 +4,7 @@ import {
   AppFrame,
   Button,
   Card,
+  Conversation,
   CopyBlock,
   Dialog,
   DropZone,
@@ -15,6 +16,26 @@ import {
   TextField,
   TextLink,
 } from "../components";
+
+const EXAMPLE_CONVERSATION = [
+  { role: "user" as const, content: "How did we do last quarter?" },
+  {
+    role: "assistant" as const,
+    content: [
+      {
+        type: "tool-call" as const,
+        toolCallId: "call-1",
+        toolName: "profit_and_loss",
+        args: {},
+        result: "",
+      },
+      {
+        type: "text" as const,
+        text: "Northwind made **a profit** last quarter.\n\n| Line | Q3 |\n|---|---|\n| Revenue | 48,200.00 |\n| Expenses | 39,950.00 |",
+      },
+    ],
+  },
+];
 
 // Every component in its states, for looking at in a browser (`pnpm dev`, then /app/gallery.html)
 // and for the accessibility test. Not part of the build. Its copy follows the design system's
@@ -115,6 +136,12 @@ export function Gallery() {
               {refused} isn&apos;t a QuickBooks export. Choose the .zip QuickBooks gave you.
             </Notice>
           )}
+        </Section>
+
+        <Section title="Conversation">
+          <div className="flex h-96 flex-col">
+            <Conversation placeholder="Ask about your books" messages={EXAMPLE_CONVERSATION} />
+          </div>
         </Section>
 
         <Section title="Progress">

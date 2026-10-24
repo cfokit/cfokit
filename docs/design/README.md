@@ -138,6 +138,11 @@ live in its code and are published into this system from there.
   `bp-tablet` the person and "Sign out" move into a menu opened from a button at the right.
   Sign-in screens have no app frame: `cfokit-lockup.svg` above a single `surface` card on
   `paper`, the card filling the width on a phone.
+- **Conversation.** The chat with CFOKit's agent. The person's messages at the right on `sunken`
+  with `radius-md`; the agent's answers at the left in `body` `ink`, its Markdown rendered as
+  elements, tables divided by `rule`. Each tool it used is one `caption` line in `ink-muted`. The
+  composer is an input on `surface` with a `control-border` hairline and the primary "Send", which
+  becomes a secondary "Stop" while the agent answers.
 - **Dialog.** A `surface` panel with `radius-lg` and `shadow-overlay`, centered. Below
   `bp-tablet` it is a sheet rising from the bottom edge, full width, with its actions in thumb
   reach.

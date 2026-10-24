@@ -36,6 +36,9 @@ SKILL = Skill(name="bookkeeper", instructions="You keep the books.", version="bo
 
 books = MCPServer("cfokit")
 
+# Every session the agent opened on the tool surface, by the token it opened it with.
+SESSIONS: list[str] = []
+
 
 @books.tool()
 def profit_and_loss(entity_id: str) -> str:
@@ -57,17 +60,24 @@ class Core:
     kept: list[dict[str, Any]] = field(default_factory=list)
     keys: set[str] = field(default_factory=set)
     missing: bool = False
+    not_allowed: bool = False
 
     async def thread(self, token: str, entity_id: str, conversation_id: str) -> Thread:
         assert token == "agent-token-for-geoff"  # noqa: S105 - a fixture's stand-in
-        if self.missing:
+        if self.missing or self.not_allowed:
+            status, code = (
+                (403, "agent_not_allowed")
+                if self.not_allowed
+                else (
+                    404,
+                    "conversation_not_found",
+                )
+            )
             request = httpx2.Request("GET", "http://core")
             raise httpx2.HTTPStatusError(
-                "not found",
+                code,
                 request=request,
-                response=httpx2.Response(
-                    404, json={"code": "conversation_not_found"}, request=request
-                ),
+                response=httpx2.Response(status, json={"code": code}, request=request),
             )
         return Thread(
             holds_untrusted=self.holds_untrusted,
@@ -103,6 +113,7 @@ class Tokens:
 
 @asynccontextmanager
 async def connect(token: str) -> AsyncIterator[Client]:
+    SESSIONS.append(token)
     async with Client(books) as client:
         yield client
 
@@ -265,3 +276,50 @@ def test_the_web_client_s_origin_may_call_the_agent() -> None:
 def test_no_other_origin_may() -> None:
     response = preflight("https://elsewhere.example")
     assert "access-control-allow-origin" not in response.headers
+
+
+def history(client: TestClient, token: str | None = PERSON) -> Any:
+    headers = {} if token is None else {"Authorization": f"Bearer {token}"}
+    return client.get(f"/entities/{ENTITY}/conversations/{CONVERSATION}", headers=headers)
+
+
+def test_the_conversation_so_far_is_served_as_ag_ui_messages() -> None:
+    """AG-UI's message model: the question, the call and its result, then the answer."""
+    core = Core()
+    client = app(core, Bookkeeper())
+    post(client, asked())
+
+    messages = history(client).json()["messages"]
+
+    assert [m["role"] for m in messages] == ["user", "assistant", "tool", "assistant"]
+    assert messages[0]["content"] == "How did we do last quarter?"
+    assert [c["function"]["name"] for c in messages[1]["toolCalls"]] == ["profit_and_loss"]
+    assert messages[2]["toolCallId"] == messages[1]["toolCalls"][0]["id"]
+    assert messages[3]["content"] == "Revenue was 1,200.00."
+
+
+def test_what_was_said_stays_readable_with_the_chat_off() -> None:
+    core = Core()
+    post(app(core, Bookkeeper()), asked())
+    assert len(history(app(core, None)).json()["messages"]) == 4
+
+
+def test_reading_the_conversation_needs_the_person_s_token() -> None:
+    response = history(app(Core(), Bookkeeper()), token=None)
+    assert (response.status_code, response.json()["code"]) == (401, "not_authenticated")
+
+
+def test_an_agent_not_yet_allowed_connects_so_the_person_can_allow_it() -> None:
+    """ADR-0066 § 3: a person allows an agent that has connected for them, and the server
+    records a connection when an agent opens a session. Refused, the agent opens one, then
+    passes on the refusal and its link (ADR-0077 § 1)."""
+    SESSIONS.clear()
+    response = history(app(Core(not_allowed=True), Bookkeeper()))
+    assert (response.status_code, response.json()["code"]) == (403, "agent_not_allowed")
+    assert SESSIONS == ["agent-token-for-geoff"]
+
+
+def test_no_other_refusal_opens_a_session() -> None:
+    SESSIONS.clear()
+    history(app(Core(missing=True), Bookkeeper()))
+    assert SESSIONS == []

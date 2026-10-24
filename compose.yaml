@@ -218,6 +218,9 @@ services:
       TLS_KEY_FILE: /etc/cfokit/tls-server/key.pem
       # The MCP service's own address, which the web client shows a person connecting their agent.
       MCP_PUBLIC_BASE_URL: ${MCP_PUBLIC_BASE_URL:-https://localhost:8081}
+      # CFOKit's agent's own address, where the web client's chat window sends a turn; the page's
+      # CSP may connect there (ADR-0075 § 1).
+      AGENT_PUBLIC_BASE_URL: ${AGENT_PUBLIC_BASE_URL:-https://localhost:8082}
     volumes:
       - ./.local/tls/ca:/etc/cfokit/tls:ro
       - ./.local/tls/cfokit:/etc/cfokit/tls-server:ro
