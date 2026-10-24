@@ -16,9 +16,13 @@ git ignores: **nothing QuickBooks returns is ever committed**. What is committed
 that it agreed, `tests/fixtures/quickbooks/validation.json`, written only when every comparison
 does.
 
-Credentials come from the environment and are never printed: `QBO_ACCESS_TOKEN` (an OAuth access
-token for the sandbox company, from Intuit's OAuth Playground or your own app) and
-`QBO_REALM_ID`. `QBO_BASE_URL` defaults to the sandbox host.
+Credentials come from the environment and are never printed or committed: `QBO_REALM_ID` (the
+sandbox company's id) and either `QBO_ACCESS_TOKEN`, an access token good for an hour, or
+`QBO_CLIENT_ID`, `QBO_CLIENT_SECRET` and `QBO_REFRESH_TOKEN`, from which the tool gets access
+tokens itself as each one expires. A refresh token lasts about 100 days, which suits a variable
+set once in an environment's settings. Intuit may answer a refresh with a new refresh token;
+the newest is kept under `.local/qbo-sandbox/`, readable by its owner only, and used in
+preference to the variable. `QBO_BASE_URL` defaults to the sandbox host.
 
 The layout — header rows, indentation, formulas, footers — is not something the API can show. It
 is checked once, by hand, against a real Export Data download (`compare-export`).
@@ -26,6 +30,7 @@ is checked once, by hand, against a real Export Data download (`compare-export`)
 
 from __future__ import annotations
 
+import base64
 import difflib
 import hashlib
 import json
@@ -84,24 +89,72 @@ def encode(value: Json) -> bytes:
 # --- the API --------------------------------------------------------------------------------
 
 
+TOKEN_URL = "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer"  # noqa: S105 — a URL
+TOKEN_LIFETIME = 50 * 60  # seconds; Intuit's access tokens last an hour
+REFRESHING = ("QBO_CLIENT_ID", "QBO_CLIENT_SECRET", "QBO_REFRESH_TOKEN")
+
+
 class Sandbox:
     def __init__(self) -> None:
-        try:
-            self._token = os.environ["QBO_ACCESS_TOKEN"]
-            realm = os.environ["QBO_REALM_ID"]
-        except KeyError as missing:
-            raise SystemExit(
-                f"{missing.args[0]} is not set; see this module's docstring"
-            ) from None
+        realm = os.environ.get("QBO_REALM_ID")
+        if not realm:
+            raise SystemExit("QBO_REALM_ID is not set; see this module's docstring")
         base = os.environ.get("QBO_BASE_URL", "https://sandbox-quickbooks.api.intuit.com")
         self.base = f"{base}/v3/company/{realm}"
         # The state directory is named by a hash, so a realm id never lands in a path either.
         self.state = STATE / hashlib.sha256(realm.encode()).hexdigest()[:12]
         self.state.mkdir(parents=True, exist_ok=True)
+        self._token = os.environ.get("QBO_ACCESS_TOKEN", "")
+        self._issued = time.monotonic()
+        self._refreshes = all(os.environ.get(name) for name in REFRESHING)
+        if not self._token and not self._refreshes:
+            missing = [name for name in REFRESHING if not os.environ.get(name)]
+            raise SystemExit(
+                f"QBO_ACCESS_TOKEN is not set, and neither is {', '.join(missing)}; "
+                "see this module's docstring"
+            )
+        if not self._token:
+            self.refresh()
+
+    def refresh(self) -> None:
+        """A new access token from the refresh token, keeping the newest refresh token."""
+        kept = self.state / "refresh_token"
+        refresh_token = (
+            kept.read_text().strip() if kept.exists() else os.environ["QBO_REFRESH_TOKEN"]
+        )
+        pair = f"{os.environ['QBO_CLIENT_ID']}:{os.environ['QBO_CLIENT_SECRET']}"
+        request = urllib.request.Request(
+            TOKEN_URL,
+            data=urllib.parse.urlencode(
+                {"grant_type": "refresh_token", "refresh_token": refresh_token}
+            ).encode(),
+            method="POST",
+            headers={
+                "Authorization": "Basic " + base64.b64encode(pair.encode()).decode(),
+                "Accept": "application/json",
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=60) as response:  # noqa: S310
+                answer = json.loads(response.read())
+        except urllib.error.HTTPError as error:
+            # Intuit's error body names the problem (`invalid_grant`); it carries no token.
+            raise SystemExit(
+                f"refreshing the access token failed: HTTP {error.code} "
+                f"{error.read().decode(errors='replace')[:300]}"
+            ) from None
+        self._token = answer["access_token"]
+        self._issued = time.monotonic()
+        if answer.get("refresh_token") and answer["refresh_token"] != refresh_token:
+            kept.write_text(answer["refresh_token"])
+            kept.chmod(0o600)
 
     def call(
         self, method: str, path: str, query: dict[str, str], body: bytes | None = None
     ) -> Json:
+        if self._refreshes and time.monotonic() - self._issued > TOKEN_LIFETIME:
+            self.refresh()
         query = {"minorversion": MINOR_VERSION, **query}
         request = urllib.request.Request(  # noqa: S310 — the host is fixed above
             f"{self.base}/{path}?{urllib.parse.urlencode(query)}",

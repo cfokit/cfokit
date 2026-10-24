@@ -9,6 +9,7 @@ recorded.
 from __future__ import annotations
 
 import json
+import urllib.request
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -104,10 +105,58 @@ def test_our_archive_against_itself_is_the_same_cells(tmp_path: Path) -> None:
 def test_without_credentials_it_stops_and_names_what_is_missing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.delenv("QBO_ACCESS_TOKEN", raising=False)
-    monkeypatch.delenv("QBO_REALM_ID", raising=False)
-    with pytest.raises(SystemExit, match="QBO_ACCESS_TOKEN is not set"):
+    for name in ("QBO_ACCESS_TOKEN", "QBO_REALM_ID", *sandbox.REFRESHING):
+        monkeypatch.delenv(name, raising=False)
+    with pytest.raises(SystemExit, match="QBO_REALM_ID is not set"):
         sandbox.Sandbox()
+    monkeypatch.setenv("QBO_REALM_ID", "123")
+    monkeypatch.setenv("QBO_CLIENT_ID", "an-app")
+    with pytest.raises(SystemExit, match="QBO_CLIENT_SECRET, QBO_REFRESH_TOKEN"):
+        sandbox.Sandbox()
+
+
+class Answer:
+    def __init__(self, body: dict[str, str]) -> None:
+        self.body = json.dumps(body).encode()
+
+    def __enter__(self) -> Answer:
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        return None
+
+    def read(self) -> bytes:
+        return self.body
+
+
+def test_a_refresh_token_becomes_an_access_token_and_the_newest_is_kept(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Intuit may rotate the refresh token on any refresh; the next run must use the new one."""
+    monkeypatch.setattr(sandbox, "STATE", tmp_path)
+    monkeypatch.delenv("QBO_ACCESS_TOKEN", raising=False)
+    for name, value in (
+        ("QBO_REALM_ID", "123"),
+        ("QBO_CLIENT_ID", "an-app"),
+        ("QBO_CLIENT_SECRET", "its-secret"),
+        ("QBO_REFRESH_TOKEN", "first"),
+    ):
+        monkeypatch.setenv(name, value)
+    sent: list[bytes] = []
+
+    def urlopen(request: Any, timeout: int) -> Answer:
+        sent.append(request.data)
+        return Answer({"access_token": "an-hour", "refresh_token": "second"})
+
+    monkeypatch.setattr(urllib.request, "urlopen", urlopen)
+    connection = sandbox.Sandbox()
+    assert connection._token == "an-hour"  # noqa: S105 — a stand-in, not a credential
+    assert b"refresh_token=first" in sent[0]
+    kept = next(tmp_path.glob("*/refresh_token"))
+    assert kept.read_text() == "second"
+    assert kept.stat().st_mode & 0o077 == 0
+    sandbox.Sandbox()
+    assert b"refresh_token=second" in sent[1]
 
 
 def test_the_fixture_is_what_quickbooks_last_agreed_with() -> None:
