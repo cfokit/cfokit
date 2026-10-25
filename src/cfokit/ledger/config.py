@@ -54,6 +54,11 @@ class Settings:
     client can tell a person what to connect their agent to. Configured, never derived from a
     request (ADR-0004)."""
 
+    agent_public_base_url: str | None = None
+    """Optional, on the REST service: CFOKit's agent's own address, so the web client knows
+    where its chat window sends a turn, and its CSP may connect there (ADR-0075 § 1). Unset,
+    the client has no chat. Configured, never derived from a request (ADR-0004)."""
+
     web_public_base_url: str | None = None
     """Optional, on the MCP service: the REST service's own ``PUBLIC_BASE_URL``, where the web
     client is, so a refusal can link a person to the page that allows their agent. Unset, the
@@ -96,5 +101,6 @@ def load_settings() -> Settings:
         tls_cert_file=tls_cert_file,
         tls_key_file=tls_key_file,
         mcp_public_base_url=os.environ.get("MCP_PUBLIC_BASE_URL") or None,
+        agent_public_base_url=os.environ.get("AGENT_PUBLIC_BASE_URL") or None,
         web_public_base_url=os.environ.get("WEB_PUBLIC_BASE_URL") or None,
     )

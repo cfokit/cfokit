@@ -19,6 +19,10 @@
     "design-system": "node design/publish/build.mjs && node design/publish/check.mjs"
   },
   "dependencies": {
+    "@ag-ui/client": "0.0.59",
+    "@assistant-ui/react": "0.15.29",
+    "@assistant-ui/react-ag-ui": "0.0.70",
+    "@assistant-ui/react-markdown": "0.14.23",
     "@tanstack/react-router": "1.170.39",
     "big.js": "7.0.1",
     "comlink": "4.4.2",
@@ -26,7 +30,8 @@
     "oidc-client-ts": "3.5.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "react-oidc-context": "3.3.1"
+    "react-oidc-context": "3.3.1",
+    "remark-gfm": "4.0.1"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

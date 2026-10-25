@@ -1,3 +1,5 @@
+import { useNavigate } from "@tanstack/react-router";
+import { useAgentUrl } from "../chat/agentUrl";
 import { Button, CopyBlock } from "../components";
 import { StartFrame } from "./StartFrame";
 import { useStarted } from "./state";
@@ -15,6 +17,14 @@ export function firstQuestion(company: string, entityId: string): string {
   );
 }
 
+/**
+ * The same question, asked in CFOKit's chat, in ADR-0058 § 3's words: the chat is already in the
+ * company, and its agent is told which (ADR-0068 § 3), so the question need not name it.
+ */
+export const FIRST_QUESTION_HERE =
+  "My books are imported into CFOKit. Confirm they match QuickBooks and explain any " +
+  "differences, then summarize this year's profit and loss and my cash position.";
+
 /** Opens Claude Desktop on a new chat with the prompt drafted, for the person to send. */
 export function claudeLink(prompt: string): string {
   return `claude://claude.ai/new?q=${encodeURIComponent(prompt)}`;
@@ -24,16 +34,33 @@ export function claudeLink(prompt: string): string {
 export function FirstQuestion({ entityId }: { entityId: string }) {
   const { company } = useStarted();
   const prompt = firstQuestion(company, entityId);
+  const agentUrl = useAgentUrl();
+  const navigate = useNavigate();
   return (
     <StartFrame step={4} title="Ask Claude about your books">
       <p className="text-body text-ink">
         Your books are in CFOKit. Continue in Claude Desktop, where the question below is waiting in
         a new chat for you to send. Your browser may ask to open Claude the first time.
       </p>
-      <div>
+      <div className="flex flex-wrap gap-2">
         <Button variant="primary" onClick={() => window.location.assign(claudeLink(prompt))}>
           Continue in Claude
         </Button>
+        {typeof agentUrl === "string" && (
+          // The browser door's other ending: the web client opens on the company, which is its
+          // chat, with the same question waiting (ADR-0058 § 1, ADR-0068 § 3).
+          <Button
+            onClick={() =>
+              void navigate({
+                to: "/companies/$entityId/chat",
+                params: { entityId },
+                search: { draft: FIRST_QUESTION_HERE },
+              })
+            }
+          >
+            Ask CFOKit here instead
+          </Button>
+        )}
       </div>
       <CopyBlock label="Or paste this into Claude" text={prompt} />
     </StartFrame>

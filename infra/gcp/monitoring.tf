@@ -20,7 +20,7 @@ locals {
 
   activity    = "logName=\"projects/${var.project_id}/logs/cloudaudit.googleapis.com%2Factivity\""
   data_access = "logName=\"projects/${var.project_id}/logs/cloudaudit.googleapis.com%2Fdata_access\""
-  issuer_log  = "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"${google_cloud_run_v2_service.issuer.name}\""
+  identity_log  = "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"${google_cloud_run_v2_service.identity.name}\""
 
   # Each a log query; one matching entry is one alert.
   log_alerts = {
@@ -74,7 +74,7 @@ locals {
     lockout = {
       name   = "Account locked"
       detail = "The issuer locked an account after repeated failed sign-ins (infra/keycloak/README.md)."
-      filter = "${local.issuer_log} AND textPayload:\"user_temporarily_disabled\""
+      filter = "${local.identity_log} AND textPayload:\"user_temporarily_disabled\""
     }
   }
 }
@@ -110,7 +110,7 @@ resource "google_monitoring_alert_policy" "log" {
 # ---------------------------------------------------------------------------------------------
 resource "google_logging_metric" "sign_in_failures" {
   name   = "cfokit/sign-in-failures"
-  filter = "${local.issuer_log} AND textPayload:\"type=\\\"LOGIN_ERROR\\\"\""
+  filter = "${local.identity_log} AND textPayload:\"type=\\\"LOGIN_ERROR\\\"\""
   metric_descriptor {
     metric_kind = "DELTA"
     value_type  = "INT64"
@@ -177,8 +177,8 @@ resource "google_monitoring_alert_policy" "server_errors" {
 # ---------------------------------------------------------------------------------------------
 locals {
   uptime = {
-    issuer = { host = local.auth_host, path = "/realms/cfokit/.well-known/openid-configuration" }
-    web    = { host = local.app_host, path = "/app/" }
+    identity = { host = local.auth_host, path = "/realms/cfokit/.well-known/openid-configuration" }
+    web      = { host = local.app_host, path = "/app/" }
   }
 }
 

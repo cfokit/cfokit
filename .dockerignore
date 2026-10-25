@@ -10,6 +10,9 @@ web/dist_keycloak
 **/__pycache__
 docs
 skills
+# The skill CFOKit's agent gives the model (ADR-0075 § 2); the rest of skills/ ships as the
+# plugin, not in the image.
+!skills/cfokit/bookkeeper/SKILL.md
 infra
 # The realm the issuer image carries, because Cloud Run mounts nothing (ADR-0060 § 3), and the
 # script that applies its settings to a realm that already exists.

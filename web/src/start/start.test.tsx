@@ -4,8 +4,9 @@ import { useEffect, type ReactNode } from "react";
 import type { Export } from "../quickbooks/read";
 import type { Reading } from "../quickbooks/readExport";
 import { ConnectPage } from "./ConnectPage";
-import { claudeLink, FirstQuestion, firstQuestion } from "./FirstQuestion";
+import { claudeLink, FIRST_QUESTION_HERE, FirstQuestion, firstQuestion } from "./FirstQuestion";
 import { GettingStarted } from "./GettingStarted";
+import { Home } from "./Home";
 import { ImportPage } from "./ImportPage";
 import { StartedProvider, useStarted } from "./state";
 
@@ -330,5 +331,71 @@ describe("connecting Claude and the first question", () => {
     await waitFor(() => expect(block.querySelector("pre")?.textContent).toBe(prompt));
     expect(screen.getByRole("button", { name: "Continue in Claude" })).toBeTruthy();
     await noViolations(container);
+  });
+});
+
+describe("the first question, asked here", () => {
+  test("where the deployment runs CFOKit's agent, the chat is offered with the question drafted", async () => {
+    expect(FIRST_QUESTION_HERE).toBe(
+      "My books are imported into CFOKit. Confirm they match QuickBooks and explain any " +
+        "differences, then summarize this year's profit and loss and my cash position.",
+    );
+    answers["/connection"] = { mcp_url: null, agent_url: "https://agent.example.test" };
+    withExport(<FirstQuestion entityId="ent-1" />);
+    fireEvent.click(await screen.findByRole("button", { name: "Ask CFOKit here instead" }));
+    expect(navigate).toHaveBeenCalledWith({
+      to: "/companies/$entityId/chat",
+      params: { entityId: "ent-1" },
+      // ADR-0058 § 3's words: the chat is in the company already, so it is not named.
+      search: { draft: FIRST_QUESTION_HERE },
+    });
+  });
+
+  test("where it runs none, only Claude is offered", async () => {
+    answers["/connection"] = { mcp_url: null, agent_url: null };
+    withExport(<FirstQuestion entityId="ent-1" />);
+    await waitFor(() => expect(requests.some((r) => r.path === "/connection")).toBe(true));
+    expect(screen.queryByRole("button", { name: "Ask CFOKit here instead" })).toBeNull();
+  });
+});
+
+describe("where a signed-in person lands", () => {
+  const company = { id: "ent-1", name: "Synthetic Co" };
+
+  test("someone with a company lands in its chat (ADR-0068 § 3)", async () => {
+    answers["/entities"] = { entities: [company] };
+    answers["/connection"] = { mcp_url: null, agent_url: "https://agent.example.test" };
+    withExport(<Home />);
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith({
+        to: "/companies/$entityId/chat",
+        params: { entityId: "ent-1" },
+        replace: true,
+      }),
+    );
+  });
+
+  test("someone with no company gets getting started", async () => {
+    answers["/entities"] = { entities: [] };
+    answers["/connection"] = { mcp_url: null, agent_url: "https://agent.example.test" };
+    render(
+      <StartedProvider>
+        <Home />
+      </StartedProvider>,
+    );
+    expect(await screen.findByRole("heading", { name: "Bring in your books" })).toBeTruthy();
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  test("on a deployment with no agent, a company's owner still gets getting started", async () => {
+    answers["/entities"] = { entities: [company] };
+    answers["/connection"] = { mcp_url: null, agent_url: null };
+    render(
+      <StartedProvider>
+        <Home />
+      </StartedProvider>,
+    );
+    expect(await screen.findByRole("heading", { name: "Bring in your books" })).toBeTruthy();
+    expect(navigate).not.toHaveBeenCalled();
   });
 });

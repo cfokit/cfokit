@@ -141,7 +141,7 @@ characters, and may not equal the person's username or email address.
 | unset: `15` | any deployment, CFOKit's hosted service included |
 | `12` to `14` | a deployment where every person also has a second factor, as NIST permits; never lower than 12 |
 
-**The breached passwords are a snapshot.** The issuer image carries the passwords of 12 to 128
+**The breached passwords are a snapshot.** The identity image carries the passwords of 12 to 128
 characters among the ten million most common in public breach compilations, from
 [SecLists](https://github.com/danielmiessler/SecLists) (MIT, its license beside the list in the
 image), pinned to one commit and checksum in the `Dockerfile`: about 702,000 of them. Twelve is the
@@ -162,7 +162,24 @@ with the realm: public, because a browser cannot keep a secret; authorization co
 (S256) and nothing else; redirects and sign-out returns only to `${PUBLIC_BASE_URL}/app/`, which
 Keycloak fills from the environment at import, so the client follows the deployment's address
 rather than naming one (ADR-0049 §§ 1-2). `webOrigins` `+` lets the page's own origin, and only
-it, call the token endpoint.
+it, call the token endpoint. Its tokens also name `cfokit-agent` in their audience, which is what
+lets CFOKit's agent exchange them, below.
+
+**`cfokit-agent`, CFOKit's agent** (ADR-0075, ADR-0077). Confidential, and allowed one thing:
+standard token exchange (RFC 8693), presenting a person's web-client token and receiving one issued
+to itself for that person. No sign-in flow, no password grant, no service account, so it never acts
+as itself. Keycloak exchanges only a token whose audience names the client asking, so a token held
+by any other client, such as a person's own agent, cannot become one of the agent's. The token it
+gets carries `cfokit-ledger` from `cfokit-audience` like every other; it asks for no audience,
+because Keycloak's `audience` parameter names clients and `cfokit-ledger` is not one.
+
+| Variable | Default | What it does |
+|---|---|---|
+| `CFOKIT_AGENT_ENABLED` | `false` in the realm file; `true` in `compose.yaml` | Whether the client is enabled at import. Off unless a deployment runs the chat, so one that does not has no exchange to protect. |
+| `CFOKIT_AGENT_CLIENT_SECRET` | none; `cfokit-agent` in `compose.yaml`, local-only like the administrator's | The client's secret, which the agent is given as `AUTH_CLIENT_SECRET`. A deployment populates it out of band (ADR-0016). |
+
+The API sees `client:cfokit-agent` acting for the person, an agent like any other, so a person
+allows it in a company before the chat can work there (ADR-0066).
 
 **People sign themselves up**, by email, and reset their own passwords (`IAM-22`, ADR-0049 § 3).
 No mail relay ships, so an address is not verified; a deployment with one turns `verifyEmail` on.
@@ -255,7 +272,7 @@ never leaves it; the script signs in as that, applies the settings, deletes the 
 proves it gone by being refused when it signs in again. A run killed outright, at the job's
 timeout or by a person, cannot clean up; its client stays until the next run, which deletes every
 `cfokit-settings-*` client it finds before its own. Events are switched on first, so each change
-after that is an admin event. It runs from the issuer image, against the issuer's
+after that is an admin event. It runs from the identity image, against the issuer's
 database, with Keycloak started inside the same container; on GCP, `setup/realm.sh --settings`
 runs it as a job and then restarts the issuer, which caches realms.
 

@@ -5,13 +5,15 @@ The reviewing model can withhold approval; it cannot grant eligibility. Eligibil
 file's job, and it is deterministic so that nothing a pull request says — in its title, its
 body, its commit messages, or the release notes a reviewer fetches — can talk it into one.
 
-Three subcommands, each called by `.github/workflows/review.yml`:
+Three subcommands are called by `.github/workflows/review.yml`, and two by `eval.yml`:
 
-- ``classify``  the tier: ``auto`` (may merge on the reviewer's approval) or ``human``.
-- ``select``    which pull requests a run reviews: the one named, or, for the weekly sweep,
-                every open Dependabot pull request with no verdict at its head commit.
-- ``decide``    what to do with a verdict: ``merge``, ``fix`` or ``escalate``, and the review
-                comment that records it.
+- ``classify``     the tier: ``auto`` (may merge on the reviewer's approval) or ``human``.
+- ``select``       which pull requests a run reviews: the one named, or, for the weekly sweep,
+                   every open Dependabot pull request with no verdict at its head commit.
+- ``decide``       what to do with a verdict: ``merge``, ``fix`` or ``escalate``, and the review
+                   comment that records it.
+- ``eval-scope``   whether a pull request's plugin holds only skills, before its evals run.
+- ``eval-report``  the comment recording an eval run at a head commit, and whether it passed.
 
 The workflow runs this file from a checkout of ``main``, never from the pull request, so a
 pull request cannot rewrite the policy it is judged by. The pull request's files are data.
@@ -48,6 +50,38 @@ MAX_FIX_ROUNDS = 2
 # The verdict marker a review comment carries, so a head commit is never reviewed twice.
 MARKER = "<!-- cfokit-review sha={sha} -->"
 MARKER_PATTERN = re.compile(r"<!-- cfokit-review sha=([0-9a-f]{40}) -->")
+
+# The plugin, which a merge releases (skills/CLAUDE.md). A change to it merges without a person
+# only when its head commit carries a passing eval result (ADR-0036 § 4, ADR-0048). The bar is
+# fixed here, on main: a pull request supplies the run, never the threshold it is judged by, and
+# one that changes its own cases changes the measure, so a person reviews it.
+EVALUATED = "skills/cfokit/"
+EVAL_CASES = "skills/cfokit/evals/"
+PASS_THRESHOLD = 1.0  # not-money: a pass rate
+# The eval workflow comments with the workflow token, so this account is its only author.
+EVAL_AUTHOR = "github-actions[bot]"
+EVAL_MARKER = "<!-- cfokit-eval sha={sha} result={result} -->"
+# Anchored: only a comment that opens with the marker records a result, so text the run
+# reports from the pull request's own cases can never carry a second one.
+EVAL_PATTERN = re.compile(r"\A<!-- cfokit-eval sha=([0-9a-f]{40}) result=(pass|fail) -->\n")
+# What the eval report prints from the run. Names come from the pull request's directories.
+REPORTED_TEXT = re.compile(r"[^A-Za-z0-9._-]")
+
+# What the plugin may hold while the evals run with credentials in the environment: its
+# manifest, its README, its eval cases, and the skills its manifest names. A hook, a command,
+# an MCP server or anything else would be code from the pull request run as the workflow.
+PLUGIN_MANIFEST_KEYS = {
+    "name", "displayName", "description", "author", "homepage", "repository", "license",
+    "keywords", "version", "skills",
+}  # fmt: skip
+SKILL_PATH = re.compile(r"\./([A-Za-z0-9_-]+)/?")
+# Inside a skill and its cases: prose and data only. A script could be run by a tool, and a
+# `SKILL.md` key beyond these could declare a hook or grant a tool the run does not.
+PLUGIN_FILE_SUFFIXES = {".md", ".json", ".yaml", ".yml", ".txt"}
+SKILL_FRONTMATTER_KEYS = {"name", "description", "license", "metadata", "version"}
+# Read fail-closed rather than parsed: a top-level line is a bare allowed key or it is refused,
+# so a quoted key, a `? key` entry or a flow mapping that YAML reads as a key is refused too.
+FRONTMATTER_LINE = re.compile(r"([a-z][a-z-]*):(?: .*)?")
 
 # A PEP 508 requirement's identity: its name and any extras. The version is what changes.
 REQUIREMENT_IDENTITY = re.compile(r"^\s*([A-Za-z0-9][A-Za-z0-9._-]*)\s*(\[[^\]]*\])?")
@@ -181,13 +215,28 @@ def classify(
     updates: list[Update],
     pyproject_reshaped: bool,
     new_runtime_packages: set[str],
+    eval_result: str | None,
 ) -> Classification:
-    """The tier. Every reason found is reported, not just the first."""
+    """The tier. Every reason found is reported, not just the first.
+
+    ``eval_result`` is the eval run recorded at the head commit: ``pass``, ``fail``, or None
+    when there is none.
+    """
     reasons: list[str] = []
 
     for path in changed:
         if pattern := protecting_pattern(path, protected):
             reasons.append(f"`{path}` is code-owned (`{pattern}`)")
+
+    if any(path.startswith(EVAL_CASES) for path in changed):
+        reasons.append(
+            f"`{EVAL_CASES}` changed: the cases are the bar a plugin change is held to"
+        )
+    elif any(path.startswith(EVALUATED) for path in changed):
+        if eval_result is None:
+            reasons.append(f"`{EVALUATED}` changed and the head commit has no eval result")
+        elif eval_result != "pass":
+            reasons.append("the eval run at the head commit scored below its threshold")
 
     if pyproject_reshaped:
         reasons.append("`pyproject.toml` changes more than versions")
@@ -345,6 +394,10 @@ def cmd_classify(args: argparse.Namespace) -> None:
             _run("git", "log", "-1", "--format=%B", head, cwd=repo)
         )
     messages = _run("git", "log", "--format=%B%x00", f"{merge_base}..{head}", cwd=repo)
+    repo_name = os.environ["GITHUB_REPOSITORY"]
+    pages = _gh_json(
+        "api", "--paginate", "--slurp", f"repos/{repo_name}/issues/{args.pr}/comments"
+    )
     result = classify(
         author=author,
         branch=pr["headRefName"],
@@ -353,6 +406,7 @@ def cmd_classify(args: argparse.Namespace) -> None:
         updates=updates,
         pyproject_reshaped=reshaped,
         new_runtime_packages=new_runtime,
+        eval_result=eval_result([c for page in pages for c in page], head),
     )
     _output(
         tier=result.tier,
@@ -373,6 +427,149 @@ def reviewed_shas(comments: list[dict[str, Any]]) -> set[str]:
         if comment.get("user", {}).get("type") == "Bot":
             shas.update(MARKER_PATTERN.findall(comment.get("body", "")))
     return shas
+
+
+def eval_result(comments: list[dict[str, Any]], sha: str) -> str | None:
+    """The latest eval result recorded at ``sha`` by the eval workflow.
+
+    A ``pass`` grants eligibility, so only the workflow's own comments count, and only the
+    marker a comment opens with: anyone can comment on a public repository, and the report
+    quotes the run.
+    """
+    result: str | None = None
+    for comment in comments:
+        if comment.get("user", {}).get("login") != EVAL_AUTHOR:
+            continue
+        match = EVAL_PATTERN.match(comment.get("body", ""))
+        if match and match.group(1) == sha:
+            result = match.group(2)
+    return result
+
+
+def plugin_refusals(plugin: Path) -> list[str]:
+    """Why the plugin at ``plugin`` may not be evaluated with credentials present; empty if
+    it may. Read before the eval runs, from main's copy of this policy."""
+    manifest = json.loads((plugin / ".claude-plugin" / "plugin.json").read_text())
+    refusals = [
+        f"plugin.json declares `{k}`" for k in sorted(set(manifest) - PLUGIN_MANIFEST_KEYS)
+    ]
+    skills = manifest.get("skills", [])
+    if not isinstance(skills, list) or not all(isinstance(s, str) for s in skills):
+        return [*refusals, "plugin.json `skills` is not a list of paths"]
+    allowed = {".claude-plugin", "README.md", "evals"}
+    for skill in skills:
+        if match := SKILL_PATH.fullmatch(skill):
+            allowed.add(match.group(1))
+        else:
+            refusals.append(f"skill path `{skill}` is not a directory of the plugin")
+    for entry in sorted(plugin.iterdir()):
+        if entry.name not in allowed:
+            refusals.append(f"`{entry.name}` is not a skill, the manifest, the README or evals")
+    for name in sorted(allowed - {".claude-plugin", "README.md"}):
+        refusals += _contents_refusals(plugin, plugin / name)
+    for skill_md in sorted(plugin.glob("*/SKILL.md")):
+        where = skill_md.relative_to(plugin)
+        refusals += [f"`{where}` {r}" for r in frontmatter_refusals(skill_md.read_text())]
+    return refusals
+
+
+def frontmatter_refusals(text: str) -> list[str]:
+    """Why a ``SKILL.md``'s frontmatter may declare more than its description; empty if it
+    cannot. Anything this reader is unsure of is refused, never skipped."""
+    if "\r" in text or text.startswith("\ufeff"):
+        return ["is not plain text with LF line endings"]
+    lines = text.split("\n")
+    if lines[0] != "---":
+        return ["does not open with frontmatter"]
+    if "---" not in lines[1:]:
+        return ["does not close its frontmatter"]
+    refusals: list[str] = []
+    for line in lines[1 : lines.index("---", 1)]:
+        if not line.strip() or line.startswith(" "):
+            continue  # a blank line, or the continuation of an allowed key's value
+        match = FRONTMATTER_LINE.fullmatch(line)
+        if match is None:
+            refusals.append(f"has a frontmatter line that is not a bare key: `{line[:40]}`")
+        elif match.group(1) not in SKILL_FRONTMATTER_KEYS:
+            refusals.append(f"declares `{match.group(1)}`")
+    return refusals
+
+
+def _contents_refusals(plugin: Path, directory: Path) -> list[str]:
+    if not directory.exists():
+        return []
+    refusals: list[str] = []
+    for path in sorted(directory.rglob("*")):
+        where = path.relative_to(plugin)
+        if path.is_symlink():
+            refusals.append(f"`{where}` is a link")
+        elif path.is_file() and path.suffix not in PLUGIN_FILE_SUFFIXES:
+            refusals.append(f"`{where}` is not prose or data")
+    return refusals
+
+
+def eval_report(*, sha: str, run: dict[str, Any] | None) -> tuple[str, str]:
+    """``pass`` or ``fail``, and the comment recording it.
+
+    A run passes when it finished and every case scored at or above ``PASS_THRESHOLD`` with
+    the plugin. The run's own threshold is the pull request's to set, so it is not read. A
+    missing or partial run, one stopped by the cost ceiling, fails: it shows nothing about the
+    cases it did not reach. The delta is reported, not judged.
+    """
+    lines: list[str] = []
+    if run is None:
+        result = "fail"
+        lines.append("The eval run produced no result.")
+    else:
+        cases = run.get("cases", [])
+        # `not >=` rather than `<`, so a NaN score, which JSON allows, fails.
+        below = [c for c in cases if not float(c["aggregates"]["score"]) >= PASS_THRESHOLD]
+        partial = bool(run.get("partial"))
+        result = "fail" if partial or below or not cases else "pass"
+        lines += [
+            "| Case | Model | Runs | With | Without | Δ |",
+            "|---|---|---|---|---|---|",
+        ]
+        for case in cases:
+            agg = case["aggregates"]
+            without = agg.get("scoreWithout")
+            delta = agg.get("delta")
+            lines.append(
+                f"| `{REPORTED_TEXT.sub('', str(case.get('name', '')))}`"
+                f" | {REPORTED_TEXT.sub('', str(case.get('model', '')))}"
+                f" | {int(case.get('runsPerCase', 0))}"
+                f" | {float(agg['score']):.2f}"
+                f" | {'' if without is None else f'{float(without):.2f}'}"
+                f" | {'' if delta is None else f'{float(delta):+.2f}'} |"
+            )
+        lines += [
+            "",
+            f"Threshold {PASS_THRESHOLD:.2f}. Cost ${float(run.get('costUsd', 0)):.2f}.",
+        ]
+        if partial:
+            lines.append("The run stopped at its cost ceiling, so some cases did not run.")
+    verdict = "passed" if result == "pass" else "failed"
+    header = [
+        EVAL_MARKER.format(sha=sha, result=result),
+        f"### Evals at `{sha[:7]}`: {verdict}",
+    ]
+    return result, "\n".join([*header, "", *lines]) + "\n"
+
+
+def cmd_eval_report(args: argparse.Namespace) -> None:
+    path = Path(args.result)
+    run = json.loads(path.read_text()) if path.is_file() else None
+    result, body = eval_report(sha=args.sha, run=run)
+    Path(args.body).write_text(body)
+    _output(result=result)
+
+
+def cmd_eval_scope(args: argparse.Namespace) -> None:
+    refusals = plugin_refusals(Path(args.plugin))
+    for refusal in refusals:
+        print(f"refused: {refusal}", file=sys.stderr)
+    if refusals:
+        sys.exit(1)
 
 
 def cmd_select(args: argparse.Namespace) -> None:
@@ -438,6 +635,14 @@ def main() -> None:
     p = sub.add_parser("decide")
     p.add_argument("--body", required=True)
     p.set_defaults(func=cmd_decide)
+    p = sub.add_parser("eval-scope")
+    p.add_argument("--plugin", required=True)
+    p.set_defaults(func=cmd_eval_scope)
+    p = sub.add_parser("eval-report")
+    p.add_argument("--result", required=True)
+    p.add_argument("--sha", required=True)
+    p.add_argument("--body", required=True)
+    p.set_defaults(func=cmd_eval_report)
     args = parser.parse_args()
     args.func(args)
 

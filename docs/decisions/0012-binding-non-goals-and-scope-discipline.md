@@ -80,6 +80,7 @@ foreseen, not the complete set.
 | Slack as a delivery surface | [ADR-0021](0021-slack-as-a-delivery-surface.md) | 2026-08-18 |
 | A web client, not an admin console | [ADR-0049](0049-cfokit-has-a-web-client.md) | 2026-09-29 |
 | A work queue, not an event bus | [ADR-0061](0061-unattended-work-is-a-queue-in-postgres.md) | 2026-10-06 |
+| SSE for the agent's stream, not websockets | [ADR-0075](0075-cfokit-s-agent-is-an-async-component-built-on-pydantic-ai.md) | 2026-10-22 |
 
 Slack was never literally on the list, but two ways of building it are — Socket Mode is a websocket,
 and a chat surface is adjacent enough to "web UI" that building one unrecorded would be the drift
@@ -163,7 +164,8 @@ They are product boundaries, so arguably they belong with the vision rather than
 - `vision.md` states the outward-facing version, and must not overstate it as a prohibition.
   **Already in place.**
 - An ADR that lifts the gate for an item updates the list to record that it passed, and when.
-- Slack has passed (ADR-0021), and the web client (ADR-0049). Rendered report output, which RPT-13 requires, is still queued.
+- Slack has passed (ADR-0021), the web client (ADR-0049), the work queue (ADR-0061), and SSE for
+  the agent's stream (ADR-0075). Rendered report output, which RPT-13 requires, is still queued.
 
 **Reversal cost. Low.** The list is a rule, not an architecture. Removing it costs nothing
 mechanically and costs the forcing function entirely.

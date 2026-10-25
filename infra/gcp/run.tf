@@ -130,7 +130,7 @@ resource "google_cloud_run_v2_service" "api" {
 locals {
   # One definition, read by the service and by the realm import job below, so the two can never
   # disagree about which database or which settings the realm is built from.
-  issuer_env = {
+  identity_env = {
     KC_DB             = "postgres"
     KC_DB_URL         = "jdbc:postgresql://${google_sql_database_instance.this.private_ip_address}:5432/keycloak?sslmode=require"
     KC_DB_USERNAME    = "keycloak"
@@ -161,19 +161,19 @@ locals {
     KC_SPI_EVENTS_LISTENER__JBOSS_LOGGING__SUCCESS_LEVEL = "info"
   }
 
-  issuer_secrets = {
+  identity_secrets = {
     KC_DB_PASSWORD              = "keycloak-db-password"
     KC_BOOTSTRAP_ADMIN_PASSWORD = "keycloak-admin-password"
   }
 }
-resource "google_cloud_run_v2_service" "issuer" {
-  name                = "cfokit-issuer"
+resource "google_cloud_run_v2_service" "identity" {
+  name                = "cfokit-identity"
   location            = var.region
   ingress             = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
   deletion_protection = true
 
   template {
-    service_account = google_service_account.issuer.email
+    service_account = google_service_account.identity.email
 
     # Exactly one: clustering needs instances to discover each other, which Cloud Run does not
     # provide, and a sign-in must not wait for a JVM to start.
@@ -191,7 +191,7 @@ resource "google_cloud_run_v2_service" "issuer" {
     }
 
     containers {
-      image = "${local.images}/issuer:latest"
+      image = "${local.images}/identity:latest"
       args  = ["start", "--import-realm"]
 
       ports {
@@ -199,7 +199,7 @@ resource "google_cloud_run_v2_service" "issuer" {
       }
 
       dynamic "env" {
-        for_each = local.issuer_env
+        for_each = local.identity_env
         content {
           name  = env.key
           value = env.value
@@ -207,7 +207,7 @@ resource "google_cloud_run_v2_service" "issuer" {
       }
 
       dynamic "env" {
-        for_each = local.issuer_secrets
+        for_each = local.identity_secrets
         content {
           name = env.key
           value_source {
@@ -266,15 +266,15 @@ resource "google_cloud_run_v2_service" "issuer" {
 # a realm only when it does not exist, so this is how the whole of cfokit-realm.json reaches a
 # running deployment, and it removes the realm's accounts. The settings job below changes a
 # realm in place instead.
-resource "google_cloud_run_v2_job" "issuer_import" {
-  name                = "cfokit-issuer-import"
+resource "google_cloud_run_v2_job" "identity_import" {
+  name                = "cfokit-identity-import"
   location            = var.region
   deletion_protection = false
 
   template {
     task_count = 1
     template {
-      service_account = google_service_account.issuer.email
+      service_account = google_service_account.identity.email
       max_retries     = 0
       timeout         = "900s"
 
@@ -287,11 +287,11 @@ resource "google_cloud_run_v2_job" "issuer_import" {
       }
 
       containers {
-        image = "${local.images}/issuer:latest"
+        image = "${local.images}/identity:latest"
         args  = ["import", "--dir", "/opt/keycloak/data/import", "--override", "true"]
 
         dynamic "env" {
-          for_each = local.issuer_env
+          for_each = local.identity_env
           content {
             name  = env.key
             value = env.value
@@ -299,7 +299,7 @@ resource "google_cloud_run_v2_job" "issuer_import" {
         }
 
         dynamic "env" {
-          for_each = local.issuer_secrets
+          for_each = local.identity_secrets
           content {
             name = env.key
             value_source {
@@ -336,15 +336,15 @@ resource "google_cloud_run_v2_job" "issuer_import" {
 # infra/keycloak/realm-settings.sh). It needs the issuer's database and nothing else: none of the
 # issuer's hostnames, and not the first administrator's password, because it signs in as a
 # temporary administrator it creates and then deletes.
-resource "google_cloud_run_v2_job" "issuer_settings" {
-  name                = "cfokit-issuer-settings"
+resource "google_cloud_run_v2_job" "identity_settings" {
+  name                = "cfokit-identity-settings"
   location            = var.region
   deletion_protection = false
 
   template {
     task_count = 1
     template {
-      service_account = google_service_account.issuer.email
+      service_account = google_service_account.identity.email
       max_retries     = 0
       timeout         = "900s"
 
@@ -357,16 +357,16 @@ resource "google_cloud_run_v2_job" "issuer_settings" {
       }
 
       containers {
-        image   = "${local.images}/issuer:latest"
+        image   = "${local.images}/identity:latest"
         command = ["/bin/bash", "/opt/cfokit/realm-settings.sh"]
 
         dynamic "env" {
           for_each = {
-            KC_DB                                = local.issuer_env.KC_DB
-            KC_DB_URL                            = local.issuer_env.KC_DB_URL
-            KC_DB_USERNAME                       = local.issuer_env.KC_DB_USERNAME
-            CFOKIT_ACCESS_TOKEN_LIFESPAN         = local.issuer_env.CFOKIT_ACCESS_TOKEN_LIFESPAN
-            CFOKIT_RESTRICT_REGISTERED_REDIRECTS = local.issuer_env.CFOKIT_RESTRICT_REGISTERED_REDIRECTS
+            KC_DB                                = local.identity_env.KC_DB
+            KC_DB_URL                            = local.identity_env.KC_DB_URL
+            KC_DB_USERNAME                       = local.identity_env.KC_DB_USERNAME
+            CFOKIT_ACCESS_TOKEN_LIFESPAN         = local.identity_env.CFOKIT_ACCESS_TOKEN_LIFESPAN
+            CFOKIT_RESTRICT_REGISTERED_REDIRECTS = local.identity_env.CFOKIT_RESTRICT_REGISTERED_REDIRECTS
             CFOKIT_MASTER_FRONTEND_URL           = "https://${local.admin_host}"
           }
           content {
@@ -411,9 +411,9 @@ resource "google_cloud_run_v2_job" "issuer_settings" {
 # request itself (ADR-0019).
 resource "google_cloud_run_v2_service_iam_member" "public" {
   for_each = {
-    rest   = google_cloud_run_v2_service.api["rest"].name
-    mcp    = google_cloud_run_v2_service.api["mcp"].name
-    issuer = google_cloud_run_v2_service.issuer.name
+    rest     = google_cloud_run_v2_service.api["rest"].name
+    mcp      = google_cloud_run_v2_service.api["mcp"].name
+    identity = google_cloud_run_v2_service.identity.name
   }
   name     = each.value
   location = var.region

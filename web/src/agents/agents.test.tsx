@@ -242,6 +242,29 @@ test("once allowed, the page says to go back to Claude", async () => {
   expect(await screen.findByText(/Go back to Claude and ask again/)).toBeTruthy();
 });
 
+test("once CFOKit's own agent is allowed, the page leads back to its chat, with the question", async () => {
+  const cfokit = "client:cfokit-agent";
+  replies["GET /entities"] = { status: 200, body: { entities: [company("e-2", "Harbor LLC")] } };
+  replies["GET /entities/e-2/grants"] = { status: 200, body: { grants: [] } };
+  replies["POST /entities/e-2/grants"] = { status: 201, body: { grant_id: "g-9" } };
+  render(<AgentPage agent={cfokit} draft="How did we do?" />);
+
+  const allowing = await screen.findByRole("button", { name: "Allow to keep the books" });
+  replies["GET /entities/e-2/grants"] = {
+    status: 200,
+    body: { grants: [grant(cfokit, "bookkeeper", "g-9")] },
+  };
+  fireEvent.click(allowing);
+
+  fireEvent.click(await screen.findByRole("button", { name: "Ask CFOKit" }));
+  expect(screen.queryByText(/Go back to Claude/)).toBeNull();
+  expect(navigate).toHaveBeenCalledWith({
+    to: "/companies/$entityId/chat",
+    params: { entityId: "e-2" },
+    search: { draft: "How did we do?" },
+  });
+});
+
 test("the page leads back to Settings", async () => {
   replies["GET /entities"] = { status: 200, body: { entities: [] } };
   render(<AgentPage agent={AGENT} />);

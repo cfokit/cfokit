@@ -31,31 +31,31 @@ esac
 
 repository="${CFOKIT_REGION}-docker.pkg.dev/${CFOKIT_PROJECT}/cfokit"
 if [ -n "${1:-}" ]; then
-  image="${repository}/issuer:$1"
+  image="${repository}/identity:$1"
 else
-  image=$(gcloud run services describe cfokit-issuer --region "$CFOKIT_REGION" \
+  image=$(gcloud run services describe cfokit-identity --region "$CFOKIT_REGION" \
     --format='value(spec.template.spec.containers[0].image)')
 fi
 
 # The running issuer caches realms in memory; a new revision starts from the database.
 restart() {
   step "Restart the issuer"
-  gcloud run services update cfokit-issuer --region "$CFOKIT_REGION" --image "$image" \
+  gcloud run services update cfokit-identity --region "$CFOKIT_REGION" --image "$image" \
     --revision-suffix "realm-$(date -u +%Y%m%d%H%M%S)" --quiet >/dev/null
   done_ "restarted on ${image##*/}"
 }
 
 if [ "$mode" = "--settings" ]; then
   step "Apply the realms' settings from ${image##*/}"
-  gcloud run jobs update cfokit-issuer-settings --region "$CFOKIT_REGION" --image "$image" \
+  gcloud run jobs update cfokit-identity-settings --region "$CFOKIT_REGION" --image "$image" \
     --quiet >/dev/null
   status=0
-  execution=$(gcloud run jobs execute cfokit-issuer-settings --region "$CFOKIT_REGION" --wait \
+  execution=$(gcloud run jobs execute cfokit-identity-settings --region "$CFOKIT_REGION" --wait \
     --quiet --format='value(metadata.name)') || status=$?
 
   # What the job read back, and whether its temporary administrator is gone. Its own output only:
   # Keycloak's log lines start with a date. Cloud Logging can trail the job by a few seconds.
-  filter="resource.type=\"cloud_run_job\" AND resource.labels.job_name=\"cfokit-issuer-settings\""
+  filter="resource.type=\"cloud_run_job\" AND resource.labels.job_name=\"cfokit-identity-settings\""
   [ -n "$execution" ] && filter="$filter AND labels.\"run.googleapis.com/execution_name\"=\"$execution\""
   for _ in $(seq 12); do
     output=$(gcloud logging read "$filter" --order asc --limit 1000 --freshness 1h \
@@ -82,8 +82,8 @@ if [ "${CFOKIT_CONFIRM:-}" != "replace-realm" ]; then
 fi
 
 step "Import the realm from ${image##*/}"
-gcloud run jobs update cfokit-issuer-import --region "$CFOKIT_REGION" --image "$image" --quiet >/dev/null
-gcloud run jobs execute cfokit-issuer-import --region "$CFOKIT_REGION" --wait --quiet >/dev/null
+gcloud run jobs update cfokit-identity-import --region "$CFOKIT_REGION" --image "$image" --quiet >/dev/null
+gcloud run jobs execute cfokit-identity-import --region "$CFOKIT_REGION" --wait --quiet >/dev/null
 done_ "imported"
 
 restart

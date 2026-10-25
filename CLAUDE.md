@@ -31,10 +31,12 @@ buys. Boundaries between capabilities are enforced by `import-linter` on module 
 works the same either way. `src/cfokit/` is a PEP 420 namespace package: **do not add
 `src/cfokit/__init__.py`**. A skill is not a package and never goes here (ADR-0014, ADR-0020).
 
-**Five capabilities exist**: `ledger`, `imports` (ADR-0040), `receivables`, `assignment`
-(ADR-0045), and `activity` (ADR-0046). `server` is not one — it is the composition point, the
+**Six capabilities exist**: `ledger`, `imports` (ADR-0040), `receivables`, `assignment`
+(ADR-0045), `activity` (ADR-0046), and `conversations` (ADR-0076). `server` is not one — it is the composition point, the
 only place that knows the module list, and a file in it that decides something about
-accounting is in the wrong place.
+accounting is in the wrong place. Nor is `agent`: it is a separate component, the agent behind
+the web app's chat, reaching CFOKit only over its published interfaces like any other client
+(ADR-0075).
 
 There was a `connectors` package holding no code; it was removed rather than renamed, because
 a package that exists before its capability is known is a boundary drawn around a guess
@@ -152,13 +154,14 @@ otherwise get wrong, because absence isn't visible in a manifest:
   forbidden because it makes an `await` inside a transaction expressible, and the workload has
   almost no concurrency to reclaim in exchange. (ADR-0024)
 - **Runtime dependencies are load-bearing and few.** Adding one is a decision, not a
-  convenience. Ask before adding any. Currently **six**, in the root `pyproject.toml`, each
+  convenience. Ask before adding any. Currently **seven**, in the root `pyproject.toml`, each
   with its reason and verified license in a comment there: `psycopg[binary]` (driver), `fastapi`
   (REST + OpenAPI), `uvicorn` (ASGI server), `mcp` (tool surface), `pyjwt[crypto]` (audience
   validation), `cryptography` (Web Push encryption, ADR-0057; already installed as PyJWT's
-  extra, declared because we call into it). Those six pull **36** packages in total — `uv export
-  --no-dev --no-emit-project --no-hashes | grep -c '^[a-z]'` — and the MCP SDK is most of it,
-  accepted knowingly (ADR-0024). Accounting exports are parsed in the person's browser, never
+  extra, declared because we call into it), and `pydantic-ai-slim[anthropic,ag-ui]` (CFOKit's
+  own agent, ADR-0075; confined to `cfokit.agent`). Those seven pull **46** packages
+  in total — `uv export --no-dev --no-emit-project --no-hashes | grep -c '^[a-z]'` — and the MCP
+  SDK is most of it, accepted knowingly (ADR-0024). Accounting exports are parsed in the person's browser, never
   by the server, so no spreadsheet library is a dependency of any kind (ADR-0058).
 - **Unattended work is a run in Postgres, enqueued in the same transaction as its cause**
   (`EntityWrite.enqueue_work`), and run by `python -m cfokit.server work`. No schedule lives
@@ -236,7 +239,7 @@ Four layers, and only the top one needs a model. (ADR-0036)
 2. A conformance corpus of published worked examples. **This is where independence comes from**,
    and every case cites its source. A case with no citation is a unit test that has been misfiled.
 3. Protocol integration against REST and MCP as a client would, deterministic.
-4. Evals, which assert on records — the transaction and its status, the postings, the audit row —
+4. Evals, which assert on the calls a turn makes — which tools, in what order, with what inputs —
    never on prose.
 
 Layers 1 to 3 gate every commit; layer 4 does not. **An assertion's expected value comes from
@@ -307,5 +310,6 @@ websockets, SSE transport, or an event bus. (ADR-0012) The web client has passed
 - **Merge by labeling, not by `gh pr merge`.** Add the `merge` label and stop. That label
   runs the reviewer, which approves and auto-merges only what `scripts/review_policy.py`
   allows, and marks everything else `needs-human`. Paths in `.github/CODEOWNERS` always need
-  a person. Use `--admin` only when the user tells you to merge a pull request the reviewer
-  escalated. (ADR-0048)
+  a person. A change to `skills/cfokit/` is a release, so it also needs a passing result from
+  the `eval` label at its head commit (ADR-0036 § 4). Use `--admin` only when the user tells
+  you to merge a pull request the reviewer escalated. (ADR-0048)

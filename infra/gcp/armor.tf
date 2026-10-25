@@ -9,8 +9,8 @@
 # Anthropic's addresses, shared by every person using one, so the limits that a connector meets
 # are set well above what one person's sessions make.
 
-resource "google_compute_security_policy" "issuer" {
-  name        = "cfokit-issuer"
+resource "google_compute_security_policy" "identity" {
+  name        = "cfokit-identity"
   description = "Rate limits on sign-in, token and client registration."
 
   adaptive_protection_config {

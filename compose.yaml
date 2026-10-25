@@ -73,12 +73,12 @@ services:
   # CFOKit from operating a login flow or storing a password, and `IAM-06` requires a running
   # deployment to be usable as it stands — so the issuer has to bring its own user store and
   # login pages, or a self-hoster is left to supply the one thing we may not write.
-  keycloak:
+  identity:
     # Keycloak with CFOKit's sign-in theme added, built from web/ (ADR-0054 § 1); the Dockerfile
     # pins the Keycloak image.
     build:
       context: .
-      target: issuer
+      target: identity
       secrets: [build_ca]
     restart: unless-stopped
     # HTTPS only, with the certificate from the `tls` step above. Cross-device access requires
@@ -107,6 +107,11 @@ services:
       # Whether a client that registers itself may send a sign-in only to Claude or back to this
       # machine. Off here, where nothing outside can reach the issuer (ADR-0064).
       CFOKIT_RESTRICT_REGISTERED_REDIRECTS: ${CFOKIT_RESTRICT_REGISTERED_REDIRECTS:-false}
+      # CFOKit's agent as a client of the issuer, allowed only to exchange a person's token
+      # for its own (ADR-0077). Off unless enabled; on here, with a local-only secret like the
+      # administrator's below, because the `agent` service presents it.
+      CFOKIT_AGENT_ENABLED: ${CFOKIT_AGENT_ENABLED:-true}
+      CFOKIT_AGENT_CLIENT_SECRET: ${CFOKIT_AGENT_CLIENT_SECRET:-cfokit-agent}
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
       KC_DB_USERNAME: cfokit
@@ -131,7 +136,7 @@ services:
       # it directly, so it has to mean the same thing from both sides. Published on the
       # container's own port rather than mapped to a different one, because a mapping makes the
       # advertised address wrong for exactly one of the two — and on this network 8080 is the
-      # ledger, so a browser following the chain to `keycloak:8080` would reach the ledger and
+      # ledger, so a browser following the chain to `keycloak.localhost:8080` would reach the ledger and
       # be answered.
       KC_HTTPS_PORT: ${KEYCLOAK_PORT:-8443}
       KC_HTTPS_CERTIFICATE_FILE: /opt/keycloak/conf/tls/cert.pem
@@ -189,7 +194,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      keycloak:
+      identity:
         condition: service_healthy
     environment:
       # The complete configuration surface; infra/README.md names every variable. Changing its
@@ -213,6 +218,9 @@ services:
       TLS_KEY_FILE: /etc/cfokit/tls-server/key.pem
       # The MCP service's own address, which the web client shows a person connecting their agent.
       MCP_PUBLIC_BASE_URL: ${MCP_PUBLIC_BASE_URL:-https://localhost:8081}
+      # CFOKit's agent's own address, where the web client's chat window sends a turn; the page's
+      # CSP may connect there (ADR-0075 § 1).
+      AGENT_PUBLIC_BASE_URL: ${AGENT_PUBLIC_BASE_URL:-https://localhost:8082}
     volumes:
       - ./.local/tls/ca:/etc/cfokit/tls:ro
       - ./.local/tls/cfokit:/etc/cfokit/tls-server:ro
@@ -257,7 +265,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      keycloak:
+      identity:
         condition: service_healthy
     environment:
       # The same surface the REST service reads, and the same issuer and audience: one
@@ -286,6 +294,56 @@ services:
       - "${MCP_PORT:-8081}:8081"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('https://localhost:8081/healthz')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # The agent behind the web app's chat (ADR-0075): a separate component, reaching the books only
+  # through the MCP service and its conversations only through the REST service, as its own
+  # client acting for the person signed in (ADR-0077). It holds no database credential.
+  #
+  # Off until ANTHROPIC_API_KEY is set: it starts, answers that the chat is off, and nothing
+  # else changes. Its own address, as the MCP service has one, because nothing here routes a
+  # path on the web client's origin to it (ADR-0075 § 1).
+  agent:
+    build:
+      context: .
+      target: runtime
+      secrets: [build_ca]
+    command: ["python", "-m", "cfokit.agent"]
+    restart: unless-stopped
+    depends_on:
+      identity:
+        condition: service_healthy
+      ledger:
+        condition: service_healthy
+      mcp:
+        condition: service_healthy
+    environment:
+      # Inside the network, by service name; the certificate names both (infra/tls/generate.py).
+      CFOKIT_API_URL: https://ledger:8080
+      CFOKIT_MCP_URL: https://mcp:8081/mcp
+      AUTH_ISSUER_URL: ${AUTH_ISSUER_URL:-https://keycloak.localhost:8443/realms/cfokit}
+      # Its client at the issuer, and the same local-only secret the issuer is given above.
+      AUTH_CLIENT_ID: cfokit-agent
+      AUTH_CLIENT_SECRET: ${CFOKIT_AGENT_CLIENT_SECRET:-cfokit-agent}
+      # The one browser origin allowed to call it: the web client's.
+      WEB_PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://localhost:8080}
+      # The inference credential, the self-hoster's own. Unset, the chat is off.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      CFOKIT_AGENT_MODEL: ${CFOKIT_AGENT_MODEL:-}
+      SSL_CERT_FILE: /etc/cfokit/tls/ca.pem
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      PORT: "8082"
+      TLS_CERT_FILE: /etc/cfokit/tls-server/cert.pem
+      TLS_KEY_FILE: /etc/cfokit/tls-server/key.pem
+    volumes:
+      - ./.local/tls/ca:/etc/cfokit/tls:ro
+      - ./.local/tls/cfokit:/etc/cfokit/tls-server:ro
+    ports:
+      - "${AGENT_PORT:-8082}:8082"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('https://localhost:8082/healthz')"]
       interval: 10s
       timeout: 3s
       retries: 5
@@ -333,7 +391,7 @@ services:
       # The issuer, because the conformance suite drives it. `infra/README.md` states a
       # contract any issuer must meet and once claimed a suite verified it; the suite now
       # exists, and it needs the thing it measures to be running (ADR-0019).
-      keycloak:
+      identity:
         condition: service_healthy
     environment:
       # As the application role, so an integration test sees exactly the privileges and the
@@ -352,6 +410,14 @@ services:
       # is measured instead of skipped behind that failure. Not part of the application's
       # configuration surface, and not read by anything that serves traffic.
       AUTH_REGISTRATION_ENDPOINT: ${AUTH_REGISTRATION_ENDPOINT:-}
+      # What the agent's exchange test needs from the shipped issuer: where the web client
+      # returns a sign-in to, the local administrator who makes a person for it, and the
+      # agent's local-only secret (tests/integration/test_agent_exchange.py). Test-only, like
+      # the registration endpoint above.
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://localhost:8080}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      CFOKIT_AGENT_CLIENT_SECRET: ${CFOKIT_AGENT_CLIENT_SECRET:-cfokit-agent}
     volumes:
       - ./.local/tls/ca:/etc/cfokit/tls:ro
 

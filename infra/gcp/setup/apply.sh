@@ -7,7 +7,7 @@
 # A service whose creation failed is left tainted, and deletion protection stops OpenTofu replacing
 # it, so a re-run cannot recover. One that never served a request is safe to remove and recreate;
 # one that ever became ready is never touched.
-for key in 'api["rest"]' 'api["mcp"]' issuer; do
+for key in 'api["rest"]' 'api["mcp"]' identity; do
   address="google_cloud_run_v2_service.$key"
   if tf state show "$address" 2>/dev/null | head -1 | grep -q tainted; then
     name=$(tf state show "$address" | sed -n 's/^ *name *= *"\(.*\)"$/\1/p' | head -1)

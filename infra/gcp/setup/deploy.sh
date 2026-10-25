@@ -41,12 +41,12 @@ fi
 repository="${CFOKIT_REGION}-docker.pkg.dev/${CFOKIT_PROJECT}/cfokit"
 bucket="gs://${CFOKIT_PROJECT}-web"
 app="${repository}/app:${sha}"
-issuer="${repository}/issuer:${sha}"
+identity="${repository}/identity:${sha}"
 
 "$(dirname "$0")/images.sh" "$sha"
 
 # Before anything runs them: a critical vulnerability with a fix stops the deploy here.
-"$(dirname "$0")/vulnerabilities.sh" "$app" "$issuer"
+"$(dirname "$0")/vulnerabilities.sh" "$app" "$identity"
 
 # Before any revision that needs it serves traffic, never by a service at startup (ADR-0004).
 step "Migrate"
@@ -89,8 +89,8 @@ for service in cfokit-rest cfokit-mcp; do
   gcloud run services update "$service" --region "$CFOKIT_REGION" --image "$app" --quiet >/dev/null
   done_ "$service"
 done
-gcloud run services update cfokit-issuer --region "$CFOKIT_REGION" --image "$issuer" --quiet >/dev/null
-done_ "cfokit-issuer"
+gcloud run services update cfokit-identity --region "$CFOKIT_REGION" --image "$identity" --quiet >/dev/null
+done_ "cfokit-identity"
 
 CFOKIT_ASSET="$(cd "$work/build" && find assets -name '*.js' | head -1)" \
   "$(dirname "$0")/check.sh"

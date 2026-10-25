@@ -53,7 +53,7 @@ nothing cites these but this repository. They are added when something breaks wi
 | [0007](0007-append-only-from-posting-reversing-corrections.md) | Records become immutable at posting; corrections are reversing entries | Accepted |
 | [0008](0008-layered-architecture-pure-engine.md) | Four layers, with a pure booking engine at the bottom | Draft |
 | [0009](0009-one-app-two-protocol-adapters.md) | One application, two protocol adapters; MCP calls the service in-process | Draft |
-| [0010](0010-beancount-as-test-oracle.md) | Beancount is a differential test oracle, never a runtime dependency | Draft |
+| [0010](0010-beancount-as-test-oracle.md) | Beancount is a differential test oracle, never an agent dependency | Draft |
 | [0011](0011-entity-advisory-lock.md) | Writes serialize on a per-entity advisory lock | Draft |
 | [0012](0012-binding-non-goals-and-scope-discipline.md) | Binding non-goals, enforced as a gate rather than a ban | Draft |
 | [0013](0013-two-dates-bitemporality.md) | Two dates per transaction, and bitemporality for free | Accepted |
@@ -118,6 +118,9 @@ nothing cites these but this repository. They are added when something breaks wi
 | [0072](0072-inference-usage-is-recorded-per-company-and-read-through-the-api.md) | Inference usage is recorded per company and read through the published API | Proposed |
 | [0073](0073-a-principals-roles-are-a-set-added-and-removed-one-at-a-time.md) | A principal's roles in an entity are a set, added and removed one at a time | Proposed |
 | [0074](0074-a-documentation-clip-is-cut-from-a-passing-run-of-its-use-case.md) | A documentation clip is cut from a passing end-to-end run of the use case it shows | Proposed |
+| [0075](0075-cfokit-s-agent-is-an-async-component-built-on-pydantic-ai.md) | CFOKit's agent is an async component built on Pydantic AI, streaming AG-UI to an assistant-ui chat window | Proposed |
+| [0076](0076-conversations-and-their-files-are-stored-in-core.md) | Conversations and the files in them are the company's records, stored in core's database | Proposed |
+| [0077](0077-the-agent-acts-with-a-token-exchanged-from-the-persons.md) | The agent acts for a person with a token exchanged from theirs, and only while they are there | Proposed |
 | [0078](0078-the-quickbooks-fixture-is-ours-and-a-sandbox-validates-it.md) | The QuickBooks fixture is ours, written from business events, with a sandbox as its validator | Proposed |
 
 ## Deferred — decided in principle, waiting on a need
@@ -227,7 +230,7 @@ A sweep found five conflicts and eight unserved requirements. None is fixed.
 
 | Conflict | Where |
 |---|---|
-| `SOC1-25` requires the acting principal's own credential to flow through, "never against a shared credential with the real actor passed as a parameter". Components authenticate by client credentials and assert which user is acting — the intersection of grants mitigates this but does not satisfy it. The fix is OAuth token exchange (RFC 8693), which ADR-0019's conformance contract also does not require | ADR-0021, ADR-0032, ADR-0019 |
+| `SOC1-25` requires the acting principal's own credential to flow through, "never against a shared credential with the real actor passed as a parameter". Components authenticate by client credentials and assert which user is acting — the intersection of grants mitigates this but does not satisfy it. The fix is OAuth token exchange (RFC 8693). ADR-0077 adopts it for CFOKit's agent and adds it to ADR-0019's conformance contract; other components still use client credentials | ADR-0021, ADR-0032, ADR-0019, ADR-0077 |
 | `SOC1-15` puts actor class on the entry "in the data itself, not only in an audit record", and `SOC1-06`, `SOC1-34` and `SOC1-35` add model and skill versions against it. ADR-0022 says the ledger knows nothing about agents. Its boundary test has no answer for this | ADR-0022 |
 | `SOC2-20` requires central session revocation reaching skills. ADR-0019's conformance contract does not enumerate it, so a conforming issuer does not satisfy it | ADR-0019 |
 | `SOC1-22` requires audit records in storage the application cannot modify or delete by any code path, administrative ones included. ADR-0003 permits only Postgres and does not address how | ADR-0003 |

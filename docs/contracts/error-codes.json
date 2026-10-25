@@ -28,12 +28,24 @@
     "error": "ConfigError"
   },
   {
+    "code": "conversation_not_found",
+    "error": "ConversationNotFound"
+  },
+  {
     "code": "customer_not_found",
     "error": "CustomerNotFound"
   },
   {
     "code": "entity_not_found",
     "error": "EntityNotFound"
+  },
+  {
+    "code": "file_not_found",
+    "error": "FileNotFound"
+  },
+  {
+    "code": "file_refused",
+    "error": "FileRefused"
   },
   {
     "code": "idempotency_key_required",
@@ -72,6 +84,10 @@
     "error": "LineWithoutIncome"
   },
   {
+    "code": "message_invalid",
+    "error": "MessageInvalid"
+  },
+  {
     "code": "migration_failed",
     "error": "MigrationError"
   },
@@ -94,6 +110,10 @@
   {
     "code": "not_authorized",
     "error": "NotAuthorized"
+  },
+  {
+    "code": "not_for_a_person",
+    "error": "NotForAPerson"
   },
   {
     "code": "nothing_to_close",

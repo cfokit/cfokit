@@ -3,6 +3,7 @@ export { ActionBar } from "./ActionBar";
 export { AppFrame } from "./AppFrame";
 export { Button } from "./Button";
 export { Card } from "./Card";
+export { Conversation } from "./Conversation";
 export { CopyBlock } from "./CopyBlock";
 export { Dialog } from "./Dialog";
 export { DropZone } from "./DropZone";

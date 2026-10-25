@@ -66,7 +66,7 @@ resource "google_logging_project_sink" "audit" {
   destination = "logging.googleapis.com/${google_logging_project_bucket_config.audit.id}"
   filter = join(" OR ", [
     "logName=\"projects/${var.project_id}/logs/cloudaudit.googleapis.com%2Fdata_access\"",
-    "(resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"${google_cloud_run_v2_service.issuer.name}\" AND textPayload:\"org.keycloak.events\")",
+    "(resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"${google_cloud_run_v2_service.identity.name}\" AND textPayload:\"org.keycloak.events\")",
   ])
   unique_writer_identity = true
 }

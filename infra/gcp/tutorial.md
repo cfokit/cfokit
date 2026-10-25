@@ -91,7 +91,7 @@ gcloud secrets versions access latest --secret keycloak-admin-password; echo
 
 ## Build the images
 
-Builds the application and issuer images from this checkout and pushes them. **Around ten
+Builds the application and identity images from this checkout and pushes them. **Around ten
 minutes**; set your DNS records (next step but one) while it runs, in a second terminal tab.
 
 ```sh

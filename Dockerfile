@@ -8,6 +8,7 @@
 #   docker run … python -m cfokit.ledger.migrations    migrations, explicit only
 #   docker run … python -m cfokit.server rest         REST service (default)
 #   docker run … python -m cfokit.server mcp          MCP service, streamable HTTP
+#   docker run … python -m cfokit.agent             CFOKit's own agent, behind the chat (ADR-0075)
 #
 # The REST service also serves the web client's static build at /app/ (ADR-0049 § 5). It is
 # built from web/ in a Node stage below; the final image carries the files and no Node.
@@ -40,7 +41,7 @@ RUN corepack pnpm build
 # ---------------------------------------------------------------------------
 # The issuer's sign-in theme (ADR-0054 § 1), built by Keycloakify from the same project into a
 # JAR. That needs Maven and a JDK beside Node, taken from the Maven image into the client's stage.
-# The `issuer` target below puts the JAR into Keycloak's image.
+# The `identity` target below puts the JAR into Keycloak's image.
 FROM maven:3.9.16-eclipse-temurin-21@sha256:99e61abcff91a9b1333463bd8451fb18495d6eba9250ac66a338b518f8278320 AS maven
 
 FROM web AS sign-in-theme
@@ -49,13 +50,26 @@ COPY --from=maven /usr/share/maven /usr/share/maven
 ENV JAVA_HOME=/opt/java/openjdk \
     MAVEN_HOME=/usr/share/maven \
     PATH=/opt/java/openjdk/bin:/usr/share/maven/bin:$PATH
-RUN --mount=type=cache,target=/root/.m2 corepack pnpm exec keycloakify build
+# The optional build CA, as for the stages above. Maven reads the JDK's trust store, not a PEM
+# file, so each certificate in the bundle is imported into a copy of it for this build only.
+RUN --mount=type=cache,target=/root/.m2 \
+    --mount=type=secret,id=build_ca,required=false \
+    if [ -s /run/secrets/build_ca ]; then \
+      cp "$JAVA_HOME/lib/security/cacerts" /tmp/build-cacerts; \
+      csplit -s -z -f /tmp/build-ca- /run/secrets/build_ca '/-----BEGIN CERTIFICATE-----/' '{*}'; \
+      for cert in /tmp/build-ca-*; do \
+        keytool -importcert -noprompt -keystore /tmp/build-cacerts -storepass changeit \
+          -alias "$(basename "$cert")" -file "$cert" >/dev/null 2>&1 || true; \
+      done; \
+      export JAVA_TOOL_OPTIONS="-Djavax.net.ssl.trustStore=/tmp/build-cacerts -Djavax.net.ssl.trustStorePassword=changeit"; \
+    fi; \
+    corepack pnpm exec keycloakify build
 
 # Passwords the issuer refuses because they are in public breach compilations
 # (infra/keycloak/README.md). The ten million most common, from SecLists (MIT), pinned by commit
 # and checksum, kept to those of 12 to 128 characters: 12 is the shortest minimum a deployment may
 # set (CFOKIT_PASSWORD_MIN_LENGTH), and anything shorter is refused before the list is read. The
-# download stays in this stage; the issuer image carries the 9.5 MB result and its license.
+# download stays in this stage; the identity image carries the 9.5 MB result and its license.
 FROM python:3.14.7-slim@sha256:51dafde81dbdb6ebde285137a295cf18a47ca95234fe388a343719cb97305b3d AS breached-passwords
 ADD --checksum=sha256:18dc49ca32b62455a61e3398f4ab9f93eb700ff142fa0d4b9fd11a727f3b80e4 \
     https://raw.githubusercontent.com/danielmiessler/SecLists/12274c98fdebe98c7a7284914436a472ed469aed/Passwords/Common-Credentials/Pwdb_top-10000000.txt \
@@ -68,7 +82,7 @@ RUN LC_ALL=C awk 'length($0) >= 12 && length($0) <= 128' /tmp/passwords.txt \
     | LC_ALL=C tr 'A-Z' 'a-z' | LC_ALL=C sort -u > /out/cfokit-breached.txt \
     && rm /tmp/passwords.txt
 
-FROM quay.io/keycloak/keycloak:26.8.0@sha256:b0f60d489d51c5d113390bdf5461d4c06e6051be026c05549f2e1e10ec352bcc AS issuer
+FROM quay.io/keycloak/keycloak:26.8.0@sha256:b0f60d489d51c5d113390bdf5461d4c06e6051be026c05549f2e1e10ec352bcc AS identity
 COPY --from=breached-passwords /out/ /opt/keycloak/data/password-blacklists/
 COPY --from=sign-in-theme /web/dist_keycloak/cfokit-theme.jar /opt/keycloak/providers/
 # The realm, imported on first start where nothing mounts it — Cloud Run mounts nothing
@@ -136,6 +150,10 @@ WORKDIR /app
 COPY --from=builder --chown=cfokit:cfokit /app /app
 # Where cfokit.server looks for it (WEB_ROOT); read-only to the service.
 COPY --from=web /web/dist /app/web
+# The bookkeeper skill, which the agent gives the model as its instructions (ADR-0075 § 2): the
+# same file the CFOKit plugin for Claude carries, so the chat and a person's own agent are told
+# the same thing. Where cfokit.agent looks (CFOKIT_AGENT_SKILL).
+COPY skills/cfokit/bookkeeper/SKILL.md /opt/cfokit/skills/cfokit/bookkeeper/SKILL.md
 
 ENV PATH="/app/.venv/bin:${PATH}" \
     PYTHONUNBUFFERED=1 \

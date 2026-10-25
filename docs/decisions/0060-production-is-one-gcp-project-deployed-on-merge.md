@@ -118,7 +118,7 @@ A deploy workflow runs after CI succeeds on `main`. It authenticates to GCP by W
 Federation, scoped to this repository's `main` branch, so no key exists to store or rotate. In
 order:
 
-1. Build the application image and the issuer image, tagged with the commit, into Artifact
+1. Build the application image and the identity image, tagged with the commit, into Artifact
    Registry.
 2. Run the migration job from the new image, and stop if it fails. A schema migration is applied
    before any revision that needs it serves traffic, never by a service at startup.

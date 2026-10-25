@@ -168,7 +168,7 @@ function useQuestions(api: Api, entityId: string) {
  * a link from a notification still names it. Until it arrives, or if it cannot be read, whatever
  * getting started knew stands in, which may be nothing.
  */
-function useCompanyName(api: Api, entityId: string, known: string): string {
+export function useCompanyName(api: Api, entityId: string, known: string): string {
   const [name, setName] = useState<string | null>(null);
   useEffect(() => {
     let current = true;

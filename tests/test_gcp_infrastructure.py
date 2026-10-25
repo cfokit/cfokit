@@ -56,9 +56,9 @@ def test_the_master_realm_answers_only_behind_identity_aware_proxy() -> None:
         r'paths\s*=\s*\["/realms/master", "/realms/master/\*"\]\s*service\s*=\s*([\w.]+)',
         auth.group(0),
     )
-    assert rule and rule.group(1) == "google_compute_backend_service.issuer_admin.id"
+    assert rule and rule.group(1) == "google_compute_backend_service.identity_admin.id"
     assert re.search(
-        r'resource "google_compute_backend_service" "issuer_admin" \{'
+        r'resource "google_compute_backend_service" "identity_admin" \{'
         r".*?iap \{\s*enabled\s*=\s*true",
         _terraform(),
         re.DOTALL,
@@ -95,7 +95,7 @@ def test_the_master_realm_is_pointed_at_the_admin_console_host() -> None:
     public host, Identity-Aware Proxy guards the master realm and cannot answer in a frame, so
     the settings job points it at the console's own host."""
     job = re.search(
-        r'resource "google_cloud_run_v2_job" "issuer_settings" \{.*?\n\}',
+        r'resource "google_cloud_run_v2_job" "identity_settings" \{.*?\n\}',
         _terraform(),
         re.DOTALL,
     )
@@ -112,7 +112,7 @@ def test_production_restricts_where_a_registered_client_may_redirect() -> None:
     terraform = _terraform()
     assert re.search(r'CFOKIT_RESTRICT_REGISTERED_REDIRECTS\s*=\s*"true"', terraform)
     assert re.search(
-        r"CFOKIT_RESTRICT_REGISTERED_REDIRECTS\s*=\s*local\.issuer_env\.CFOKIT_RESTRICT_REGISTERED_REDIRECTS",
+        r"CFOKIT_RESTRICT_REGISTERED_REDIRECTS\s*=\s*local\.identity_env\.CFOKIT_RESTRICT_REGISTERED_REDIRECTS",
         terraform,
     )
 
@@ -214,7 +214,7 @@ def test_a_fixable_critical_vulnerability_stops_the_deploy_before_anything_runs(
     after pushing them and before the migration job or any service runs them, and the deploy
     identity can read the findings, and nothing more for them."""
     deploy = (GCP / "setup" / "deploy.sh").read_text(encoding="utf-8")
-    gate = deploy.index('vulnerabilities.sh" "$app" "$issuer"')
+    gate = deploy.index('vulnerabilities.sh" "$app" "$identity"')
     assert deploy.index('images.sh" "$sha"') < gate < deploy.index("cfokit-migrate")
     iam = (GCP / "iam.tf").read_text(encoding="utf-8")
     assert re.search(

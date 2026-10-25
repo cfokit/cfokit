@@ -1,7 +1,8 @@
 /**
  * A recorded run, cut into one clip per step (ADR-0074 § 3). The reporter keeps where each
  * top-level `test.step` began and ended in a passing run's video; `cut-clips.ts` cuts each one
- * into an MP4, a GIF and a WebVTT caption track whose cue is the step's title.
+ * into an MP4, a still of how it leaves the screen, and a WebVTT caption track whose cue is the
+ * step's title.
  */
 
 export interface Clip {

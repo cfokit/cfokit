@@ -14,9 +14,9 @@ resource "google_service_account" "migrate" {
   display_name = "CFOKit migration job"
 }
 
-resource "google_service_account" "issuer" {
-  account_id   = "cfokit-issuer"
-  display_name = "CFOKit issuer (Keycloak)"
+resource "google_service_account" "identity" {
+  account_id   = "cfokit-identity"
+  display_name = "CFOKit identity (Keycloak)"
 }
 
 resource "google_service_account" "deploy" {
@@ -28,8 +28,8 @@ locals {
   secret_readers = {
     "database-url-app"        = google_service_account.service.member
     "database-url-owner"      = google_service_account.migrate.member
-    "keycloak-db-password"    = google_service_account.issuer.member
-    "keycloak-admin-password" = google_service_account.issuer.member
+    "keycloak-db-password"    = google_service_account.identity.member
+    "keycloak-admin-password" = google_service_account.identity.member
   }
 }
 
@@ -83,9 +83,9 @@ resource "google_project_iam_member" "deploy_run" {
 # A revision runs as its runtime identity, so deploying one requires acting as it.
 resource "google_service_account_iam_member" "deploy_acts_as" {
   for_each = {
-    service = google_service_account.service.name
-    migrate = google_service_account.migrate.name
-    issuer  = google_service_account.issuer.name
+    service  = google_service_account.service.name
+    migrate  = google_service_account.migrate.name
+    identity = google_service_account.identity.name
   }
   service_account_id = each.value
   role               = "roles/iam.serviceAccountUser"
