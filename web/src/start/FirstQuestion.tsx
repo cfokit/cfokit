@@ -17,6 +17,14 @@ export function firstQuestion(company: string, entityId: string): string {
   );
 }
 
+/**
+ * The same question, asked in CFOKit's chat, in ADR-0058 § 3's words: the chat is already in the
+ * company, and its agent is told which (ADR-0068 § 3), so the question need not name it.
+ */
+export const FIRST_QUESTION_HERE =
+  "My books are imported into CFOKit. Confirm they match QuickBooks and explain any " +
+  "differences, then summarize this year's profit and loss and my cash position.";
+
 /** Opens Claude Desktop on a new chat with the prompt drafted, for the person to send. */
 export function claudeLink(prompt: string): string {
   return `claude://claude.ai/new?q=${encodeURIComponent(prompt)}`;
@@ -46,7 +54,7 @@ export function FirstQuestion({ entityId }: { entityId: string }) {
               void navigate({
                 to: "/companies/$entityId/chat",
                 params: { entityId },
-                search: { draft: prompt },
+                search: { draft: FIRST_QUESTION_HERE },
               })
             }
           >

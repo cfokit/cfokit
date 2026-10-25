@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { ApiError, useApi } from "../api";
 import { Button, Notice } from "../components";
+import { AGENT } from "../chat/agentUrl";
 import { PersonFrame } from "../settings/PersonFrame";
 import { describeAgent, signedInAs, useAgentConnections, when, type AgentConnection } from "./name";
 import { useCompanies, type Company } from "../settings/SettingsPage";
@@ -45,12 +46,21 @@ function messageOf(error: unknown): string {
  * Where this agent stands in one company: every role it holds there, each removable, and the
  * roles it could be given besides (ADR-0073).
  */
-function CompanyRow({ company, agent }: { company: Company; agent: string }) {
+function CompanyRow({
+  company,
+  agent,
+  draft,
+}: {
+  company: Company;
+  agent: string;
+  draft: string | undefined;
+}) {
   const api = useApi();
   const [standing, setStanding] = useState<Standing>({ state: "loading" });
   const [busy, setBusy] = useState(false);
   // Set when the person allows the agent here, on this visit: then the page says what is next.
   const [justAllowed, setJustAllowed] = useState(false);
+  const navigate = useNavigate();
 
   // Bumped after each change, so the standing is read again from the server, which holds it.
   const [version, setVersion] = useState(0);
@@ -137,9 +147,30 @@ function CompanyRow({ company, agent }: { company: Company; agent: string }) {
           </div>
         </div>
       )}
-      {standing.state === "allowed" && justAllowed && (
+      {standing.state === "allowed" && justAllowed && agent !== AGENT && (
         <Notice tone="success" label="Done" announce>
           Go back to Claude and ask again. It can act in {company.name} now.
+        </Notice>
+      )}
+      {standing.state === "allowed" && justAllowed && agent === AGENT && (
+        // CFOKit's own agent is answered in the web client, so the way back is to its chat, with
+        // what the person had written there (ADR-0068 § 3).
+        <Notice tone="success" label="Done" announce>
+          <p>CFOKit can act in {company.name} now.</p>
+          <div className="pt-2">
+            <Button
+              variant="primary"
+              onClick={() =>
+                void navigate({
+                  to: "/companies/$entityId/chat",
+                  params: { entityId: company.id },
+                  search: draft === undefined ? {} : { draft },
+                })
+              }
+            >
+              Ask CFOKit
+            </Button>
+          </div>
         </Notice>
       )}
       {standing.state === "not-allowed" && (
@@ -212,7 +243,7 @@ function AgentFacts({
  * person allowed it there; this is where they do, signed in as themselves (`IAM-10`, `IAM-12`).
  * Every refusal an agent receives for want of it links here.
  */
-export function AgentPage({ agent }: { agent: string }) {
+export function AgentPage({ agent, draft }: { agent: string; draft?: string | undefined }) {
   const listing = useCompanies();
   const navigate = useNavigate();
   const connection = useAgentConnections(
@@ -249,7 +280,7 @@ export function AgentPage({ agent }: { agent: string }) {
           ) : (
             <ul aria-label="Companies" className="flex flex-col border-t border-rule">
               {listing.companies.map((company) => (
-                <CompanyRow key={company.id} company={company} agent={agent} />
+                <CompanyRow key={company.id} company={company} agent={agent} draft={draft} />
               ))}
             </ul>
           ))}

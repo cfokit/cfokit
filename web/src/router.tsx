@@ -29,8 +29,6 @@ const root = createRootRoute({
   ),
 });
 
-// Getting started (ADR-0058): the export and the company it describes, then the import into that
-// company, connecting Claude, and the first question.
 // Where a signed-in person lands: a company's chat, or getting started when there is none to open.
 const home = createRoute({
   getParentRoute: () => root,
@@ -42,7 +40,9 @@ const home = createRoute({
   ),
 });
 
-// Getting started for one more company, as Settings' "Add a company" opens it.
+// Getting started (ADR-0058): the export and the company it describes, then the import into that
+// company, connecting Claude, and the first question. Here, for one more company, as Settings'
+// "Add a company" opens it.
 const start = createRoute({
   getParentRoute: () => root,
   path: "/start",
@@ -177,11 +177,13 @@ const company = createRoute({
 const agents = createRoute({
   getParentRoute: () => root,
   path: "/agents/$agent",
+  validateSearch: withDraft,
   component: function Agents() {
     const { agent } = agents.useParams();
+    const { draft } = agents.useSearch();
     return (
       <SignedIn>
-        <AgentPage agent={agent} />
+        <AgentPage agent={agent} draft={draft} />
       </SignedIn>
     );
   },

@@ -4,7 +4,7 @@ import { useEffect, type ReactNode } from "react";
 import type { Export } from "../quickbooks/read";
 import type { Reading } from "../quickbooks/readExport";
 import { ConnectPage } from "./ConnectPage";
-import { claudeLink, FirstQuestion, firstQuestion } from "./FirstQuestion";
+import { claudeLink, FIRST_QUESTION_HERE, FirstQuestion, firstQuestion } from "./FirstQuestion";
 import { GettingStarted } from "./GettingStarted";
 import { Home } from "./Home";
 import { ImportPage } from "./ImportPage";
@@ -336,13 +336,18 @@ describe("connecting Claude and the first question", () => {
 
 describe("the first question, asked here", () => {
   test("where the deployment runs CFOKit's agent, the chat is offered with the question drafted", async () => {
+    expect(FIRST_QUESTION_HERE).toBe(
+      "My books are imported into CFOKit. Confirm they match QuickBooks and explain any " +
+        "differences, then summarize this year's profit and loss and my cash position.",
+    );
     answers["/connection"] = { mcp_url: null, agent_url: "https://agent.example.test" };
     withExport(<FirstQuestion entityId="ent-1" />);
     fireEvent.click(await screen.findByRole("button", { name: "Ask CFOKit here instead" }));
     expect(navigate).toHaveBeenCalledWith({
       to: "/companies/$entityId/chat",
       params: { entityId: "ent-1" },
-      search: { draft: firstQuestion("Synthetic Co", "ent-1") },
+      // ADR-0058 § 3's words: the chat is in the company already, so it is not named.
+      search: { draft: FIRST_QUESTION_HERE },
     });
   });
 

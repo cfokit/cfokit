@@ -24,6 +24,7 @@ from starlette.testclient import TestClient
 from cfokit.agent import Skill
 from cfokit.agent.app import Services, create_app
 from cfokit.agent.core import Stored, Thread
+from cfokit.agent.scripted import scripted_model
 from cfokit.agent.tokens import TokenRefused
 
 ENTITY = "0b9a6c86-2a7e-4f43-8f4a-1f0d6c2c1e11"
@@ -123,11 +124,13 @@ class Bookkeeper:
     """A model that asks for the profit and loss, then answers, noting what it was offered."""
 
     offered: list[list[str]] = field(default_factory=list)
+    told: list[str] = field(default_factory=list)
 
     async def __call__(
         self, messages: list[ModelMessage], info: AgentInfo
     ) -> AsyncIterator[str | DeltaToolCalls]:
         self.offered.append(sorted(tool.name for tool in info.function_tools))
+        self.told.append(info.instructions or "")
         if any(part.part_kind == "tool-return" for part in messages[-1].parts):
             yield "Revenue was "
             yield "1,200.00."
@@ -353,3 +356,83 @@ def test_the_refusal_still_reaches_the_person_when_connecting_fails() -> None:
     )
     response = history(client)
     assert (response.status_code, response.json()["code"]) == (403, "agent_not_allowed")
+
+
+def test_the_model_is_told_which_company_the_conversation_is_in() -> None:
+    """Every tool call names its entity and there is no current one (the bookkeeper skill), so
+    the turn tells the model the company the window posted to rather than leaving it to ask."""
+    model = Bookkeeper()
+    post(app(Core(), model), asked())
+    assert all(f"entity_id {ENTITY}" in told for told in model.told)
+    assert all(SKILL.instructions in told for told in model.told)
+
+
+# The scripted stand-in the documentation is recorded with (ADR-0074), through the real app.
+# Expected values: the tool's published inputs (`profit_and_loss` takes `entity_id` and
+# `since`), the figures the stand-in tool returned, which the answer repeats rather than
+# computes, and `SOC1-35`, by which a response records the model that wrote it.
+
+scripted_books = MCPServer("cfokit-scripted")
+CALLS: list[dict[str, str]] = []
+
+
+@scripted_books.tool(name="profit_and_loss")
+def scripted_profit_and_loss(entity_id: str, since: str) -> dict[str, Any]:
+    """Income and expense between two dates, as the published tool returns it: a dict."""
+    CALLS.append({"entity_id": entity_id, "since": since})
+    return {
+        "ok": True,
+        "company": "Synthetic Co",
+        "since": since,
+        "income": [{"name": "Income:Consulting", "amount": "1200.00"}],
+        "expenses": [{"name": "Meals:Client Meals", "amount": "12.50"}],
+        "total_income": "1200.00",
+        "total_expenses": "12.50",
+        "net_income": "1187.50",
+    }
+
+
+@asynccontextmanager
+async def connect_scripted(token: str) -> AsyncIterator[Client]:
+    async with Client(scripted_books) as client:
+        yield client
+
+
+def scripted_turn(core: Core) -> Any:
+    client = TestClient(
+        create_app(
+            Services(
+                model=scripted_model(),
+                skill=SKILL,
+                tokens=Tokens(),
+                core=core,
+                connect=connect_scripted,
+            )
+        )
+    )
+    return client.post(
+        TURN,
+        json=asked(),
+        headers={"Accept": "text/event-stream", "Authorization": f"Bearer {PERSON}"},
+    )
+
+
+def test_it_reads_the_profit_and_loss_to_date_for_the_conversation_s_company() -> None:
+    CALLS.clear()
+    scripted_turn(Core())
+    assert CALLS == [{"entity_id": ENTITY, "since": "0001-01-01"}]
+
+
+def test_it_answers_with_the_figures_the_tool_returned_and_says_it_is_scripted() -> None:
+    core = Core()
+    scripted_turn(core)
+    answer = core.kept[-1]
+    assert answer["kind"] == "response"
+    assert answer["model"] == "scripted"
+    text = "".join(
+        part.get("content", "")
+        for part in answer["content"]["parts"]
+        if part["part_kind"] == "text"
+    )
+    for figure in ("Synthetic Co", "1,200.00", "12.50", "1,187.50"):
+        assert figure in text
