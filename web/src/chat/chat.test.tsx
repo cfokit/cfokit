@@ -75,10 +75,10 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function page(conversationId?: string) {
+function page(conversationId?: string, draft?: string) {
   return render(
     <StartedProvider>
-      <ChatPage entityId={ENTITY} conversationId={conversationId} />
+      <ChatPage entityId={ENTITY} conversationId={conversationId} draft={draft} />
     </StartedProvider>,
   );
 }
@@ -109,6 +109,7 @@ test("with no conversation named, it starts one and puts it in the address", asy
   expect(navigate).toHaveBeenCalledWith({
     to: "/companies/$entityId/chat/$conversationId",
     params: { entityId: ENTITY, conversationId: "c-new" },
+    search: {},
     replace: true,
   });
 });
@@ -164,4 +165,15 @@ test("a refusal clears when the person tries again", async () => {
 
   await waitFor(() => expect(screen.queryByText("Not allowed yet")).toBeNull());
   expect(requests.some((r) => r.method === "POST" && r.url.endsWith("/turn"))).toBe(true);
+});
+
+test("a question handed over is carried to the conversation and waits, unsent, to be sent", async () => {
+  page(undefined, "How did we do?");
+  await waitFor(() => expect(navigate).toHaveBeenCalled());
+  expect(navigate.mock.calls[0]?.[0].search).toEqual({ draft: "How did we do?" });
+
+  page(CONVERSATION, "How did we do?");
+  const composer = await screen.findByRole("textbox", { name: "Ask about your books" });
+  await waitFor(() => expect((composer as HTMLTextAreaElement).value).toBe("How did we do?"));
+  expect(requests.some((r) => r.url.endsWith("/turn"))).toBe(false);
 });

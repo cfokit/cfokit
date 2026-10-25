@@ -1,3 +1,5 @@
+import { useNavigate } from "@tanstack/react-router";
+import { useAgentUrl } from "../chat/agentUrl";
 import { Button, CopyBlock } from "../components";
 import { StartFrame } from "./StartFrame";
 import { useStarted } from "./state";
@@ -24,16 +26,33 @@ export function claudeLink(prompt: string): string {
 export function FirstQuestion({ entityId }: { entityId: string }) {
   const { company } = useStarted();
   const prompt = firstQuestion(company, entityId);
+  const agentUrl = useAgentUrl();
+  const navigate = useNavigate();
   return (
     <StartFrame step={4} title="Ask Claude about your books">
       <p className="text-body text-ink">
         Your books are in CFOKit. Continue in Claude Desktop, where the question below is waiting in
         a new chat for you to send. Your browser may ask to open Claude the first time.
       </p>
-      <div>
+      <div className="flex flex-wrap gap-2">
         <Button variant="primary" onClick={() => window.location.assign(claudeLink(prompt))}>
           Continue in Claude
         </Button>
+        {typeof agentUrl === "string" && (
+          // The browser door's other ending: the web client opens on the company, which is its
+          // chat, with the same question waiting (ADR-0058 § 1, ADR-0068 § 3).
+          <Button
+            onClick={() =>
+              void navigate({
+                to: "/companies/$entityId/chat",
+                params: { entityId },
+                search: { draft: prompt },
+              })
+            }
+          >
+            Ask CFOKit here instead
+          </Button>
+        )}
       </div>
       <CopyBlock label="Or paste this into Claude" text={prompt} />
     </StartFrame>

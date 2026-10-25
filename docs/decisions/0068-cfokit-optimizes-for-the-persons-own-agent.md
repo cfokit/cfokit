@@ -96,6 +96,18 @@ runtime hosts too. A capability built for it serves both offerings.
 Each of these hands back to the agent when it is done, with a link or a drafted prompt, rather than
 continuing on the web.
 
+### 3. The web client's home is CFOKit's chat
+
+Where the deployment runs CFOKit's agent (ADR-0075), a company's home in the web client is its chat
+with that agent, and a signed-in person with a company lands there. The chat is not a page in § 1's
+sense: it hosts the same skill and the same published tools as the person's own agent, so a
+capability built conversation first serves it unchanged, and the order in § 1 stands. The pages in
+§ 2 hand back to the chat, or to the person's own agent, when they are done.
+
+Getting started still ends offering Claude first (ADR-0058 § 1), with the chat beside it and the same
+first question drafted in it. A deployment that runs no agent has no chat, and its web client keeps
+the pages it had.
+
 ### Consequences
 
 * Good, because setup and migration draw on what the person's agent already knows about the
@@ -109,7 +121,8 @@ continuing on the web.
   Nothing returns a browser tab to a specific chat (ADR-0058), so each hand-off back is a new
   chat or a copied prompt.
 * Bad, because a person who chose the browser at the end of getting started (ADR-0058) gets less
-  than one who connected an agent: what is built for the agent reaches them when they connect one.
+  than one who connected an agent where the deployment runs no agent of its own. Where it runs one,
+  the chat brings them what is built for the agent (§ 3).
 * Neutral, because pages do not go away. They narrow to what the browser holds.
 
 ### Confirmation

@@ -1,5 +1,11 @@
 import { lazy, Suspense } from "react";
-import { createRootRoute, createRoute, createRouter, Outlet } from "@tanstack/react-router";
+import {
+  createRootRoute,
+  createRoute,
+  createRouter,
+  Outlet,
+  redirect,
+} from "@tanstack/react-router";
 import { AgentPage } from "./agents/AgentPage";
 import { SignedIn } from "./auth/SignedIn";
 import { SignInReturn } from "./auth/SignInReturn";
@@ -8,6 +14,7 @@ import { SettingsPage } from "./settings/SettingsPage";
 import { ConnectPage } from "./start/ConnectPage";
 import { FirstQuestion } from "./start/FirstQuestion";
 import { GettingStarted } from "./start/GettingStarted";
+import { Home } from "./start/Home";
 import { ImportPage } from "./start/ImportPage";
 import { StartedProvider } from "./start/state";
 
@@ -24,9 +31,21 @@ const root = createRootRoute({
 
 // Getting started (ADR-0058): the export and the company it describes, then the import into that
 // company, connecting Claude, and the first question.
-const start = createRoute({
+// Where a signed-in person lands: a company's chat, or getting started when there is none to open.
+const home = createRoute({
   getParentRoute: () => root,
   path: "/",
+  component: () => (
+    <SignedIn>
+      <Home />
+    </SignedIn>
+  ),
+});
+
+// Getting started for one more company, as Settings' "Add a company" opens it.
+const start = createRoute({
+  getParentRoute: () => root,
+  path: "/start",
   component: () => (
     <SignedIn>
       <GettingStarted />
@@ -105,15 +124,22 @@ const ChatPage = lazy(() => import("./chat/ChatPage").then((m) => ({ default: m.
 
 // The chat with CFOKit's agent in a company (ADR-0075). Without a conversation named, the page opens
 // the person's newest or starts one, and replaces the address with that conversation's.
+// A question another page hands to the chat, left in the composer for the person to send.
+function withDraft(search: Record<string, unknown>): { draft?: string } {
+  return typeof search.draft === "string" ? { draft: search.draft } : {};
+}
+
 const chat = createRoute({
   getParentRoute: () => root,
   path: "/companies/$entityId/chat",
+  validateSearch: withDraft,
   component: function Chat() {
     const { entityId } = chat.useParams();
+    const { draft } = chat.useSearch();
     return (
       <SignedIn>
         <Suspense>
-          <ChatPage entityId={entityId} />
+          <ChatPage entityId={entityId} draft={draft} />
         </Suspense>
       </SignedIn>
     );
@@ -123,15 +149,26 @@ const chat = createRoute({
 const conversation = createRoute({
   getParentRoute: () => root,
   path: "/companies/$entityId/chat/$conversationId",
+  validateSearch: withDraft,
   component: function Conversation() {
     const { entityId, conversationId } = conversation.useParams();
+    const { draft } = conversation.useSearch();
     return (
       <SignedIn>
         <Suspense>
-          <ChatPage entityId={entityId} conversationId={conversationId} />
+          <ChatPage entityId={entityId} conversationId={conversationId} draft={draft} />
         </Suspense>
       </SignedIn>
     );
+  },
+});
+
+// A company's home in the web client is its chat (ADR-0068 § 3).
+const company = createRoute({
+  getParentRoute: () => root,
+  path: "/companies/$entityId",
+  beforeLoad: ({ params }) => {
+    throw redirect({ to: "/companies/$entityId/chat", params, replace: true });
   },
 });
 
@@ -160,7 +197,9 @@ const signedIn = createRoute({
 
 export const router = createRouter({
   routeTree: root.addChildren([
+    home,
     start,
+    company,
     importing,
     connect,
     ask,
