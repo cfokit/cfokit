@@ -1,15 +1,15 @@
 {
  "validated_on": "2026-10-25",
  "archives": {
-  "accrual": "e05566d7a3ba15637d7c0001728fe49b48e88df3b0e25335016f0cf9ed6e542c",
-  "cash": "35d935ed1ac1a342bfc2744435d1f36a5e517a9a434a6a1fdf07eab02aec1710",
-  "partial-range": "b913ddf0aea3afd174a95e14da973fdae4e7a14eee2dd8c8baceae717905c261",
-  "calendar-year": "7fbc8f02f3fdb9f56b6bf358d75ec4be7b593278e4f8c6b84935d59934128cf0"
+  "accrual": "1095bf03edfa261cc4309a9dc8ed30e950bd09cc9ccd3cbbbd2ae3130a49aa60",
+  "cash": "a9ebf3aa5e004a0df84175fd08ac49bf86d1d0aac1c1508a03ae2731bd9a5889",
+  "partial-range": "64c10aea777e25587bd129d758ab97db574206a495fe7622e10ab101f01c8291",
+  "calendar-year": "1095bf03edfa261cc4309a9dc8ed30e950bd09cc9ccd3cbbbd2ae3130a49aa60"
  },
  "not_compared": {
   "account-numbers": "the Reports API prints no account numbers, whatever the setting"
  },
  "comparisons": 128,
- "rows_compared": 43494,
+ "rows_compared": 43503,
  "result": "agrees"
 }
