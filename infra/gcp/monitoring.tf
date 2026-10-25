@@ -18,9 +18,9 @@ resource "google_monitoring_notification_channel" "email" {
 locals {
   channels = [for channel in google_monitoring_notification_channel.email : channel.name]
 
-  activity    = "logName=\"projects/${var.project_id}/logs/cloudaudit.googleapis.com%2Factivity\""
-  data_access = "logName=\"projects/${var.project_id}/logs/cloudaudit.googleapis.com%2Fdata_access\""
-  identity_log  = "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"${google_cloud_run_v2_service.identity.name}\""
+  activity     = "logName=\"projects/${var.project_id}/logs/cloudaudit.googleapis.com%2Factivity\""
+  data_access  = "logName=\"projects/${var.project_id}/logs/cloudaudit.googleapis.com%2Fdata_access\""
+  identity_log = "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"${google_cloud_run_v2_service.identity.name}\""
 
   # Each a log query; one matching entry is one alert.
   log_alerts = {

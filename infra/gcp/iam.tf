@@ -17,6 +17,12 @@ resource "google_service_account" "migrate" {
 resource "google_service_account" "identity" {
   account_id   = "cfokit-identity"
   display_name = "CFOKit identity (Keycloak)"
+
+  # Created before the one it replaces is removed (moved.tf), so sign-in stays up through the
+  # rename. Removed with moved.tf: a later replacement under the same name could not be created first.
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "google_service_account" "deploy" {
@@ -38,6 +44,12 @@ resource "google_secret_manager_secret_iam_member" "reader" {
   secret_id = google_secret_manager_secret.this[each.key].id
   role      = "roles/secretmanager.secretAccessor"
   member    = each.value
+
+  # Created before the one it replaces is removed (moved.tf), so sign-in stays up through the
+  # rename. Removed with moved.tf: a later replacement under the same name could not be created first.
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 # ---------------------------------------------------------------------------------------------
