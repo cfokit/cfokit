@@ -1,10 +1,11 @@
 """What QuickBooks Online records for the events: its chart, and each transaction's lines.
 
-The export writer renders reports from this, so this is where our belief about QuickBooks'
+The export writer renders reports from this, so this is where what we know of QuickBooks'
 bookkeeping lives — which accounts an invoice touches, what a void leaves, how the cash basis
-recognizes a part payment. **Every rule here is a belief until the sandbox agrees** (ADR-0075):
-the validation run compares what these rules produce with what the Reports API returns for the
-same postings, and a disagreement is fixed here.
+recognizes a part payment. A rule is a belief until a sandbox agrees with it (ADR-0075): the
+validation run compares what these rules produce with what the Reports API returns for the
+same postings, a disagreement is fixed here, and `tests/fixtures/quickbooks/validation.json`
+records the run that agreed. A rule changed since is a belief again until the next one.
 
 Two views of the same transactions:
 
@@ -12,6 +13,24 @@ Two views of the same transactions:
   of these lines, and the Journal report prints them whatever the basis.
 * **Cash** recognizes an invoice or a bill only as it is paid, in proportion to the amount paid,
   dated with the payment. Everything that moves money directly is the same on both bases.
+
+What QuickBooks records, as the sandbox showed it for every posting of the synthetic company:
+
+* A document's first line — its A/R, A/P, bank or card side — carries no memo; its detail lines
+  carry their own. A journal entry's line carries only its own description, and the entry's memo
+  is never printed. A transfer's memo is on both its lines.
+* A bill payment lists the bank first, then A/P; a transfer, the account the money left first.
+* A deposit lists its payments by the day each was received, then in the order they were made,
+  whatever order it names them in. Its bank line names the customer when all of them are one
+  customer's.
+* A void keeps every line, at nothing; its first line says "Voided", the rest keep their memos.
+* A payment of nothing, which applies a credit memo, keeps two lines of nothing: a bank side
+  with no account ("Not Specified"), and A/R.
+* On the cash basis a payment no invoice took is income, reported as "Unapplied Cash Payment
+  Income". A vendor credit a bill payment takes is applied on the credit's own day, against as
+  much of the bill; the rest of the bill is recognized when it is paid. (The one such credit is
+  dated after its bill, so whether QuickBooks uses the credit's day or the later of the two is
+  not yet shown.)
 """
 
 from __future__ import annotations
@@ -219,6 +238,7 @@ class Recorder:
                 detail = self.sale(lines, -1, name)
                 total = -sum((p.amount for p in detail), ZERO)
                 books.documents[key] = [replace(p, amount=-p.amount) for p in detail]
+                # A document's first line carries no memo; its detail lines carry their own.
                 receivable = Posting(RECEIVABLE, total, "", name)
                 self.add(
                     Transaction(
@@ -392,6 +412,7 @@ class Recorder:
                         event_id,
                         day,
                         "Bill Payment (Check)",
+                        # The bank first, then A/P.
                         [Posting(out_of, -total, "", name), Posting(PAYABLE, total, "", name)],
                         number,
                         name,
@@ -436,10 +457,12 @@ class Recorder:
                         event_id,
                         day,
                         "Transfer",
+                        # The account the money left first; the memo on both lines.
                         [Posting(out_of, -amount, memo), Posting(into, amount, memo)],
                     )
                 )
             case Journal(lines=lines):
+                # Each line carries only its own description; the entry's memo is not printed.
                 postings = [
                     Posting(line.account, line.amount, line.memo, self.name(line.customer))
                     for line in lines

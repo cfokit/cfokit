@@ -6,11 +6,31 @@ holds the five reports Export Data writes — Journal, General Ledger, Profit an
 Sheet and Trial Balance — and beside it, the trial balance at every month end, which the round
 trip compares against.
 
+**What a report prints** is as the Reports API showed it for every posting of the synthetic
+company (ADR-0075):
+
+* An account with any line in a report's span is printed, at zero if it nets to nothing. The
+  balance sheet always prints Retained Earnings, blank when it has no figure.
+* A trial balance states income and expense from its fiscal year's start, whatever the report's.
+* The general ledger splits a document's detail line against its first line, the first line
+  against the rest ("-Split-" when the rest is more than one line), and every line of a journal
+  entry as "-Split-". It names each line by its transaction, keeps the balance on the account's
+  natural side, prints a beginning balance only where there is one (Retained Earnings' with
+  every earlier year's profit), and says "with sub-accounts" only of a parent with entries of
+  its own. On the cash basis, what a payment recognizes is shown as the invoice or bill it is
+  part of.
+* The ledger's order within a day is QuickBooks' own and not stable: the same day comes back
+  differently for different date ranges. Ours is the order the events were made in.
+
 **The layout is our belief about QuickBooks**, taken from the reader and the export it was built
 against: three title rows, a blank row and a header row before the body; sub-accounts indented
 three spaces a level on a statement and named by full path elsewhere; statement figures as
-formulas holding a number; each report's basis in its footer, and none on the journal. ADR-0075
-checks it against one real export, cell by cell, and the content against the Reports API.
+formulas holding a number; each report's basis in its footer, and none on the journal. Where the
+API showed something different, the difference may be the API's own presentation, so only a
+real export settles it: the general ledger's Debit and Credit columns, where the API's ledger
+has one signed Amount; names by full path, where it nests leaf names; and a zero row's 0.00 in
+the debit column. Account numbers, and the order they put accounts in, the API never prints.
+ADR-0075 checks the layout against one real export, cell by cell.
 """
 
 from __future__ import annotations
@@ -355,7 +375,7 @@ class Report:
                     short_date(line.on or transaction.on),
                     shown.type,
                     shown.number or None,
-                    shown.name or None,
+                    shown.name or None,  # the transaction's name, never a line's own
                     line.memo or None,
                     split,
                     *self.sides(line.amount),

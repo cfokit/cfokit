@@ -1103,7 +1103,8 @@ class Business:
                 out_of="checking",
                 payee="paper-co",
                 lines=(
-                    # First, because the journal's first line carries the entry's description.
+                    # First of the detail lines. QuickBooks prints the expense's own first row,
+                    # its bank side, with no memo, so this is the first memo the journal shows.
                     Line("supplies", money(800), "=SUM(B2:B9) is what the client asked for"),
                     Line("supplies", money(1200), "First line of the order\nSecond line"),
                     Line("supplies", money(500), ""),
