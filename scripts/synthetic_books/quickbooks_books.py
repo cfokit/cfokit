@@ -58,6 +58,7 @@ from synthetic_books.events import (
 
 OPENING_EQUITY = "opening-equity"
 UNAPPLIED_INCOME = "unapplied-cash-payment-income"
+NOT_SPECIFIED = "not-specified"
 CENT = Decimal("0.01")
 ZERO = Decimal(0)
 
@@ -70,6 +71,8 @@ SYSTEM_ACCOUNTS: dict[str, tuple[str, str]] = {
     RETAINED_EARNINGS: ("Retained Earnings", "equity"),
     # Only the cash basis posts here: it is where QuickBooks reports a payment no invoice took.
     UNAPPLIED_INCOME: ("Unapplied Cash Payment Income", "income"),
+    # Where QuickBooks puts the bank side of a payment of nothing, which has none.
+    NOT_SPECIFIED: ("Not Specified", "not_specified"),
 }
 
 
@@ -91,8 +94,10 @@ class Posting:
     amount: Decimal
     memo: str = ""
     name: str = ""
-    # On the cash basis, the document a line recognizes part of, which the ledger shows it as.
+    # On the cash basis, the document a line recognizes part of, which the ledger shows it as,
+    # and the day it is recognized where that is not its transaction's.
     source: str | None = None
+    on: date | None = None
 
 
 @dataclass(slots=True)
@@ -234,18 +239,28 @@ class Recorder:
                 books.documents[key] = detail
                 receivable = Posting(RECEIVABLE, -total, "", name)
                 self.add(
-                    Transaction(event_id, day, "Credit Memo", [receivable, *detail], name=name),
+                    Transaction(
+                        event_id,
+                        day,
+                        "Credit Memo",
+                        [receivable, *detail],
+                        name=name,
+                        document=key,
+                    ),
                     key,
                 )
                 if invoice is not None:
-                    # Applied through a payment of nothing: no lines, but on the cash basis it
-                    # recognizes the invoice and the credit against each other.
+                    # Applied through a payment of nothing, kept as two lines of nothing; on the
+                    # cash basis it recognizes the invoice and the credit against each other.
                     self.add(
                         Transaction(
                             event_id,
                             day,
                             "Payment",
-                            [],
+                            [
+                                Posting(NOT_SPECIFIED, ZERO, "", name),
+                                Posting(RECEIVABLE, ZERO, "", name),
+                            ],
                             name=name,
                             settles=(Applied(invoice, total),),
                             credits=(Applied(key, total),),
@@ -488,11 +503,29 @@ def _cash_receipt(books: Books, payment: Transaction) -> list[Posting]:
 
 
 def _cash_disbursement(books: Books, payment: Transaction) -> list[Posting]:
+    """A bill payment's lines on the cash basis. A vendor credit it takes is applied on the
+    credit's own day: that much of the bills, taken in order, is recognized then against the
+    credit's own lines. The rest of the bills is recognized on the payment's day, against the
+    bank."""
     out: list[Posting] = []
-    for applied in payment.settles:  # each bill's expense, recognized as a debit
-        out += _recognized(books, applied, 1)
+    unused = [(c.amount, books.sources[c.target].on) for c in payment.credits]
+    for bill in payment.settles:
+        left = bill.amount
+        while unused and left:
+            amount, on = unused[0]
+            taken = min(amount, left)
+            out += [
+                replace(p, on=on) for p in _recognized(books, Applied(bill.target, taken), 1)
+            ]
+            left -= taken
+            unused[0] = (amount - taken, on)
+            if not unused[0][0]:
+                unused.pop(0)
+        if left:
+            out += _recognized(books, Applied(bill.target, left), 1)
     for applied in payment.credits:  # each vendor credit's lines, recognized as a credit
-        out += _recognized(books, applied, -1)
+        on = books.sources[applied.target].on
+        out += [replace(p, on=on) for p in _recognized(books, applied, -1)]
     paid = sum((p.amount for p in out), ZERO)
     if payment.deposit_account is None:
         raise ValueError(f"{payment.event} pays bills out of no account")

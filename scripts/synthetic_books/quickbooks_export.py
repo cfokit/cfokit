@@ -24,8 +24,15 @@ from decimal import Decimal
 from typing import Literal
 
 from synthetic_books.business import END, MONTH_NAMES, month_end, months
-from synthetic_books.events import RETAINED_EARNINGS
-from synthetic_books.quickbooks_books import ZERO, Books, Posting, Transaction, cash_lines
+from synthetic_books.events import RECEIVABLE, RETAINED_EARNINGS
+from synthetic_books.quickbooks_books import (
+    NOT_SPECIFIED,
+    ZERO,
+    Books,
+    Posting,
+    Transaction,
+    cash_lines,
+)
 from synthetic_books.xlsx import Cell, Formula, Number, Row, archive, workbook
 
 COMPANY = "Brightwater Design Studio"
@@ -59,6 +66,7 @@ TYPE_ORDER = (
     "expense",
     "other_income",
     "other_expense",
+    "not_specified",
 )
 PROFIT_AND_LOSS_TYPES = {"income", "cost_of_sales", "expense", "other_income", "other_expense"}
 CREDIT_NATURE = {
@@ -152,10 +160,10 @@ class Report:
         """Each account's net movement (debit positive) over [since, until]."""
         out: dict[str, Decimal] = defaultdict(Decimal)
         for transaction, lines in self.postings:
-            if transaction.on > until or (since is not None and transaction.on < since):
-                continue
             for line in lines:
-                out[line.account] += line.amount
+                on = line.on or transaction.on
+                if on <= until and (since is None or on >= since):
+                    out[line.account] += line.amount
         return out
 
     def as_presented(self, until: date) -> dict[str, Decimal]:
@@ -168,7 +176,7 @@ class Report:
         out = {
             k: v
             for k, v in self.balances(None, until).items()
-            if self.type_of(k) not in PROFIT_AND_LOSS_TYPES
+            if self.type_of(k) not in PROFIT_AND_LOSS_TYPES | {"not_specified"}
         }
         prior = self.balances(None, year_start - timedelta(days=1))
         earlier = sum(
@@ -227,7 +235,7 @@ class Report:
                         (transaction.number or None) if first else None,
                         (transaction.name or None) if first else None,
                         line.memo or None,
-                        self.path(line.account),
+                        self.path(line.account) if line.account != NOT_SPECIFIED else None,
                         *self.sides(line.amount),
                     ]
                 )
@@ -252,19 +260,32 @@ class Report:
         rows: list[Row] = [*self.title("General Ledger", self.period()), LEDGER_HEADER]
         by_account: dict[str, list[tuple[Transaction, Posting]]] = defaultdict(list)
         for transaction, lines in self.postings:
-            if self.in_range(transaction):
-                for line in lines:
+            for line in lines:
+                if self.start is None or (line.on or transaction.on) >= self.start:
                     by_account[line.account].append((transaction, line))
+        for entries in by_account.values():  # by day, as QuickBooks sorts a ledger
+            entries.sort(key=lambda entry: entry[1].on or entry[0].on)
         opening: dict[str, Decimal] = {}
         if self.start is not None:
             # Balance-sheet accounts open with everything before the range; income and expense,
-            # with what their fiscal year had booked before it.
+            # with what their fiscal year had booked before it; and Retained Earnings with every
+            # earlier year's profit besides, as it is presented.
+            year_start = self.fiscal_year_start(self.start)
             before = self.start - timedelta(days=1)
-            year = self.balances(self.fiscal_year_start(self.start), before)
+            year = self.balances(year_start, before)
             opening = {
                 k: year.get(k, ZERO) if self.type_of(k) in PROFIT_AND_LOSS_TYPES else v
                 for k, v in self.balances(None, before).items()
             }
+            closed = sum(
+                (
+                    v
+                    for k, v in self.balances(None, year_start - timedelta(days=1)).items()
+                    if self.type_of(k) in PROFIT_AND_LOSS_TYPES
+                ),
+                ZERO,
+            )
+            opening[RETAINED_EARNINGS] = opening.get(RETAINED_EARNINGS, ZERO) + closed
         roots = [
             k
             for k in self.ordered(self.books.accounts)
@@ -294,6 +315,11 @@ class Report:
             return document, self.path(document.lines[0].account)
         if transaction.type == "Journal Entry":
             return transaction, "-Split-"
+        if (
+            line.account == RECEIVABLE
+            and len(transaction.settles) + len(transaction.credits) > 1
+        ):
+            return transaction, "-Split-"  # a payment's one A/R line, for several documents
         first, *rest = transaction.lines
         if line.account != first.account:
             return transaction, self.path(first.account)
@@ -326,10 +352,10 @@ class Report:
             rows.append(
                 [
                     None,
-                    short_date(transaction.on),
+                    short_date(line.on or transaction.on),
                     shown.type,
                     shown.number or None,
-                    line.name or shown.name or None,
+                    shown.name or None,
                     line.memo or None,
                     split,
                     *self.sides(line.amount),

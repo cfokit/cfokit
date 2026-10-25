@@ -170,6 +170,8 @@ def test_the_fixture_is_what_quickbooks_last_agreed_with() -> None:
     validated = json.loads(record.read_text())
     assert validated["result"] == "agrees"
     for rendering in RENDERINGS:
+        if rendering.name in validated["not_compared"]:
+            continue  # the API cannot show it; `compare-export` is its check
         assert validated["archives"][rendering.name] == sandbox.archive_digest(rendering), (
             f"{rendering.name} changed after its validation; run the sandbox validation again"
         )

@@ -215,7 +215,7 @@ check = { kind = "account", present = ["Office Expenses:Software:Design Tools"],
 [[case]]
 id = "d-zero-balance-account"
 category = "data"
-description = "Conference Fees, charged once and refunded in full, so it nets to zero and appears on no statement."
+description = "Conference Fees, charged once and refunded in full, so it nets to zero; QuickBooks still prints it, at zero."
 check = { kind = "account", present = ["Conference Fees"], type = "expense" }
 
 [[case]]
@@ -289,8 +289,8 @@ check = { kind = "stated", account = "Repairs/Maintenance", report = "profit_and
 [[case]]
 id = "d-cash-unapplied-credit"
 category = "data"
-description = "The overpayment's unapplied $400, banked but applied to no invoice."
-check = { kind = "stated", account = "Accounts Receivable (A/R)", report = "balance_sheet", archive = "cash" }
+description = "The overpayment's unapplied $400, banked but applied to no invoice, which the cash basis reports as income."
+check = { kind = "stated", account = "Unapplied Cash Payment Income", report = "profit_and_loss", archive = "cash" }
 
 [[case]]
 id = "d-cash-credit-memo"

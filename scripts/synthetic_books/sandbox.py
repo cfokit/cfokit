@@ -14,14 +14,16 @@ Each payload's id, with a token drawn when the state is first written, is QuickB
 `requestid`, so a retry is a replay rather than a second transaction, and a cleared company
 never receives an answer QuickBooks remembers from before.
 
-`validate` asks the Reports API what QuickBooks makes of those postings — the journal, both
-statements, and the trial balance at every month end, on each basis and under each rendering's
-settings — and compares it with what our writer put in the archives. The API accepts the fiscal
-year and account numbers and ignores them, so a person changes them in QuickBooks between runs:
-each run compares the renderings the company's settings allow, remembers those that agreed,
-and names the setting the next one needs. QuickBooks' answers and the differences are written
-under `.local/qbo-sandbox/`, which git ignores: **nothing QuickBooks returns is ever
-committed**. What is committed is the record that it agreed,
+`validate` asks the Reports API what QuickBooks makes of those postings — the journal, the
+general ledger, both statements, and the trial balance at every month end, on each basis and
+under each rendering's settings — and compares it with what our writer put in the archives. The
+API reports by the company's fiscal year but cannot change it, so a person changes it in
+QuickBooks between runs: each run compares the
+renderings the company's settings allow, remembers those that agreed, and names the setting the
+next one needs. The API never prints account numbers, so the numbered rendering is left to
+`compare-export`, and the record says so. QuickBooks' answers and the
+differences are written under `.local/qbo-sandbox/`, which git ignores: **nothing QuickBooks
+returns is ever committed**. What is committed is the record that it agreed,
 `tests/fixtures/quickbooks/validation.json`, written only when every rendering has.
 
 Setting up a sandbox, and where the values below come from, is in `CONTRIBUTING.md`, under "The
@@ -560,10 +562,15 @@ def our_trial_balances(rendering: Rendering) -> dict[str, list[tuple[str, ...]]]
     if not path.exists():
         path = FIXTURE / "archives" / "accrual" / "trial_balances.json"
     saved = json.loads(path.read_text())
-    return {
-        day: [comparable((r["account"], r["debit"], r["credit"])) for r in lines]
-        for day, lines in saved.items()
-    }
+    out: dict[str, list[tuple[str, ...]]] = {}
+    for day, lines in saved.items():
+        debit = sum((Decimal(r["debit"]) for r in lines), Decimal(0))
+        credit = sum((Decimal(r["credit"]) for r in lines), Decimal(0))
+        out[day] = [
+            *(comparable((r["account"], r["debit"], r["credit"])) for r in lines),
+            comparable(("TOTAL", format(debit, "f"), format(credit, "f"))),
+        ]
+    return out
 
 
 # --- validate -------------------------------------------------------------------------------
@@ -579,18 +586,20 @@ def differences(
     )
 
 
+# Renderings the Reports API cannot show, and why: they are checked by `compare-export` alone.
+NOT_COMPARED = {
+    "account-numbers": "the Reports API prints no account numbers, whatever the setting",
+}
+
+
 def settings(rendering: Rendering) -> Json:
-    """The settings QuickBooks must have to print this rendering: the company's own, as the
-    adapter requires them, with the rendering's fiscal year and account numbers."""
+    """The settings QuickBooks must have to report this rendering: its fiscal year, or the
+    company's own as the adapter requires it."""
     company = next(p for p in payloads() if p["operation"] == "require")["body"]
     month = rendering.fiscal_start_month
     own = company["AccountingInfoPrefs"]["FirstMonthOfFiscalYear"]
-    fiscal = MONTHS[month - 1] if month else own
     return {
-        "AccountingInfoPrefs": {
-            "FirstMonthOfFiscalYear": fiscal,
-            "UseAccountNumbers": rendering.numbers,
-        }
+        "AccountingInfoPrefs": {"FirstMonthOfFiscalYear": MONTHS[month - 1] if month else own}
     }
 
 
@@ -626,6 +635,9 @@ def validate(sandbox: Sandbox) -> int:
         print(f"{name}: {'agrees' if not diff else f'{failed[name]} lines differ'}")
 
     for rendering in RENDERINGS:
+        if rendering.name in NOT_COMPARED:
+            print(f"{rendering.name}: not compared; {NOT_COMPARED[rendering.name]}")
+            continue
         archive = archive_digest(rendering)
         if progress.get(rendering.name, {}).get("archive") == archive:
             print(f"{rendering.name}: agreed already")
@@ -668,6 +680,12 @@ def validate(sandbox: Sandbox) -> int:
             sandbox.report("BalanceSheet", **as_of),
             comparisons,
         )
+        compare(
+            f"{rendering.name}-trial-balance",
+            ours(rendering, "Trial_balance.xlsx"),
+            sandbox.report("TrialBalance", **as_of),
+            comparisons,
+        )
         if rendering.start is None:
             months = our_trial_balances(rendering)
             for day in month_ends():
@@ -697,11 +715,13 @@ def validate(sandbox: Sandbox) -> int:
         if others:
             print(f"after it: {others}")
         return 1
+    compared = [r for r in RENDERINGS if r.name not in NOT_COMPARED]
     record = {
         "validated_on": datetime.now(UTC).date().isoformat(),
-        "archives": {r.name: progress[r.name]["archive"] for r in RENDERINGS},
-        "comparisons": sum(progress[r.name]["comparisons"] for r in RENDERINGS),
-        "rows_compared": sum(progress[r.name]["rows"] for r in RENDERINGS),
+        "archives": {r.name: progress[r.name]["archive"] for r in compared},
+        "not_compared": NOT_COMPARED,
+        "comparisons": sum(progress[r.name]["comparisons"] for r in compared),
+        "rows_compared": sum(progress[r.name]["rows"] for r in compared),
         "result": "agrees",
     }
     (FIXTURE / "validation.json").write_text(json.dumps(record, indent=1) + "\n")

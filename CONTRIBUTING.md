@@ -277,9 +277,9 @@ delete `.local/qbo-sandbox/`, and post again.
 **Some settings only a person can make.** The API accepts the fiscal year, account numbers and
 "Automatically apply credits" and ignores them. `post` checks them first and names any that
 need changing; make them in the sandbox company under Settings, Account and settings,
-Advanced. The renderings print under different ones too, so `validate` compares the renderings
-the current settings allow, remembers those that agreed, and names the setting the next one
-needs. Run it again after each change.
+Advanced. The calendar-year rendering needs the fiscal year changed too, so `validate` compares
+the renderings the current settings allow, remembers those that agreed, and names the setting
+the next one needs. Run it again after the change, and change it back when it is done.
 
 Differences that `validate` finds are written under `.local/qbo-sandbox/`, which git ignores,
 and are fixed in the writer. When every rendering agrees, `validate` writes
