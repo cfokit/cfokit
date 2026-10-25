@@ -19,25 +19,34 @@ resource "google_service_account" "identity" {
   display_name = "CFOKit identity (Keycloak)"
 }
 
+resource "google_service_account" "agent" {
+  account_id   = "cfokit-agent"
+  display_name = "CFOKit's agent, behind the web app's chat"
+}
+
 resource "google_service_account" "deploy" {
   account_id   = "cfokit-deploy"
   display_name = "CFOKit deploy, from GitHub Actions on main"
 }
 
 locals {
+  # Keyed by secret, or by secret and reader where two read one.
   secret_readers = {
-    "database-url-app"        = google_service_account.service.member
-    "database-url-owner"      = google_service_account.migrate.member
-    "keycloak-db-password"    = google_service_account.identity.member
-    "keycloak-admin-password" = google_service_account.identity.member
+    "database-url-app"             = { secret = "database-url-app", member = google_service_account.service.member }
+    "database-url-owner"           = { secret = "database-url-owner", member = google_service_account.migrate.member }
+    "keycloak-db-password"         = { secret = "keycloak-db-password", member = google_service_account.identity.member }
+    "keycloak-admin-password"      = { secret = "keycloak-admin-password", member = google_service_account.identity.member }
+    "agent-client-secret/identity" = { secret = "agent-client-secret", member = google_service_account.identity.member }
+    "agent-client-secret/agent"    = { secret = "agent-client-secret", member = google_service_account.agent.member }
+    "anthropic-api-key"            = { secret = "anthropic-api-key", member = google_service_account.agent.member }
   }
 }
 
 resource "google_secret_manager_secret_iam_member" "reader" {
   for_each  = local.secret_readers
-  secret_id = google_secret_manager_secret.this[each.key].id
+  secret_id = google_secret_manager_secret.this[each.value.secret].id
   role      = "roles/secretmanager.secretAccessor"
-  member    = each.value
+  member    = each.value.member
 }
 
 # ---------------------------------------------------------------------------------------------
@@ -86,6 +95,7 @@ resource "google_service_account_iam_member" "deploy_acts_as" {
     service  = google_service_account.service.name
     migrate  = google_service_account.migrate.name
     identity = google_service_account.identity.name
+    agent    = google_service_account.agent.name
   }
   service_account_id = each.value
   role               = "roles/iam.serviceAccountUser"

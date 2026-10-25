@@ -2,6 +2,9 @@ locals {
   app_host  = "app.${var.domain}"
   mcp_host  = "mcp.${var.domain}"
   auth_host = "auth.${var.domain}"
+  # CFOKit's agent, behind the web app's chat (ADR-0075): its own host, as MCP has, because its
+  # routes would collide with the API's under the app's.
+  agent_host = "agent.${var.domain}"
   # The issuer's admin console, reachable only through Identity-Aware Proxy (ADR-0060).
   admin_host = "admin.${var.domain}"
 

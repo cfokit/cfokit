@@ -85,7 +85,7 @@ docker rm "$container" >/dev/null
 done_ "published"
 
 step "Roll out"
-for service in cfokit-rest cfokit-mcp; do
+for service in cfokit-rest cfokit-mcp cfokit-agent; do
   gcloud run services update "$service" --region "$CFOKIT_REGION" --image "$app" --quiet >/dev/null
   done_ "$service"
 done

@@ -17,8 +17,21 @@
 #                                  true or false; what the realm file reads at import
 #   CFOKIT_PASSWORD_MIN_LENGTH     optional, 15 by default; at least 12, the shortest password the
 #                                  image's breached-password list covers
+#   CFOKIT_AGENT_ENABLED           optional, false by default; true gives the realm CFOKit's
+#                                  agent's client, as the realm file does at import (ADR-0077)
+#   CFOKIT_AGENT_CLIENT_SECRET     that client's secret; required when the agent is enabled
 set -euo pipefail
 : "${CFOKIT_ACCESS_TOKEN_LIFESPAN:?}" "${CFOKIT_MASTER_FRONTEND_URL:?}"
+agent_enabled="${CFOKIT_AGENT_ENABLED:-false}"
+case "$agent_enabled" in true | false) ;; *)
+  echo "CFOKIT_AGENT_ENABLED is true or false" >&2
+  exit 2
+  ;;
+esac
+if [ "$agent_enabled" = true ] && [ -z "${CFOKIT_AGENT_CLIENT_SECRET:-}" ]; then
+  echo "CFOKIT_AGENT_CLIENT_SECRET is required when CFOKIT_AGENT_ENABLED is true" >&2
+  exit 2
+fi
 min_length="${CFOKIT_PASSWORD_MIN_LENGTH:-15}"
 if ! [[ $min_length =~ ^[0-9]+$ ]] || [ "$min_length" -lt 12 ] || [ "$min_length" -gt 128 ]; then
   echo "CFOKIT_PASSWORD_MIN_LENGTH is 12 to 128: the breached-password list covers 12 and up" >&2
@@ -136,6 +149,38 @@ JSON
 {"policies":[{"name":"cfokit-registered-redirects","description":"Applies the registered-redirects profile to every client that registers or updates itself without an administrator.","enabled":${CFOKIT_RESTRICT_REGISTERED_REDIRECTS},"conditions":[{"condition":"client-updater-context","configuration":{"update-client-source":["ByAnonymous","ByRegistrationAccessToken"]}}],"profiles":["cfokit-registered-redirects"]}]}
 JSON
 
+# CFOKit's agent's client, and the audience on the web client's tokens that lets it exchange
+# them (ADR-0077). A realm imported before the agent existed has neither. Both as the realm file
+# holds them; tests/test_issuer_realm.py asserts the two agree. The secret goes to kcadm on its
+# standard input and is never printed.
+agent_client() {
+  cat <<AGENT
+{"clientId":"cfokit-agent","name":"CFOKit's agent","description":"The agent behind the web app's chat (ADR-0075). Confidential, and allowed nothing but standard token exchange: it presents a person's web-client token and receives one issued to itself, for that person (ADR-0077).","enabled":${agent_enabled},"protocol":"openid-connect","publicClient":false,"clientAuthenticatorType":"client-secret","secret":"${CFOKIT_AGENT_CLIENT_SECRET:-}","standardFlowEnabled":false,"implicitFlowEnabled":false,"directAccessGrantsEnabled":false,"serviceAccountsEnabled":false,"attributes":{"standard.token.exchange.enabled":"true"}}
+AGENT
+}
+agent_audience() {
+  cat <<'AUDIENCE'
+{"name":"cfokit-agent-audience","protocol":"openid-connect","protocolMapper":"oidc-audience-mapper","config":{"included.client.audience":"cfokit-agent","access.token.claim":"true","introspection.token.claim":"true"}}
+AUDIENCE
+}
+client_id() {
+  "$adm" get clients -r cfokit -q "clientId=$1" --fields id --format csv --noquotes
+}
+agent=$(client_id cfokit-agent)
+if [ -n "$agent" ] && [ "$agent_enabled" = true ]; then
+  agent_client | "$adm" update "clients/$agent" -r cfokit -f -
+elif [ -n "$agent" ]; then
+  echo '{"enabled":false}' | "$adm" update "clients/$agent" -r cfokit -f -
+elif [ "$agent_enabled" = true ]; then
+  agent_client | "$adm" create clients -r cfokit -f -
+fi
+web=$(client_id cfokit-web)
+[ -n "$web" ] || fail "the cfokit realm has no cfokit-web client"
+if ! "$adm" get "clients/$web/protocol-mappers/models" -r cfokit --fields name --format csv \
+  --noquotes | grep -qx cfokit-agent-audience; then
+  agent_audience | "$adm" create "clients/$web/protocol-mappers/models" -r cfokit -f -
+fi
+
 "$adm" update realms/master "${lockout[@]}"
 # The admin console signs in to the master realm at that realm's frontend URL, from a hidden
 # frame. Left at the issuer's public hostname, where Identity-Aware Proxy guards the master
@@ -152,3 +197,5 @@ echo "-- cfokit"
 "$adm" get events/config -r cfokit \
   --fields eventsEnabled,eventsExpiration,eventsListeners,adminEventsEnabled,adminEventsDetailsEnabled
 "$adm" get client-policies/policies -r cfokit | grep -E '"(name|enabled)"'
+"$adm" get clients -r cfokit -q clientId=cfokit-agent --fields clientId,enabled
+"$adm" get "clients/$web/protocol-mappers/models" -r cfokit --fields name

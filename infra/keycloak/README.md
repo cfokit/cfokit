@@ -259,6 +259,13 @@ the `cfokit` realm, with the restriction on clients that register themselves, an
 and events on `master`. It keeps every account, which re-importing the realm does not.
 `tests/test_issuer_realm.py` asserts its values and this file's agree.
 
+It also gives a realm imported before CFOKit's agent existed what the agent needs: the
+`cfokit-agent` client, enabled with its secret when `CFOKIT_AGENT_ENABLED` is true and disabled
+when it is not, and the `cfokit-agent` audience on the web client's tokens, without which
+Keycloak refuses the exchange (ADR-0077). Both are the file's, field for field. A person's
+account, and so the `sub` every company grant in the ledger is keyed to, is untouched; replacing
+the realm instead would give everyone a new one.
+
 It also sets the one thing the master realm needs where the admin console has a host of its own
 and the issuer's public host does not serve the master realm, as on GCP: the master realm's
 **frontend URL**, pointed at the console's host. The console signs in to the master realm at that

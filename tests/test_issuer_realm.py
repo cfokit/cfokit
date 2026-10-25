@@ -237,3 +237,29 @@ def test_only_the_web_client_s_tokens_name_the_agent() -> None:
     for scope in _realm()["clientScopes"]:
         for mapper in scope.get("protocolMappers", []):
             assert mapper["config"].get("included.client.audience") != "cfokit-agent"
+
+
+def _heredoc(name: str) -> dict[str, Any]:
+    """The JSON realm-settings.sh sends for one heredoc, with the deployment's values in place
+    of the shell's: the agent enabled, and the realm file's own placeholder for its secret."""
+    script = SETTINGS.read_text(encoding="utf-8")
+    body = re.search(rf"<<'?{name}'?\n(.*?)\n{name}\n", script, re.DOTALL)
+    assert body, name
+    text = body.group(1).replace("${agent_enabled}", "true")
+    text = text.replace("${CFOKIT_AGENT_CLIENT_SECRET:-}", "${CFOKIT_AGENT_CLIENT_SECRET}")
+    value: dict[str, Any] = json.loads(text)
+    return value
+
+
+def test_a_running_issuer_receives_the_agent_s_client_as_a_new_realm_imports_it() -> None:
+    """A realm imported before CFOKit's agent existed gains its client from realm-settings.sh,
+    so the client the script creates is the file's, grant for grant."""
+    expected = {**_client("cfokit-agent"), "enabled": True}
+    assert _heredoc("AGENT") == expected
+
+
+def test_a_running_issuer_receives_the_audience_that_lets_the_agent_exchange() -> None:
+    """And the web client's tokens gain the audience Keycloak checks before it exchanges one
+    (ADR-0077 § 1), as the file's web client holds it."""
+    (mapper,) = _client("cfokit-web")["protocolMappers"]
+    assert _heredoc("AUDIENCE") == mapper
