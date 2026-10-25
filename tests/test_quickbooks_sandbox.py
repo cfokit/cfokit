@@ -1,4 +1,4 @@
-"""The sandbox validation tool, offline: everything but the HTTP calls (ADR-0075).
+"""The sandbox validation tool, offline: everything but the HTTP calls (ADR-0078).
 
 No test here reaches QuickBooks; CI never does. The report shape in `REPORT` is the Reports
 API's documented nesting — rows that are `Data` with `ColData`, or a `Section` with a `Header`,
@@ -161,7 +161,7 @@ def test_a_refresh_token_becomes_an_access_token_and_the_newest_is_kept(
 
 
 def test_the_fixture_is_what_quickbooks_last_agreed_with() -> None:
-    """ADR-0075: a fixture changed after its validation is unvalidated until the next one."""
+    """ADR-0078: a fixture changed after its validation is unvalidated until the next one."""
     record = FIXTURE / "validation.json"
     if not record.exists():
         pytest.skip(

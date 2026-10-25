@@ -5,7 +5,7 @@ date: 2026-10-22
 decision-makers: [Geoff]
 ---
 
-# ADR-0075: The QuickBooks fixture is ours, written from business events, with a sandbox as its validator
+# ADR-0078: The QuickBooks fixture is ours, written from business events, with a sandbox as its validator
 
 **Requirements served:** `IMP-01`, `IMP-02`, `IMP-08`, `NFR-01`, `NFR-14`.
 

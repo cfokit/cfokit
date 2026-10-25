@@ -1,4 +1,4 @@
-"""The synthetic QuickBooks company: current, deterministic, covering its catalog (ADR-0075).
+"""The synthetic QuickBooks company: current, deterministic, covering its catalog (ADR-0078).
 
 No expected figure here comes from running the generator. What is asserted is that the committed
 files are what the generator writes, that every catalog case is realized, and invariants any set

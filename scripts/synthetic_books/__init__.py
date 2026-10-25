@@ -1,4 +1,4 @@
-"""A synthetic small business, written as platform-neutral events (ADR-0075).
+"""A synthetic small business, written as platform-neutral events (ADR-0078).
 
 Development tooling: nothing here ships, and nothing under `src/` imports it. The generator
 writes the business (`business`) as events (`events`); one adapter turns the events into

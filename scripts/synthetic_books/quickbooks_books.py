@@ -2,7 +2,7 @@
 
 The export writer renders reports from this, so this is where what we know of QuickBooks'
 bookkeeping lives — which accounts an invoice touches, what a void leaves, how the cash basis
-recognizes a part payment. A rule is a belief until a sandbox agrees with it (ADR-0075): the
+recognizes a part payment. A rule is a belief until a sandbox agrees with it (ADR-0078): the
 validation run compares what these rules produce with what the Reports API returns for the
 same postings, a disagreement is fixed here, and `tests/fixtures/quickbooks/validation.json`
 records the run that agreed. A rule changed since is a belief again until the next one.

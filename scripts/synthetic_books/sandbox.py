@@ -1,4 +1,4 @@
-"""Validate the fixture against a QuickBooks Online sandbox company (ADR-0075).
+"""Validate the fixture against a QuickBooks Online sandbox company (ADR-0078).
 
     PYTHONPATH=scripts uv run python -m synthetic_books.sandbox post
     PYTHONPATH=scripts uv run python -m synthetic_books.sandbox validate
@@ -214,7 +214,7 @@ def system_account(sandbox: Sandbox, subtype: str) -> str:
     found = sandbox.query(f"select Id from Account where AccountSubType = '{subtype}'")  # noqa: S608
     accounts = found["QueryResponse"].get("Account", [])
     if not accounts:
-        raise SystemExit(f"the company has no {subtype} account; escalate (ADR-0075)")
+        raise SystemExit(f"the company has no {subtype} account; escalate (ADR-0078)")
     return str(accounts[0]["Id"])
 
 
@@ -223,7 +223,7 @@ def default_account(sandbox: Sandbox, name: str) -> str:
     found = sandbox.query(f"select * from Account where Name = '{name}'")  # noqa: S608
     accounts = [a for a in found["QueryResponse"].get("Account", []) if not a["SubAccount"]]
     if not accounts:
-        raise SystemExit(f"the company has no default account {name}; escalate (ADR-0075)")
+        raise SystemExit(f"the company has no default account {name}; escalate (ADR-0078)")
     return str(accounts[0]["Id"])
 
 

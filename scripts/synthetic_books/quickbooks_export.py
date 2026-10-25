@@ -7,7 +7,7 @@ Sheet and Trial Balance — and beside it, the trial balance at every month end,
 trip compares against.
 
 **What a report prints** is as the Reports API showed it for every posting of the synthetic
-company (ADR-0075):
+company (ADR-0078):
 
 * An account with any line in a report's span is printed, at zero if it nets to nothing. The
   balance sheet always prints Retained Earnings, blank when it has no figure.
@@ -30,7 +30,7 @@ API showed something different, the difference may be the API's own presentation
 real export settles it: the general ledger's Debit and Credit columns, where the API's ledger
 has one signed Amount; names by full path, where it nests leaf names; and a zero row's 0.00 in
 the debit column. Account numbers, and the order they put accounts in, the API never prints.
-ADR-0075 checks the layout against one real export, cell by cell.
+ADR-0078 checks the layout against one real export, cell by cell.
 """
 
 from __future__ import annotations

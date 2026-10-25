@@ -211,7 +211,7 @@ docker compose --profile test run --rm test
 `tests/fixtures/quickbooks/` holds a synthetic company's QuickBooks Online exports, written by
 `scripts/synthetic_books/` from business events we generate. Nothing in it is real books, and
 nothing in it was produced by QuickBooks.
-[ADR-0075](docs/decisions/0075-the-quickbooks-fixture-is-ours-and-a-sandbox-validates-it.md) says
+[ADR-0078](docs/decisions/0078-the-quickbooks-fixture-is-ours-and-a-sandbox-validates-it.md) says
 why. `catalog.toml` lists the cases it must contain.
 
 After changing the generator or the catalog, regenerate and commit what changed:

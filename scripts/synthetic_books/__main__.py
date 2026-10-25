@@ -54,7 +54,7 @@ def manifest(
         if case["category"] == "archive":
             entry["rendering"] = case_id.removeprefix("a-")
         if case["category"] == "file":
-            # A mutation of the accrual archive, made from it at test time (ADR-0075).
+            # A mutation of the accrual archive, made from it at test time (ADR-0078).
             entry["mutation"] = case_id
         out[case_id] = entry
     return out
