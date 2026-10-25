@@ -121,6 +121,8 @@ nothing cites these but this repository. They are added when something breaks wi
 | [0075](0075-cfokit-s-agent-is-an-async-component-built-on-pydantic-ai.md) | CFOKit's agent is an async component built on Pydantic AI, streaming AG-UI to an assistant-ui chat window | Proposed |
 | [0076](0076-conversations-and-their-files-are-stored-in-core.md) | Conversations and the files in them are the company's records, stored in core's database | Proposed |
 | [0077](0077-the-agent-acts-with-a-token-exchanged-from-the-persons.md) | The agent acts for a person with a token exchanged from theirs, and only while they are there | Proposed |
+| [0078](0078-the-quickbooks-fixture-is-ours-and-a-sandbox-validates-it.md) | The QuickBooks fixture is ours, written from business events, with a sandbox as its validator | Proposed |
+| [0079](0079-the-quickbooks-round-trip-imports-what-the-reader-read.md) | The QuickBooks round trip imports what the web client's reader read from the fixture | Proposed |
 
 ## Deferred — decided in principle, waiting on a need
 

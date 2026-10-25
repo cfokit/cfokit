@@ -206,6 +206,112 @@ docker compose --profile test run --rm test
 
 `CLAUDE.md` explains why it runs there rather than against the stack from the host.
 
+## The synthetic QuickBooks fixture
+
+`tests/fixtures/quickbooks/` holds a synthetic company's QuickBooks Online exports, written by
+`scripts/synthetic_books/` from business events we generate. Nothing in it is real books, and
+nothing in it was produced by QuickBooks.
+[ADR-0078](docs/decisions/0078-the-quickbooks-fixture-is-ours-and-a-sandbox-validates-it.md) says
+why. `catalog.toml` lists the cases it must contain.
+
+After changing the generator or the catalog, regenerate and commit what changed:
+
+```bash
+PYTHONPATH=scripts uv run python -m synthetic_books           # rewrite the fixture
+PYTHONPATH=scripts uv run python -m synthetic_books --check   # what CI's drift test checks
+```
+
+Each archive's `read.json` is what the web client's reader reads from it, and what the round
+trip into CFOKit imports
+([ADR-0079](docs/decisions/0079-the-quickbooks-round-trip-imports-what-the-reader-read.md)).
+After changing the reader or the archives, rewrite them from `web/` and commit them with the
+change. A test fails while one is stale:
+
+```bash
+corepack pnpm read-fixture   # in web/: rewrite every archive's read.json
+```
+
+A reading is the reader's output, so it is reviewed as a change to what CFOKit receives, and
+never the source of an expected value: the round trip
+(`tests/integration/test_quickbooks_round_trip.py`) checks it against QuickBooks' figures.
+
+### Validating it against a QuickBooks sandbox
+
+The archives are our belief about what QuickBooks writes. Checking that belief means posting the
+same events to a sandbox company and comparing. CI never does this, because it holds no
+credentials and calls no third party. A person does it after a change to the generator. Until
+it is done, `tests/test_quickbooks_sandbox.py` skips its validation check and says why.
+
+**Before the first run:**
+
+- **Your own Intuit developer account** and an app, at
+  [developer.intuit.com](https://developer.intuit.com). The project holds no account and no
+  credentials; whoever runs the tool does so under their own account and their own acceptance of
+  Intuit's terms. The app gives you a **client ID** and a **client secret**.
+- **An empty sandbox company.** A new sandbox company comes with Intuit's sample data, which
+  must not end up in the comparison (ADR-0044). Empty it from the developer portal's Sandboxes
+  list ("Clear data and reset", or "Delete all data"). What stays is QuickBooks' default chart
+  of accounts and two items, which every new company has.
+- **Intuit's Developer Terms read** by whoever accepts them, § 3.1 in particular.
+
+**Four values, from Intuit's OAuth 2.0 Playground** (Tools, then OAuth 2.0 Playground). Select
+your app, tick the `com.intuit.quickbooks.accounting` scope, choose **Get authorization code**,
+sign in and pick the sandbox company, then choose **Get tokens**.
+
+| Variable | What it is |
+|---|---|
+| `QBO_CLIENT_ID` | your app's client ID |
+| `QBO_CLIENT_SECRET` | your app's client secret |
+| `QBO_REFRESH_TOKEN` | the refresh token *Get tokens* shows. It lasts about 100 days, and the tool turns it into hour-long access tokens itself |
+| `QBO_REALM_ID` | the sandbox company's id, which Intuit also calls the Company ID |
+
+On your own machine, `export` them in the shell. In a **Claude Code cloud environment**, add them
+in the environment's settings (the environment menu in the session's title bar, then **Edit**),
+under Network secrets where that is offered, or as environment variables. A new session picks
+them up. **Never paste them into a chat.** The tool reads them only from the environment and
+never prints them.
+
+**Two hosts, allowed in the environment's network access** if it does not allow everything:
+
+```
+oauth.platform.intuit.com
+sandbox-quickbooks.api.intuit.com
+```
+
+**Then:**
+
+```bash
+PYTHONPATH=scripts uv run python -m synthetic_books.sandbox post       # resumable
+PYTHONPATH=scripts uv run python -m synthetic_books.sandbox validate
+```
+
+A payload QuickBooks rejects means an event was modeled wrong, so fix the generator, not the
+post. So does one it accepts but keeps differently, which `post` checks for. A payload changed
+after it was posted stops `post`, because the company holds the old one: empty the company,
+delete `.local/qbo-sandbox/`, and post again.
+
+**Some settings only a person can make.** The API accepts the fiscal year, account numbers and
+"Automatically apply credits" and ignores them. `post` checks them first and names any that
+need changing; make them in the sandbox company under Settings, Account and settings,
+Advanced. The calendar-year rendering needs the fiscal year changed too, so `validate` compares
+the renderings the current settings allow, remembers those that agreed, and names the setting
+the next one needs. Run it again after the change, and change it back when it is done.
+
+Differences that `validate` finds are written under `.local/qbo-sandbox/`, which git ignores,
+and are fixed in the writer. When every rendering agrees, `validate` writes
+`tests/fixtures/quickbooks/validation.json`; commit that. **Never commit anything QuickBooks
+returned.** Intuit's terms do not permit it, and nothing under `.local/` can reach a commit.
+
+The layout of the reports cannot be seen through the API. After a change to the writer's
+layout, download Export Data from the sandbox company (Settings, then Export data): its reports
+over all dates, with the fiscal year starting in July and account numbers off, as the accrual
+archive is written. Compare it, leaving the download outside the repository; the company's name
+and the time each report was run differ by nature, and are not compared:
+
+```bash
+PYTHONPATH=scripts uv run python -m synthetic_books.sandbox compare-export ~/Downloads/export.zip
+```
+
 ## Opening a pull request
 
 - Work on a branch of your fork. Never commit to `main`.

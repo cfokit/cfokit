@@ -1,0 +1,6509 @@
+{
+ "2023-07-31": [
+  {
+   "account": "Operating Checking",
+   "debit": "43219.00",
+   "credit": "0"
+  },
+  {
+   "account": "Reserve Savings",
+   "debit": "25019.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Receivable (A/R)",
+   "debit": "9000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Computer Equipment:Accumulated Depreciation",
+   "debit": "0",
+   "credit": "500.00"
+  },
+  {
+   "account": "Computer Equipment:Original Cost Basis",
+   "debit": "18000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Payable (A/P)",
+   "debit": "0",
+   "credit": "2100.00"
+  },
+  {
+   "account": "Business Card",
+   "debit": "0",
+   "credit": "530.00"
+  },
+  {
+   "account": "Payroll Liabilities",
+   "debit": "0",
+   "credit": "7412.50"
+  },
+  {
+   "account": "Equipment Loan",
+   "debit": "0",
+   "credit": "23400.00"
+  },
+  {
+   "account": "Opening Balance Equity",
+   "debit": "0",
+   "credit": "61000.00"
+  },
+  {
+   "account": "Design Services",
+   "debit": "0",
+   "credit": "37600.00"
+  },
+  {
+   "account": "Cost of Services:Software",
+   "debit": "218.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Stock Media",
+   "debit": "49.00",
+   "credit": "0"
+  },
+  {
+   "account": "Bank Fees",
+   "debit": "25.00",
+   "credit": "0"
+  },
+  {
+   "account": "Depreciation",
+   "debit": "500.00",
+   "credit": "0"
+  },
+  {
+   "account": "Insurance",
+   "debit": "2100.00",
+   "credit": "0"
+  },
+  {
+   "account": "Meals & Entertainment",
+   "debit": "194.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software",
+   "debit": "15.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software:Design Tools",
+   "debit": "54.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Supplies",
+   "debit": "109.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Employer Taxes",
+   "debit": "1912.50",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Wages",
+   "debit": "25000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Rent",
+   "debit": "6500.00",
+   "credit": "0"
+  },
+  {
+   "account": "Repairs/Maintenance",
+   "debit": "332.00",
+   "credit": "0"
+  },
+  {
+   "account": "Telephone (deleted)",
+   "debit": "185.00",
+   "credit": "0"
+  },
+  {
+   "account": "Interest Earned",
+   "debit": "0",
+   "credit": "19.00"
+  },
+  {
+   "account": "Interest Expense",
+   "debit": "130.00",
+   "credit": "0"
+  }
+ ],
+ "2023-08-31": [
+  {
+   "account": "Operating Checking",
+   "debit": "42320.75",
+   "credit": "0"
+  },
+  {
+   "account": "Reserve Savings",
+   "debit": "25042.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Receivable (A/R)",
+   "debit": "9000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Computer Equipment:Accumulated Depreciation",
+   "debit": "0",
+   "credit": "1000.00"
+  },
+  {
+   "account": "Computer Equipment:Original Cost Basis",
+   "debit": "18000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Payable (A/P)",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Business Card",
+   "debit": "0",
+   "credit": "1663.00"
+  },
+  {
+   "account": "Payroll Liabilities",
+   "debit": "0",
+   "credit": "7412.50"
+  },
+  {
+   "account": "Equipment Loan",
+   "debit": "0",
+   "credit": "22800.00"
+  },
+  {
+   "account": "Opening Balance Equity",
+   "debit": "0",
+   "credit": "61000.00"
+  },
+  {
+   "account": "Design Services",
+   "debit": "0",
+   "credit": "75200.00"
+  },
+  {
+   "account": "Cost of Services:Software",
+   "debit": "459.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Stock Media",
+   "debit": "98.00",
+   "credit": "0"
+  },
+  {
+   "account": "Bank Fees",
+   "debit": "50.00",
+   "credit": "0"
+  },
+  {
+   "account": "Depreciation",
+   "debit": "1000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Insurance",
+   "debit": "2100.00",
+   "credit": "0"
+  },
+  {
+   "account": "Meals & Entertainment",
+   "debit": "469.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software",
+   "debit": "30.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software:Design Tools",
+   "debit": "108.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Supplies",
+   "debit": "173.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Employer Taxes",
+   "debit": "3825.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Wages",
+   "debit": "50000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Professional Fees:Legal & Accounting",
+   "debit": "1455.00",
+   "credit": "0"
+  },
+  {
+   "account": "Rent",
+   "debit": "13000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Repairs/Maintenance",
+   "debit": "332.00",
+   "credit": "0"
+  },
+  {
+   "account": "Telephone (deleted)",
+   "debit": "370.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel",
+   "debit": "306.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel:Airfare",
+   "debit": "723.00",
+   "credit": "0"
+  },
+  {
+   "account": "Interest Earned",
+   "debit": "0",
+   "credit": "42.00"
+  },
+  {
+   "account": "Interest Expense",
+   "debit": "256.75",
+   "credit": "0"
+  }
+ ],
+ "2023-09-30": [
+  {
+   "account": "Operating Checking",
+   "debit": "22640.75",
+   "credit": "0"
+  },
+  {
+   "account": "Reserve Savings",
+   "debit": "25073.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Receivable (A/R)",
+   "debit": "18000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Computer Equipment:Accumulated Depreciation",
+   "debit": "0",
+   "credit": "1500.00"
+  },
+  {
+   "account": "Computer Equipment:Original Cost Basis",
+   "debit": "18000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Payable (A/P)",
+   "debit": "0",
+   "credit": "1544.00"
+  },
+  {
+   "account": "Business Card",
+   "debit": "0",
+   "credit": "746.00"
+  },
+  {
+   "account": "Payroll Liabilities",
+   "debit": "0",
+   "credit": "7412.50"
+  },
+  {
+   "account": "Equipment Loan",
+   "debit": "0",
+   "credit": "22200.00"
+  },
+  {
+   "account": "Opening Balance Equity",
+   "debit": "0",
+   "credit": "61000.00"
+  },
+  {
+   "account": "Owner Draws",
+   "debit": "15000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Design Services",
+   "debit": "0",
+   "credit": "115600.00"
+  },
+  {
+   "account": "Cost of Services:Contractors",
+   "debit": "1544.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Software",
+   "debit": "669.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Stock Media",
+   "debit": "147.00",
+   "credit": "0"
+  },
+  {
+   "account": "Bank Fees",
+   "debit": "75.00",
+   "credit": "0"
+  },
+  {
+   "account": "Depreciation",
+   "debit": "1500.00",
+   "credit": "0"
+  },
+  {
+   "account": "Insurance",
+   "debit": "2100.00",
+   "credit": "0"
+  },
+  {
+   "account": "Meals & Entertainment",
+   "debit": "887.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software",
+   "debit": "45.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software:Design Tools",
+   "debit": "162.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Supplies",
+   "debit": "244.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Employer Taxes",
+   "debit": "5737.50",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Wages",
+   "debit": "75000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Professional Fees:Legal & Accounting",
+   "debit": "1455.00",
+   "credit": "0"
+  },
+  {
+   "account": "Rent",
+   "debit": "19500.00",
+   "credit": "0"
+  },
+  {
+   "account": "Repairs/Maintenance",
+   "debit": "332.00",
+   "credit": "0"
+  },
+  {
+   "account": "Telephone (deleted)",
+   "debit": "555.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel",
+   "debit": "306.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel:Airfare",
+   "debit": "723.00",
+   "credit": "0"
+  },
+  {
+   "account": "Interest Earned",
+   "debit": "0",
+   "credit": "73.00"
+  },
+  {
+   "account": "Interest Expense",
+   "debit": "380.25",
+   "credit": "0"
+  }
+ ],
+ "2023-10-31": [
+  {
+   "account": "Operating Checking",
+   "debit": "51096.00",
+   "credit": "0"
+  },
+  {
+   "account": "Reserve Savings",
+   "debit": "25097.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Receivable (A/R)",
+   "debit": "20128.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Computer Equipment:Accumulated Depreciation",
+   "debit": "0",
+   "credit": "2000.00"
+  },
+  {
+   "account": "Computer Equipment:Original Cost Basis",
+   "debit": "18000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Payable (A/P)",
+   "debit": "0",
+   "credit": "6077.00"
+  },
+  {
+   "account": "Business Card",
+   "debit": "0",
+   "credit": "685.00"
+  },
+  {
+   "account": "Payroll Liabilities",
+   "debit": "0",
+   "credit": "7412.50"
+  },
+  {
+   "account": "Equipment Loan",
+   "debit": "0",
+   "credit": "21600.00"
+  },
+  {
+   "account": "Opening Balance Equity",
+   "debit": "0",
+   "credit": "61000.00"
+  },
+  {
+   "account": "Owner Draws",
+   "debit": "15000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Design Services",
+   "debit": "0",
+   "credit": "183317.00"
+  },
+  {
+   "account": "Cost of Services:Contractors",
+   "debit": "5521.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Software",
+   "debit": "975.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Stock Media",
+   "debit": "196.00",
+   "credit": "0"
+  },
+  {
+   "account": "Bank Fees",
+   "debit": "100.00",
+   "credit": "0"
+  },
+  {
+   "account": "Depreciation",
+   "debit": "2000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Insurance",
+   "debit": "4200.00",
+   "credit": "0"
+  },
+  {
+   "account": "Meals & Entertainment",
+   "debit": "1148.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software",
+   "debit": "60.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software:Design Tools",
+   "debit": "216.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Supplies",
+   "debit": "282.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Employer Taxes",
+   "debit": "7650.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Wages",
+   "debit": "100000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Professional Fees:Legal & Accounting",
+   "debit": "1455.00",
+   "credit": "0"
+  },
+  {
+   "account": "Rent",
+   "debit": "26000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Repairs/Maintenance",
+   "debit": "795.00",
+   "credit": "0"
+  },
+  {
+   "account": "Telephone (deleted)",
+   "debit": "740.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel",
+   "debit": "306.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel:Airfare",
+   "debit": "723.00",
+   "credit": "0"
+  },
+  {
+   "account": "Interest Earned",
+   "debit": "0",
+   "credit": "97.00"
+  },
+  {
+   "account": "Interest Expense",
+   "debit": "500.50",
+   "credit": "0"
+  }
+ ],
+ "2023-11-30": [
+  {
+   "account": "Operating Checking",
+   "debit": "70991.50",
+   "credit": "0"
+  },
+  {
+   "account": "Reserve Savings",
+   "debit": "25123.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Receivable (A/R)",
+   "debit": "16112.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Computer Equipment:Accumulated Depreciation",
+   "debit": "0",
+   "credit": "2500.00"
+  },
+  {
+   "account": "Computer Equipment:Original Cost Basis",
+   "debit": "18000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Payable (A/P)",
+   "debit": "0",
+   "credit": "7237.00"
+  },
+  {
+   "account": "Business Card",
+   "debit": "0",
+   "credit": "2380.00"
+  },
+  {
+   "account": "Payroll Liabilities",
+   "debit": "0",
+   "credit": "7412.50"
+  },
+  {
+   "account": "Equipment Loan",
+   "debit": "0",
+   "credit": "21000.00"
+  },
+  {
+   "account": "Opening Balance Equity",
+   "debit": "0",
+   "credit": "61000.00"
+  },
+  {
+   "account": "Owner Draws",
+   "debit": "15000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Design Services",
+   "debit": "0",
+   "credit": "240374.00"
+  },
+  {
+   "account": "Cost of Services:Contractors",
+   "debit": "11177.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Software",
+   "debit": "1208.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Stock Media",
+   "debit": "245.00",
+   "credit": "0"
+  },
+  {
+   "account": "Bank Fees",
+   "debit": "125.00",
+   "credit": "0"
+  },
+  {
+   "account": "Depreciation",
+   "debit": "2500.00",
+   "credit": "0"
+  },
+  {
+   "account": "Insurance",
+   "debit": "4200.00",
+   "credit": "0"
+  },
+  {
+   "account": "Meals & Entertainment",
+   "debit": "1336.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software",
+   "debit": "75.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software:Design Tools",
+   "debit": "270.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Supplies",
+   "debit": "358.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Employer Taxes",
+   "debit": "9562.50",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Wages",
+   "debit": "125000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Professional Fees:Legal & Accounting",
+   "debit": "3036.00",
+   "credit": "0"
+  },
+  {
+   "account": "Rent",
+   "debit": "32500.00",
+   "credit": "0"
+  },
+  {
+   "account": "Repairs/Maintenance",
+   "debit": "795.00",
+   "credit": "0"
+  },
+  {
+   "account": "Telephone (deleted)",
+   "debit": "925.00",
+   "credit": "0"
+  },
+  {
+   "account": "Totally Promotional Merch",
+   "debit": "781.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel",
+   "debit": "597.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel:Airfare",
+   "debit": "1492.00",
+   "credit": "0"
+  },
+  {
+   "account": "Interest Earned",
+   "debit": "0",
+   "credit": "123.00"
+  },
+  {
+   "account": "Interest Expense",
+   "debit": "617.50",
+   "credit": "0"
+  }
+ ],
+ "2023-12-31": [
+  {
+   "account": "Operating Checking",
+   "debit": "59531.25",
+   "credit": "0"
+  },
+  {
+   "account": "Reserve Savings",
+   "debit": "25147.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Receivable (A/R)",
+   "debit": "36775.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "3800.00",
+   "credit": "0"
+  },
+  {
+   "account": "Computer Equipment:Accumulated Depreciation",
+   "debit": "0",
+   "credit": "3000.00"
+  },
+  {
+   "account": "Computer Equipment:Original Cost Basis",
+   "debit": "18000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Payable (A/P)",
+   "debit": "0",
+   "credit": "4084.00"
+  },
+  {
+   "account": "Business Card",
+   "debit": "0",
+   "credit": "620.00"
+  },
+  {
+   "account": "Payroll Liabilities",
+   "debit": "0",
+   "credit": "7412.50"
+  },
+  {
+   "account": "Equipment Loan",
+   "debit": "0",
+   "credit": "20400.00"
+  },
+  {
+   "account": "Opening Balance Equity",
+   "debit": "0",
+   "credit": "61000.00"
+  },
+  {
+   "account": "Owner Draws",
+   "debit": "30000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Design Services",
+   "debit": "0",
+   "credit": "312405.00"
+  },
+  {
+   "account": "Cost of Services:Contractors",
+   "debit": "15261.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Software",
+   "debit": "1521.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Stock Media",
+   "debit": "294.00",
+   "credit": "0"
+  },
+  {
+   "account": "Bank Fees",
+   "debit": "150.00",
+   "credit": "0"
+  },
+  {
+   "account": "Depreciation",
+   "debit": "3000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Insurance",
+   "debit": "4200.00",
+   "credit": "0"
+  },
+  {
+   "account": "Meals & Entertainment",
+   "debit": "1525.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software",
+   "debit": "90.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software:Design Tools",
+   "debit": "324.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Supplies",
+   "debit": "433.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Employer Taxes",
+   "debit": "11475.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Wages",
+   "debit": "150000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Professional Fees:Legal & Accounting",
+   "debit": "3036.00",
+   "credit": "0"
+  },
+  {
+   "account": "Rent",
+   "debit": "39000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Repairs/Maintenance",
+   "debit": "795.00",
+   "credit": "0"
+  },
+  {
+   "account": "Telephone (deleted)",
+   "debit": "1110.00",
+   "credit": "0"
+  },
+  {
+   "account": "Totally Promotional Merch",
+   "debit": "781.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel",
+   "debit": "597.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel:Airfare",
+   "debit": "1492.00",
+   "credit": "0"
+  },
+  {
+   "account": "Interest Earned",
+   "debit": "0",
+   "credit": "147.00"
+  },
+  {
+   "account": "Interest Expense",
+   "debit": "731.25",
+   "credit": "0"
+  }
+ ],
+ "2024-01-31": [
+  {
+   "account": "Operating Checking",
+   "debit": "104669.25",
+   "credit": "0"
+  },
+  {
+   "account": "Reserve Savings",
+   "debit": "10174.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Receivable (A/R)",
+   "debit": "12670.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Computer Equipment:Accumulated Depreciation",
+   "debit": "0",
+   "credit": "3500.00"
+  },
+  {
+   "account": "Computer Equipment:Original Cost Basis",
+   "debit": "18000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Payable (A/P)",
+   "debit": "0",
+   "credit": "3745.00"
+  },
+  {
+   "account": "Business Card",
+   "debit": "0",
+   "credit": "593.00"
+  },
+  {
+   "account": "Payroll Liabilities",
+   "debit": "0",
+   "credit": "7412.50"
+  },
+  {
+   "account": "Equipment Loan",
+   "debit": "0",
+   "credit": "19800.00"
+  },
+  {
+   "account": "Opening Balance Equity",
+   "debit": "0",
+   "credit": "61000.00"
+  },
+  {
+   "account": "Owner Draws",
+   "debit": "30000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Retained Earnings",
+   "debit": "0",
+   "credit": "76736.75"
+  },
+  {
+   "account": "Design Services",
+   "debit": "0",
+   "credit": "41900.00"
+  },
+  {
+   "account": "Cost of Services:Contractors",
+   "debit": "1645.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Software",
+   "debit": "270.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Stock Media",
+   "debit": "49.00",
+   "credit": "0"
+  },
+  {
+   "account": "Bank Fees",
+   "debit": "25.00",
+   "credit": "0"
+  },
+  {
+   "account": "Depreciation",
+   "debit": "500.00",
+   "credit": "0"
+  },
+  {
+   "account": "Insurance",
+   "debit": "2100.00",
+   "credit": "0"
+  },
+  {
+   "account": "Meals & Entertainment",
+   "debit": "205.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software",
+   "debit": "15.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software:Design Tools",
+   "debit": "54.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Supplies",
+   "debit": "114.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Employer Taxes",
+   "debit": "1912.50",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Wages",
+   "debit": "25000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Rent",
+   "debit": "6500.00",
+   "credit": "0"
+  },
+  {
+   "account": "Repairs/Maintenance",
+   "debit": "516.00",
+   "credit": "0"
+  },
+  {
+   "account": "Telephone (deleted)",
+   "debit": "185.00",
+   "credit": "0"
+  },
+  {
+   "account": "Interest Earned",
+   "debit": "0",
+   "credit": "27.00"
+  },
+  {
+   "account": "Interest Expense",
+   "debit": "110.50",
+   "credit": "0"
+  }
+ ],
+ "2024-02-29": [
+  {
+   "account": "Operating Checking",
+   "debit": "102837.50",
+   "credit": "0"
+  },
+  {
+   "account": "Reserve Savings",
+   "debit": "10203.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Receivable (A/R)",
+   "debit": "20700.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Computer Equipment:Accumulated Depreciation",
+   "debit": "0",
+   "credit": "4000.00"
+  },
+  {
+   "account": "Computer Equipment:Original Cost Basis",
+   "debit": "18000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Payable (A/P)",
+   "debit": "0",
+   "credit": "2920.00"
+  },
+  {
+   "account": "Business Card",
+   "debit": "0",
+   "credit": "1691.00"
+  },
+  {
+   "account": "Payroll Liabilities",
+   "debit": "0",
+   "credit": "7412.50"
+  },
+  {
+   "account": "Equipment Loan",
+   "debit": "0",
+   "credit": "19200.00"
+  },
+  {
+   "account": "Opening Balance Equity",
+   "debit": "0",
+   "credit": "61000.00"
+  },
+  {
+   "account": "Owner Draws",
+   "debit": "30000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Retained Earnings",
+   "debit": "0",
+   "credit": "76736.75"
+  },
+  {
+   "account": "Design Services",
+   "debit": "0",
+   "credit": "86900.00"
+  },
+  {
+   "account": "Cost of Services:Contractors",
+   "debit": "3182.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Software",
+   "debit": "572.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Stock Media",
+   "debit": "98.00",
+   "credit": "0"
+  },
+  {
+   "account": "Bank Fees",
+   "debit": "50.00",
+   "credit": "0"
+  },
+  {
+   "account": "Depreciation",
+   "debit": "1000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Insurance",
+   "debit": "2100.00",
+   "credit": "0"
+  },
+  {
+   "account": "Meals & Entertainment",
+   "debit": "345.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software",
+   "debit": "30.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software:Design Tools",
+   "debit": "108.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Supplies",
+   "debit": "248.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Employer Taxes",
+   "debit": "3825.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Wages",
+   "debit": "50000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Professional Fees:Legal & Accounting",
+   "debit": "1383.00",
+   "credit": "0"
+  },
+  {
+   "account": "Rent",
+   "debit": "13000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Repairs/Maintenance",
+   "debit": "516.00",
+   "credit": "0"
+  },
+  {
+   "account": "Telephone (deleted)",
+   "debit": "370.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel",
+   "debit": "449.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel:Airfare",
+   "debit": "682.00",
+   "credit": "0"
+  },
+  {
+   "account": "Interest Earned",
+   "debit": "0",
+   "credit": "56.00"
+  },
+  {
+   "account": "Interest Expense",
+   "debit": "217.75",
+   "credit": "0"
+  }
+ ],
+ "2024-03-31": [
+  {
+   "account": "Operating Checking",
+   "debit": "117306.00",
+   "credit": "0"
+  },
+  {
+   "account": "Reserve Savings",
+   "debit": "10224.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Receivable (A/R)",
+   "debit": "14800.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Computer Equipment:Accumulated Depreciation",
+   "debit": "0",
+   "credit": "4500.00"
+  },
+  {
+   "account": "Computer Equipment:Original Cost Basis",
+   "debit": "18000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Payable (A/P)",
+   "debit": "0",
+   "credit": "2304.00"
+  },
+  {
+   "account": "Business Card",
+   "debit": "0",
+   "credit": "797.00"
+  },
+  {
+   "account": "Payroll Liabilities",
+   "debit": "0",
+   "credit": "7412.50"
+  },
+  {
+   "account": "Equipment Loan",
+   "debit": "0",
+   "credit": "18600.00"
+  },
+  {
+   "account": "Opening Balance Equity",
+   "debit": "0",
+   "credit": "61000.00"
+  },
+  {
+   "account": "Owner Draws",
+   "debit": "45000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Retained Earnings",
+   "debit": "0",
+   "credit": "76736.75"
+  },
+  {
+   "account": "Design Services",
+   "debit": "0",
+   "credit": "131900.00"
+  },
+  {
+   "account": "Workshops",
+   "debit": "0",
+   "credit": "17550.00"
+  },
+  {
+   "account": "Cost of Services:Contractors",
+   "debit": "5486.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Software",
+   "debit": "883.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Stock Media",
+   "debit": "147.00",
+   "credit": "0"
+  },
+  {
+   "account": "Bank Fees",
+   "debit": "75.00",
+   "credit": "0"
+  },
+  {
+   "account": "Depreciation",
+   "debit": "1500.00",
+   "credit": "0"
+  },
+  {
+   "account": "Insurance",
+   "debit": "2100.00",
+   "credit": "0"
+  },
+  {
+   "account": "Meals & Entertainment",
+   "debit": "713.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software",
+   "debit": "45.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software:Design Tools",
+   "debit": "162.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Supplies",
+   "debit": "292.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Employer Taxes",
+   "debit": "5737.50",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Wages",
+   "debit": "75000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Professional Fees:Legal & Accounting",
+   "debit": "1383.00",
+   "credit": "0"
+  },
+  {
+   "account": "Rent",
+   "debit": "19500.00",
+   "credit": "0"
+  },
+  {
+   "account": "Repairs/Maintenance",
+   "debit": "516.00",
+   "credit": "0"
+  },
+  {
+   "account": "Telephone (deleted)",
+   "debit": "555.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel",
+   "debit": "449.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel:Airfare",
+   "debit": "682.00",
+   "credit": "0"
+  },
+  {
+   "account": "Interest Earned",
+   "debit": "0",
+   "credit": "77.00"
+  },
+  {
+   "account": "Interest Expense",
+   "debit": "321.75",
+   "credit": "0"
+  }
+ ],
+ "2024-04-30": [
+  {
+   "account": "Operating Checking",
+   "debit": "132113.75",
+   "credit": "0"
+  },
+  {
+   "account": "Reserve Savings",
+   "debit": "10247.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Receivable (A/R)",
+   "debit": "14800.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Computer Equipment:Accumulated Depreciation",
+   "debit": "0",
+   "credit": "5000.00"
+  },
+  {
+   "account": "Computer Equipment:Original Cost Basis",
+   "debit": "18000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Payable (A/P)",
+   "debit": "0",
+   "credit": "3051.00"
+  },
+  {
+   "account": "Business Card",
+   "debit": "0",
+   "credit": "815.00"
+  },
+  {
+   "account": "Payroll Liabilities",
+   "debit": "0",
+   "credit": "7412.50"
+  },
+  {
+   "account": "Equipment Loan",
+   "debit": "0",
+   "credit": "18000.00"
+  },
+  {
+   "account": "Opening Balance Equity",
+   "debit": "0",
+   "credit": "61000.00"
+  },
+  {
+   "account": "Owner Draws",
+   "debit": "45000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Retained Earnings",
+   "debit": "0",
+   "credit": "76736.75"
+  },
+  {
+   "account": "Design Services",
+   "debit": "0",
+   "credit": "176900.00"
+  },
+  {
+   "account": "Workshops",
+   "debit": "0",
+   "credit": "26100.00"
+  },
+  {
+   "account": "Cost of Services:Contractors",
+   "debit": "6437.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Software",
+   "debit": "1188.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Stock Media",
+   "debit": "196.00",
+   "credit": "0"
+  },
+  {
+   "account": "Bank Fees",
+   "debit": "100.00",
+   "credit": "0"
+  },
+  {
+   "account": "Depreciation",
+   "debit": "2000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Gross Receipts Tax",
+   "debit": "1009.00",
+   "credit": "0"
+  },
+  {
+   "account": "Insurance",
+   "debit": "4200.00",
+   "credit": "0"
+  },
+  {
+   "account": "Meals & Entertainment",
+   "debit": "1105.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software",
+   "debit": "60.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software:Design Tools",
+   "debit": "216.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Supplies",
+   "debit": "391.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Employer Taxes",
+   "debit": "7650.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Wages",
+   "debit": "100000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Professional Fees:Legal & Accounting",
+   "debit": "1383.00",
+   "credit": "0"
+  },
+  {
+   "account": "Rent",
+   "debit": "26000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Repairs/Maintenance",
+   "debit": "726.00",
+   "credit": "0"
+  },
+  {
+   "account": "Telephone (deleted)",
+   "debit": "740.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel",
+   "debit": "449.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel:Airfare",
+   "debit": "682.00",
+   "credit": "0"
+  },
+  {
+   "account": "Interest Earned",
+   "debit": "0",
+   "credit": "100.00"
+  },
+  {
+   "account": "Interest Expense",
+   "debit": "422.50",
+   "credit": "0"
+  }
+ ],
+ "2024-05-31": [
+  {
+   "account": "Operating Checking",
+   "debit": "140366.75",
+   "credit": "0"
+  },
+  {
+   "account": "Reserve Savings",
+   "debit": "10271.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Receivable (A/R)",
+   "debit": "14800.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "8400.00",
+   "credit": "0"
+  },
+  {
+   "account": "Computer Equipment:Accumulated Depreciation",
+   "debit": "0",
+   "credit": "5500.00"
+  },
+  {
+   "account": "Computer Equipment:Original Cost Basis",
+   "debit": "18000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Payable (A/P)",
+   "debit": "0",
+   "credit": "3545.00"
+  },
+  {
+   "account": "Business Card",
+   "debit": "0",
+   "credit": "1224.00"
+  },
+  {
+   "account": "Payroll Liabilities",
+   "debit": "0",
+   "credit": "7412.50"
+  },
+  {
+   "account": "Equipment Loan",
+   "debit": "0",
+   "credit": "17400.00"
+  },
+  {
+   "account": "Opening Balance Equity",
+   "debit": "0",
+   "credit": "61000.00"
+  },
+  {
+   "account": "Owner Draws",
+   "debit": "45000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Retained Earnings",
+   "debit": "0",
+   "credit": "76736.75"
+  },
+  {
+   "account": "Design Services",
+   "debit": "0",
+   "credit": "221900.00"
+  },
+  {
+   "account": "Workshops",
+   "debit": "0",
+   "credit": "36000.00"
+  },
+  {
+   "account": "Cost of Services:Contractors",
+   "debit": "8428.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Software",
+   "debit": "1383.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Stock Media",
+   "debit": "245.00",
+   "credit": "0"
+  },
+  {
+   "account": "Bank Fees",
+   "debit": "125.00",
+   "credit": "0"
+  },
+  {
+   "account": "Depreciation",
+   "debit": "2500.00",
+   "credit": "0"
+  },
+  {
+   "account": "Gross Receipts Tax",
+   "debit": "1009.00",
+   "credit": "0"
+  },
+  {
+   "account": "Insurance",
+   "debit": "4200.00",
+   "credit": "0"
+  },
+  {
+   "account": "Meals & Entertainment",
+   "debit": "1245.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software",
+   "debit": "75.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software:Design Tools",
+   "debit": "270.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Supplies",
+   "debit": "452.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Employer Taxes",
+   "debit": "9562.50",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Wages",
+   "debit": "125000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Professional Fees:Legal & Accounting",
+   "debit": "2937.00",
+   "credit": "0"
+  },
+  {
+   "account": "Rent",
+   "debit": "32500.00",
+   "credit": "0"
+  },
+  {
+   "account": "Repairs/Maintenance",
+   "debit": "726.00",
+   "credit": "0"
+  },
+  {
+   "account": "Telephone (deleted)",
+   "debit": "925.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel",
+   "debit": "725.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel:Airfare",
+   "debit": "1177.00",
+   "credit": "0"
+  },
+  {
+   "account": "Interest Earned",
+   "debit": "0",
+   "credit": "124.00"
+  },
+  {
+   "account": "Interest Expense",
+   "debit": "520.00",
+   "credit": "0"
+  }
+ ],
+ "2024-06-30": [
+  {
+   "account": "Operating Checking",
+   "debit": "142645.00",
+   "credit": "0"
+  },
+  {
+   "account": "Reserve Savings",
+   "debit": "10294.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Receivable (A/R)",
+   "debit": "11700.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Computer Equipment:Accumulated Depreciation",
+   "debit": "0",
+   "credit": "6000.00"
+  },
+  {
+   "account": "Computer Equipment:Original Cost Basis",
+   "debit": "18000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Payable (A/P)",
+   "debit": "0",
+   "credit": "1823.00"
+  },
+  {
+   "account": "Business Card",
+   "debit": "0",
+   "credit": "867.00"
+  },
+  {
+   "account": "Payroll Liabilities",
+   "debit": "0",
+   "credit": "7412.50"
+  },
+  {
+   "account": "Equipment Loan",
+   "debit": "0",
+   "credit": "16800.00"
+  },
+  {
+   "account": "Opening Balance Equity",
+   "debit": "0",
+   "credit": "61000.00"
+  },
+  {
+   "account": "Owner Draws",
+   "debit": "60000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Retained Earnings",
+   "debit": "0",
+   "credit": "76736.75"
+  },
+  {
+   "account": "Design Services",
+   "debit": "0",
+   "credit": "266900.00"
+  },
+  {
+   "account": "Workshops",
+   "debit": "0",
+   "credit": "36000.00"
+  },
+  {
+   "account": "Cost of Services:Contractors",
+   "debit": "10251.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Software",
+   "debit": "1614.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Stock Media",
+   "debit": "294.00",
+   "credit": "0"
+  },
+  {
+   "account": "Bank Fees",
+   "debit": "150.00",
+   "credit": "0"
+  },
+  {
+   "account": "Depreciation",
+   "debit": "3000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Gross Receipts Tax",
+   "debit": "1009.00",
+   "credit": "0"
+  },
+  {
+   "account": "Insurance",
+   "debit": "4200.00",
+   "credit": "0"
+  },
+  {
+   "account": "Meals & Entertainment",
+   "debit": "1628.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software",
+   "debit": "90.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software:Design Tools",
+   "debit": "324.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Supplies",
+   "debit": "631.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Employer Taxes",
+   "debit": "11475.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Wages",
+   "debit": "150000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Professional Fees:Legal & Accounting",
+   "debit": "2937.00",
+   "credit": "0"
+  },
+  {
+   "account": "Rent",
+   "debit": "39000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Repairs/Maintenance",
+   "debit": "726.00",
+   "credit": "0"
+  },
+  {
+   "account": "Telephone (deleted)",
+   "debit": "1110.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel",
+   "debit": "817.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel:Airfare",
+   "debit": "1177.00",
+   "credit": "0"
+  },
+  {
+   "account": "Interest Earned",
+   "debit": "0",
+   "credit": "147.00"
+  },
+  {
+   "account": "Interest Expense",
+   "debit": "614.25",
+   "credit": "0"
+  }
+ ],
+ "2024-07-31": [
+  {
+   "account": "Operating Checking",
+   "debit": "146742.50",
+   "credit": "0"
+  },
+  {
+   "account": "Reserve Savings",
+   "debit": "10323.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Receivable (A/R)",
+   "debit": "15300.00",
+   "credit": "0"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "4400.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Computer Equipment:Accumulated Depreciation",
+   "debit": "0",
+   "credit": "6500.00"
+  },
+  {
+   "account": "Computer Equipment:Original Cost Basis",
+   "debit": "18000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Payable (A/P)",
+   "debit": "0",
+   "credit": "3495.00"
+  },
+  {
+   "account": "Business Card",
+   "debit": "0",
+   "credit": "5442.00"
+  },
+  {
+   "account": "Payroll Liabilities",
+   "debit": "0",
+   "credit": "8005.50"
+  },
+  {
+   "account": "Equipment Loan",
+   "debit": "0",
+   "credit": "16200.00"
+  },
+  {
+   "account": "Opening Balance Equity",
+   "debit": "0",
+   "credit": "61000.00"
+  },
+  {
+   "account": "Owner Draws",
+   "debit": "60000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Retained Earnings",
+   "debit": "0",
+   "credit": "76736.75"
+  },
+  {
+   "account": "Design Services",
+   "debit": "0",
+   "credit": "313800.00"
+  },
+  {
+   "account": "Workshops",
+   "debit": "0",
+   "credit": "36000.00"
+  },
+  {
+   "account": "Cost of Services:Contractors",
+   "debit": "11646.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Software",
+   "debit": "1910.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Stock Media",
+   "debit": "343.00",
+   "credit": "0"
+  },
+  {
+   "account": "Bank Fees",
+   "debit": "175.00",
+   "credit": "0"
+  },
+  {
+   "account": "Depreciation",
+   "debit": "3500.00",
+   "credit": "0"
+  },
+  {
+   "account": "Gross Receipts Tax",
+   "debit": "1009.00",
+   "credit": "0"
+  },
+  {
+   "account": "Insurance",
+   "debit": "6300.00",
+   "credit": "0"
+  },
+  {
+   "account": "Meals & Entertainment",
+   "debit": "1856.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software",
+   "debit": "505.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software:Design Tools",
+   "debit": "378.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Supplies",
+   "debit": "729.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Employer Taxes",
+   "debit": "13540.50",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Wages",
+   "debit": "177000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Professional Fees:Legal & Accounting",
+   "debit": "2937.00",
+   "credit": "0"
+  },
+  {
+   "account": "Rent",
+   "debit": "45500.00",
+   "credit": "0"
+  },
+  {
+   "account": "Repairs/Maintenance",
+   "debit": "1267.00",
+   "credit": "0"
+  },
+  {
+   "account": "Telephone (deleted)",
+   "debit": "1295.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel",
+   "debit": "817.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel:Airfare",
+   "debit": "1177.00",
+   "credit": "0"
+  },
+  {
+   "account": "Interest Earned",
+   "debit": "0",
+   "credit": "176.00"
+  },
+  {
+   "account": "Interest Expense",
+   "debit": "705.25",
+   "credit": "0"
+  }
+ ],
+ "2024-08-31": [
+  {
+   "account": "Operating Checking",
+   "debit": "138702.25",
+   "credit": "0"
+  },
+  {
+   "account": "Reserve Savings",
+   "debit": "10351.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Receivable (A/R)",
+   "debit": "24800.00",
+   "credit": "0"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "4000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Computer Equipment:Accumulated Depreciation",
+   "debit": "0",
+   "credit": "7000.00"
+  },
+  {
+   "account": "Computer Equipment:Original Cost Basis",
+   "debit": "18000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Payable (A/P)",
+   "debit": "0",
+   "credit": "2401.00"
+  },
+  {
+   "account": "Business Card",
+   "debit": "0",
+   "credit": "1521.00"
+  },
+  {
+   "account": "Payroll Liabilities",
+   "debit": "0",
+   "credit": "8617.50"
+  },
+  {
+   "account": "Equipment Loan",
+   "debit": "0",
+   "credit": "15600.00"
+  },
+  {
+   "account": "Opening Balance Equity",
+   "debit": "0",
+   "credit": "61000.00"
+  },
+  {
+   "account": "Owner Draws",
+   "debit": "60000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Retained Earnings",
+   "debit": "0",
+   "credit": "76124.75"
+  },
+  {
+   "account": "Design Services",
+   "debit": "0",
+   "credit": "360700.00"
+  },
+  {
+   "account": "Workshops",
+   "debit": "0",
+   "credit": "36000.00"
+  },
+  {
+   "account": "Cost of Services:Contractors",
+   "debit": "12533.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Software",
+   "debit": "2099.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Stock Media",
+   "debit": "392.00",
+   "credit": "0"
+  },
+  {
+   "account": "Bank Fees",
+   "debit": "200.00",
+   "credit": "0"
+  },
+  {
+   "account": "Depreciation",
+   "debit": "4000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Gross Receipts Tax",
+   "debit": "1009.00",
+   "credit": "0"
+  },
+  {
+   "account": "Insurance",
+   "debit": "6300.00",
+   "credit": "0"
+  },
+  {
+   "account": "Meals & Entertainment",
+   "debit": "1955.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software",
+   "debit": "920.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software:Design Tools",
+   "debit": "432.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Supplies",
+   "debit": "769.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Employer Taxes",
+   "debit": "15606.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Wages",
+   "debit": "204000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Professional Fees:Legal & Accounting",
+   "debit": "4451.00",
+   "credit": "0"
+  },
+  {
+   "account": "Rent",
+   "debit": "52000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Repairs/Maintenance",
+   "debit": "1267.00",
+   "credit": "0"
+  },
+  {
+   "account": "Telephone (deleted)",
+   "debit": "1480.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel",
+   "debit": "1119.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel:Airfare",
+   "debit": "1990.00",
+   "credit": "0"
+  },
+  {
+   "account": "Interest Earned",
+   "debit": "0",
+   "credit": "204.00"
+  },
+  {
+   "account": "Interest Expense",
+   "debit": "793.00",
+   "credit": "0"
+  }
+ ],
+ "2024-09-30": [
+  {
+   "account": "Operating Checking",
+   "debit": "143986.25",
+   "credit": "0"
+  },
+  {
+   "account": "Reserve Savings",
+   "debit": "10377.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Receivable (A/R)",
+   "debit": "12200.00",
+   "credit": "0"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "3600.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Computer Equipment:Accumulated Depreciation",
+   "debit": "0",
+   "credit": "7500.00"
+  },
+  {
+   "account": "Computer Equipment:Original Cost Basis",
+   "debit": "18000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Payable (A/P)",
+   "debit": "0",
+   "credit": "1864.00"
+  },
+  {
+   "account": "Business Card",
+   "debit": "0",
+   "credit": "543.00"
+  },
+  {
+   "account": "Payroll Liabilities",
+   "debit": "0",
+   "credit": "8617.50"
+  },
+  {
+   "account": "Equipment Loan",
+   "debit": "0",
+   "credit": "15000.00"
+  },
+  {
+   "account": "Opening Balance Equity",
+   "debit": "0",
+   "credit": "61000.00"
+  },
+  {
+   "account": "Owner Draws",
+   "debit": "75000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Retained Earnings",
+   "debit": "0",
+   "credit": "76124.75"
+  },
+  {
+   "account": "Design Services",
+   "debit": "0",
+   "credit": "408800.00"
+  },
+  {
+   "account": "Workshops",
+   "debit": "0",
+   "credit": "36000.00"
+  },
+  {
+   "account": "Cost of Services:Contractors",
+   "debit": "14397.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Software",
+   "debit": "2331.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Stock Media",
+   "debit": "441.00",
+   "credit": "0"
+  },
+  {
+   "account": "Bank Fees",
+   "debit": "225.00",
+   "credit": "0"
+  },
+  {
+   "account": "Depreciation",
+   "debit": "4500.00",
+   "credit": "0"
+  },
+  {
+   "account": "Gross Receipts Tax",
+   "debit": "1009.00",
+   "credit": "0"
+  },
+  {
+   "account": "Insurance",
+   "debit": "6300.00",
+   "credit": "0"
+  },
+  {
+   "account": "Meals & Entertainment",
+   "debit": "2148.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software",
+   "debit": "1335.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software:Design Tools",
+   "debit": "486.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Supplies",
+   "debit": "803.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Employer Taxes",
+   "debit": "17671.50",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Wages",
+   "debit": "231000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Professional Fees:Legal & Accounting",
+   "debit": "4451.00",
+   "credit": "0"
+  },
+  {
+   "account": "Rent",
+   "debit": "58500.00",
+   "credit": "0"
+  },
+  {
+   "account": "Repairs/Maintenance",
+   "debit": "1267.00",
+   "credit": "0"
+  },
+  {
+   "account": "Telephone (deleted)",
+   "debit": "1665.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel",
+   "debit": "1119.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel:Airfare",
+   "debit": "1990.00",
+   "credit": "0"
+  },
+  {
+   "account": "Interest Earned",
+   "debit": "0",
+   "credit": "230.00"
+  },
+  {
+   "account": "Interest Expense",
+   "debit": "877.50",
+   "credit": "0"
+  }
+ ],
+ "2024-10-31": [
+  {
+   "account": "Operating Checking",
+   "debit": "161201.50",
+   "credit": "0"
+  },
+  {
+   "account": "Reserve Savings",
+   "debit": "10395.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Receivable (A/R)",
+   "debit": "33788.00",
+   "credit": "0"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "3200.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Computer Equipment:Accumulated Depreciation",
+   "debit": "0",
+   "credit": "8000.00"
+  },
+  {
+   "account": "Computer Equipment:Original Cost Basis",
+   "debit": "18000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Payable (A/P)",
+   "debit": "0",
+   "credit": "7161.00"
+  },
+  {
+   "account": "Business Card",
+   "debit": "0",
+   "credit": "631.00"
+  },
+  {
+   "account": "Payroll Liabilities",
+   "debit": "0",
+   "credit": "8617.50"
+  },
+  {
+   "account": "Equipment Loan",
+   "debit": "0",
+   "credit": "14400.00"
+  },
+  {
+   "account": "Opening Balance Equity",
+   "debit": "0",
+   "credit": "61000.00"
+  },
+  {
+   "account": "Owner Draws",
+   "debit": "75000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Retained Earnings",
+   "debit": "0",
+   "credit": "76124.75"
+  },
+  {
+   "account": "Design Services",
+   "debit": "0",
+   "credit": "487012.00"
+  },
+  {
+   "account": "Workshops",
+   "debit": "0",
+   "credit": "36000.00"
+  },
+  {
+   "account": "Cost of Services:Contractors",
+   "debit": "19458.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Software",
+   "debit": "2592.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Stock Media",
+   "debit": "490.00",
+   "credit": "0"
+  },
+  {
+   "account": "Bank Fees",
+   "debit": "250.00",
+   "credit": "0"
+  },
+  {
+   "account": "Conference Fees",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Depreciation",
+   "debit": "5000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Gross Receipts Tax",
+   "debit": "1009.00",
+   "credit": "0"
+  },
+  {
+   "account": "Insurance",
+   "debit": "8400.00",
+   "credit": "0"
+  },
+  {
+   "account": "Meals & Entertainment",
+   "debit": "2400.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software",
+   "debit": "1750.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software:Design Tools",
+   "debit": "540.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Supplies",
+   "debit": "927.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Employer Taxes",
+   "debit": "19737.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Wages",
+   "debit": "258000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Professional Fees:Legal & Accounting",
+   "debit": "4451.00",
+   "credit": "0"
+  },
+  {
+   "account": "Rent",
+   "debit": "65000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Repairs/Maintenance",
+   "debit": "1688.00",
+   "credit": "0"
+  },
+  {
+   "account": "Telephone (deleted)",
+   "debit": "1850.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel",
+   "debit": "1119.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel:Airfare",
+   "debit": "1990.00",
+   "credit": "0"
+  },
+  {
+   "account": "Interest Earned",
+   "debit": "0",
+   "credit": "248.00"
+  },
+  {
+   "account": "Interest Expense",
+   "debit": "958.75",
+   "credit": "0"
+  }
+ ],
+ "2024-11-30": [
+  {
+   "account": "Operating Checking",
+   "debit": "182274.00",
+   "credit": "0"
+  },
+  {
+   "account": "Reserve Savings",
+   "debit": "10425.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Receivable (A/R)",
+   "debit": "34585.00",
+   "credit": "0"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "2800.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "9258.00",
+   "credit": "0"
+  },
+  {
+   "account": "Computer Equipment:Accumulated Depreciation",
+   "debit": "0",
+   "credit": "8500.00"
+  },
+  {
+   "account": "Computer Equipment:Original Cost Basis",
+   "debit": "18000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Payable (A/P)",
+   "debit": "0",
+   "credit": "5864.00"
+  },
+  {
+   "account": "Business Card",
+   "debit": "0",
+   "credit": "2882.00"
+  },
+  {
+   "account": "Payroll Liabilities",
+   "debit": "0",
+   "credit": "8617.50"
+  },
+  {
+   "account": "Equipment Loan",
+   "debit": "0",
+   "credit": "13800.00"
+  },
+  {
+   "account": "Opening Balance Equity",
+   "debit": "0",
+   "credit": "61000.00"
+  },
+  {
+   "account": "Owner Draws",
+   "debit": "75000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Retained Earnings",
+   "debit": "0",
+   "credit": "76124.75"
+  },
+  {
+   "account": "Design Services",
+   "debit": "0",
+   "credit": "562435.00"
+  },
+  {
+   "account": "Workshops",
+   "debit": "0",
+   "credit": "36000.00"
+  },
+  {
+   "account": "Cost of Services:Contractors",
+   "debit": "23528.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Software",
+   "debit": "2857.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Stock Media",
+   "debit": "539.00",
+   "credit": "0"
+  },
+  {
+   "account": "Bank Fees",
+   "debit": "275.00",
+   "credit": "0"
+  },
+  {
+   "account": "Conference Fees",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Depreciation",
+   "debit": "5500.00",
+   "credit": "0"
+  },
+  {
+   "account": "Gross Receipts Tax",
+   "debit": "1009.00",
+   "credit": "0"
+  },
+  {
+   "account": "Insurance",
+   "debit": "8400.00",
+   "credit": "0"
+  },
+  {
+   "account": "Meals & Entertainment",
+   "debit": "2698.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software",
+   "debit": "2165.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software:Design Tools",
+   "debit": "594.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Supplies",
+   "debit": "977.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Employer Taxes",
+   "debit": "21802.50",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Wages",
+   "debit": "285000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Professional Fees:Legal & Accounting",
+   "debit": "6245.00",
+   "credit": "0"
+  },
+  {
+   "account": "Rent",
+   "debit": "71500.00",
+   "credit": "0"
+  },
+  {
+   "account": "Repairs/Maintenance",
+   "debit": "1688.00",
+   "credit": "0"
+  },
+  {
+   "account": "Telephone (deleted)",
+   "debit": "2035.00",
+   "credit": "0"
+  },
+  {
+   "account": "Totally Promotional Merch",
+   "debit": "953.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel",
+   "debit": "1604.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel:Airfare",
+   "debit": "2753.00",
+   "credit": "0"
+  },
+  {
+   "account": "Interest Earned",
+   "debit": "0",
+   "credit": "278.00"
+  },
+  {
+   "account": "Interest Expense",
+   "debit": "1036.75",
+   "credit": "0"
+  }
+ ],
+ "2024-12-31": [
+  {
+   "account": "Operating Checking",
+   "debit": "208474.75",
+   "credit": "0"
+  },
+  {
+   "account": "Reserve Savings",
+   "debit": "10454.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Receivable (A/R)",
+   "debit": "18732.00",
+   "credit": "0"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "2400.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "5173.00",
+   "credit": "0"
+  },
+  {
+   "account": "Computer Equipment:Accumulated Depreciation",
+   "debit": "0",
+   "credit": "9000.00"
+  },
+  {
+   "account": "Computer Equipment:Original Cost Basis",
+   "debit": "18000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Payable (A/P)",
+   "debit": "0",
+   "credit": "4788.00"
+  },
+  {
+   "account": "Business Card",
+   "debit": "0",
+   "credit": "585.00"
+  },
+  {
+   "account": "Payroll Liabilities",
+   "debit": "0",
+   "credit": "8617.50"
+  },
+  {
+   "account": "Equipment Loan",
+   "debit": "0",
+   "credit": "13200.00"
+  },
+  {
+   "account": "Opening Balance Equity",
+   "debit": "0",
+   "credit": "61000.00"
+  },
+  {
+   "account": "Owner Draws",
+   "debit": "90000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Retained Earnings",
+   "debit": "0",
+   "credit": "76124.75"
+  },
+  {
+   "account": "Design Services",
+   "debit": "0",
+   "credit": "628986.00"
+  },
+  {
+   "account": "Workshops",
+   "debit": "0",
+   "credit": "36000.00"
+  },
+  {
+   "account": "Cost of Services:Contractors",
+   "debit": "28316.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Software",
+   "debit": "3085.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Stock Media",
+   "debit": "588.00",
+   "credit": "0"
+  },
+  {
+   "account": "Bank Fees",
+   "debit": "300.00",
+   "credit": "0"
+  },
+  {
+   "account": "Conference Fees",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Depreciation",
+   "debit": "6000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Gross Receipts Tax",
+   "debit": "1009.00",
+   "credit": "0"
+  },
+  {
+   "account": "Insurance",
+   "debit": "8400.00",
+   "credit": "0"
+  },
+  {
+   "account": "Meals & Entertainment",
+   "debit": "2937.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software",
+   "debit": "2580.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software:Design Tools",
+   "debit": "648.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Supplies",
+   "debit": "1069.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Employer Taxes",
+   "debit": "23868.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Wages",
+   "debit": "312000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Professional Fees:Legal & Accounting",
+   "debit": "6245.00",
+   "credit": "0"
+  },
+  {
+   "account": "Rent",
+   "debit": "78000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Repairs/Maintenance",
+   "debit": "1688.00",
+   "credit": "0"
+  },
+  {
+   "account": "Telephone (deleted)",
+   "debit": "2220.00",
+   "credit": "0"
+  },
+  {
+   "account": "Totally Promotional Merch",
+   "debit": "953.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel",
+   "debit": "1604.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel:Airfare",
+   "debit": "2753.00",
+   "credit": "0"
+  },
+  {
+   "account": "Interest Earned",
+   "debit": "0",
+   "credit": "307.00"
+  },
+  {
+   "account": "Interest Expense",
+   "debit": "1111.50",
+   "credit": "0"
+  }
+ ],
+ "2025-01-31": [
+  {
+   "account": "Operating Checking",
+   "debit": "222288.75",
+   "credit": "0"
+  },
+  {
+   "account": "Reserve Savings",
+   "debit": "10476.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Receivable (A/R)",
+   "debit": "18732.00",
+   "credit": "0"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "2000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Computer Equipment:Accumulated Depreciation",
+   "debit": "0",
+   "credit": "9500.00"
+  },
+  {
+   "account": "Computer Equipment:Original Cost Basis",
+   "debit": "18000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Payable (A/P)",
+   "debit": "0",
+   "credit": "3644.00"
+  },
+  {
+   "account": "Business Card",
+   "debit": "0",
+   "credit": "621.00"
+  },
+  {
+   "account": "Payroll Liabilities",
+   "debit": "0",
+   "credit": "8617.50"
+  },
+  {
+   "account": "Equipment Loan",
+   "debit": "0",
+   "credit": "12600.00"
+  },
+  {
+   "account": "Opening Balance Equity",
+   "debit": "0",
+   "credit": "61000.00"
+  },
+  {
+   "account": "Owner Draws",
+   "debit": "90000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Retained Earnings",
+   "debit": "0",
+   "credit": "256043.25"
+  },
+  {
+   "account": "Design Services",
+   "debit": "0",
+   "credit": "50800.00"
+  },
+  {
+   "account": "Cost of Services:Contractors",
+   "debit": "1544.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Software",
+   "debit": "287.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Stock Media",
+   "debit": "49.00",
+   "credit": "0"
+  },
+  {
+   "account": "Bank Fees",
+   "debit": "25.00",
+   "credit": "0"
+  },
+  {
+   "account": "Depreciation",
+   "debit": "500.00",
+   "credit": "0"
+  },
+  {
+   "account": "Insurance",
+   "debit": "2100.00",
+   "credit": "0"
+  },
+  {
+   "account": "Meals & Entertainment",
+   "debit": "216.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software",
+   "debit": "415.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software:Design Tools",
+   "debit": "54.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Supplies",
+   "debit": "106.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Employer Taxes",
+   "debit": "2065.50",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Wages",
+   "debit": "27000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Rent",
+   "debit": "6500.00",
+   "credit": "0"
+  },
+  {
+   "account": "Repairs/Maintenance",
+   "debit": "233.00",
+   "credit": "0"
+  },
+  {
+   "account": "Telephone (deleted)",
+   "debit": "185.00",
+   "credit": "0"
+  },
+  {
+   "account": "Interest Earned",
+   "debit": "0",
+   "credit": "22.00"
+  },
+  {
+   "account": "Interest Expense",
+   "debit": "71.50",
+   "credit": "0"
+  }
+ ],
+ "2025-02-28": [
+  {
+   "account": "Operating Checking",
+   "debit": "238849.00",
+   "credit": "0"
+  },
+  {
+   "account": "Reserve Savings",
+   "debit": "10495.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Receivable (A/R)",
+   "debit": "12200.00",
+   "credit": "0"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "1600.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Computer Equipment:Accumulated Depreciation",
+   "debit": "0",
+   "credit": "10000.00"
+  },
+  {
+   "account": "Computer Equipment:Original Cost Basis",
+   "debit": "18000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Payable (A/P)",
+   "debit": "0",
+   "credit": "1771.00"
+  },
+  {
+   "account": "Business Card",
+   "debit": "0",
+   "credit": "1449.00"
+  },
+  {
+   "account": "Payroll Liabilities",
+   "debit": "0",
+   "credit": "8617.50"
+  },
+  {
+   "account": "Equipment Loan",
+   "debit": "0",
+   "credit": "12000.00"
+  },
+  {
+   "account": "Opening Balance Equity",
+   "debit": "0",
+   "credit": "61000.00"
+  },
+  {
+   "account": "Owner Draws",
+   "debit": "90000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Retained Earnings",
+   "debit": "0",
+   "credit": "256043.25"
+  },
+  {
+   "account": "Design Services",
+   "debit": "0",
+   "credit": "101600.00"
+  },
+  {
+   "account": "Cost of Services:Contractors",
+   "debit": "1959.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Software",
+   "debit": "538.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Stock Media",
+   "debit": "98.00",
+   "credit": "0"
+  },
+  {
+   "account": "Bank Fees",
+   "debit": "50.00",
+   "credit": "0"
+  },
+  {
+   "account": "Depreciation",
+   "debit": "1000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Insurance",
+   "debit": "2100.00",
+   "credit": "0"
+  },
+  {
+   "account": "Meals & Entertainment",
+   "debit": "314.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software",
+   "debit": "830.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software:Design Tools",
+   "debit": "108.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Supplies",
+   "debit": "169.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Employer Taxes",
+   "debit": "4131.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Wages",
+   "debit": "54000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Professional Fees:Legal & Accounting",
+   "debit": "1356.00",
+   "credit": "0"
+  },
+  {
+   "account": "Rent",
+   "debit": "13000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Repairs/Maintenance",
+   "debit": "233.00",
+   "credit": "0"
+  },
+  {
+   "account": "Telephone (deleted)",
+   "debit": "370.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel",
+   "debit": "235.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel:Airfare",
+   "debit": "747.00",
+   "credit": "0"
+  },
+  {
+   "account": "Interest Earned",
+   "debit": "0",
+   "credit": "41.00"
+  },
+  {
+   "account": "Interest Expense",
+   "debit": "139.75",
+   "credit": "0"
+  }
+ ],
+ "2025-03-31": [
+  {
+   "account": "Operating Checking",
+   "debit": "247927.50",
+   "credit": "0"
+  },
+  {
+   "account": "Reserve Savings",
+   "debit": "10523.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Receivable (A/R)",
+   "debit": "12200.00",
+   "credit": "0"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "1200.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Computer Equipment:Accumulated Depreciation",
+   "debit": "0",
+   "credit": "10500.00"
+  },
+  {
+   "account": "Computer Equipment:Original Cost Basis",
+   "debit": "18000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Payable (A/P)",
+   "debit": "0",
+   "credit": "1284.00"
+  },
+  {
+   "account": "Business Card",
+   "debit": "0",
+   "credit": "636.00"
+  },
+  {
+   "account": "Payroll Liabilities",
+   "debit": "0",
+   "credit": "8617.50"
+  },
+  {
+   "account": "Equipment Loan",
+   "debit": "0",
+   "credit": "11400.00"
+  },
+  {
+   "account": "Opening Balance Equity",
+   "debit": "0",
+   "credit": "61000.00"
+  },
+  {
+   "account": "Owner Draws",
+   "debit": "105000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Retained Earnings",
+   "debit": "0",
+   "credit": "256043.25"
+  },
+  {
+   "account": "Design Services",
+   "debit": "0",
+   "credit": "152400.00"
+  },
+  {
+   "account": "Workshops",
+   "debit": "0",
+   "credit": "13050.00"
+  },
+  {
+   "account": "Cost of Services:Contractors",
+   "debit": "3243.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Software",
+   "debit": "820.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Stock Media",
+   "debit": "147.00",
+   "credit": "0"
+  },
+  {
+   "account": "Bank Fees",
+   "debit": "75.00",
+   "credit": "0"
+  },
+  {
+   "account": "Depreciation",
+   "debit": "1500.00",
+   "credit": "0"
+  },
+  {
+   "account": "Insurance",
+   "debit": "2100.00",
+   "credit": "0"
+  },
+  {
+   "account": "Meals & Entertainment",
+   "debit": "550.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software",
+   "debit": "1245.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software:Design Tools",
+   "debit": "162.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Supplies",
+   "debit": "280.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Employer Taxes",
+   "debit": "6196.50",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Wages",
+   "debit": "81000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Professional Fees:Legal & Accounting",
+   "debit": "1356.00",
+   "credit": "0"
+  },
+  {
+   "account": "Rent",
+   "debit": "19500.00",
+   "credit": "0"
+  },
+  {
+   "account": "Repairs/Maintenance",
+   "debit": "233.00",
+   "credit": "0"
+  },
+  {
+   "account": "Telephone (deleted)",
+   "debit": "555.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel",
+   "debit": "235.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel:Airfare",
+   "debit": "747.00",
+   "credit": "0"
+  },
+  {
+   "account": "Interest Earned",
+   "debit": "0",
+   "credit": "69.00"
+  },
+  {
+   "account": "Interest Expense",
+   "debit": "204.75",
+   "credit": "0"
+  }
+ ],
+ "2025-04-30": [
+  {
+   "account": "Operating Checking",
+   "debit": "258817.25",
+   "credit": "0"
+  },
+  {
+   "account": "Reserve Savings",
+   "debit": "10543.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Receivable (A/R)",
+   "debit": "24800.00",
+   "credit": "0"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "800.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Computer Equipment:Accumulated Depreciation",
+   "debit": "0",
+   "credit": "11000.00"
+  },
+  {
+   "account": "Computer Equipment:Original Cost Basis",
+   "debit": "18000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Payable (A/P)",
+   "debit": "0",
+   "credit": "3785.00"
+  },
+  {
+   "account": "Business Card",
+   "debit": "0",
+   "credit": "408.00"
+  },
+  {
+   "account": "Payroll Liabilities",
+   "debit": "0",
+   "credit": "8617.50"
+  },
+  {
+   "account": "Equipment Loan",
+   "debit": "0",
+   "credit": "10800.00"
+  },
+  {
+   "account": "Opening Balance Equity",
+   "debit": "0",
+   "credit": "61000.00"
+  },
+  {
+   "account": "Owner Draws",
+   "debit": "105000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Retained Earnings",
+   "debit": "0",
+   "credit": "256043.25"
+  },
+  {
+   "account": "Design Services",
+   "debit": "0",
+   "credit": "200900.00"
+  },
+  {
+   "account": "Workshops",
+   "debit": "0",
+   "credit": "28350.00"
+  },
+  {
+   "account": "Cost of Services:Contractors",
+   "debit": "4928.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Software",
+   "debit": "1051.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Stock Media",
+   "debit": "196.00",
+   "credit": "0"
+  },
+  {
+   "account": "Bank Fees",
+   "debit": "100.00",
+   "credit": "0"
+  },
+  {
+   "account": "Depreciation",
+   "debit": "2000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Gross Receipts Tax",
+   "debit": "1375.00",
+   "credit": "0"
+  },
+  {
+   "account": "Insurance",
+   "debit": "4200.00",
+   "credit": "0"
+  },
+  {
+   "account": "Meals & Entertainment",
+   "debit": "609.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software",
+   "debit": "1660.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software:Design Tools",
+   "debit": "216.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Supplies",
+   "debit": "410.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Employer Taxes",
+   "debit": "8262.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Wages",
+   "debit": "108000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Professional Fees:Legal & Accounting",
+   "debit": "1356.00",
+   "credit": "0"
+  },
+  {
+   "account": "Rent",
+   "debit": "26000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Repairs/Maintenance",
+   "debit": "681.00",
+   "credit": "0"
+  },
+  {
+   "account": "Telephone (deleted)",
+   "debit": "740.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel",
+   "debit": "235.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel:Airfare",
+   "debit": "747.00",
+   "credit": "0"
+  },
+  {
+   "account": "Interest Earned",
+   "debit": "0",
+   "credit": "89.00"
+  },
+  {
+   "account": "Interest Expense",
+   "debit": "266.50",
+   "credit": "0"
+  }
+ ],
+ "2025-05-31": [
+  {
+   "account": "Operating Checking",
+   "debit": "286577.25",
+   "credit": "0"
+  },
+  {
+   "account": "Reserve Savings",
+   "debit": "10570.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Receivable (A/R)",
+   "debit": "18600.00",
+   "credit": "0"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "400.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Computer Equipment:Accumulated Depreciation",
+   "debit": "0",
+   "credit": "11500.00"
+  },
+  {
+   "account": "Computer Equipment:Original Cost Basis",
+   "debit": "18000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Payable (A/P)",
+   "debit": "0",
+   "credit": "1965.00"
+  },
+  {
+   "account": "Business Card",
+   "debit": "0",
+   "credit": "1741.00"
+  },
+  {
+   "account": "Payroll Liabilities",
+   "debit": "0",
+   "credit": "8617.50"
+  },
+  {
+   "account": "Equipment Loan",
+   "debit": "0",
+   "credit": "10200.00"
+  },
+  {
+   "account": "Opening Balance Equity",
+   "debit": "0",
+   "credit": "61000.00"
+  },
+  {
+   "account": "Owner Draws",
+   "debit": "105000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Retained Earnings",
+   "debit": "0",
+   "credit": "256043.25"
+  },
+  {
+   "account": "Design Services",
+   "debit": "0",
+   "credit": "249400.00"
+  },
+  {
+   "account": "Workshops",
+   "debit": "0",
+   "credit": "43650.00"
+  },
+  {
+   "account": "Cost of Services:Contractors",
+   "debit": "6893.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Software",
+   "debit": "1370.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Stock Media",
+   "debit": "245.00",
+   "credit": "0"
+  },
+  {
+   "account": "Bank Fees",
+   "debit": "125.00",
+   "credit": "0"
+  },
+  {
+   "account": "Depreciation",
+   "debit": "2500.00",
+   "credit": "0"
+  },
+  {
+   "account": "Gross Receipts Tax",
+   "debit": "1375.00",
+   "credit": "0"
+  },
+  {
+   "account": "Insurance",
+   "debit": "4200.00",
+   "credit": "0"
+  },
+  {
+   "account": "Meals & Entertainment",
+   "debit": "762.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software",
+   "debit": "2075.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software:Design Tools",
+   "debit": "270.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Supplies",
+   "debit": "509.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Employer Taxes",
+   "debit": "10327.50",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Wages",
+   "debit": "135000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Professional Fees:Legal & Accounting",
+   "debit": "2870.00",
+   "credit": "0"
+  },
+  {
+   "account": "Rent",
+   "debit": "32500.00",
+   "credit": "0"
+  },
+  {
+   "account": "Repairs/Maintenance",
+   "debit": "681.00",
+   "credit": "0"
+  },
+  {
+   "account": "Telephone (deleted)",
+   "debit": "925.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel",
+   "debit": "733.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel:Airfare",
+   "debit": "1400.00",
+   "credit": "0"
+  },
+  {
+   "account": "Interest Earned",
+   "debit": "0",
+   "credit": "116.00"
+  },
+  {
+   "account": "Interest Expense",
+   "debit": "325.00",
+   "credit": "0"
+  }
+ ],
+ "2025-06-30": [
+  {
+   "account": "Operating Checking",
+   "debit": "270446.50",
+   "credit": "0"
+  },
+  {
+   "account": "Reserve Savings",
+   "debit": "10599.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Receivable (A/R)",
+   "debit": "28000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Computer Equipment:Accumulated Depreciation",
+   "debit": "0",
+   "credit": "12000.00"
+  },
+  {
+   "account": "Computer Equipment:Original Cost Basis",
+   "debit": "18000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Payable (A/P)",
+   "debit": "0",
+   "credit": "1897.00"
+  },
+  {
+   "account": "Business Card",
+   "debit": "0",
+   "credit": "445.00"
+  },
+  {
+   "account": "Payroll Liabilities",
+   "debit": "0",
+   "credit": "8617.50"
+  },
+  {
+   "account": "Equipment Loan",
+   "debit": "0",
+   "credit": "9600.00"
+  },
+  {
+   "account": "Opening Balance Equity",
+   "debit": "0",
+   "credit": "61000.00"
+  },
+  {
+   "account": "Owner Draws",
+   "debit": "120000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Retained Earnings",
+   "debit": "0",
+   "credit": "256043.25"
+  },
+  {
+   "account": "Design Services",
+   "debit": "0",
+   "credit": "297900.00"
+  },
+  {
+   "account": "Workshops",
+   "debit": "0",
+   "credit": "43650.00"
+  },
+  {
+   "account": "Cost of Services:Contractors",
+   "debit": "8790.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Software",
+   "debit": "1616.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Stock Media",
+   "debit": "294.00",
+   "credit": "0"
+  },
+  {
+   "account": "Bank Fees",
+   "debit": "150.00",
+   "credit": "0"
+  },
+  {
+   "account": "Depreciation",
+   "debit": "3000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Gross Receipts Tax",
+   "debit": "1375.00",
+   "credit": "0"
+  },
+  {
+   "account": "Insurance",
+   "debit": "4200.00",
+   "credit": "0"
+  },
+  {
+   "account": "Meals & Entertainment",
+   "debit": "843.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software",
+   "debit": "2490.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software:Design Tools",
+   "debit": "324.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Supplies",
+   "debit": "603.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Employer Taxes",
+   "debit": "12393.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Wages",
+   "debit": "162000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Professional Fees:Legal & Accounting",
+   "debit": "2870.00",
+   "credit": "0"
+  },
+  {
+   "account": "Rent",
+   "debit": "39000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Repairs/Maintenance",
+   "debit": "681.00",
+   "credit": "0"
+  },
+  {
+   "account": "Telephone (deleted)",
+   "debit": "1110.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel",
+   "debit": "733.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel:Airfare",
+   "debit": "1400.00",
+   "credit": "0"
+  },
+  {
+   "account": "Interest Earned",
+   "debit": "0",
+   "credit": "145.00"
+  },
+  {
+   "account": "Interest Expense",
+   "debit": "380.25",
+   "credit": "0"
+  }
+ ],
+ "2025-07-31": [
+  {
+   "account": "Operating Checking",
+   "debit": "288729.00",
+   "credit": "0"
+  },
+  {
+   "account": "Reserve Savings",
+   "debit": "10624.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Receivable (A/R)",
+   "debit": "19100.00",
+   "credit": "0"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Computer Equipment:Accumulated Depreciation",
+   "debit": "0",
+   "credit": "12500.00"
+  },
+  {
+   "account": "Computer Equipment:Original Cost Basis",
+   "debit": "18000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Payable (A/P)",
+   "debit": "0",
+   "credit": "3032.00"
+  },
+  {
+   "account": "Business Card",
+   "debit": "0",
+   "credit": "476.00"
+  },
+  {
+   "account": "Payroll Liabilities",
+   "debit": "0",
+   "credit": "9210.50"
+  },
+  {
+   "account": "Equipment Loan",
+   "debit": "0",
+   "credit": "9000.00"
+  },
+  {
+   "account": "Opening Balance Equity",
+   "debit": "0",
+   "credit": "61000.00"
+  },
+  {
+   "account": "Owner Draws",
+   "debit": "120000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Retained Earnings",
+   "debit": "0",
+   "credit": "256043.25"
+  },
+  {
+   "account": "Design Services",
+   "debit": "0",
+   "credit": "348400.00"
+  },
+  {
+   "account": "Workshops",
+   "debit": "0",
+   "credit": "43650.00"
+  },
+  {
+   "account": "Cost of Services:Contractors",
+   "debit": "9722.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Software",
+   "debit": "1917.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Stock Media",
+   "debit": "343.00",
+   "credit": "0"
+  },
+  {
+   "account": "Bank Fees",
+   "debit": "175.00",
+   "credit": "0"
+  },
+  {
+   "account": "Depreciation",
+   "debit": "3500.00",
+   "credit": "0"
+  },
+  {
+   "account": "Gross Receipts Tax",
+   "debit": "1375.00",
+   "credit": "0"
+  },
+  {
+   "account": "Insurance",
+   "debit": "6300.00",
+   "credit": "0"
+  },
+  {
+   "account": "Internet & Phone",
+   "debit": "185.00",
+   "credit": "0"
+  },
+  {
+   "account": "Meals & Entertainment",
+   "debit": "900.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software",
+   "debit": "2505.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software:Design Tools",
+   "debit": "378.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Supplies",
+   "debit": "736.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Employer Taxes",
+   "debit": "14611.50",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Wages",
+   "debit": "191000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Professional Fees:Legal & Accounting",
+   "debit": "2870.00",
+   "credit": "0"
+  },
+  {
+   "account": "Rent",
+   "debit": "45800.00",
+   "credit": "0"
+  },
+  {
+   "account": "Repairs/Maintenance",
+   "debit": "1036.00",
+   "credit": "0"
+  },
+  {
+   "account": "Telephone (deleted)",
+   "debit": "1110.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel",
+   "debit": "733.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel:Airfare",
+   "debit": "1400.00",
+   "credit": "0"
+  },
+  {
+   "account": "Interest Earned",
+   "debit": "0",
+   "credit": "170.00"
+  },
+  {
+   "account": "Interest Expense",
+   "debit": "432.25",
+   "credit": "0"
+  }
+ ],
+ "2025-08-31": [
+  {
+   "account": "Operating Checking",
+   "debit": "294842.75",
+   "credit": "0"
+  },
+  {
+   "account": "Reserve Savings",
+   "debit": "10646.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Receivable (A/R)",
+   "debit": "21000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Computer Equipment:Accumulated Depreciation",
+   "debit": "0",
+   "credit": "13000.00"
+  },
+  {
+   "account": "Computer Equipment:Original Cost Basis",
+   "debit": "18000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Payable (A/P)",
+   "debit": "0",
+   "credit": "3384.00"
+  },
+  {
+   "account": "Business Card",
+   "debit": "0",
+   "credit": "1399.00"
+  },
+  {
+   "account": "Payroll Liabilities",
+   "debit": "0",
+   "credit": "9210.50"
+  },
+  {
+   "account": "Equipment Loan",
+   "debit": "0",
+   "credit": "8400.00"
+  },
+  {
+   "account": "Opening Balance Equity",
+   "debit": "0",
+   "credit": "61000.00"
+  },
+  {
+   "account": "Owner Draws",
+   "debit": "120000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Retained Earnings",
+   "debit": "0",
+   "credit": "256043.25"
+  },
+  {
+   "account": "Design Services",
+   "debit": "0",
+   "credit": "398900.00"
+  },
+  {
+   "account": "Workshops",
+   "debit": "0",
+   "credit": "43650.00"
+  },
+  {
+   "account": "Cost of Services:Contractors",
+   "debit": "11477.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Software",
+   "debit": "2207.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Stock Media",
+   "debit": "392.00",
+   "credit": "0"
+  },
+  {
+   "account": "Bank Fees",
+   "debit": "200.00",
+   "credit": "0"
+  },
+  {
+   "account": "Depreciation",
+   "debit": "4000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Gross Receipts Tax",
+   "debit": "1375.00",
+   "credit": "0"
+  },
+  {
+   "account": "Insurance",
+   "debit": "6300.00",
+   "credit": "0"
+  },
+  {
+   "account": "Internet & Phone",
+   "debit": "370.00",
+   "credit": "0"
+  },
+  {
+   "account": "Meals & Entertainment",
+   "debit": "990.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software",
+   "debit": "2520.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software:Design Tools",
+   "debit": "432.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Supplies",
+   "debit": "837.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Employer Taxes",
+   "debit": "16830.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Wages",
+   "debit": "220000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Professional Fees:Legal & Accounting",
+   "debit": "4499.00",
+   "credit": "0"
+  },
+  {
+   "account": "Rent",
+   "debit": "52600.00",
+   "credit": "0"
+  },
+  {
+   "account": "Repairs/Maintenance",
+   "debit": "1036.00",
+   "credit": "0"
+  },
+  {
+   "account": "Telephone (deleted)",
+   "debit": "1110.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel",
+   "debit": "1164.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel:Airfare",
+   "debit": "1870.00",
+   "credit": "0"
+  },
+  {
+   "account": "Interest Earned",
+   "debit": "0",
+   "credit": "192.00"
+  },
+  {
+   "account": "Interest Expense",
+   "debit": "481.00",
+   "credit": "0"
+  }
+ ],
+ "2025-09-30": [
+  {
+   "account": "Operating Checking",
+   "debit": "287383.75",
+   "credit": "0"
+  },
+  {
+   "account": "Reserve Savings",
+   "debit": "10665.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Receivable (A/R)",
+   "debit": "19200.00",
+   "credit": "0"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Computer Equipment:Accumulated Depreciation",
+   "debit": "0",
+   "credit": "13500.00"
+  },
+  {
+   "account": "Computer Equipment:Original Cost Basis",
+   "debit": "18000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Payable (A/P)",
+   "debit": "0",
+   "credit": "3807.00"
+  },
+  {
+   "account": "Business Card",
+   "debit": "0",
+   "credit": "510.00"
+  },
+  {
+   "account": "Payroll Liabilities",
+   "debit": "0",
+   "credit": "9210.50"
+  },
+  {
+   "account": "Equipment Loan",
+   "debit": "0",
+   "credit": "7800.00"
+  },
+  {
+   "account": "Opening Balance Equity",
+   "debit": "0",
+   "credit": "61000.00"
+  },
+  {
+   "account": "Owner Draws",
+   "debit": "135000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Retained Earnings",
+   "debit": "0",
+   "credit": "256043.25"
+  },
+  {
+   "account": "Design Services",
+   "debit": "0",
+   "credit": "449400.00"
+  },
+  {
+   "account": "Workshops",
+   "debit": "0",
+   "credit": "43650.00"
+  },
+  {
+   "account": "Cost of Services:Contractors",
+   "debit": "13834.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Software",
+   "debit": "2450.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Stock Media",
+   "debit": "441.00",
+   "credit": "0"
+  },
+  {
+   "account": "Bank Fees",
+   "debit": "225.00",
+   "credit": "0"
+  },
+  {
+   "account": "Depreciation",
+   "debit": "4500.00",
+   "credit": "0"
+  },
+  {
+   "account": "Gross Receipts Tax",
+   "debit": "1375.00",
+   "credit": "0"
+  },
+  {
+   "account": "Insurance",
+   "debit": "6300.00",
+   "credit": "0"
+  },
+  {
+   "account": "Internet & Phone",
+   "debit": "555.00",
+   "credit": "0"
+  },
+  {
+   "account": "Meals & Entertainment",
+   "debit": "1139.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software",
+   "debit": "2535.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software:Design Tools",
+   "debit": "486.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Supplies",
+   "debit": "1589.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Employer Taxes",
+   "debit": "19048.50",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Wages",
+   "debit": "249000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Professional Fees:Legal & Accounting",
+   "debit": "4499.00",
+   "credit": "0"
+  },
+  {
+   "account": "Rent",
+   "debit": "59400.00",
+   "credit": "0"
+  },
+  {
+   "account": "Repairs/Maintenance",
+   "debit": "2836.00",
+   "credit": "0"
+  },
+  {
+   "account": "Telephone (deleted)",
+   "debit": "1110.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel",
+   "debit": "1164.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel:Airfare",
+   "debit": "1870.00",
+   "credit": "0"
+  },
+  {
+   "account": "Interest Earned",
+   "debit": "0",
+   "credit": "211.00"
+  },
+  {
+   "account": "Interest Expense",
+   "debit": "526.50",
+   "credit": "0"
+  }
+ ],
+ "2025-10-31": [
+  {
+   "account": "Operating Checking",
+   "debit": "287889.33",
+   "credit": "0"
+  },
+  {
+   "account": "Reserve Savings",
+   "debit": "10684.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Receivable (A/R)",
+   "debit": "59403.67",
+   "credit": "0"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Computer Equipment:Accumulated Depreciation",
+   "debit": "0",
+   "credit": "14000.00"
+  },
+  {
+   "account": "Computer Equipment:Original Cost Basis",
+   "debit": "18000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Payable (A/P)",
+   "debit": "0",
+   "credit": "7363.00"
+  },
+  {
+   "account": "Business Card",
+   "debit": "0",
+   "credit": "463.00"
+  },
+  {
+   "account": "Payroll Liabilities",
+   "debit": "0",
+   "credit": "9210.50"
+  },
+  {
+   "account": "Equipment Loan",
+   "debit": "0",
+   "credit": "7200.00"
+  },
+  {
+   "account": "Opening Balance Equity",
+   "debit": "0",
+   "credit": "61000.00"
+  },
+  {
+   "account": "Owner Draws",
+   "debit": "135000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Retained Earnings",
+   "debit": "0",
+   "credit": "256043.25"
+  },
+  {
+   "account": "Design Services",
+   "debit": "0",
+   "credit": "531387.00"
+  },
+  {
+   "account": "Workshops",
+   "debit": "0",
+   "credit": "45900.00"
+  },
+  {
+   "account": "Cost of Services:Contractors",
+   "debit": "19097.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Software",
+   "debit": "2699.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Stock Media",
+   "debit": "490.00",
+   "credit": "0"
+  },
+  {
+   "account": "Bank Fees",
+   "debit": "250.00",
+   "credit": "0"
+  },
+  {
+   "account": "Depreciation",
+   "debit": "5000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Gross Receipts Tax",
+   "debit": "1375.00",
+   "credit": "0"
+  },
+  {
+   "account": "Insurance",
+   "debit": "8400.00",
+   "credit": "0"
+  },
+  {
+   "account": "Internet & Phone",
+   "debit": "740.00",
+   "credit": "0"
+  },
+  {
+   "account": "Meals & Entertainment",
+   "debit": "1235.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software",
+   "debit": "2550.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software:Design Tools",
+   "debit": "540.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Supplies",
+   "debit": "1640.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Employer Taxes",
+   "debit": "21267.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Wages",
+   "debit": "278000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Professional Fees:Legal & Accounting",
+   "debit": "4499.00",
+   "credit": "0"
+  },
+  {
+   "account": "Rent",
+   "debit": "66200.00",
+   "credit": "0"
+  },
+  {
+   "account": "Repairs/Maintenance",
+   "debit": "3125.00",
+   "credit": "0"
+  },
+  {
+   "account": "Telephone (deleted)",
+   "debit": "1110.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel",
+   "debit": "1164.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel:Airfare",
+   "debit": "1870.00",
+   "credit": "0"
+  },
+  {
+   "account": "Interest Earned",
+   "debit": "0",
+   "credit": "230.00"
+  },
+  {
+   "account": "Interest Expense",
+   "debit": "568.75",
+   "credit": "0"
+  }
+ ],
+ "2025-11-30": [
+  {
+   "account": "Operating Checking",
+   "debit": "321354.83",
+   "credit": "0"
+  },
+  {
+   "account": "Reserve Savings",
+   "debit": "10707.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Receivable (A/R)",
+   "debit": "53609.67",
+   "credit": "0"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "5000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Computer Equipment:Accumulated Depreciation",
+   "debit": "0",
+   "credit": "14500.00"
+  },
+  {
+   "account": "Computer Equipment:Original Cost Basis",
+   "debit": "18000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Payable (A/P)",
+   "debit": "0",
+   "credit": "8391.00"
+  },
+  {
+   "account": "Business Card",
+   "debit": "0",
+   "credit": "2634.00"
+  },
+  {
+   "account": "Payroll Liabilities",
+   "debit": "0",
+   "credit": "9210.50"
+  },
+  {
+   "account": "Equipment Loan",
+   "debit": "0",
+   "credit": "6600.00"
+  },
+  {
+   "account": "Opening Balance Equity",
+   "debit": "0",
+   "credit": "61000.00"
+  },
+  {
+   "account": "Owner Draws",
+   "debit": "135000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Retained Earnings",
+   "debit": "0",
+   "credit": "256043.25"
+  },
+  {
+   "account": "Design Services",
+   "debit": "0",
+   "credit": "610847.00"
+  },
+  {
+   "account": "Workshops",
+   "debit": "0",
+   "credit": "45900.00"
+  },
+  {
+   "account": "Cost of Services:Contractors",
+   "debit": "26115.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Software",
+   "debit": "2934.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Stock Media",
+   "debit": "539.00",
+   "credit": "0"
+  },
+  {
+   "account": "Bank Fees",
+   "debit": "275.00",
+   "credit": "0"
+  },
+  {
+   "account": "Depreciation",
+   "debit": "5500.00",
+   "credit": "0"
+  },
+  {
+   "account": "Gross Receipts Tax",
+   "debit": "1375.00",
+   "credit": "0"
+  },
+  {
+   "account": "Insurance",
+   "debit": "8400.00",
+   "credit": "0"
+  },
+  {
+   "account": "Internet & Phone",
+   "debit": "925.00",
+   "credit": "0"
+  },
+  {
+   "account": "Meals & Entertainment",
+   "debit": "1389.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software",
+   "debit": "2565.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software:Design Tools",
+   "debit": "594.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Supplies",
+   "debit": "1735.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Employer Taxes",
+   "debit": "23485.50",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Wages",
+   "debit": "307000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Professional Fees:Legal & Accounting",
+   "debit": "5872.00",
+   "credit": "0"
+  },
+  {
+   "account": "Rent",
+   "debit": "73000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Repairs/Maintenance",
+   "debit": "3125.00",
+   "credit": "0"
+  },
+  {
+   "account": "Telephone (deleted)",
+   "debit": "1110.00",
+   "credit": "0"
+  },
+  {
+   "account": "Totally Promotional Merch",
+   "debit": "1089.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel",
+   "debit": "1541.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel:Airfare",
+   "debit": "2531.00",
+   "credit": "0"
+  },
+  {
+   "account": "Interest Earned",
+   "debit": "0",
+   "credit": "253.00"
+  },
+  {
+   "account": "Interest Expense",
+   "debit": "607.75",
+   "credit": "0"
+  }
+ ],
+ "2025-12-31": [
+  {
+   "account": "Operating Checking",
+   "debit": "346363.25",
+   "credit": "0"
+  },
+  {
+   "account": "Reserve Savings",
+   "debit": "10734.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Receivable (A/R)",
+   "debit": "34701.00",
+   "credit": "0"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Computer Equipment:Accumulated Depreciation",
+   "debit": "0",
+   "credit": "15000.00"
+  },
+  {
+   "account": "Computer Equipment:Original Cost Basis",
+   "debit": "18000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Payable (A/P)",
+   "debit": "0",
+   "credit": "6288.00"
+  },
+  {
+   "account": "Business Card",
+   "debit": "0",
+   "credit": "571.00"
+  },
+  {
+   "account": "Payroll Liabilities",
+   "debit": "0",
+   "credit": "9210.50"
+  },
+  {
+   "account": "Equipment Loan",
+   "debit": "0",
+   "credit": "6000.00"
+  },
+  {
+   "account": "Opening Balance Equity",
+   "debit": "0",
+   "credit": "61000.00"
+  },
+  {
+   "account": "Owner Draws",
+   "debit": "150000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Retained Earnings",
+   "debit": "0",
+   "credit": "256043.25"
+  },
+  {
+   "account": "Design Services",
+   "debit": "0",
+   "credit": "680132.00"
+  },
+  {
+   "account": "Workshops",
+   "debit": "0",
+   "credit": "45900.00"
+  },
+  {
+   "account": "Cost of Services:Contractors",
+   "debit": "32403.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Software",
+   "debit": "3227.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Stock Media",
+   "debit": "588.00",
+   "credit": "0"
+  },
+  {
+   "account": "Bad Debts",
+   "debit": "3200.00",
+   "credit": "0"
+  },
+  {
+   "account": "Bank Fees",
+   "debit": "300.00",
+   "credit": "0"
+  },
+  {
+   "account": "Depreciation",
+   "debit": "6000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Gross Receipts Tax",
+   "debit": "1375.00",
+   "credit": "0"
+  },
+  {
+   "account": "Insurance",
+   "debit": "8400.00",
+   "credit": "0"
+  },
+  {
+   "account": "Internet & Phone",
+   "debit": "1110.00",
+   "credit": "0"
+  },
+  {
+   "account": "Meals & Entertainment",
+   "debit": "1549.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software",
+   "debit": "2580.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software:Design Tools",
+   "debit": "648.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Supplies",
+   "debit": "1831.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Employer Taxes",
+   "debit": "25704.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Wages",
+   "debit": "336000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Professional Fees:Legal & Accounting",
+   "debit": "5872.00",
+   "credit": "0"
+  },
+  {
+   "account": "Rent",
+   "debit": "79800.00",
+   "credit": "0"
+  },
+  {
+   "account": "Repairs/Maintenance",
+   "debit": "3125.00",
+   "credit": "0"
+  },
+  {
+   "account": "Telephone (deleted)",
+   "debit": "1110.00",
+   "credit": "0"
+  },
+  {
+   "account": "Totally Promotional Merch",
+   "debit": "1089.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel",
+   "debit": "1541.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel:Airfare",
+   "debit": "2531.00",
+   "credit": "0"
+  },
+  {
+   "account": "Interest Earned",
+   "debit": "0",
+   "credit": "280.00"
+  },
+  {
+   "account": "Interest Expense",
+   "debit": "643.50",
+   "credit": "0"
+  }
+ ],
+ "2026-01-31": [
+  {
+   "account": "Operating Checking",
+   "debit": "356689.25",
+   "credit": "0"
+  },
+  {
+   "account": "Reserve Savings",
+   "debit": "10757.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Receivable (A/R)",
+   "debit": "25800.00",
+   "credit": "0"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "3000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Computer Equipment:Accumulated Depreciation",
+   "debit": "0",
+   "credit": "15500.00"
+  },
+  {
+   "account": "Computer Equipment:Original Cost Basis",
+   "debit": "18000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Payable (A/P)",
+   "debit": "0",
+   "credit": "3795.00"
+  },
+  {
+   "account": "Business Card",
+   "debit": "0",
+   "credit": "554.00"
+  },
+  {
+   "account": "Payroll Liabilities",
+   "debit": "0",
+   "credit": "9210.50"
+  },
+  {
+   "account": "Equipment Loan",
+   "debit": "0",
+   "credit": "5400.00"
+  },
+  {
+   "account": "Opening Balance Equity",
+   "debit": "0",
+   "credit": "61000.00"
+  },
+  {
+   "account": "Owner Draws",
+   "debit": "150000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Retained Earnings",
+   "debit": "0",
+   "credit": "461728.75"
+  },
+  {
+   "account": "Design Services",
+   "debit": "0",
+   "credit": "50500.00"
+  },
+  {
+   "account": "Cost of Services:Contractors",
+   "debit": "1695.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Software",
+   "debit": "232.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Stock Media",
+   "debit": "49.00",
+   "credit": "0"
+  },
+  {
+   "account": "Bank Fees",
+   "debit": "25.00",
+   "credit": "0"
+  },
+  {
+   "account": "Depreciation",
+   "debit": "500.00",
+   "credit": "0"
+  },
+  {
+   "account": "Insurance",
+   "debit": "2100.00",
+   "credit": "0"
+  },
+  {
+   "account": "Internet & Phone",
+   "debit": "185.00",
+   "credit": "0"
+  },
+  {
+   "account": "Meals & Entertainment",
+   "debit": "204.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software",
+   "debit": "15.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software:Design Tools",
+   "debit": "54.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Supplies",
+   "debit": "94.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Employer Taxes",
+   "debit": "2218.50",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Wages",
+   "debit": "29000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Rent",
+   "debit": "6800.00",
+   "credit": "0"
+  },
+  {
+   "account": "Repairs/Maintenance",
+   "debit": "261.00",
+   "credit": "0"
+  },
+  {
+   "account": "Interest Earned",
+   "debit": "0",
+   "credit": "23.00"
+  },
+  {
+   "account": "Interest Expense",
+   "debit": "32.50",
+   "credit": "0"
+  }
+ ],
+ "2026-02-28": [
+  {
+   "account": "Operating Checking",
+   "debit": "367465.50",
+   "credit": "0"
+  },
+  {
+   "account": "Reserve Savings",
+   "debit": "10779.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Receivable (A/R)",
+   "debit": "16000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "9200.00",
+   "credit": "0"
+  },
+  {
+   "account": "Computer Equipment:Accumulated Depreciation",
+   "debit": "0",
+   "credit": "16000.00"
+  },
+  {
+   "account": "Computer Equipment:Original Cost Basis",
+   "debit": "18000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Payable (A/P)",
+   "debit": "0",
+   "credit": "2497.00"
+  },
+  {
+   "account": "Business Card",
+   "debit": "0",
+   "credit": "1858.00"
+  },
+  {
+   "account": "Payroll Liabilities",
+   "debit": "0",
+   "credit": "9210.50"
+  },
+  {
+   "account": "Equipment Loan",
+   "debit": "0",
+   "credit": "4800.00"
+  },
+  {
+   "account": "Opening Balance Equity",
+   "debit": "0",
+   "credit": "61000.00"
+  },
+  {
+   "account": "Owner Draws",
+   "debit": "150000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Retained Earnings",
+   "debit": "0",
+   "credit": "461728.75"
+  },
+  {
+   "account": "Design Services",
+   "debit": "0",
+   "credit": "101000.00"
+  },
+  {
+   "account": "Cost of Services:Contractors",
+   "debit": "2895.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Software",
+   "debit": "437.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Stock Media",
+   "debit": "98.00",
+   "credit": "0"
+  },
+  {
+   "account": "Bank Fees",
+   "debit": "50.00",
+   "credit": "0"
+  },
+  {
+   "account": "Depreciation",
+   "debit": "1000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Insurance",
+   "debit": "2100.00",
+   "credit": "0"
+  },
+  {
+   "account": "Internet & Phone",
+   "debit": "370.00",
+   "credit": "0"
+  },
+  {
+   "account": "Meals & Entertainment",
+   "debit": "583.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software",
+   "debit": "30.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software:Design Tools",
+   "debit": "108.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Supplies",
+   "debit": "211.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Employer Taxes",
+   "debit": "4437.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Wages",
+   "debit": "58000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Professional Fees:Legal & Accounting",
+   "debit": "1297.00",
+   "credit": "0"
+  },
+  {
+   "account": "Rent",
+   "debit": "13600.00",
+   "credit": "0"
+  },
+  {
+   "account": "Repairs/Maintenance",
+   "debit": "261.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel",
+   "debit": "396.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel:Airfare",
+   "debit": "760.00",
+   "credit": "0"
+  },
+  {
+   "account": "Interest Earned",
+   "debit": "0",
+   "credit": "45.00"
+  },
+  {
+   "account": "Interest Expense",
+   "debit": "61.75",
+   "credit": "0"
+  }
+ ],
+ "2026-03-31": [
+  {
+   "account": "Operating Checking",
+   "debit": "378190.00",
+   "credit": "0"
+  },
+  {
+   "account": "Reserve Savings",
+   "debit": "10803.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Receivable (A/R)",
+   "debit": "16000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Computer Equipment:Accumulated Depreciation",
+   "debit": "0",
+   "credit": "16500.00"
+  },
+  {
+   "account": "Computer Equipment:Original Cost Basis",
+   "debit": "18000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Payable (A/P)",
+   "debit": "0",
+   "credit": "2039.00"
+  },
+  {
+   "account": "Business Card",
+   "debit": "0",
+   "credit": "571.00"
+  },
+  {
+   "account": "Payroll Liabilities",
+   "debit": "0",
+   "credit": "9210.50"
+  },
+  {
+   "account": "Equipment Loan",
+   "debit": "0",
+   "credit": "4200.00"
+  },
+  {
+   "account": "Opening Balance Equity",
+   "debit": "0",
+   "credit": "61000.00"
+  },
+  {
+   "account": "Owner Draws",
+   "debit": "165000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Retained Earnings",
+   "debit": "0",
+   "credit": "461728.75"
+  },
+  {
+   "account": "Design Services",
+   "debit": "0",
+   "credit": "146400.00"
+  },
+  {
+   "account": "Workshops",
+   "debit": "0",
+   "credit": "14400.00"
+  },
+  {
+   "account": "Cost of Services:Contractors",
+   "debit": "4934.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Software",
+   "debit": "744.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Stock Media",
+   "debit": "147.00",
+   "credit": "0"
+  },
+  {
+   "account": "Bank Fees",
+   "debit": "75.00",
+   "credit": "0"
+  },
+  {
+   "account": "Depreciation",
+   "debit": "1500.00",
+   "credit": "0"
+  },
+  {
+   "account": "Insurance",
+   "debit": "2100.00",
+   "credit": "0"
+  },
+  {
+   "account": "Internet & Phone",
+   "debit": "555.00",
+   "credit": "0"
+  },
+  {
+   "account": "Meals & Entertainment",
+   "debit": "729.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software",
+   "debit": "45.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software:Design Tools",
+   "debit": "162.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Supplies",
+   "debit": "277.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Employer Taxes",
+   "debit": "6655.50",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Wages",
+   "debit": "87000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Professional Fees:Legal & Accounting",
+   "debit": "1297.00",
+   "credit": "0"
+  },
+  {
+   "account": "Rent",
+   "debit": "20400.00",
+   "credit": "0"
+  },
+  {
+   "account": "Repairs/Maintenance",
+   "debit": "261.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel",
+   "debit": "396.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel:Airfare",
+   "debit": "760.00",
+   "credit": "0"
+  },
+  {
+   "account": "Interest Earned",
+   "debit": "0",
+   "credit": "69.00"
+  },
+  {
+   "account": "Interest Expense",
+   "debit": "87.75",
+   "credit": "0"
+  }
+ ],
+ "2026-04-30": [
+  {
+   "account": "Operating Checking",
+   "debit": "390569.75",
+   "credit": "0"
+  },
+  {
+   "account": "Reserve Savings",
+   "debit": "10821.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Receivable (A/R)",
+   "debit": "16000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Computer Equipment:Accumulated Depreciation",
+   "debit": "0",
+   "credit": "17000.00"
+  },
+  {
+   "account": "Computer Equipment:Original Cost Basis",
+   "debit": "18000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Payable (A/P)",
+   "debit": "0",
+   "credit": "3887.00"
+  },
+  {
+   "account": "Business Card",
+   "debit": "0",
+   "credit": "590.00"
+  },
+  {
+   "account": "Payroll Liabilities",
+   "debit": "0",
+   "credit": "9210.50"
+  },
+  {
+   "account": "Equipment Loan",
+   "debit": "0",
+   "credit": "3600.00"
+  },
+  {
+   "account": "Opening Balance Equity",
+   "debit": "0",
+   "credit": "61000.00"
+  },
+  {
+   "account": "Owner Draws",
+   "debit": "165000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Retained Earnings",
+   "debit": "0",
+   "credit": "461728.75"
+  },
+  {
+   "account": "Design Services",
+   "debit": "0",
+   "credit": "191800.00"
+  },
+  {
+   "account": "Workshops",
+   "debit": "0",
+   "credit": "24300.00"
+  },
+  {
+   "account": "Cost of Services:Contractors",
+   "debit": "6721.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Software",
+   "debit": "1054.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Stock Media",
+   "debit": "196.00",
+   "credit": "0"
+  },
+  {
+   "account": "Bank Fees",
+   "debit": "100.00",
+   "credit": "0"
+  },
+  {
+   "account": "Depreciation",
+   "debit": "2000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Gross Receipts Tax",
+   "debit": "1016.00",
+   "credit": "0"
+  },
+  {
+   "account": "Insurance",
+   "debit": "4200.00",
+   "credit": "0"
+  },
+  {
+   "account": "Internet & Phone",
+   "debit": "740.00",
+   "credit": "0"
+  },
+  {
+   "account": "Meals & Entertainment",
+   "debit": "891.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software",
+   "debit": "60.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software:Design Tools",
+   "debit": "216.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Supplies",
+   "debit": "405.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Employer Taxes",
+   "debit": "8874.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Wages",
+   "debit": "116000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Professional Fees:Legal & Accounting",
+   "debit": "1297.00",
+   "credit": "0"
+  },
+  {
+   "account": "Rent",
+   "debit": "27200.00",
+   "credit": "0"
+  },
+  {
+   "account": "Repairs/Maintenance",
+   "debit": "576.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel",
+   "debit": "396.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel:Airfare",
+   "debit": "760.00",
+   "credit": "0"
+  },
+  {
+   "account": "Interest Earned",
+   "debit": "0",
+   "credit": "87.00"
+  },
+  {
+   "account": "Interest Expense",
+   "debit": "110.50",
+   "credit": "0"
+  }
+ ],
+ "2026-05-31": [
+  {
+   "account": "Operating Checking",
+   "debit": "408906.75",
+   "credit": "0"
+  },
+  {
+   "account": "Reserve Savings",
+   "debit": "10842.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Receivable (A/R)",
+   "debit": "12700.00",
+   "credit": "0"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Computer Equipment:Accumulated Depreciation",
+   "debit": "0",
+   "credit": "17500.00"
+  },
+  {
+   "account": "Computer Equipment:Original Cost Basis",
+   "debit": "18000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Payable (A/P)",
+   "debit": "0",
+   "credit": "3846.00"
+  },
+  {
+   "account": "Business Card",
+   "debit": "0",
+   "credit": "1485.00"
+  },
+  {
+   "account": "Payroll Liabilities",
+   "debit": "0",
+   "credit": "9210.50"
+  },
+  {
+   "account": "Equipment Loan",
+   "debit": "0",
+   "credit": "3000.00"
+  },
+  {
+   "account": "Opening Balance Equity",
+   "debit": "0",
+   "credit": "61000.00"
+  },
+  {
+   "account": "Owner Draws",
+   "debit": "165000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Retained Earnings",
+   "debit": "0",
+   "credit": "461728.75"
+  },
+  {
+   "account": "Design Services",
+   "debit": "0",
+   "credit": "237200.00"
+  },
+  {
+   "account": "Workshops",
+   "debit": "0",
+   "credit": "37350.00"
+  },
+  {
+   "account": "Cost of Services:Contractors",
+   "debit": "8779.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Software",
+   "debit": "1255.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Stock Media",
+   "debit": "245.00",
+   "credit": "0"
+  },
+  {
+   "account": "Bank Fees",
+   "debit": "125.00",
+   "credit": "0"
+  },
+  {
+   "account": "Depreciation",
+   "debit": "2500.00",
+   "credit": "0"
+  },
+  {
+   "account": "Gross Receipts Tax",
+   "debit": "1016.00",
+   "credit": "0"
+  },
+  {
+   "account": "Insurance",
+   "debit": "4200.00",
+   "credit": "0"
+  },
+  {
+   "account": "Internet & Phone",
+   "debit": "925.00",
+   "credit": "0"
+  },
+  {
+   "account": "Meals & Entertainment",
+   "debit": "1221.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software",
+   "debit": "75.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software:Design Tools",
+   "debit": "270.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Supplies",
+   "debit": "493.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Employer Taxes",
+   "debit": "11092.50",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Wages",
+   "debit": "145000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Professional Fees:Legal & Accounting",
+   "debit": "3085.00",
+   "credit": "0"
+  },
+  {
+   "account": "Rent",
+   "debit": "34000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Repairs/Maintenance",
+   "debit": "576.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel",
+   "debit": "645.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel:Airfare",
+   "debit": "1347.00",
+   "credit": "0"
+  },
+  {
+   "account": "Interest Earned",
+   "debit": "0",
+   "credit": "108.00"
+  },
+  {
+   "account": "Interest Expense",
+   "debit": "130.00",
+   "credit": "0"
+  }
+ ],
+ "2026-06-30": [
+  {
+   "account": "Operating Checking",
+   "debit": "391703.00",
+   "credit": "0"
+  },
+  {
+   "account": "Reserve Savings",
+   "debit": "10861.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Receivable (A/R)",
+   "debit": "16000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Computer Equipment:Accumulated Depreciation",
+   "debit": "0",
+   "credit": "18000.00"
+  },
+  {
+   "account": "Computer Equipment:Original Cost Basis",
+   "debit": "18000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Payable (A/P)",
+   "debit": "0",
+   "credit": "1831.00"
+  },
+  {
+   "account": "Business Card",
+   "debit": "0",
+   "credit": "585.00"
+  },
+  {
+   "account": "Payroll Liabilities",
+   "debit": "0",
+   "credit": "9210.50"
+  },
+  {
+   "account": "Equipment Loan",
+   "debit": "0",
+   "credit": "2400.00"
+  },
+  {
+   "account": "Opening Balance Equity",
+   "debit": "0",
+   "credit": "61000.00"
+  },
+  {
+   "account": "Owner Draws",
+   "debit": "180000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Retained Earnings",
+   "debit": "0",
+   "credit": "461728.75"
+  },
+  {
+   "account": "Design Services",
+   "debit": "0",
+   "credit": "282600.00"
+  },
+  {
+   "account": "Workshops",
+   "debit": "0",
+   "credit": "37350.00"
+  },
+  {
+   "account": "Cost of Services:Contractors",
+   "debit": "10610.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Software",
+   "debit": "1509.00",
+   "credit": "0"
+  },
+  {
+   "account": "Cost of Services:Stock Media",
+   "debit": "294.00",
+   "credit": "0"
+  },
+  {
+   "account": "Bank Fees",
+   "debit": "150.00",
+   "credit": "0"
+  },
+  {
+   "account": "Depreciation",
+   "debit": "3000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Gross Receipts Tax",
+   "debit": "1016.00",
+   "credit": "0"
+  },
+  {
+   "account": "Insurance",
+   "debit": "4200.00",
+   "credit": "0"
+  },
+  {
+   "account": "Internet & Phone",
+   "debit": "1110.00",
+   "credit": "0"
+  },
+  {
+   "account": "Meals & Entertainment",
+   "debit": "1434.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software",
+   "debit": "90.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Expenses:Software:Design Tools",
+   "debit": "324.00",
+   "credit": "0"
+  },
+  {
+   "account": "Office Supplies",
+   "debit": "621.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Employer Taxes",
+   "debit": "13311.00",
+   "credit": "0"
+  },
+  {
+   "account": "Payroll Expenses:Wages",
+   "debit": "174000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Professional Fees:Legal & Accounting",
+   "debit": "3085.00",
+   "credit": "0"
+  },
+  {
+   "account": "Rent",
+   "debit": "40800.00",
+   "credit": "0"
+  },
+  {
+   "account": "Repairs/Maintenance",
+   "debit": "576.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel",
+   "debit": "645.00",
+   "credit": "0"
+  },
+  {
+   "account": "Travel:Airfare",
+   "debit": "1347.00",
+   "credit": "0"
+  },
+  {
+   "account": "Interest Earned",
+   "debit": "0",
+   "credit": "127.00"
+  },
+  {
+   "account": "Interest Expense",
+   "debit": "146.25",
+   "credit": "0"
+  }
+ ]
+}

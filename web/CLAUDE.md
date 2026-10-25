@@ -6,8 +6,10 @@ ADR-0055). The root `CLAUDE.md` still applies.
 
 ## Boundary
 
-- **`web/` reads one file from outside itself: `docs/contracts/openapi.json`.** It imports
-  nothing from `src/`, `skills/` or `infra/`, and nothing imports from it. (ADR-0054)
+- **`web/` reads from outside itself only `docs/contracts/openapi.json`, `docs/design/` to
+  publish the design system, and `tests/fixtures/quickbooks/`,** whose archives the reader
+  reads and whose readings it writes beside them (ADR-0079). It imports nothing from `src/`,
+  `skills/` or `infra/`, and nothing imports from it. (ADR-0054)
 - **No endpoints of its own.** The client calls the published REST API with the person's bearer
   token, like any other client. A capability the API lacks is an API change, reviewed as a
   contract change. (ADR-0049 § 4)

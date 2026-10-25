@@ -91,6 +91,14 @@ A set of divergences that nets to zero is consistent with a basis difference and
 one. A set that does not is a defect, and fails. That converts a note a person had to agree with
 into an arithmetic check, which is what `NFR-01` means by resolved.
 
+**Only across bases.** A history the export lacks — an earlier year left out of a partial range —
+is whole balanced transactions as well, and nets exactly as a basis difference does; the
+arithmetic cannot tell the two apart. The basis can: between balances the source ran on accrual
+and the books, which are accrual (ADR-0037), there is no basis difference to explain anything, so
+divergences there are a defect however they net. The reconciliation is told the basis the
+balances were run on, as it is each statement's; balances that state none are taken as possibly
+cross-basis, which is what every reconciliation recorded before the basis was stated assumed.
+
 **Necessary, not sufficient, and the record says so rather than overselling it.** A transaction
 posted to the wrong account also nets to zero. Three things hold together and none alone is the
 claim: the journal total proves every row landed at the right magnitude; the accounts that agree
@@ -127,8 +135,9 @@ correctly, and the only remaining difference is one the accounting basis fully e
 Integration tests over an import whose journal total is stated: agreement reported when the books
 match it, and a failure when a row is dropped or an amount altered — the two ways the total moves.
 
-A test that a set of divergences netting to zero is reported as a basis difference, and one that a
-set which does not net fails. The second is the case that would otherwise never be exercised,
+A test that a set of divergences netting to zero is reported as a basis difference, one that a
+set which does not net fails, and one that the same netting set from balances run on accrual
+fails. The second is the case that would otherwise never be exercised,
 because a real export does not produce it.
 
 **Not gated:** nothing forces a reader to emit the stated total where a source prints one. That is

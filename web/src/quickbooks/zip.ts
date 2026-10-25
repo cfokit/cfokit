@@ -56,6 +56,11 @@ export class Zip {
     return this.members.has(name);
   }
 
+  /** Every member's name, in the order the directory lists them. */
+  names(): string[] {
+    return [...this.members.keys()];
+  }
+
   /** One member's bytes, refusing to read past the ceiling whatever its entry declared. */
   async read(name: string): Promise<Uint8Array> {
     const member = this.members.get(name);

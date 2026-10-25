@@ -86,6 +86,7 @@ export async function importBooks(
 
   const reconciliation = await api.post<Reconciliation>(`${at}/reconciliation`, {
     balances: books.balances,
+    balances_basis: books.balances_basis,
     journal_total: books.journal_total,
     statements: books.statements,
   });

@@ -1,0 +1,15 @@
+{
+ "validated_on": "2026-10-25",
+ "archives": {
+  "accrual": "1095bf03edfa261cc4309a9dc8ed30e950bd09cc9ccd3cbbbd2ae3130a49aa60",
+  "cash": "a9ebf3aa5e004a0df84175fd08ac49bf86d1d0aac1c1508a03ae2731bd9a5889",
+  "partial-range": "64c10aea777e25587bd129d758ab97db574206a495fe7622e10ab101f01c8291",
+  "calendar-year": "1095bf03edfa261cc4309a9dc8ed30e950bd09cc9ccd3cbbbd2ae3130a49aa60"
+ },
+ "not_compared": {
+  "account-numbers": "the Reports API prints no account numbers, whatever the setting"
+ },
+ "comparisons": 128,
+ "rows_compared": 43503,
+ "result": "agrees"
+}

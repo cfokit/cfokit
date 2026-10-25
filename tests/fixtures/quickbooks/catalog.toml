@@ -1,0 +1,418 @@
+# The cases the synthetic QuickBooks company must contain (ADR-0078).
+#
+# A case is one of three categories, and its id begins with the category's letter:
+#
+#   data     realized by business events the generator tags with the id (`generated/manifest.json`)
+#   archive  realized by a rendering of the same events: a basis, a setting, a date range
+#   file     realized by damaging the accrual archive after it is written
+#
+# An id is stable: never renamed, never reused.
+#
+# `check` is one of a closed set of kinds, each a plain function. It is not a query language
+# (ADR-0012): no expressions, no composition, and a case that fits none gets a new kind through
+# review. A check runs against the accrual archive unless it names another in `archive`.
+#
+#   balance         CFOKit's balance for `account` at `as_of` equals QuickBooks' trial balance
+#                   then. The figure is never written here; it is read from what QuickBooks
+#                   reported. `as_of = "month-end"` is the month end after the case's last event.
+#   stated          the balance the reader takes from the archive's `report` for `account` equals
+#                   the figure QuickBooks states in that report
+#   account         the chart has `present` (and, where given, of `type`), and has no `absent`
+#   text            an entry carrying `description` byte for byte is in the books (`present`,
+#                   the default) or is not; `account` and `on` narrow where
+#   skipped         the import plan declines the row with refusal `code` rather than booking it
+#   refused         the reader refuses the file with refusal `code`
+#   reconciliation  `journal_total` is agrees | disagrees; `divergences` is none | nets_to_zero |
+#                   unexplained
+#
+# Account names and dates in the checks are provisional until the fixture is validated against
+# QuickBooks, which may print a name differently from how it was posted.
+
+# --- Posting transaction types -------------------------------------------------------------------
+
+[[case]]
+id = "d-invoice"
+category = "data"
+description = "A monthly retainer invoiced on the first of the month and still open at its end."
+check = { kind = "balance", account = "Accounts Receivable (A/R)", as_of = "month-end" }
+
+[[case]]
+id = "d-partial-payment"
+category = "data"
+description = "A project invoice paid in two parts that straddle a month end."
+check = { kind = "balance", account = "Accounts Receivable (A/R)", as_of = "month-end" }
+
+[[case]]
+id = "d-overpayment"
+category = "data"
+description = "A client pays $400 more than the invoice; the excess stays as an unapplied credit."
+check = { kind = "balance", account = "Accounts Receivable (A/R)", as_of = "month-end" }
+
+[[case]]
+id = "d-sales-receipt"
+category = "data"
+description = "A one-off workshop paid for on the spot, straight into checking."
+check = { kind = "balance", account = "Operating Checking", as_of = "month-end" }
+
+[[case]]
+id = "d-credit-memo"
+category = "data"
+description = "A credit for a missed deliverable, applied against the client's open invoice."
+check = { kind = "balance", account = "Accounts Receivable (A/R)", as_of = "month-end" }
+
+[[case]]
+id = "d-refund-receipt"
+category = "data"
+description = "A workshop seat refunded to the attendee out of checking."
+check = { kind = "balance", account = "Workshops", as_of = "month-end" }
+
+[[case]]
+id = "d-bill"
+category = "data"
+description = "An insurance bill entered in one month and paid in the next."
+check = { kind = "balance", account = "Accounts Payable (A/P)", as_of = "month-end" }
+
+[[case]]
+id = "d-bill-payment-multi"
+category = "data"
+description = "One bill payment settles three bills from the same contractor."
+check = { kind = "balance", account = "Accounts Payable (A/P)", as_of = "month-end" }
+
+[[case]]
+id = "d-vendor-credit"
+category = "data"
+description = "A contractor's credit, applied inside the bill payment that settles their next bill."
+check = { kind = "balance", account = "Accounts Payable (A/P)", as_of = "month-end" }
+
+[[case]]
+id = "d-check"
+category = "data"
+description = "Rent paid to the landlord by numbered check."
+check = { kind = "balance", account = "Rent", as_of = "month-end" }
+
+[[case]]
+id = "d-expense"
+category = "data"
+description = "Office supplies bought on the debit card, posted as a QuickBooks expense."
+check = { kind = "balance", account = "Office Supplies", as_of = "month-end" }
+
+[[case]]
+id = "d-card-credit"
+category = "data"
+description = "A card charge for a chair, then the merchant's refund back to the card."
+check = { kind = "balance", account = "Business Card", as_of = "month-end" }
+
+[[case]]
+id = "d-deposit-other-income"
+category = "data"
+description = "Monthly interest deposited into savings, coded to an Other Income account."
+check = { kind = "account", present = ["Interest Earned"], type = "income" }
+
+[[case]]
+id = "d-undeposited-funds"
+category = "data"
+description = "Three check payments held for deposit, then banked together the next month."
+check = { kind = "balance", account = "Undeposited Funds", as_of = "month-end" }
+
+[[case]]
+id = "d-transfer"
+category = "data"
+description = "Cash moved from the reserve savings account into operating checking."
+check = { kind = "balance", account = "Reserve Savings", as_of = "month-end" }
+
+[[case]]
+id = "d-journal-entry"
+category = "data"
+description = "A semimonthly payroll run booked from the payroll provider's journal."
+check = { kind = "balance", account = "Payroll Liabilities", as_of = "month-end" }
+
+[[case]]
+id = "d-void-invoice"
+category = "data"
+description = "An invoice raised in error and voided; it stays in the journal at zero."
+check = { kind = "balance", account = "Accounts Receivable (A/R)", as_of = "month-end" }
+
+# --- Special cases ---------------------------------------------------------------------------------
+
+[[case]]
+id = "d-opening-balance-equity"
+category = "data"
+description = "Opening bank, equipment and loan balances on the first day, against Opening Balance Equity."
+check = { kind = "balance", account = "Opening Balance Equity", as_of = "month-end" }
+
+[[case]]
+id = "d-renamed-account"
+category = "data"
+description = "Stock Photography renamed Stock Media halfway through, with history on both sides."
+check = { kind = "account", present = ["Cost of Services:Stock Media"], absent = ["Cost of Services:Stock Photography"] }
+
+[[case]]
+id = "d-inactive-account"
+category = "data"
+description = "Telephone, used for two years, made inactive once Internet & Phone replaces it."
+check = { kind = "account", present = ["Telephone (deleted)"] }
+
+[[case]]
+id = "d-name-both-sides"
+category = "data"
+description = "One studio is both a client and a contractor; QuickBooks needs two names, so the vendor is 'Northwind Studio (V)'."
+check = { kind = "balance", account = "Accounts Payable (A/P)", as_of = "month-end" }
+
+[[case]]
+id = "d-punctuation-names"
+category = "data"
+description = "Account names with an ampersand and a slash, and a colon only as the sub-account separator."
+check = { kind = "account", present = ["Meals & Entertainment", "Repairs/Maintenance", "Professional Fees:Legal & Accounting"] }
+
+[[case]]
+id = "d-same-leaf"
+category = "data"
+description = "A sub-account named Software under two different parents, both posted to."
+check = { kind = "account", present = ["Cost of Services:Software", "Office Expenses:Software"], type = "expense" }
+
+[[case]]
+id = "d-parent-with-postings"
+category = "data"
+description = "Travel posted to directly as well as through its sub-account Travel:Airfare."
+check = { kind = "reconciliation", journal_total = "agrees", divergences = "none" }
+
+[[case]]
+id = "d-fiscal-year-july"
+category = "data"
+description = "The fiscal year starts on July 1, so year-to-date and retained earnings roll over mid-calendar."
+check = { kind = "balance", account = "Retained Earnings", as_of = "2024-07-31" }
+
+[[case]]
+id = "d-unicode-commas"
+category = "data"
+description = "A client named 'Café Ñandú, LLC', invoiced with a memo carrying an em dash, commas and 東京."
+check = { kind = "text", on = "2024-03-01", description = "Q3 retainer — 東京 office, phase 2" }
+
+[[case]]
+id = "d-total-prefix-name"
+category = "data"
+description = "An account named 'Totally Promotional Merch', which begins the way a subtotal row does."
+check = { kind = "stated", account = "Totally Promotional Merch", report = "profit_and_loss" }
+
+[[case]]
+id = "d-gross-prefix-name"
+category = "data"
+description = "An account named 'Gross Receipts Tax', which begins the way 'Gross Profit' does."
+check = { kind = "stated", account = "Gross Receipts Tax", report = "profit_and_loss" }
+
+[[case]]
+id = "d-basis-suffix-name"
+category = "data"
+description = "A fixed-asset sub-account named 'Original Cost Basis', which ends the way a report footer does."
+check = { kind = "stated", account = "Computer Equipment:Original Cost Basis", report = "balance_sheet" }
+
+[[case]]
+id = "d-three-levels"
+category = "data"
+description = "A sub-account two levels down, Office Expenses:Software:Design Tools, posted to monthly."
+check = { kind = "account", present = ["Office Expenses:Software:Design Tools"], type = "expense" }
+
+[[case]]
+id = "d-zero-balance-account"
+category = "data"
+description = "Conference Fees, charged once and refunded in full, so it nets to zero; QuickBooks still prints it, at zero."
+check = { kind = "account", present = ["Conference Fees"], type = "expense" }
+
+[[case]]
+id = "d-leap-day"
+category = "data"
+description = "Supplies bought on February 29, 2024."
+check = { kind = "text", on = "2024-02-29", description = "Leap-day restock" }
+
+[[case]]
+id = "d-memo-shapes"
+category = "data"
+description = "Memos that break a line, begin with '=', are empty, and run to 1,000 characters."
+check = { kind = "text", description = "=SUM(B2:B9) is what the client asked for" }
+
+[[case]]
+id = "d-split-purchase"
+category = "data"
+description = "One card charge split across meals, travel and supplies."
+check = { kind = "balance", account = "Meals & Entertainment", as_of = "month-end" }
+
+[[case]]
+id = "d-negative-line"
+category = "data"
+description = "An invoice carrying a negative line: a loyalty discount against the project fee."
+check = { kind = "balance", account = "Design Services", as_of = "month-end" }
+
+[[case]]
+id = "d-retained-earnings-entry"
+category = "data"
+description = "A prior-year correction journaled straight to Retained Earnings."
+check = { kind = "balance", account = "Retained Earnings", as_of = "month-end" }
+
+[[case]]
+id = "d-owner-draw"
+category = "data"
+description = "Quarterly owner draws out of checking, to an equity account."
+check = { kind = "balance", account = "Owner Draws", as_of = "month-end" }
+
+[[case]]
+id = "d-prepaid-expense"
+category = "data"
+description = "An annual license paid up front into Prepaid Expenses and released monthly by journal."
+check = { kind = "balance", account = "Prepaid Expenses", as_of = "month-end" }
+
+[[case]]
+id = "d-non-posting"
+category = "data"
+description = "An estimate to a prospect and a purchase order to a supplier, neither of which posts."
+check = { kind = "text", description = "Estimate — rebrand proposal", present = false }
+
+[[case]]
+id = "d-sub-customer"
+category = "data"
+description = "A client's second location billed as a sub-customer, Harbor Dental Group:Downtown Clinic."
+check = { kind = "balance", account = "Accounts Receivable (A/R)", as_of = "month-end" }
+
+# --- Cash basis: where the cash archive departs from the accrual one ------------------------------
+
+[[case]]
+id = "d-cash-partial-multiline"
+category = "data"
+description = "A two-line invoice, part paid: cash basis recognizes each line in proportion, to the cent."
+check = { kind = "stated", account = "Workshops", report = "profit_and_loss", archive = "cash" }
+
+[[case]]
+id = "d-cash-bill-partial-multiline"
+category = "data"
+description = "A two-line bill, part paid: the expense side of the same proportion."
+check = { kind = "stated", account = "Repairs/Maintenance", report = "profit_and_loss", archive = "cash" }
+
+[[case]]
+id = "d-cash-unapplied-credit"
+category = "data"
+description = "The overpayment's unapplied $400, banked but applied to no invoice, which the cash basis reports as income."
+check = { kind = "stated", account = "Unapplied Cash Payment Income", report = "profit_and_loss", archive = "cash" }
+
+[[case]]
+id = "d-cash-credit-memo"
+category = "data"
+description = "The credit memo applied to an invoice the client then pays."
+check = { kind = "stated", account = "Design Services", report = "profit_and_loss", archive = "cash" }
+
+[[case]]
+id = "d-cash-vendor-credit"
+category = "data"
+description = "The vendor credit taken inside a bill payment."
+check = { kind = "stated", account = "Cost of Services:Contractors", report = "profit_and_loss", archive = "cash" }
+
+[[case]]
+id = "d-cash-year-boundary"
+category = "data"
+description = "A June retainer paid in July: income falls in different fiscal years on the two bases."
+check = { kind = "balance", account = "Retained Earnings", as_of = "2024-07-31", archive = "cash" }
+
+[[case]]
+id = "d-cash-void-after-payment"
+category = "data"
+description = "A payment that bounces and is voided, then the invoice paid again two weeks later."
+check = { kind = "balance", account = "Accounts Receivable (A/R)", as_of = "month-end" }
+
+[[case]]
+id = "d-cash-undeposited"
+category = "data"
+description = "Payments received but still held for deposit at a month end."
+check = { kind = "stated", account = "Undeposited Funds", report = "balance_sheet", archive = "cash" }
+
+[[case]]
+id = "d-cash-journal-to-receivable"
+category = "data"
+description = "A disputed balance written off by journal entry straight to A/R, naming the customer."
+check = { kind = "balance", account = "Accounts Receivable (A/R)", as_of = "month-end" }
+
+[[case]]
+id = "d-cash-open-at-end"
+category = "data"
+description = "Invoices and bills still open when the books end, the whole divergence the netting check explains."
+check = { kind = "reconciliation", journal_total = "agrees", divergences = "nets_to_zero", archive = "cash" }
+
+# --- Archives: the same events, rendered differently ----------------------------------------------
+
+[[case]]
+id = "a-accrual"
+category = "archive"
+description = "Every report on the accrual basis, for all dates. The baseline every other case runs against."
+check = { kind = "reconciliation", journal_total = "agrees", divergences = "none" }
+
+[[case]]
+id = "a-cash"
+category = "archive"
+description = "Every report on the cash basis. The journal is unchanged; the statements are not."
+check = { kind = "reconciliation", journal_total = "agrees", divergences = "nets_to_zero", archive = "cash" }
+
+[[case]]
+id = "a-account-numbers"
+category = "archive"
+description = "Account numbers turned on, so every account prints as '1000 Operating Checking'."
+check = { kind = "reconciliation", journal_total = "agrees", divergences = "none", archive = "account-numbers" }
+
+[[case]]
+id = "a-partial-range"
+category = "archive"
+description = "Exported for the current fiscal year only, so the journal lacks every earlier year."
+check = { kind = "reconciliation", journal_total = "agrees", divergences = "unexplained", archive = "partial-range" }
+
+[[case]]
+id = "a-calendar-year"
+category = "archive"
+description = "The fiscal year set to start in January, so the year-end rollover falls on December 31."
+check = { kind = "balance", account = "Retained Earnings", as_of = "2025-01-31", archive = "calendar-year" }
+
+# --- File cases: mutations of the export ----------------------------------------------------------
+# Each check is the outcome we want. A failure is a finding, not a mistake in the case.
+
+[[case]]
+id = "f-truncated-sheet"
+category = "file"
+description = "The Journal sheet's XML cut mid-row, re-zipped as a valid archive."
+check = { kind = "refused", code = "unreadable_archive" }
+
+[[case]]
+id = "f-extra-header-row"
+category = "file"
+description = "One extra row above the Journal's column headings."
+check = { kind = "refused", code = "unreadable_figure" }
+
+[[case]]
+id = "f-invalid-utf8"
+category = "file"
+description = "An invalid UTF-8 byte inside a shared string of the Journal."
+check = { kind = "refused", code = "unreadable_archive" }
+
+[[case]]
+id = "f-macos-rezip"
+category = "file"
+description = "Unzipped and zipped again on a Mac, which adds __MACOSX/ and ._ entries."
+check = { kind = "reconciliation", journal_total = "agrees", divergences = "none" }
+
+[[case]]
+id = "f-nested-folder"
+category = "file"
+description = "Zipped as a folder, so every report sits under export/ rather than at the root."
+check = { kind = "reconciliation", journal_total = "agrees", divergences = "none" }
+
+[[case]]
+id = "f-excel-resave"
+category = "file"
+description = "Each workbook opened and saved in Excel: cached values beside formulas, strings inline."
+check = { kind = "reconciliation", journal_total = "agrees", divergences = "none" }
+
+[[case]]
+id = "f-single-workbook"
+category = "file"
+description = "Journal.xlsx chosen on its own, rather than the archive it came in."
+check = { kind = "refused", code = "import_refused" }
+
+[[case]]
+id = "f-csv-instead"
+category = "file"
+description = "The journal exported as CSV, as the report screen offers, rather than through Export Data."
+check = { kind = "refused", code = "unreadable_archive" }

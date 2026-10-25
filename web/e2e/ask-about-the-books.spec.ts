@@ -52,7 +52,7 @@ async function withBooksImported(page: Page): Promise<string> {
   const entityId = /\/companies\/([^/]+)\/import/.exec(page.url())?.[1];
   expect(entityId).toBeDefined();
   await page.getByRole("button", { name: "Import", exact: true }).click();
-  await expect(page.getByText("3 of 3 accounts match QuickBooks exactly.")).toBeVisible();
+  await expect(page.getByText("4 of 4 accounts match QuickBooks exactly.")).toBeVisible();
   return entityId ?? "";
 }
 

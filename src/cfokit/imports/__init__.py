@@ -496,6 +496,11 @@ def _reconcile(
     non-zero balances. Left out of the comparison rather than counted as a divergence: the two
     systems state the same figure in different ways, and calling that a disagreement would
     bury the ones that are real.
+
+    **An account only we hold is a divergence against zero.** The source's balances are every
+    account it shows activity in, so its silence about one is a zero. Left out, the comparison
+    would agree about only the accounts both sides named, and an account the reader failed to
+    read would look the same as one that agreed.
     """
     if not books.balances:
         return 0, 0, ()
@@ -515,7 +520,7 @@ def _reconcile(
     stated = [
         comparison
         for comparison in report.comparisons
-        if not comparison.only_ours and not (comparison.only_theirs and comparison.theirs == 0)
+        if not (comparison.only_theirs and comparison.theirs == 0)
     ]
     divergences = tuple(
         (

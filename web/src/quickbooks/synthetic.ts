@@ -29,6 +29,9 @@ const HEADER = [
   "Credit",
 ];
 
+// The general ledger's, which adds the running balance.
+const LEDGER_HEADER = [...HEADER, "Balance"];
+
 export const JOURNAL: SyntheticRows = [
   ["Synthetic Co"],
   ["Journal"],
@@ -63,12 +66,18 @@ export const PROFIT_AND_LOSS: SyntheticRows = [
   ["All Dates"],
   [],
   [null, "Total"],
+  // An account named as its section is, told from it by its indentation.
   ["Income", null],
-  ["   Consulting", "=1200.00"],
-  ["Total Income", "=1200.00"],
+  ["   Income", null],
+  ["      Consulting", "=1200.00"],
+  ["   Total Income", "=B8"],
+  ["Total Income", "=B9"],
   ["Expenses", null],
   ["   Meals", null],
   ["      Client Meals", "=12.50"],
+  ["   Total Meals", "=B13"],
+  ["Total Expenses", "=B14"],
+  ["Net Income", "=(B10)-(B15)"],
   ["Saturday, Sep 05, 2026 07:30:59 AM GMT-7 - Accrual Basis"],
 ];
 
@@ -84,16 +93,66 @@ export const BALANCE_SHEET: SyntheticRows = [
   ["Saturday, Sep 05, 2026 07:30:59 AM GMT-7 - Accrual Basis"],
 ];
 
+// Each account by its leaf, indented three spaces under its parent, its entries naming it by its
+// full path, and closed by "Total for" its leaf; a sub-account's total carries the indentation in
+// its empty amount, and a parent's is over its children.
 export const GENERAL_LEDGER: SyntheticRows = [
   ["Synthetic Co"],
   ["General Ledger"],
   ["All Dates"],
   [],
-  HEADER,
+  LEDGER_HEADER,
+  ["Accounts Receivable"],
+  [
+    null,
+    "01/15/2026",
+    "Invoice",
+    "1001",
+    "A Client",
+    "Consulting",
+    "Accounts Receivable",
+    n("1200.00"),
+    null,
+    n("1200.00"),
+  ],
   ["Total for Accounts Receivable", null, null, null, null, null, null, n("1200.00"), null],
-  ["Total for Income:Consulting", null, null, null, null, null, null, null, n("1200.00")],
-  ["Total for Meals with sub-accounts", null, null, null, null, null, null, n("12.50"), null],
+  ["Checking"],
+  [null, "02/02/2026", "Expense", null, null, "Coffee", "Checking", null, n("12.50"), n("-12.50")],
   ["Total for Checking", null, null, null, null, null, null, null, n("12.50")],
+  ["Income"],
+  ["   Consulting"],
+  [
+    null,
+    "01/15/2026",
+    "Invoice",
+    "1001",
+    "A Client",
+    "Consulting",
+    "Income:Consulting",
+    null,
+    n("1200.00"),
+    n("1200.00"),
+  ],
+  ["   Total for Consulting", null, null, null, null, null, null, "   ", n("1200.00")],
+  ["Total for Income", null, null, null, null, null, null, null, n("1200.00")],
+  ["Meals"],
+  ["   Client Meals"],
+  [
+    null,
+    "02/02/2026",
+    "Expense",
+    null,
+    null,
+    "Coffee",
+    "Meals:Client Meals",
+    n("12.50"),
+    null,
+    n("12.50"),
+  ],
+  ["   Total for Client Meals", null, null, null, null, null, null, n("12.50"), "   "],
+  ["Total for Meals", null, null, null, null, null, null, n("12.50"), null],
+  [],
+  [],
   ["Saturday, Sep 05, 2026 07:31:07 AM GMT-7 - Cash Basis"],
 ];
 

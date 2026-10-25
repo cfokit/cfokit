@@ -38,7 +38,15 @@ class Reconciled:
 
     @property
     def divergences_net_to_zero(self) -> bool:
-        """Whether the balance divergences are consistent with a basis difference (ADR-0050)."""
+        """Whether the balance divergences are consistent with a basis difference (ADR-0050):
+        they net to zero, and the source's balances were not run on accrual, as the books are.
+
+        Between accrual balances and an accrual ledger there is no basis difference to explain
+        anything, however the divergences net: a history the export lacks is whole balanced
+        transactions too. A reconciliation recorded before the balances' basis was, states none.
+        """
+        if self.balances.divergences and self.balances.their_basis == "accrual":
+            return False
         return nets_to_zero(self.balances.divergences)
 
 
@@ -78,7 +86,8 @@ def insert_reconciliation(
         reconciliation_id = str(row[0])
 
         for position, comparison in enumerate((balances, *statements), start=1):
-            stated = comparison.report != BALANCES
+            # The stated balances carry the basis the source ran them on, and no basis of ours:
+            # they are compared with the trial balance, which is the postings themselves.
             cur.execute(
                 "INSERT INTO import_reconciliation_comparison"
                 " (entity_id, reconciliation_id, position, report, their_basis, our_basis,"
@@ -89,8 +98,8 @@ def insert_reconciliation(
                     reconciliation_id,
                     position,
                     comparison.report,
-                    comparison.their_basis if stated else None,
-                    comparison.our_basis if stated else None,
+                    comparison.their_basis or None,
+                    comparison.our_basis or None,
                     comparison.agreed,
                 ),
             )

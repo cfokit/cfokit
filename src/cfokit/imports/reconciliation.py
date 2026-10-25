@@ -57,7 +57,11 @@ def record_reconciliation(
         database, entity_id=entity_id, principal=principal, books=books, as_of=as_of
     )
     balances = Comparison(
-        report=BALANCES, their_basis="", our_basis="", agreed=agreed, divergences=divergences
+        report=BALANCES,
+        their_basis=books.balances_basis,
+        our_basis="",
+        agreed=agreed,
+        divergences=divergences,
     )
     total = check_total(
         database, entity_id=entity_id, principal=principal, books=books, as_of=as_of

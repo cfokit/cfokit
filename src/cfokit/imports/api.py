@@ -200,6 +200,12 @@ class ReconcileImportRequest(BaseModel):
     """The figures the source states for itself, for `IMP-08`'s comparison."""
 
     balances: list[StatedBalanceModel] = Field(default_factory=list)
+    balances_basis: Basis = Field(
+        default="unknown",
+        description="The method the stated balances were computed on, as when the import was"
+        " opened. Balances run on accrual differ from the books, which are accrual, for no"
+        " reason the basis explains, so their divergences are never reported as one.",
+    )
     journal_total: StatedTotalModel | None = Field(
         default=None,
         description="The total the source prints on its own raw journal. Omitted where it"
@@ -266,8 +272,9 @@ class ReconcileImportResponse(BaseModel):
         default=True,
         description="Whether the divergences are consistent with an accounting-basis"
         " difference. Cash basis excludes whole transactions, so the difference between an"
-        " accrual journal and a cash-basis report sums to zero in posting signs. False means"
-        " the difference is not the basis and is a defect.",
+        " accrual journal and a cash-basis report sums to zero in posting signs; between"
+        " balances run on accrual and the books there is no basis difference, however the"
+        " divergences net. False means the difference is not the basis and is a defect.",
     )
     divergences: list[DivergenceModel] = Field(default_factory=list)
     statements: list[StatementComparisonModel] = Field(default_factory=list)
@@ -422,7 +429,7 @@ def reconcile_import(
         system="",
         fingerprint="",
         basis="unknown",
-        balances_basis="unknown",
+        balances_basis=body.balances_basis,
         commodity="",
         balances=tuple(
             StatedBalance(account_code=line.account_code, balance=line.balance)
