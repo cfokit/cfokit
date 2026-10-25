@@ -141,7 +141,7 @@ characters, and may not equal the person's username or email address.
 | unset: `15` | any deployment, CFOKit's hosted service included |
 | `12` to `14` | a deployment where every person also has a second factor, as NIST permits; never lower than 12 |
 
-**The breached passwords are a snapshot.** The issuer image carries the passwords of 12 to 128
+**The breached passwords are a snapshot.** The identity image carries the passwords of 12 to 128
 characters among the ten million most common in public breach compilations, from
 [SecLists](https://github.com/danielmiessler/SecLists) (MIT, its license beside the list in the
 image), pinned to one commit and checksum in the `Dockerfile`: about 702,000 of them. Twelve is the
@@ -272,7 +272,7 @@ never leaves it; the script signs in as that, applies the settings, deletes the 
 proves it gone by being refused when it signs in again. A run killed outright, at the job's
 timeout or by a person, cannot clean up; its client stays until the next run, which deletes every
 `cfokit-settings-*` client it finds before its own. Events are switched on first, so each change
-after that is an admin event. It runs from the issuer image, against the issuer's
+after that is an admin event. It runs from the identity image, against the issuer's
 database, with Keycloak started inside the same container; on GCP, `setup/realm.sh --settings`
 runs it as a job and then restarts the issuer, which caches realms.
 

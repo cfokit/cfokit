@@ -108,7 +108,7 @@ def test_the_settings_script_deletes_its_temporary_administrator() -> None:
 
 
 def test_the_issuer_image_carries_the_settings_script() -> None:
-    """It runs as a job from the issuer image, which is the only place it is."""
+    """It runs as a job from the identity image, which is the only place it is."""
     dockerfile = (REALM.parent.parent.parent / "Dockerfile").read_text(encoding="utf-8")
     assert "COPY infra/keycloak/realm-settings.sh /opt/cfokit/realm-settings.sh" in dockerfile
 
