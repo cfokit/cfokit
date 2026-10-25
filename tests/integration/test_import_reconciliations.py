@@ -241,6 +241,70 @@ def test_a_misstated_figure_is_recorded_with_both_sides(
     assert found["divergences_net_to_zero"] is False
 
 
+def test_an_account_only_the_books_hold_is_a_divergence_against_zero(
+    client: TestClient, entity: str
+) -> None:
+    """The general ledger lists every account it has activity in, so an account it says nothing
+    about stands at zero there. Left out, the books would agree with QuickBooks about only the
+    accounts both named — and a total the reader failed to read would look like agreement."""
+    import_id = imported(client, entity)
+    unstated = [
+        line for line in STATED_BALANCES if line["account_code"] != "Meals:Client Meals"
+    ]
+
+    found = reconcile(client, entity, import_id, balances=unstated)
+
+    assert (found["agreed"], found["compared"]) == (3, 4)
+    assert [
+        (d["account_code"], Decimal(d["ours"]), Decimal(d["theirs"]))
+        for d in found["divergences"]
+    ] == [("Meals:Client Meals", Decimal("12.50"), Decimal("0"))]
+
+
+# The invoice missing from the source's side: what an export lacking a transaction, or a
+# cash-basis report of an unpaid one, states. Whole transactions, so the divergences net.
+WITHOUT_THE_INVOICE = [
+    {"account_code": "Accounts Receivable", "balance": "0"},
+    {"account_code": "Income:Consulting", "balance": "0"},
+    {"account_code": "Meals:Client Meals", "balance": "12.50"},
+    {"account_code": "Checking", "balance": "-12.50"},
+]
+
+
+def test_balances_on_cash_that_lack_whole_transactions_are_a_basis_difference(
+    client: TestClient, entity: str
+) -> None:
+    """ADR-0050 § 2: cash basis leaves out the unpaid invoice whole, receivable and income."""
+    import_id = imported(client, entity)
+
+    found = reconcile(
+        client, entity, import_id, balances=WITHOUT_THE_INVOICE, balances_basis="cash"
+    )
+
+    assert [d["account_code"] for d in found["divergences"]] == [
+        "Accounts Receivable",
+        "Income:Consulting",
+    ]
+    assert found["divergences_net_to_zero"] is True
+
+
+def test_balances_on_accrual_are_never_a_basis_difference(
+    client: TestClient, entity: str
+) -> None:
+    """The same divergences, from balances run on accrual as the books are: nothing about the
+    basis explains them, however they net. A partial export's missing history nets too."""
+    import_id = imported(client, entity)
+
+    found = reconcile(
+        client, entity, import_id, balances=WITHOUT_THE_INVOICE, balances_basis="accrual"
+    )
+
+    assert len(found["divergences"]) == 2
+    assert found["divergences_net_to_zero"] is False
+    [read] = client.get(f"/entities/{entity}/imports/reconciliations").json()["reconciliations"]
+    assert read["divergences_net_to_zero"] is False
+
+
 def test_the_latest_comes_first(client: TestClient, entity: str) -> None:
     import_id = imported(client, entity)
     first = reconcile(client, entity, import_id, statements=[])

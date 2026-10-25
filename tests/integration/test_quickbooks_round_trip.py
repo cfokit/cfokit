@@ -189,6 +189,7 @@ def imported(client: TestClient, database: Database, archive: str) -> Imported:
         f"{at}/reconciliation",
         json={
             "balances": books["balances"],
+            "balances_basis": books["balances_basis"],
             "journal_total": books["journal_total"],
             "statements": books["statements"],
         },

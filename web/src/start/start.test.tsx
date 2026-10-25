@@ -278,6 +278,7 @@ describe("the import", () => {
     expect((requests[1]?.body as { entries: unknown[] }).entries).toHaveLength(2);
     expect(requests[2]?.body).toEqual({
       balances: EXPORTED.books.balances,
+      balances_basis: "cash",
       journal_total: EXPORTED.books.journal_total,
       statements: [],
     });

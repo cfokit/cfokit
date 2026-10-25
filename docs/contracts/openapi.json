@@ -2238,6 +2238,17 @@
             "title": "Balances",
             "type": "array"
           },
+          "balances_basis": {
+            "default": "unknown",
+            "description": "The method the stated balances were computed on, as when the import was opened. Balances run on accrual differ from the books, which are accrual, for no reason the basis explains, so their divergences are never reported as one.",
+            "enum": [
+              "accrual",
+              "cash",
+              "unknown"
+            ],
+            "title": "Balances Basis",
+            "type": "string"
+          },
           "journal_total": {
             "anyOf": [
               {
@@ -2306,7 +2317,7 @@
           },
           "divergences_net_to_zero": {
             "default": true,
-            "description": "Whether the divergences are consistent with an accounting-basis difference. Cash basis excludes whole transactions, so the difference between an accrual journal and a cash-basis report sums to zero in posting signs. False means the difference is not the basis and is a defect.",
+            "description": "Whether the divergences are consistent with an accounting-basis difference. Cash basis excludes whole transactions, so the difference between an accrual journal and a cash-basis report sums to zero in posting signs; between balances run on accrual and the books there is no basis difference, however the divergences net. False means the difference is not the basis and is a defect.",
             "title": "Divergences Net To Zero",
             "type": "boolean"
           },
