@@ -9,10 +9,9 @@ import { Button, Conversation, Notice, TextLink } from "../components";
 import { useCompanyName } from "../questions/QuestionsPage";
 import { PersonFrame } from "../settings/PersonFrame";
 import { useStarted } from "../start/state";
-import { useAgentUrl } from "./agentUrl";
+import { AGENT, useAgentUrl } from "./agentUrl";
 
-/** CFOKit's agent as the API records it acting for a person (ADR-0077), for the allow page. */
-export const AGENT = "client:cfokit-agent";
+export { AGENT };
 
 /** The agent's history as assistant-ui's repository: each message after the one before it. */
 export function thread(
@@ -42,7 +41,16 @@ export function refusalOf(error: unknown): { code: string; message: string } {
   return { code: "unexpected", message: error instanceof Error ? error.message : String(error) };
 }
 
-function Refusal({ code, message }: { code: string; message: string }) {
+function Refusal({
+  code,
+  message,
+  composed,
+}: {
+  code: string;
+  message: string;
+  /** What the person has written so far, carried to the allow page and back. */
+  composed: () => string;
+}) {
   const navigate = useNavigate();
   if (code === "agent_not_allowed") {
     return (
@@ -51,7 +59,14 @@ function Refusal({ code, message }: { code: string; message: string }) {
         <div className="pt-2">
           <Button
             variant="primary"
-            onClick={() => void navigate({ to: "/agents/$agent", params: { agent: AGENT } })}
+            onClick={() => {
+              const draft = composed();
+              void navigate({
+                to: "/agents/$agent",
+                params: { agent: AGENT },
+                search: draft === "" ? {} : { draft },
+              });
+            }}
           >
             Allow CFOKit
           </Button>
@@ -120,10 +135,19 @@ function Live({
     },
   });
 
-  // A question handed over by another page waits in the composer for the person to send.
+  // A question handed over by another page waits in the composer for the person to send. It
+  // leaves the address once it is there, so a reload after sending does not write it again.
+  const navigate = useNavigate();
   useEffect(() => {
-    if (draft !== undefined) runtime.thread.composer.setText(draft);
-  }, [runtime, draft]);
+    if (draft === undefined) return;
+    runtime.thread.composer.setText(draft);
+    void navigate({
+      to: "/companies/$entityId/chat/$conversationId",
+      params: { entityId, conversationId },
+      search: {},
+      replace: true,
+    });
+  }, [runtime, draft, entityId, conversationId, navigate]);
 
   // A refusal stands until the person tries again: a new turn clears it, and refuses afresh if it
   // still applies.
@@ -147,7 +171,9 @@ function Live({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
-      {refused !== null && <Refusal {...refused} />}
+      {refused !== null && (
+        <Refusal {...refused} composed={() => runtime.thread.composer.getState().text} />
+      )}
       <Conversation runtime={runtime} placeholder="Ask about your books" />
     </div>
   );

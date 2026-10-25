@@ -22,6 +22,8 @@ from cfokit.agent import read_skill
 from cfokit.agent.app import Services, create_app
 from cfokit.agent.config import AgentSettings, ConfigError
 from cfokit.agent.core import CoreAPI
+from cfokit.agent.scripted import NAME as SCRIPTED
+from cfokit.agent.scripted import scripted_model
 from cfokit.agent.tokens import Exchange
 
 log = logging.getLogger("cfokit.agent")
@@ -37,6 +39,10 @@ def _model(settings: AgentSettings) -> Model | None:
     Imported here, not at module scope, so the provider's SDK loads only where it is used
     (ADR-0004).
     """
+    if settings.model == SCRIPTED:
+        # For recording the documentation with no credential (ADR-0074); never Claude.
+        log.warning("the agent is answering from a script, not a model")
+        return scripted_model()
     if settings.anthropic_api_key is None:
         log.warning("no inference credential is configured; the chat is off")
         return None

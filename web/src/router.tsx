@@ -177,11 +177,13 @@ const company = createRoute({
 const agents = createRoute({
   getParentRoute: () => root,
   path: "/agents/$agent",
+  validateSearch: withDraft,
   component: function Agents() {
     const { agent } = agents.useParams();
+    const { draft } = agents.useSearch();
     return (
       <SignedIn>
-        <AgentPage agent={agent} />
+        <AgentPage agent={agent} draft={draft} />
       </SignedIn>
     );
   },

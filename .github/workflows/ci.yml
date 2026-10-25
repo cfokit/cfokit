@@ -102,10 +102,13 @@ jobs:
           while IFS= read -r path; do
             case "$path" in
               # Getting started (web/e2e/onboarding.spec.ts): signing up on the issuer's page,
-              # the start pages, the sample export, the first question, and what they render with.
+              # the start pages, the sample export, the first question, and what they render with;
+              # and asking about the books (web/e2e/ask-about-the-books.spec.ts): the chat, allowing
+              # CFOKit, and the agent that answers.
               web/e2e/onboarding.spec.ts|web/e2e/clips*.ts|web/e2e/cut-clips.ts|web/src/login/*|web/src/start/*|web/src/quickbooks/*|\
               web/src/questions/*|web/src/connect/*|web/src/settings/*|web/src/components/*|\
-              web/src/*.css|infra/keycloak/*)
+              web/src/*.css|infra/keycloak/*|\
+              web/e2e/ask-about-the-books.spec.ts|web/src/chat/*|web/src/agents/*|src/cfokit/agent/*)
                 echo "recorded flow: $path"; record=true ;;
             esac
           done <<< "$(git diff --name-only "$BEFORE" HEAD)"
@@ -278,6 +281,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Bring up compose.yaml WITHOUT the dev overlay
+        # The agent answers from its script: CI holds no inference credential (ADR-0004),
+        # and the chat's use case is recorded from a passing run (ADR-0074).
+        env:
+          CFOKIT_AGENT_MODEL: scripted
         run: docker compose -f compose.yaml up -d --wait --wait-timeout 240
       - name: Create the schema
         run: docker compose -f compose.yaml --profile migrate run --rm migrate
@@ -362,6 +369,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Bring up compose.yaml WITHOUT the dev overlay, requiring a second factor
+        # The agent answers from its script: CI holds no inference credential (ADR-0004),
+        # and the chat's use case is recorded from a passing run (ADR-0074).
+        env:
+          CFOKIT_AGENT_MODEL: scripted
         run: docker compose -f compose.yaml up -d --wait --wait-timeout 240
       - name: Create the schema
         run: docker compose -f compose.yaml --profile migrate run --rm migrate

@@ -41,6 +41,7 @@ step, including trusting the local certificate authority.
 | Know what it must do | [`docs/product/requirements.md`](docs/product/requirements.md) |
 | Understand why the architecture is the way it is | [`docs/decisions/README.md`](docs/decisions/README.md) |
 | Run it on your computer, from nothing to your first question | [`docs/tutorials/run-cfokit-on-your-computer.md`](docs/tutorials/run-cfokit-on-your-computer.md) |
+| Ask CFOKit about your books, in its own chat | [`docs/how-to/ask-about-your-books.md`](docs/how-to/ask-about-your-books.md) |
 | Connect Claude, hosted or on your computer | [`docs/how-to/connect-claude.md`](docs/how-to/connect-claude.md) |
 | Understand what an import's comparison with QuickBooks means | [`docs/explanation/reading-an-import.md`](docs/explanation/reading-an-import.md) |
 | Contribute code | [`CONTRIBUTING.md`](CONTRIBUTING.md) |

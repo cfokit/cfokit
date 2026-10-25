@@ -139,8 +139,15 @@ test("an agent not yet allowed in the company sends the person to allow it", asy
     body: { code: "agent_not_allowed", message: "Allow this agent" },
   };
   page(CONVERSATION);
+  const composer = await screen.findByRole("textbox", { name: "Ask about your books" });
+  fireEvent.change(composer, { target: { value: "How did we do?" } });
   (await screen.findByRole("button", { name: "Allow CFOKit" })).click();
-  expect(navigate).toHaveBeenCalledWith({ to: "/agents/$agent", params: { agent: AGENT } });
+  // What the person wrote goes with them, and comes back once CFOKit is allowed.
+  expect(navigate).toHaveBeenCalledWith({
+    to: "/agents/$agent",
+    params: { agent: AGENT },
+    search: { draft: "How did we do?" },
+  });
 });
 
 test("a deployment running no agent says so instead of offering a chat", async () => {
@@ -175,5 +182,12 @@ test("a question handed over is carried to the conversation and waits, unsent, t
   page(CONVERSATION, "How did we do?");
   const composer = await screen.findByRole("textbox", { name: "Ask about your books" });
   await waitFor(() => expect((composer as HTMLTextAreaElement).value).toBe("How did we do?"));
+  // Then it leaves the address, so a reload after sending does not write it again.
+  expect(navigate).toHaveBeenLastCalledWith({
+    to: "/companies/$entityId/chat/$conversationId",
+    params: { entityId: ENTITY, conversationId: CONVERSATION },
+    search: {},
+    replace: true,
+  });
   expect(requests.some((r) => r.url.endsWith("/turn"))).toBe(false);
 });

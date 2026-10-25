@@ -81,6 +81,16 @@ def _prompt(messages: list[ModelMessage]) -> ModelRequest | None:
     return ModelRequest(parts=parts) if parts else None
 
 
+def _working_in(entity_id: str) -> str:
+    """Which company the conversation is in. The window posts to that company's conversation and
+    every tool call names its entity, so the model is told it rather than asking (the bookkeeper
+    skill: there is no current company)."""
+    return (
+        f"This conversation is in the company with entity_id {entity_id}. Name it in every "
+        "tool call that takes an entity_id, and keep to it unless the person names another."
+    )
+
+
 def _code(response: httpx2.Response) -> str | None:
     try:
         body = response.json()
@@ -213,7 +223,10 @@ def create_app(services: Services, *, web_origin: str | None = None) -> Starlett
             async with services.connect(token) as client:
                 tools = PublishedTools(client, holds_untrusted=thread.holds_untrusted)
                 async for event in adapter.run_stream(
-                    message_history=[*history, prompt], toolsets=[tools], on_complete=keep
+                    message_history=[*history, prompt],
+                    toolsets=[tools],
+                    instructions=_working_in(entity_id),
+                    on_complete=keep,
                 ):
                     yield event
 

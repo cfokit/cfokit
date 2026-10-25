@@ -61,7 +61,7 @@ or retry, because the CI portability gate runs with no credentials present.
 | `CFOKIT_MCP_URL` | yes | The MCP endpoint reachable from the agent, ending `/mcp`: the only way it reaches the books. |
 | `WEB_PUBLIC_BASE_URL` | yes | The web client's origin, the one browser origin allowed to call the agent (CORS). |
 | `ANTHROPIC_API_KEY` | no | The inference credential. Unset, the agent starts and answers every turn `503 agent_off`. |
-| `CFOKIT_AGENT_MODEL` | no | The Claude model, recorded with every response (`SOC1-35`). Defaults to the one `cfokit.agent.config` pins. |
+| `CFOKIT_AGENT_MODEL` | no | The Claude model, recorded with every response (`SOC1-35`). Defaults to the one `cfokit.agent.config` pins. `scripted` answers from a script instead, needing no credential: for recording the documentation (ADR-0074), never for a deployment people use. |
 | `CFOKIT_AGENT_SKILL` | no | The skill given as instructions. Defaults to the bookkeeper skill the image carries. |
 
 It asks for no audience: the token it gets by exchange carries the one the issuer binds every token
