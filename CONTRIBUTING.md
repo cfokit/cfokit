@@ -230,8 +230,10 @@ it is done, `tests/test_quickbooks_sandbox.py` skips its validation check and sa
 
 **Before the first run:**
 
-- **An Intuit developer account** and an app, at [developer.intuit.com](https://developer.intuit.com).
-  The app gives you a **client ID** and a **client secret**.
+- **Your own Intuit developer account** and an app, at
+  [developer.intuit.com](https://developer.intuit.com). The project holds no account and no
+  credentials; whoever runs the tool does so under their own account and their own acceptance of
+  Intuit's terms. The app gives you a **client ID** and a **client secret**.
 - **An empty sandbox company.** A new sandbox company comes with Intuit's sample data, which
   must not end up in the comparison (ADR-0044). Empty it from the developer portal's Sandboxes
   list ("Clear data and reset", or "Delete all data"). What stays is QuickBooks' default chart
