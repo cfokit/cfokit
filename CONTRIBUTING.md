@@ -221,6 +221,20 @@ PYTHONPATH=scripts uv run python -m synthetic_books           # rewrite the fixt
 PYTHONPATH=scripts uv run python -m synthetic_books --check   # what CI's drift test checks
 ```
 
+Each archive's `read.json` is what the web client's reader reads from it, and what the round
+trip into CFOKit imports
+([ADR-0079](docs/decisions/0079-the-quickbooks-round-trip-imports-what-the-reader-read.md)).
+After changing the reader or the archives, rewrite them from `web/` and commit them with the
+change. A test fails while one is stale:
+
+```bash
+corepack pnpm read-fixture   # in web/: rewrite every archive's read.json
+```
+
+A reading is the reader's output, so it is reviewed as a change to what CFOKit receives, and
+never the source of an expected value: the round trip
+(`tests/integration/test_quickbooks_round_trip.py`) checks it against QuickBooks' figures.
+
 ### Validating it against a QuickBooks sandbox
 
 The archives are our belief about what QuickBooks writes. Checking that belief means posting the

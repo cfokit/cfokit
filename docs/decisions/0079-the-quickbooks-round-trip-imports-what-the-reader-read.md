@@ -107,7 +107,10 @@ person would — open, entries, reconcile — and runs each catalog case's check
 * `reconciliation` — the reconciliation's journal total agrees or does not, and its divergences
   are none, net to zero, or are unexplained.
 
-A check of a kind the test does not run fails rather than passing unexamined.
+A check of a kind the test does not run fails rather than passing unexamined. Every row the
+import declines must be one that moves nothing, which `IMP-05` shows the person rather than
+drops. A case CFOKit cannot hold yet is marked as an expected failure, strictly, with what CFOKit
+lacks: it is a finding on record, and the day it passes the suite fails until the mark comes off.
 
 ### 4. Where the expected values come from
 
@@ -203,7 +206,9 @@ its image or from an artifact the web job uploads.
   `tests/fixtures/quickbooks/` alongside the contract and the design system.
 * `CONTRIBUTING.md`'s section on the fixture names the script that writes the readings, beside the
   command that regenerates the archives: a change to either is followed by both.
-* The integration test image carries `tests/fixtures/quickbooks/`, readings included.
+* The integration test image carries `tests/fixtures/quickbooks/`, readings included, and the
+  generator's own workbook reader in `scripts/synthetic_books/`, so the round trip reads an
+  archive's stated figures with the code that wrote them rather than a second reader.
 
 **Reversal cost.** Low. The script, the readings and the two tests are additions; removing them
 leaves the reader and the import as they are, and the fixture as ADR-0078 left it.

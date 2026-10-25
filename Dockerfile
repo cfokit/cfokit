@@ -134,6 +134,9 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked
 
 COPY tests/ ./tests/
+# The QuickBooks round trip reads the fixture's archives with the generator's own reader
+# (ADR-0079); pytest finds it on `pythonpath`, as on the host.
+COPY scripts/synthetic_books/ ./scripts/synthetic_books/
 
 # Only the integration tests. The unit and documentation tests run on the host in the same
 # CI job and need the full checkout — `test_documentation.py` walks the repository at import
