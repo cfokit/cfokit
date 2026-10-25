@@ -7,7 +7,7 @@
 import Big from "big.js";
 import { read, type Export, type SourceBooks } from "./read";
 import { Refused } from "./refused";
-import { JOURNAL, PROFIT_AND_LOSS, syntheticExport, zip } from "./synthetic";
+import { GENERAL_LEDGER, JOURNAL, PROFIT_AND_LOSS, syntheticExport, zip } from "./synthetic";
 
 let books: SourceBooks;
 let company: Export["company"];
@@ -135,13 +135,24 @@ describe("account types and paths", () => {
     expect(typeOf("Income:Consulting")).toBe("income");
   });
 
+  test("an account named as its section is typed by the section it sits in", () => {
+    expect(typeOf("Income")).toBe("income");
+  });
+
   test("a sub-account takes its parent's type", () => {
     expect(typeOf("Meals:Client Meals")).toBe("expense");
   });
 
-  test("a parent that takes no postings is not an account", () => {
-    expect(books.accounts.map((account) => account.code)).not.toContain("Meals");
-    expect(books.accounts[0]?.parent).toBe("");
+  test("a parent that takes no postings is an account, above its children", () => {
+    expect(books.accounts.map((account) => [account.code, account.parent])).toEqual([
+      ["Accounts Receivable", ""],
+      ["Checking", ""],
+      ["Income", ""],
+      ["Income:Consulting", "Income"],
+      ["Meals", ""],
+      ["Meals:Client Meals", "Meals"],
+    ]);
+    expect(typeOf("Meals")).toBe("expense");
   });
 });
 
@@ -163,12 +174,20 @@ describe("the statements", () => {
     expect(new Big(figure("Income:Consulting")).gt(0)).toBe(true);
   });
 
-  test("a subtotal is a rollup, not a balance", () => {
-    expect(books.rollups.map((stated) => stated.account_code)).toEqual(["Meals"]);
+  test("totals and the lines a statement computes are neither read nor unmatched", () => {
+    expect(profit()?.lines.map((line) => line.account_code)).toEqual([
+      "Income:Consulting",
+      "Meals:Client Meals",
+    ]);
+    expect(profit()?.unmatched).toEqual([]);
+  });
+
+  test("a subtotal over a parent and its children is a rollup, not a balance", () => {
+    expect(books.rollups.map((stated) => stated.account_code)).toEqual(["Income", "Meals"]);
     expect(books.balances.map((stated) => stated.account_code)).not.toContain("Meals");
   });
 
-  test("the general ledger's totals are read as the source's own balances", () => {
+  test("the general ledger's totals are read as the source's own balances, by full path", () => {
     const stated = Object.fromEntries(
       books.balances.map((line) => [line.account_code, line.balance]),
     );
@@ -176,20 +195,31 @@ describe("the statements", () => {
       "Accounts Receivable",
       "Checking",
       "Income:Consulting",
+      "Meals:Client Meals",
     ]);
     expect(same(stated["Accounts Receivable"] ?? "", "1200.00")).toBe(true);
     expect(same(stated["Income:Consulting"] ?? "", "-1200.00")).toBe(true);
+    expect(same(stated["Meals:Client Meals"] ?? "", "12.50")).toBe(true);
     expect(same(stated.Checking ?? "", "-12.50")).toBe(true);
+  });
+
+  test("a beginning balance is part of the balance, on the account's natural side", async () => {
+    const opened = GENERAL_LEDGER.flatMap((row) =>
+      row[0] === "   Consulting"
+        ? [row, [null, "Beginning Balance", null, null, null, null, null, null, null, "500.00"]]
+        : [row],
+    );
+    const { books: read_ } = await read(await syntheticExport({ "General_ledger.xlsx": opened }));
+    const consulting = read_.balances.find((line) => line.account_code === "Income:Consulting");
+    expect(same(consulting?.balance ?? "", "-1700.00")).toBe(true);
   });
 });
 
 describe("refusals", () => {
   test("a computed cell is refused rather than read as zero", async () => {
-    const broken = [
-      ...PROFIT_AND_LOSS.slice(0, 6),
-      ["   Consulting", "=SUM(B7:B9)"],
-      ...PROFIT_AND_LOSS.slice(7),
-    ];
+    const broken = PROFIT_AND_LOSS.map((row) =>
+      row[0] === "      Consulting" ? ["      Consulting", "=SUM(B7:B9)"] : row,
+    );
     expect((await refusal(await syntheticExport({ "Profit_and_loss.xlsx": broken }))).code).toBe(
       "unreadable_figure",
     );

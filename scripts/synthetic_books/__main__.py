@@ -28,7 +28,9 @@ def manifest(
     events: list[tuple[str, Event]],
     payloads: list[quickbooks.Payload],
 ) -> dict[str, Json]:
-    """Each catalog id, with the events tagged with it and the payloads those events became.
+    """Each catalog id, with its check, the events tagged with it and the payloads those events
+    became. The check is the catalog's, carried here so a reader in another language needs no
+    TOML to know what each case expects (ADR-0079).
 
     An event tagged with an id the catalog does not have is an error: a case that exists only in
     the generator is a case nobody reviewed.
@@ -46,8 +48,10 @@ def manifest(
     for case in cases:
         case_id = str(case["id"])
         tagged = [event_id for event_id, event in events if case_id in event.cases]
+        check: Json = case["check"]  # type: ignore[assignment]
         entry: dict[str, Json] = {
             "category": str(case["category"]),
+            "check": check,
             "events": list(tagged),
             "payloads": [p for event_id in tagged for p in by_event.get(event_id, [])],
         }

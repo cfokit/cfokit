@@ -91,22 +91,49 @@ const MEMO = 5;
 const ACCOUNT = 6;
 const DEBIT = 7;
 const CREDIT = 8;
+// The general ledger's own: its running balance, on the account's natural side.
+const BALANCE = 9;
 const HEADER_ROWS = 5;
 
-const BALANCE_SHEET_SECTIONS: Record<string, AccountType | null> = {
-  ASSETS: "asset",
-  "LIABILITIES AND EQUITY": null,
-  Liabilities: "liability",
-  Equity: "equity",
+// The reports read, each found by its name wherever the archive keeps it: at the root as Export
+// Data writes it, or under the one folder an archive made by zipping the folder adds.
+const REPORTS = [
+  "Journal.xlsx",
+  "General_ledger.xlsx",
+  "Balance_sheet.xlsx",
+  "Profit_and_loss.xlsx",
+] as const;
+
+// What a statement works out from the accounts above it and prints as a line of its own.
+const COMPUTED = new Set([
+  "Gross Profit",
+  "Net Operating Income",
+  "Net Other Income",
+  "Net Income",
+]);
+
+// The types whose balance is a credit, which a ledger's running balance prints positive.
+const CREDIT_NATURE = new Set<AccountType>(["liability", "equity", "income"]);
+
+// Each section, with the type it states and the indentation it is printed at: an account may
+// share a section's name, and is told from it by where it sits.
+type Sections = Record<string, [AccountType | null, number]>;
+
+const BALANCE_SHEET_SECTIONS: Sections = {
+  ASSETS: ["asset", 0],
+  "LIABILITIES AND EQUITY": [null, 0],
+  Liabilities: ["liability", 3],
+  Equity: ["equity", 3],
 };
-// A profit and loss has four sections, not two. "Other Income" and "Other Expenses" carry things
-// outside the trading result — interest earned, a gain on disposal — and an account under one of
-// them is still income or expense.
-const INCOME_STATEMENT_SECTIONS: Record<string, AccountType | null> = {
-  Income: "income",
-  "Other Income": "income",
-  Expenses: "expense",
-  "Other Expenses": "expense",
+// A profit and loss has five sections, not two. "Cost of Goods Sold" is what the income cost to
+// earn, and "Other Income" and "Other Expenses" carry things outside the trading result — interest
+// earned, a gain on disposal — and an account under any of them is still income or expense.
+const INCOME_STATEMENT_SECTIONS: Sections = {
+  Income: ["income", 0],
+  "Cost of Goods Sold": ["expense", 0],
+  "Other Income": ["income", 0],
+  Expenses: ["expense", 0],
+  "Other Expenses": ["expense", 0],
 };
 
 function at(row: Row | undefined, index: number): Cell {
@@ -120,7 +147,8 @@ function at(row: Row | undefined, index: number): Cell {
  * a financial figure reads as a fact.
  */
 function amount(value: Cell): Big {
-  if (value === null) return new Big(0);
+  // QuickBooks fills an indented total's empty amount with its indentation.
+  if (value === null || value.trim() === "") return new Big(0);
   if (value.startsWith("=")) {
     const stated = value.slice(1).trim();
     if (!LITERAL.test(stated)) {
@@ -180,6 +208,10 @@ function basisOf(rows: Row[]): Basis {
  *
  * The reference is positional because QuickBooks' journal prints no stable identifier. It
  * identifies the row in *this* export, which is what the server's idempotency key is built on.
+ *
+ * A transaction's description is the first memo it carries. QuickBooks prints a memo on each
+ * line rather than one for the transaction, and its first row's is usually blank: a journal
+ * entry's memo is on its lines, and a sale's on the line that names what was sold.
  */
 function entriesOf(rows: Row[]): SourceEntry[] {
   const entries: SourceEntry[] = [];
@@ -193,10 +225,12 @@ function entriesOf(rows: Row[]): SourceEntry[] {
       current = {
         reference: String(reference),
         transaction_date: asDate(date),
-        description: at(row, MEMO) ?? "",
+        description: "",
         lines: [],
       };
     }
+    const memo = at(row, MEMO);
+    if (current !== null && current.description === "" && memo !== null) current.description = memo;
     const account = at(row, ACCOUNT);
     if (account === null || current === null) continue;
     current.lines.push({
@@ -209,12 +243,56 @@ function entriesOf(rows: Row[]): SourceEntry[] {
   return entries;
 }
 
+/** A statement row naming something, with the path its indentation puts it on. */
+interface Printed {
+  name: string;
+  /** The labels of the rows it is indented under, outermost first, then its own. */
+  path: string[];
+  /** The type of the section it is in, where its section states one. */
+  section: AccountType | null;
+  figure: Cell;
+}
+
+/**
+ * A statement's rows by indentation. A statement indents each row under the heading it belongs
+ * to, and closes each heading with "Total" and the heading's own label, at its indentation: that
+ * is how a total is told from an account whose name begins with the word. Section headings are
+ * left out; every other heading is kept, because a parent account is one.
+ */
+function printed(rows: Row[], sections: Sections): Printed[] {
+  const out: Printed[] = [];
+  const open: [number, string][] = [];
+  for (const row of rows.slice(HEADER_ROWS)) {
+    const label = at(row, 0);
+    if (label === null || label.trim() === "") continue;
+    const name = label.trim();
+    const depth = label.length - label.trimStart().length;
+    while (open.length > 0 && (open[open.length - 1]?.[0] ?? -1) > depth) open.pop();
+    const top = open[open.length - 1];
+    if (top?.[0] === depth) {
+      open.pop();
+      if (name.toUpperCase() === `TOTAL ${top[1]}`.toUpperCase()) continue;
+    }
+    open.push([depth, name]);
+    const heading = ([indent, label]: [number, string]) => sections[label]?.[1] === indent;
+    if (heading([depth, name])) continue;
+    const section = open.findLast(heading);
+    out.push({
+      name,
+      path: open.map(([, label]) => label),
+      section: section === undefined ? null : (sections[section[1]]?.[0] ?? null),
+      figure: at(row, 1),
+    });
+  }
+  return out;
+}
+
 /**
  * Each account's type, from the source's own statement sections. An account under `ASSETS` on the
  * balance sheet is an asset; one under `Income` on the profit and loss is income. Guessing a type
  * from an account's name would put our judgment into data whose whole value is that it is not ours.
  */
-function accountTypes(sheets: Map<string, Row[]>): Map<string, AccountType> {
+function accountTypes(sheets: Map<string, Row[]>, accounts: Set<string>): Map<string, AccountType> {
   const types = new Map<string, AccountType>();
   for (const [member, sections] of [
     ["Balance_sheet.xlsx", BALANCE_SHEET_SECTIONS],
@@ -222,29 +300,18 @@ function accountTypes(sheets: Map<string, Row[]>): Map<string, AccountType> {
   ] as const) {
     const rows = sheets.get(member);
     if (rows === undefined) continue;
-    let current: AccountType | null = null;
-    for (const row of rows.slice(HEADER_ROWS)) {
-      const label = at(row, 0);
-      if (label === null) continue;
-      const name = label.trim();
-      if (name in sections) {
-        current = sections[name] ?? null;
-        continue;
-      }
-      if (name.toUpperCase().startsWith("TOTAL") || name.startsWith("Gross ")) continue;
-      if (current !== null && row.slice(1).some((cell) => cell !== null) && !types.has(name)) {
-        types.set(name, current);
-      }
+    for (const { path, section } of printed(rows, sections)) {
+      const code = resolve(path, accounts);
+      if (code !== null && section !== null && !types.has(code)) types.set(code, section);
     }
   }
   return types;
 }
 
 /**
- * An account's type, from the statement it appears on or from its parent's. QuickBooks prints a
- * sub-account under its bare leaf name, and requires a sub-account to share its parent's type, so
- * walking up the path is the source stating the hierarchy rather than a guess. The bare leaf is
- * tried last, because a leaf name can repeat under two parents.
+ * An account's type, from the statement it appears on or from its parent's. QuickBooks requires a
+ * sub-account to share its parent's type, so walking up the path is the source stating the
+ * hierarchy rather than a guess.
  */
 function typed(name: string, types: Map<string, AccountType>): AccountType {
   const parts = name.split(":");
@@ -252,13 +319,10 @@ function typed(name: string, types: Map<string, AccountType>): AccountType {
     const stated = types.get(parts.slice(0, cut).join(":"));
     if (stated !== undefined) return stated;
   }
-  return types.get(parts[parts.length - 1] ?? "") ?? "unknown";
+  return "unknown";
 }
 
-/**
- * The account this one sits under, where the export has one. A parent taking no postings of its
- * own is not in the journal and so is not an account here.
- */
+/** The account this one sits under, where it has one. */
 function parentOf(name: string, accounts: Set<string>): string {
   const parts = name.split(":");
   for (let cut = parts.length - 1; cut > 0; cut--) {
@@ -268,52 +332,66 @@ function parentOf(name: string, accounts: Set<string>): string {
   return "";
 }
 
-/** The account a statement row names, from its indentation: the longest posted-to suffix wins. */
-function resolve(path: string[], postedTo: Set<string>): string | null {
+/** The account a statement row names, from its indentation: the longest known suffix wins. */
+function resolve(path: string[], accounts: Set<string>): string | null {
   for (let start = 0; start < path.length; start++) {
     const candidate = path.slice(start).join(":");
-    if (postedTo.has(candidate)) return candidate;
+    if (accounts.has(candidate)) return candidate;
   }
   return null;
 }
 
 /**
+ * Every account the export shows: each the journal posts to; each the general ledger lists
+ * entries under, which on a cash basis includes accounts only that basis has; each it opens with
+ * a beginning balance, which a ledger run from a start date prints for an account with nothing
+ * in its range; and each account above one of them. An entry names its account by its full path,
+ * a ledger by its leaf under its parent's, and QuickBooks allows no colon in a name, so every
+ * parent on a path is an account.
+ */
+function accountsOf(entries: SourceEntry[], ledger: Row[] | undefined): Set<string> {
+  const named = entries.flatMap((entry) => entry.lines.map((line) => line.account_code));
+  const open: string[] = [];
+  for (const row of ledger?.slice(HEADER_ROWS) ?? []) {
+    const label = at(row, 0);
+    const account = at(row, ACCOUNT);
+    if (label !== null && !label.trim().startsWith("Total for ")) {
+      open.length = Math.floor((label.length - label.trimStart().length) / 3);
+      open.push(label.trim());
+    } else if (label === null && account !== null) {
+      named.push(account);
+    } else if (label === null && at(row, DATE)?.trim() === "Beginning Balance") {
+      named.push(open.join(":"));
+    }
+  }
+  const accounts = new Set<string>();
+  for (const name of named) {
+    const parts = name.split(":");
+    for (let cut = 1; cut <= parts.length; cut++) accounts.add(parts.slice(0, cut).join(":"));
+  }
+  return accounts;
+}
+
+/**
  * One printed statement, by account. **Account paths come from the indentation**: a statement
- * indents a sub-account under its parent, and the leaf alone is ambiguous. A row matching no
- * account the journal uses is reported as unmatched rather than guessed at. Sign is left exactly
- * as the source prints it; the comparison is where conventions meet.
+ * indents a sub-account under its parent, and the leaf alone is ambiguous. A row with a figure
+ * that matches no account is reported as unmatched rather than guessed at, unless it is one of
+ * the lines a statement computes. Sign is left exactly as the source prints it; the comparison is
+ * where conventions meet.
  */
 function statement(
   rows: Row[],
   report: StatedStatement["report"],
-  postedTo: Set<string>,
+  sections: Sections,
+  accounts: Set<string>,
 ): StatedStatement {
   const lines: StatedBalance[] = [];
   const unmatched: string[] = [];
-  const stack: [number, string][] = [];
-  for (const row of rows.slice(HEADER_ROWS)) {
-    const label = at(row, 0);
-    if (label === null) continue;
-    const name = label.trim();
-    if (name === "" || name.toUpperCase().startsWith("TOTAL") || name.startsWith("Gross "))
-      continue;
-    if (name.includes("Basis") && name.endsWith("Basis")) continue;
-
-    const depth = label.length - label.trimStart().length;
-    while (stack.length > 0 && (stack[stack.length - 1]?.[0] ?? -1) >= depth) stack.pop();
-    stack.push([depth, name]);
-
-    if (at(row, 1) === null) continue; // a heading, or a parent carrying no figure of its own
-
-    const code = resolve(
-      stack.map(([, entry]) => entry),
-      postedTo,
-    );
-    if (code === null) {
-      unmatched.push(name);
-      continue;
-    }
-    lines.push({ account_code: code, balance: text(amount(at(row, 1))) });
+  for (const { name, path, figure } of printed(rows, sections)) {
+    if (figure === null) continue; // a heading, or a parent carrying no figure of its own
+    const code = resolve(path, accounts);
+    if (code !== null) lines.push({ account_code: code, balance: text(amount(figure)) });
+    else if (!COMPUTED.has(name)) unmatched.push(name);
   }
   return { report, basis: basisOf(rows), lines, unmatched };
 }
@@ -333,31 +411,65 @@ function journalTotal(rows: Row[]): SourceBooks["journal_total"] {
 }
 
 /**
- * The general ledger's own stated totals — the source's balances, which `IMP-08` reconciles
- * against — split from the rollups. A "Total for X with sub-accounts", or a bare "Total for X"
- * where the journal posts beneath X and never to X itself, is a subtotal over a parent and its
- * children; comparing it against a chart account would manufacture a divergence.
+ * The general ledger's own stated balances — the source's, which `IMP-08` reconciles against —
+ * split from the rollups. The ledger names each account by its leaf, indented under its parent,
+ * and closes it with "Total for" the leaf. A parent's own entries are totalled one level in from
+ * the parent; "Total for X with sub-accounts", or a bare "Total for X" over a parent with no
+ * entries of its own, is a subtotal over a parent and its children, and comparing it against a
+ * chart account would manufacture a divergence.
+ *
+ * A balance is the account's at the ledger's end: the total's debits less its credits, and the
+ * beginning balance a ledger run from a start date prints, which is on the account's natural
+ * side. A ledger over all dates prints none.
  */
 function ledgerTotals(
   rows: Row[],
-  postedTo: Set<string>,
+  accounts: Set<string>,
+  types: Map<string, AccountType>,
 ): [StatedBalance[], StatedBalance[], Basis] {
   const balances: StatedBalance[] = [];
   const rollups: StatedBalance[] = [];
+  const open: string[] = [];
+  const openings = new Map<string, Big>();
   for (const row of rows.slice(HEADER_ROWS)) {
     const label = at(row, 0);
-    if (label === null || !label.startsWith("Total for ")) continue;
-    const account = label.slice("Total for ".length).trim();
-    const parent = account.endsWith(" with sub-accounts")
-      ? account.slice(0, -" with sub-accounts".length)
-      : account;
-    const stated = {
-      account_code: parent,
-      balance: text(amount(at(row, DEBIT)).minus(amount(at(row, CREDIT)))),
-    };
-    const hasChildren = [...postedTo].some((code) => code.startsWith(parent + ":"));
-    if (account !== parent || (hasChildren && !postedTo.has(parent))) rollups.push(stated);
-    else balances.push(stated);
+    if (label === null) {
+      if (at(row, DATE)?.trim() === "Beginning Balance") {
+        const code = open.join(":");
+        const natural = amount(at(row, BALANCE));
+        openings.set(code, CREDIT_NATURE.has(typed(code, types)) ? natural.times(-1) : natural);
+      }
+      continue;
+    }
+    const level = Math.floor((label.length - label.trimStart().length) / 3);
+    const name = label.trim();
+    if (!name.startsWith("Total for ")) {
+      open.length = level;
+      open.push(name);
+      continue;
+    }
+    const subtotal = name.endsWith(" with sub-accounts");
+    const leaf = name.slice(
+      "Total for ".length,
+      subtotal ? -" with sub-accounts".length : undefined,
+    );
+    const own = open[level] === leaf ? level : open[level - 1] === leaf ? level - 1 : -1;
+    if (own < 0) {
+      throw new Refused(
+        "unreadable_figure",
+        `the general ledger's ${JSON.stringify(name)} closes no account it opened`,
+      );
+    }
+    const code = open.slice(0, own + 1).join(":");
+    const parent = own === level && [...accounts].some((other) => other.startsWith(code + ":"));
+    let balance = amount(at(row, DEBIT)).minus(amount(at(row, CREDIT)));
+    for (const [opened, figure] of openings) {
+      if (opened === code || ((subtotal || parent) && opened.startsWith(code + ":"))) {
+        balance = balance.plus(figure);
+      }
+    }
+    (subtotal || parent ? rollups : balances).push({ account_code: code, balance: text(balance) });
+    if (own === level) open.length = level;
   }
   return [balances, rollups, basisOf(rows)];
 }
@@ -383,38 +495,38 @@ export async function read(archive: Uint8Array): Promise<Export> {
     );
   }
   const exported = new Zip(archive);
+  const found = new Map<string, string>();
+  for (const member of exported.names()) {
+    const report = REPORTS.find((name) => member === name || member.endsWith("/" + name));
+    if (report === undefined || member.split("/").length > 2) continue;
+    if (found.has(report)) {
+      throw new Refused("import_refused", `the archive carries ${report} more than once`);
+    }
+    found.set(report, member);
+  }
   const sheets = new Map<string, Row[]>();
-  for (const member of [
-    "Journal.xlsx",
-    "General_ledger.xlsx",
-    "Balance_sheet.xlsx",
-    "Profit_and_loss.xlsx",
-  ]) {
-    if (!exported.has(member)) continue;
-    sheets.set(member, await sheetRows(new Zip(await exported.read(member))));
+  for (const [report, member] of found) {
+    sheets.set(report, await sheetRows(new Zip(await exported.read(member))));
   }
   const journal = sheets.get("Journal.xlsx");
   if (journal === undefined)
     throw new Refused("import_refused", "the export carries no Journal.xlsx to read");
 
   const entries = entriesOf(journal);
-  const postedTo = new Set(
-    entries.flatMap((entry) => entry.lines.map((line) => line.account_code)),
-  );
-  const used = [...postedTo].sort();
-  const types = accountTypes(sheets);
-
   const ledger = sheets.get("General_ledger.xlsx");
+  const accounts = accountsOf(entries, ledger);
+  const types = accountTypes(sheets, accounts);
+
   const [balances, rollups, balancesBasis] =
-    ledger === undefined ? [[], [], "unknown" as const] : ledgerTotals(ledger, postedTo);
+    ledger === undefined ? [[], [], "unknown" as const] : ledgerTotals(ledger, accounts, types);
 
   const statements: StatedStatement[] = [];
-  for (const [member, report] of [
-    ["Profit_and_loss.xlsx", "profit_and_loss"],
-    ["Balance_sheet.xlsx", "balance_sheet"],
+  for (const [member, report, sections] of [
+    ["Profit_and_loss.xlsx", "profit_and_loss", INCOME_STATEMENT_SECTIONS],
+    ["Balance_sheet.xlsx", "balance_sheet", BALANCE_SHEET_SECTIONS],
   ] as const) {
     const rows = sheets.get(member);
-    if (rows !== undefined) statements.push(statement(rows, report, postedTo));
+    if (rows !== undefined) statements.push(statement(rows, report, sections, accounts));
   }
 
   return {
@@ -428,11 +540,11 @@ export async function read(archive: Uint8Array): Promise<Export> {
       basis: basisOf(journal),
       balances_basis: balancesBasis,
       commodity: COMMODITY,
-      accounts: used.map((name) => ({
+      accounts: [...accounts].sort().map((name) => ({
         code: name,
         name,
         account_type: typed(name, types),
-        parent: parentOf(name, postedTo),
+        parent: parentOf(name, accounts),
       })),
       entries,
       journal_total: journalTotal(journal),

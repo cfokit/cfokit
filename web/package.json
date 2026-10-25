@@ -15,6 +15,7 @@
     "test": "vitest run",
     "e2e": "playwright test",
     "sample-export": "node e2e/sample-export.ts",
+    "read-fixture": "vitest run src/quickbooks/fixture.test.ts --update",
     "theme": "vitest run design/theme.test.ts --update",
     "design-system": "node design/publish/build.mjs && node design/publish/check.mjs"
   },

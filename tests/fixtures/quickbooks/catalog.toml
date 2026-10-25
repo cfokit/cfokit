@@ -144,7 +144,7 @@ check = { kind = "balance", account = "Opening Balance Equity", as_of = "month-e
 id = "d-renamed-account"
 category = "data"
 description = "Stock Photography renamed Stock Media halfway through, with history on both sides."
-check = { kind = "account", present = ["Stock Media"], absent = ["Stock Photography"] }
+check = { kind = "account", present = ["Cost of Services:Stock Media"], absent = ["Cost of Services:Stock Photography"] }
 
 [[case]]
 id = "d-inactive-account"
@@ -168,7 +168,7 @@ check = { kind = "account", present = ["Meals & Entertainment", "Repairs/Mainten
 id = "d-same-leaf"
 category = "data"
 description = "A sub-account named Software under two different parents, both posted to."
-check = { kind = "account", present = ["Cost of Services:Software", "Office Expenses:Software"] }
+check = { kind = "account", present = ["Cost of Services:Software", "Office Expenses:Software"], type = "expense" }
 
 [[case]]
 id = "d-parent-with-postings"

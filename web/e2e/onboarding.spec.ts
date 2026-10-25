@@ -7,9 +7,10 @@
  * session (SOC2-19).
  *
  * Every expected figure is one the synthetic export states for itself (`synthetic.ts`): two
- * transactions, 1,200.00 and 12.50, a journal total of 1,212.50, and a general ledger stating three
- * account balances — Accounts Receivable 1,200.00, Income:Consulting −1,200.00 and Checking −12.50,
- * with Meals a subtotal rather than a balance (ADR-0036: never a value read back from a first run).
+ * transactions, 1,200.00 and 12.50, a journal total of 1,212.50, and a general ledger stating four
+ * account balances — Accounts Receivable 1,200.00, Income:Consulting −1,200.00, Meals:Client Meals
+ * 12.50 and Checking −12.50, with Income and Meals subtotals rather than balances (ADR-0036: never
+ * a value read back from a first run).
  *
  * Its steps are the clips in `docs/tutorials/run-cfokit-on-your-computer.md` (ADR-0074).
  */
@@ -115,7 +116,7 @@ test("a new person goes from creating an account to their first question", async
 
     // The answer first: whether the books agree with QuickBooks.
     await expect(page.getByRole("heading", { name: "Do the books agree?" })).toBeVisible();
-    await expect(page.getByText("3 of 3 accounts match QuickBooks exactly.")).toBeVisible();
+    await expect(page.getByText("4 of 4 accounts match QuickBooks exactly.")).toBeVisible();
     await expect(
       page.getByText(/Every transaction came across: the books total 1,212\.50/),
     ).toBeVisible();

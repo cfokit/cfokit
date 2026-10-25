@@ -48,9 +48,18 @@ function unescape(text: string): string {
   });
 }
 
-/** One part as a tree, refusing a document type declaration. */
+/**
+ * One part as a tree, refusing a document type declaration. **A part that is not UTF-8, or not
+ * well formed, is refused rather than read as far as it goes**: a worksheet cut off partway is
+ * otherwise a shorter worksheet, and every row after the cut silently missing from the books.
+ */
 export function parse(payload: Uint8Array): Element {
-  const text = new TextDecoder().decode(payload);
+  let text: string;
+  try {
+    text = new TextDecoder("utf-8", { fatal: true }).decode(payload);
+  } catch {
+    throw new Refused("unreadable_archive", "a spreadsheet part is not UTF-8");
+  }
   const head = text.slice(0, 4096).toUpperCase();
   if (head.includes("<!DOCTYPE") || head.includes("<!ENTITY")) {
     throw new Refused("unreadable_figure", "a spreadsheet part declares a document type");
@@ -58,7 +67,10 @@ export function parse(payload: Uint8Array): Element {
 
   const root: Element = { name: "", attributes: {}, children: [], text: "" };
   const open: Element[] = [root];
+  let read = 0;
   for (const match of text.matchAll(TOKEN)) {
+    if (match.index !== read) break;
+    read += match[0].length;
     const [, cdata, closing, tag, attributes, selfClosing, chars] = match;
     const current = open[open.length - 1] ?? root;
     if (chars !== undefined) {
@@ -67,7 +79,8 @@ export function parse(payload: Uint8Array): Element {
       current.text += cdata;
     } else if (tag !== undefined) {
       if (closing === "/") {
-        if (open.length > 1) open.pop();
+        if (open.length === 1 || current.name !== local(tag)) break;
+        open.pop();
         continue;
       }
       const element: Element = { name: local(tag), attributes: {}, children: [], text: "" };
@@ -77,6 +90,9 @@ export function parse(payload: Uint8Array): Element {
       current.children.push(element);
       if (selfClosing !== "/") open.push(element);
     }
+  }
+  if (read !== text.length || open.length > 1) {
+    throw new Refused("unreadable_archive", "a spreadsheet part ends before its elements close");
   }
   const document = root.children[0];
   if (document === undefined)
