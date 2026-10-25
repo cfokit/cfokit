@@ -419,6 +419,12 @@ resource "google_cloud_run_v2_service_iam_member" "public" {
   location = var.region
   role     = "roles/run.invoker"
   member   = "allUsers"
+
+  # Created before the one it replaces is removed (moved.tf), so sign-in stays up through the
+  # rename. Removed with moved.tf: a later replacement under the same name could not be created first.
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 # ---------------------------------------------------------------------------------------------

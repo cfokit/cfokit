@@ -1,11 +1,18 @@
 # The issuer's resources, renamed for the capability they provide: identity. Each was the same
-# resource under another address, so OpenTofu plans a replacement where the name changed and
-# leaves a binding or a map entry that only moved in place. Kept until every deployment has
+# resource under another address, so OpenTofu plans a replacement where the name changed, made
+# create-before-destroy so nothing in the sign-in path is missing at any moment, and leaves a
+# binding or a map entry that only moved in place. Kept until every deployment has
 # applied the rename (setup/rename-identity.sh), then removed.
 
-moved {
+# The old service is forgotten rather than moved: deletion protection lives in OpenTofu's state,
+# so a replacement could not remove it. cfokit-identity is created beside it, the load balancer
+# moves to the new one, and setup/rename-identity.sh deletes cfokit-issuer once sign-in works.
+removed {
   from = google_cloud_run_v2_service.issuer
-  to   = google_cloud_run_v2_service.identity
+
+  lifecycle {
+    destroy = false
+  }
 }
 
 moved {
@@ -56,4 +63,9 @@ moved {
 moved {
   from = google_monitoring_uptime_check_config.this["issuer"]
   to   = google_monitoring_uptime_check_config.this["identity"]
+}
+
+moved {
+  from = google_monitoring_alert_policy.uptime["issuer"]
+  to   = google_monitoring_alert_policy.uptime["identity"]
 }
