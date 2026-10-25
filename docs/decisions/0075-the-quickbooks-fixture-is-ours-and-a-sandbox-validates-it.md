@@ -95,10 +95,26 @@ committed.
 
 ### 3. QuickBooks validates content through the API, and layout once by hand
 
-**Content** is validated on every render: the payloads are posted to a sandbox company that started
-empty, and each report's rows, accounts, sections and figures — at every month end for the trial
-balance, on the accrual basis — must equal what the Reports API returns. A payload QuickBooks
-rejects means an event was modeled wrong, and the generator is fixed, never the post.
+**Content** is validated whenever the fixture changes: the payloads are posted to a sandbox company
+that started empty, and each report's rows, accounts, sections and figures must equal what the
+Reports API returns — the journal, the general ledger, both statements, and the trial balance at
+the books' end and at every month end, on each basis and in each rendering the API can show. A
+payload QuickBooks rejects, or accepts and keeps differently from how it was sent, means an event
+was modeled wrong, and the generator is fixed, never the post. A payload changed after it was
+posted leaves the company holding the old one, so the company is cleared and posted again.
+
+**A person does what the API cannot.** The API accepts the settings that decide what a company
+keeps and how it reports — the fiscal year, account numbers, whether credits apply themselves —
+and ignores them. A person makes them once for each company, and posting checks them before
+anything is posted. A rendering under another fiscal year needs the setting changed between runs,
+so validation compares what the current settings allow, keeps each rendering that agreed, and
+names the change the next one needs.
+
+**What the API cannot show is left to the download.** The API prints no account numbers whatever
+the setting, so a numbered rendering is checked by its layout alone, and the validation record
+names it as not compared, with the reason. The general ledger's order within a day is not settled
+in QuickBooks itself — the same day comes back in another order for another date range — so a
+day's entries are compared as a set, with the balance the day ends on.
 
 **Layout** is validated by comparing our archive with one Export Data download, cell by cell, after
 decoding each sheet into rows of cells, with a named list of cells that differ by nature (the time a
@@ -122,13 +138,17 @@ accounting is right; that stays with the conformance corpus (ADR-0050 § 3).
   repository.
 * Good, because CI needs nothing but the repository, and the fixture regenerates byte for byte from
   the seed.
-* Good, because routine validation is a script against the API; only a format change needs a person.
+* Good, because routine validation is a script against the API. A person makes a new company's
+  settings once, changes the fiscal year between runs, and downloads an export only when the
+  format changes.
 * Bad, because every figure in the fixture is our arithmetic. It is evidence only because QuickBooks
   agreed with it at the recorded validation, and a fixture changed after that is unvalidated until
   the next one.
 * Bad, because our writer must reproduce QuickBooks' presentation rules — ordering of a day's
   transactions, which rows a report prints — learned by comparison, and a rule it never exercised is
   a rule it may have wrong.
+* Bad, because the API cannot show every rendering: a numbered archive's content is checked only
+  through the accrual archive it shares, and its numbers only against a download.
 * Bad, because the fixture covers only what QuickBooks accepts. A colon in an account's own name, or
   one name as both customer and vendor, cannot be posted, and the catalog records the nearest form
   QuickBooks allows.
@@ -214,5 +234,7 @@ with QuickBooks proves), ADR-0041 (the neutral shape this mirrors on the reading
   the stronger option.
 * QuickBooks changes the Export Data format, or a customer's export disagrees with the fixture's
   layout.
+* The API starts writing the settings it now ignores, or printing account numbers, which removes
+  a person's part in validation or a rendering left to the download.
 * A second adapter lands, which tests whether the events are neutral or QuickBooks-shaped.
 * `LED-18` activates.
