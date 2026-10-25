@@ -289,8 +289,10 @@ and are fixed in the writer. When every rendering agrees, `validate` writes
 returned.** Intuit's terms do not permit it, and nothing under `.local/` can reach a commit.
 
 The layout of the reports cannot be seen through the API. After a change to the writer's
-layout, download Export Data from the sandbox company (Settings, then Export data) and compare
-it, leaving the download outside the repository:
+layout, download Export Data from the sandbox company (Settings, then Export data): its reports
+over all dates, with the fiscal year starting in July and account numbers off, as the accrual
+archive is written. Compare it, leaving the download outside the repository; the company's name
+and the time each report was run differ by nature, and are not compared:
 
 ```bash
 PYTHONPATH=scripts uv run python -m synthetic_books.sandbox compare-export ~/Downloads/export.zip

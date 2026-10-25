@@ -308,7 +308,7 @@ check = { kind = "stated", account = "Cost of Services:Contractors", report = "p
 id = "d-cash-year-boundary"
 category = "data"
 description = "A June retainer paid in July: income falls in different fiscal years on the two bases."
-check = { kind = "stated", account = "Retained Earnings", report = "balance_sheet", archive = "cash" }
+check = { kind = "balance", account = "Retained Earnings", as_of = "2024-07-31", archive = "cash" }
 
 [[case]]
 id = "d-cash-void-after-payment"

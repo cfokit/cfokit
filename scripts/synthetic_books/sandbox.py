@@ -47,6 +47,7 @@ import difflib
 import hashlib
 import json
 import os
+import re
 import secrets
 import sys
 import time
@@ -71,7 +72,7 @@ from synthetic_books.quickbooks_export import (
     Report,
     month_ends,
 )
-from synthetic_books.xlsx import contents, rows
+from synthetic_books.xlsx import cells, contents, values
 
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURE = ROOT / "tests" / "fixtures" / "quickbooks"
@@ -484,16 +485,10 @@ def api_ledger(answer: Json) -> list[tuple[str, ...]]:
                 c = [str(cell.get("value", "")) for cell in row["ColData"]]
                 if c[0] == "Beginning Balance":
                     items.append(("begin", path, "Beginning Balance", amount(c[7])))
-                else:
+                else:  # the API's Split, which the export does not print, is left out
+                    fields = tuple(c[1:5])
                     items.append(
-                        (
-                            "entry",
-                            path,
-                            api_date(c[0]),
-                            tuple(c[1:6]),
-                            amount(c[6]),
-                            amount(c[7]),
-                        )
+                        ("entry", path, api_date(c[0]), fields, amount(c[6]), amount(c[7]))
                     )
             if "Rows" in row:
                 walk(row, here)
@@ -514,8 +509,9 @@ def api_ledger(answer: Json) -> list[tuple[str, ...]]:
 
 
 def grid(rendering: Rendering, member: str) -> list[list[str | None]]:
+    """A member's body, past its title and header rows, each formula worked out."""
     archive = (FIXTURE / "archives" / rendering.name / "export.zip").read_bytes()
-    return rows(contents(archive)[member])[5:]  # past the title and header rows
+    return values(contents(archive)[member])[5:]
 
 
 def ours(rendering: Rendering, member: str) -> list[tuple[str, ...]]:
@@ -534,26 +530,46 @@ def our_ledger(rendering: Rendering) -> list[tuple[str, ...]]:
 
 
 def ledger_of(report: Report, ledger: list[list[str | None]]) -> list[tuple[str, ...]]:
+    """A general ledger as the export lays it out, read back into its entries: each account
+    named by its leaf, indented three spaces a level, and a parent's own total a level in."""
     sign = {
         report.path(k): -1 if report.type_of(k) in CREDIT_NATURE else 1
         for k in report.books.accounts
     }
     items: list[tuple[Any, ...]] = []
-    path = ""
+    open_: list[str] = []  # the open accounts' paths, one a level
+
+    def leaf(path: str) -> str:
+        return path.rsplit(":", 1)[-1]
+
     for row in ledger:
         c = [*row, *[None] * (10 - len(row))]
-        label = (c[0] or "").strip()
+        raw = c[0] or ""
+        label, level = raw.strip(), (len(raw) - len(raw.lstrip(" "))) // 3
         if label.startswith("Total for "):
-            account = label.removeprefix("Total for ").removesuffix(" with sub-accounts")
-            items.append(("total", label, sign[account] * (amount(c[7]) - amount(c[8]))))
-        elif label and not label.startswith("Wednesday,"):
-            path = label
-        elif c[1] == "Beginning Balance":
-            items.append(("begin", path, "Beginning Balance", amount(c[9])))
-        elif c[1]:
-            fields = tuple(cell or "" for cell in c[2:7])
+            name = label.removeprefix("Total for ")
+            suffix = " with sub-accounts" if name.endswith(" with sub-accounts") else ""
+            own = name.removesuffix(suffix)
+            if level < len(open_) and leaf(open_[level]) == own:
+                path = open_[level]
+                del open_[level:]
+            elif 0 < level <= len(open_) and leaf(open_[level - 1]) == own:
+                path = open_[level - 1]  # a parent's own entries, totalled a level in
+            else:
+                raise ValueError(f"{label!r} totals no open account")
             change = sign[path] * (amount(c[7]) - amount(c[8]))
-            items.append(("entry", path, c[1], fields, change, amount(c[9])))
+            items.append(("total", f"Total for {path}{suffix}", change))
+        elif label and RUN_TIME.match(label) is None and not any(c[1:]):
+            del open_[level:]
+            open_.append(f"{open_[-1]}:{label}" if open_ else label)
+        elif c[1] == "Beginning Balance":
+            items.append(("begin", open_[-1], "Beginning Balance", amount(c[9])))
+        elif c[1]:
+            if c[6] not in (open_[-1], None):
+                raise ValueError(f"an entry under {open_[-1]} names {c[6]}")
+            fields = tuple(cell or "" for cell in c[2:6])
+            change = sign[open_[-1]] * (amount(c[7]) - amount(c[8]))
+            items.append(("entry", open_[-1], c[1], fields, change, amount(c[9])))
     return ledger_rows(items)
 
 
@@ -648,8 +664,17 @@ def validate(sandbox: Sandbox) -> int:
             continue
         comparisons: dict[str, int] = {}
         method = rendering.basis.title()
-        start = (rendering.start or START).isoformat()
-        span = {"start_date": start, "end_date": END.isoformat(), "accounting_method": method}
+        # As Export Data runs each report: over all dates, or from the rendering's start.
+        if rendering.start is None:
+            span = {"date_macro": "All", "accounting_method": method}
+            as_of = span
+        else:
+            span = {
+                "start_date": rendering.start.isoformat(),
+                "end_date": END.isoformat(),
+                "accounting_method": method,
+            }
+            as_of = {**span, "start_date": START.isoformat()}
         compare(
             f"{rendering.name}-journal",
             ours(rendering, "Journal.xlsx"),
@@ -669,11 +694,6 @@ def validate(sandbox: Sandbox) -> int:
             comparisons,
             api_ledger,
         )
-        as_of = {
-            "start_date": START.isoformat(),
-            "end_date": END.isoformat(),
-            "accounting_method": method,
-        }
         compare(
             f"{rendering.name}-balance-sheet",
             ours(rendering, "Balance_sheet.xlsx"),
@@ -694,7 +714,12 @@ def validate(sandbox: Sandbox) -> int:
                     months[day.isoformat()],
                     # Without a start the API reports the fiscal year to today, whatever
                     # the end; income and expense are the fiscal year's to the end either way.
-                    sandbox.report("TrialBalance", **{**as_of, "end_date": day.isoformat()}),
+                    sandbox.report(
+                        "TrialBalance",
+                        start_date=START.isoformat(),
+                        end_date=day.isoformat(),
+                        accounting_method=method,
+                    ),
                     comparisons,
                 )
         if not any(name in failed for name in comparisons):
@@ -744,23 +769,85 @@ def archive_digest(rendering: Rendering) -> str:
 # --- the layout, against one real download --------------------------------------------------
 
 
-def compare_export(path: Path, rendering_name: str) -> int:
-    """Our archive against one Export Data download, cell by cell, report by report.
+# Cells an export and ours differ in by nature, listed rather than compared.
+BY_NATURE = (
+    "each member's first row: the company's name, which is the sandbox company's own",
+    "each footer's time: when the report was run",
+)
+RUN_TIME = re.compile(r"\w+day, \w{3} \d{2}, \d{4} \d{2}:\d{2}:\d{2} [AP]M GMT[+-]\d+")
+DATE = re.compile(r"\d{2}/\d{2}/\d{4}$")
 
-    The download is read from wherever it was saved and never copied into the repository. Cells
-    that differ by nature — the time a report was run — are expected to differ and are listed.
+
+def exact(data: bytes) -> list[tuple[str, ...]]:
+    """A worksheet's cells exactly, but for what differs by nature: a string as it is, spaces
+    and all; a number by its value, however many zeros it is written with; a formula as its
+    text."""
+    out: list[tuple[str, ...]] = []
+    for at, row in enumerate(cells(data)):
+        text = [
+            ""
+            if cell is None
+            else f"={cell[1]}"
+            if cell[0] == "f"
+            else format(Decimal(cell[1]).normalize(), "f")
+            if cell[0] == "n"
+            else cell[1]
+            for cell in row
+        ]
+        while text and text[-1] == "":
+            text.pop()
+        if at == 0 and text:
+            text[0] = "<company>"
+        if text and RUN_TIME.match(text[0]):
+            text[0] = RUN_TIME.sub("<run time>", text[0])
+        out.append(tuple(text))
+    return out
+
+
+def settled(ledger: list[tuple[str, ...]]) -> list[tuple[str, ...]]:
+    """A general ledger with each day's entries in one order, and the balance the day ends on.
+    QuickBooks writes a day's entries in no settled order, so neither side's is compared."""
+    out: list[tuple[str, ...]] = []
+    day: list[tuple[str, ...]] = []
+
+    def flush() -> None:
+        if day:
+            out.extend(sorted(row[:9] for row in day))
+            out.append(("", day[-1][1], "<the day ends on>", *day[-1][9:]))
+            day.clear()
+
+    for row in ledger:
+        if len(row) > 1 and DATE.match(row[1]):
+            if day and day[-1][1] != row[1]:
+                flush()
+            day.append(row)
+        else:
+            flush()
+            out.append(row)
+    flush()
+    return out
+
+
+def compare_export(path: Path, rendering_name: str) -> int:
+    """Our archive against one Export Data download, cell by cell, member by member.
+
+    The download is read from wherever it was saved and never copied into the repository. The
+    cells that differ by nature are listed, not compared; a general ledger's days are compared
+    as sets, because QuickBooks orders a day's entries differently from one run to the next.
     """
     rendering = next(r for r in RENDERINGS if r.name == rendering_name)
     theirs = contents(path.read_bytes())
     mine = contents((FIXTURE / "archives" / rendering.name / "export.zip").read_bytes())
+    print("not compared, by nature: " + "; ".join(BY_NATURE))
     status = 0
     for member in sorted(set(theirs) | set(mine)):
         if member not in mine or member not in theirs:
             print(f"{member}: only in {'their export' if member in theirs else 'ours'}")
             status = 1
             continue
-        actual = [comparable(row) for row in rows(theirs[member])]
-        expected = [comparable(row) for row in rows(mine[member])]
+        actual, expected = exact(theirs[member]), exact(mine[member])
+        if member == "General_ledger.xlsx":
+            actual, expected = settled(actual), settled(expected)
         diff = differences(member, expected, actual)
         print(f"{member}: {'same cells' if not diff else f'{len(diff)} diff lines'}")
         for line in diff[:40]:

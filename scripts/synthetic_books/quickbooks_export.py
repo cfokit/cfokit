@@ -2,35 +2,47 @@
 
 One archive per rendering: the same books, run on a basis, with or without account numbers, over
 all dates or one fiscal year, under a fiscal year starting in July or January. Each archive
-holds the five reports Export Data writes — Journal, General Ledger, Profit and Loss, Balance
-Sheet and Trial Balance — and beside it, the trial balance at every month end, which the round
-trip compares against.
+holds what Export Data writes — Journal, General Ledger, Profit and Loss, Balance Sheet and
+Trial Balance, and the Customer, Vendor and Employee contact lists — and beside it, the trial
+balance at every month end, which the round trip compares against.
 
 **What a report prints** is as the Reports API showed it for every posting of the synthetic
-company (ADR-0078):
+company, asked as Export Data asks (ADR-0078):
 
+* Export Data runs every report over all dates. Nothing is then closed into Retained Earnings,
+  which holds only what was posted to it, and the balance sheet's Net Income is every year's.
+  From a start, a balance is presented at the end, earlier fiscal years closed.
 * An account with any line in a report's span is printed, at zero if it nets to nothing. The
   balance sheet always prints Retained Earnings, blank when it has no figure.
-* A trial balance states income and expense from its fiscal year's start, whatever the report's.
-* The general ledger splits a document's detail line against its first line, the first line
-  against the rest ("-Split-" when the rest is more than one line), and every line of a journal
-  entry as "-Split-". It names each line by its transaction, keeps the balance on the account's
+* A trial balance at a month end states income and expense from its fiscal year's start.
+* The general ledger names each line by its transaction, keeps the balance on the account's
   natural side, prints a beginning balance only where there is one (Retained Earnings' with
   every earlier year's profit), and says "with sub-accounts" only of a parent with entries of
   its own. On the cash basis, what a payment recognizes is shown as the invoice or bill it is
-  part of.
+  part of. The API's ledger also has a Split column, which the export does not print.
 * The ledger's order within a day is QuickBooks' own and not stable: the same day comes back
-  differently for different date ranges. Ours is the order the events were made in.
+  differently for different date ranges, in the API and in the export alike. Ours is the order
+  the events were made in.
 
-**The layout is our belief about QuickBooks**, taken from the reader and the export it was built
-against: three title rows, a blank row and a header row before the body; sub-accounts indented
-three spaces a level on a statement and named by full path elsewhere; statement figures as
-formulas holding a number; each report's basis in its footer, and none on the journal. Where the
-API showed something different, the difference may be the API's own presentation, so only a
-real export settles it: the general ledger's Debit and Credit columns, where the API's ledger
-has one signed Amount; names by full path, where it nests leaf names; and a zero row's 0.00 in
-the debit column. Account numbers, and the order they put accounts in, the API never prints.
-ADR-0078 checks the layout against one real export, cell by cell.
+**The layout is an Export Data download's**, compared with it cell by cell (ADR-0078):
+
+* Three title rows — the company, the report, its period — a blank row and a header row before
+  the body, and three blank rows before a statement's footer, two before the journal's and the
+  ledger's. The footer names the basis, except on the journal and the contact lists.
+* A blank row after each of the journal's transactions. A document number that is all digits
+  is a number cell. A zero amount is a debit of 0, except on a payment's A/R line for several
+  documents that net to nothing, which shows none.
+* Every figure of a statement and a trial balance is a formula, cached as zero: an account's,
+  its figure to the cent; a total's, the sum of the rows above it, nested as
+  `((B11)+(B14))+(B18)`.
+* Sub-accounts are indented three spaces a level, on a statement and in the general ledger's
+  headings and totals, and named by full path in the journal, the trial balance and each
+  ledger entry's Account column. A parent's own entries are totalled a level in. An indented
+  total's empty amount holds its indentation as text.
+
+Only an accrual download over all dates has been compared. How a cash download, a numbered one
+or one over a fiscal year prints is still our belief; the Reports API never prints account
+numbers, so only a download can show them.
 """
 
 from __future__ import annotations
@@ -68,7 +80,26 @@ JOURNAL_HEADER: Row = [
     "Debit",
     "Credit",
 ]
-LEDGER_HEADER: Row = [*JOURNAL_HEADER[:6], "Split", "Debit", "Credit", "Balance"]
+LEDGER_HEADER: Row = [*JOURNAL_HEADER, "Balance"]
+CUSTOMER_HEADER: Row = [
+    None,
+    "Customer",
+    "Phone Numbers",
+    "Email",
+    "Full Name",
+    "Billing Address",
+    "Shipping Address",
+]
+VENDOR_HEADER: Row = [
+    None,
+    "Vendor",
+    "Phone Numbers",
+    "Email",
+    "Full Name",
+    "Address",
+    "Account #",
+]
+EMPLOYEE_HEADER: Row = [None, "Employee", "Phone Numbers", "Email", "Address"]
 
 # The order QuickBooks lists account types in, and which side of the books each sits on.
 TYPE_ORDER = (
@@ -210,8 +241,23 @@ class Report:
             del out[RETAINED_EARNINGS]
         return out
 
-    def trial_balance(self, until: date) -> list[tuple[str, Decimal, Decimal]]:
-        presented = self.as_presented(until)
+    def all_dates(self, until: date) -> dict[str, Decimal]:
+        """Debit-positive balances over all dates, as Export Data reports them: every account
+        all time, and no year closed into Retained Earnings, which holds only what was posted
+        to it."""
+        out = {
+            k: v
+            for k, v in self.balances(None, until).items()
+            if self.type_of(k) != "not_specified"
+        }
+        if not out.get(RETAINED_EARNINGS, 1):
+            del out[RETAINED_EARNINGS]
+        return out
+
+    def trial_balance(
+        self, until: date, *, closing: bool = True
+    ) -> list[tuple[str, Decimal, Decimal]]:
+        presented = self.as_presented(until) if closing else self.all_dates(until)
         return [
             (
                 self.path(k),
@@ -231,14 +277,27 @@ class Report:
             return "All Dates"
         return f"{long_date(self.start)} - {long_date(self.end)}"
 
+    def as_of(self) -> str:
+        """A balance's period: all dates when the report has no start, as Export Data runs it.
+        With a start, how QuickBooks names the period is not yet seen in a download."""
+        return "All Dates" if self.start is None else f"As of {long_date(self.end)}"
+
     def footer(self) -> Row:
         return [f"{RUN_AT} - {self.rendering.basis.title()} Basis"]
 
     def in_range(self, transaction: Transaction) -> bool:
         return self.start is None or transaction.on >= self.start
 
+    @staticmethod
+    def number(text: str) -> Cell:
+        """A document's number: a number cell where it is all digits, as QuickBooks has it."""
+        if not text:
+            return None
+        return Number(Decimal(text)) if text.isdigit() else text
+
     def journal(self) -> list[Row]:
-        """Every transaction with lines, as recorded: the journal has no basis."""
+        """Every transaction with lines, as recorded: the journal has no basis. A blank row
+        follows each transaction's totals."""
         rows: list[Row] = [*self.title("Journal", self.period()), JOURNAL_HEADER]
         debit_total = credit_total = ZERO
         for transaction in self.books.transactions:
@@ -252,29 +311,37 @@ class Report:
                         None,
                         short_date(transaction.on) if first else None,
                         transaction.type if first else None,
-                        (transaction.number or None) if first else None,
+                        self.number(transaction.number) if first else None,
                         (transaction.name or None) if first else None,
                         line.memo or None,
                         self.path(line.account) if line.account != NOT_SPECIFIED else None,
-                        *self.sides(line.amount),
+                        *self.amounts(transaction, line),
                     ]
                 )
                 debit += max(line.amount, ZERO)
                 credit += max(-line.amount, ZERO)
-            rows.append([*[None] * 7, Number(debit), Number(credit)])
+            totals = [Number(debit), Number(credit)] if debit or credit else self.sides(ZERO)
+            rows += [[*[None] * 7, *totals], []]
             debit_total += debit
             credit_total += credit
         rows.append(["TOTAL", *[None] * 6, Number(debit_total), Number(credit_total)])
-        rows += [[], [RUN_AT]]
+        rows += [[], [], [RUN_AT]]
         return rows
 
     @staticmethod
     def sides(amount: Decimal) -> list[Cell]:
-        if amount > 0:
-            return [Number(amount), None]
+        """An amount on its debit or credit side; nothing, as a debit of zero."""
         if amount < 0:
             return [None, Number(-amount)]
-        return [None, None]
+        return [Number(amount), None]
+
+    def amounts(self, transaction: Transaction, line: Posting) -> list[Cell]:
+        """A line's amount cells. A payment's A/R line for several documents that net to
+        nothing, as applying a credit memo is, shows no amount at all."""
+        several = len(transaction.settles) + len(transaction.credits) > 1
+        if line.account == RECEIVABLE and several and not line.amount:
+            return [None, None]
+        return self.sides(line.amount)
 
     def general_ledger(self) -> list[Row]:
         rows: list[Row] = [*self.title("General Ledger", self.period()), LEDGER_HEADER]
@@ -312,8 +379,8 @@ class Report:
             if self.books.accounts[k].parent is None
         ]
         for root in roots:
-            rows += self.ledger_block(root, by_account, opening)
-        rows += [[], self.footer()]
+            rows += self.ledger_block(root, 0, by_account, opening)
+        rows += [[], [], self.footer()]
         return rows
 
     def subtree(self, key: str) -> list[str]:
@@ -321,51 +388,55 @@ class Report:
             k for child in self.ordered(self.children(key)) for k in self.subtree(child)
         ]
 
-    def shown(self, transaction: Transaction, line: Posting) -> tuple[Transaction, str]:
-        """The transaction a ledger line is shown as, and its Split: the other side of the line
-        as it was recorded, whatever the basis.
+    def shown(self, transaction: Transaction, line: Posting) -> Transaction:
+        """The transaction a ledger line is shown as: on the cash basis, a line recognized
+        from an invoice or a bill is shown as that document."""
+        return transaction if line.source is None else self.books.sources[line.source]
 
-        A line the cash basis recognizes from an invoice or a bill is shown as that document,
-        split against its first line. Every line of a journal entry is "-Split-". A document's
-        first line is split against the rest, which is "-Split-" when the rest is more than one
-        line; any other line, against the first.
-        """
-        if line.source is not None:
-            document = self.books.sources[line.source]
-            return document, self.path(document.lines[0].account)
-        if transaction.type == "Journal Entry":
-            return transaction, "-Split-"
-        if (
-            line.account == RECEIVABLE
-            and len(transaction.settles) + len(transaction.credits) > 1
-        ):
-            return transaction, "-Split-"  # a payment's one A/R line, for several documents
-        first, *rest = transaction.lines
-        if line.account != first.account:
-            return transaction, self.path(first.account)
-        return transaction, self.path(rest[0].account) if len(rest) == 1 else "-Split-"
+    @staticmethod
+    def ledger_total(label: str, level: int, debit: Decimal, credit: Decimal) -> Row:
+        """A ledger's total, indented to its level. An indented total's empty amount carries
+        the indentation as text, as QuickBooks writes it; a total of nothing shows a zero
+        debit."""
+        pad = "   " * level
+
+        def side(amount: Decimal) -> Cell:
+            return Number(amount) if amount else (pad or None)
+
+        amounts = (
+            [Number(ZERO), pad or None]
+            if not debit and not credit
+            else [
+                side(debit),
+                side(credit),
+            ]
+        )
+        return [pad + label, *[None] * 6, *amounts]
 
     def ledger_block(
         self,
         key: str,
+        level: int,
         by_account: dict[str, list[tuple[Transaction, Posting]]],
         opening: dict[str, Decimal],
     ) -> list[Row]:
         """One account's entries and its children's, as the ledger lists them.
 
-        Amounts sit on their debit or credit side; the running balance is on the account's
-        natural side, as QuickBooks keeps it. A beginning balance is printed only where there is
-        one. A parent's own entries are totalled apart from its children's only when it has any.
+        The account is named by its leaf, indented three spaces a level, and each entry names
+        it by its full path. Amounts sit on their debit or credit side; the running balance is
+        on the account's natural side. A beginning balance is printed only where there is one.
+        A parent's own entries are totalled one level in, apart from its children's, only when
+        it has any.
         """
         if not any(by_account.get(k) or opening.get(k) for k in self.subtree(key)):
             return []
-        rows: list[Row] = [[self.path(key)]]
+        rows: list[Row] = [["   " * level + self.leaf(key)]]
         balance = self.natural(key, opening.get(key, ZERO))
         if balance:
             rows.append([None, "Beginning Balance", *[None] * 7, Number(balance)])
         debit = credit = ZERO
         for transaction, line in by_account.get(key, []):
-            shown, split = self.shown(transaction, line)
+            shown = self.shown(transaction, line)
             balance += self.natural(key, line.amount)
             debit += max(line.amount, ZERO)
             credit += max(-line.amount, ZERO)
@@ -374,64 +445,77 @@ class Report:
                     None,
                     short_date(line.on or transaction.on),
                     shown.type,
-                    shown.number or None,
+                    self.number(shown.number),
                     shown.name or None,  # the transaction's name, never a line's own
                     line.memo or None,
-                    split,
-                    *self.sides(line.amount),
+                    self.path(key) if key != NOT_SPECIFIED else None,
+                    *self.amounts(transaction, line),
                     Number(balance),
                 ]
             )
         children = self.ordered(self.children(key))
         own = bool(by_account.get(key) or opening.get(key))
         if own or not children:
+            leaf = self.leaf(key)
             rows.append(
-                [f"Total for {self.path(key)}", *[None] * 6, Number(debit), Number(credit)]
+                self.ledger_total(f"Total for {leaf}", level + bool(children), debit, credit)
             )
         if children:
             for child in children:
-                rows += self.ledger_block(child, by_account, opening)
+                rows += self.ledger_block(child, level + 1, by_account, opening)
             sub_debit = sub_credit = ZERO
             for k in self.subtree(key):
                 for _, line in by_account.get(k, []):
                     sub_debit += max(line.amount, ZERO)
                     sub_credit += max(-line.amount, ZERO)
-            label = f"Total for {self.path(key)}" + (" with sub-accounts" if own else "")
-            rows.append([label, *[None] * 6, Number(sub_debit), Number(sub_credit)])
+            label = f"Total for {self.leaf(key)}" + (" with sub-accounts" if own else "")
+            rows.append(self.ledger_total(label, level, sub_debit, sub_credit))
         return rows
 
+    @staticmethod
+    def sum_of(refs: list[int], column: str = "B") -> Formula:
+        """A sum of the figures in these rows, nested as QuickBooks writes it:
+        `((B11)+(B14))+(B18)`."""
+        text = f"{column}{refs[0]}"
+        for ref in refs[1:]:
+            text = f"({text})+({column}{ref})"
+        return Formula(text)
+
     def statement_rows(
-        self, kinds: tuple[str, ...], figures: dict[str, Decimal], indent: int
-    ) -> tuple[list[Row], Decimal]:
-        """The accounts of these types as a statement lists them, and their total.
+        self, rows: list[Row], kinds: tuple[str, ...], figures: dict[str, Decimal], indent: int
+    ) -> list[int]:
+        """The accounts of these types, appended to `rows` as a statement lists them; returns
+        the rows that hold each top-level account's figure, for the total above to sum.
 
         A parent's own figure is on its row, its children indented beneath, and its total after
-        them. An account with nothing in its subtree is left out. Figures are on the account's
-        natural side.
+        them, which sums its row and theirs. An account with nothing in its subtree is left out.
+        Figures are on the account's natural side, each written as a formula.
         """
 
-        def block(key: str, depth: int) -> list[Row]:
+        def block(key: str, depth: int) -> int | None:
             if not any(k in figures for k in self.subtree(key)):
-                return []
+                return None
             pad = "   " * depth
-            own = figures.get(key, ZERO)
+            own = figures.get(key)
             children = self.ordered(self.children(key))
             if not children:
-                return [[pad + self.leaf(key), Formula(own)]]
-            total = sum((figures.get(k, ZERO) for k in self.subtree(key)), ZERO)
-            rows: list[Row] = [[pad + self.leaf(key), Formula(own) if own else None]]
+                rows.append([pad + self.leaf(key), Formula.of(ZERO if own is None else own)])
+                return len(rows)
+            rows.append([pad + self.leaf(key), Formula.of(own) if own else None])
+            refs = [len(rows)]
             for child in children:
-                rows += block(child, depth + 1)
-            return [*rows, [f"{pad}Total {self.leaf(key)}", Formula(total)]]
+                ref = block(child, depth + 1)
+                if ref is not None:
+                    refs.append(ref)
+            rows.append([f"{pad}Total {self.leaf(key)}", self.sum_of(refs)])
+            return len(rows)
 
         roots = self.ordered(
             k
             for k, a in self.books.accounts.items()
             if a.parent is None and self.type_of(k) in kinds
         )
-        rows = [row for root in roots for row in block(root, indent)]
-        total = sum((v for k, v in figures.items() if self.type_of(k) in kinds), ZERO)
-        return rows, total
+        return [ref for root in roots if (ref := block(root, indent)) is not None]
 
     def natural(self, key: str, debit_positive: Decimal) -> Decimal:
         return -debit_positive if self.type_of(key) in CREDIT_NATURE else debit_positive
@@ -443,7 +527,7 @@ class Report:
             if self.type_of(k) in PROFIT_AND_LOSS_TYPES
         }
         rows: list[Row] = [*self.title("Profit and Loss", self.period()), [None, "Total"]]
-        totals: dict[str, Decimal] = {}
+        totals: dict[str, int] = {}
         for label, kind in (
             ("Income", "income"),
             ("Cost of Goods Sold", "cost_of_sales"),
@@ -451,23 +535,38 @@ class Report:
             ("Other Income", "other_income"),
             ("Other Expenses", "other_expense"),
         ):
-            body, totals[kind] = self.statement_rows((kind,), figures, 1)
-            if body:
-                rows += [[label, None], *body, [f"Total {label}", Formula(totals[kind])]]
+            rows.append([label, None])
+            refs = self.statement_rows(rows, (kind,), figures, 1)
+            if not refs:
+                raise ValueError(f"no {label}: a statement without it is not yet seen")
+            rows.append([f"Total {label}", self.sum_of(refs)])
+            totals[kind] = len(rows)
             if kind == "cost_of_sales":
-                rows.append(["Gross Profit", Formula(totals["income"] - totals[kind])])
+                rows.append(
+                    ["Gross Profit", Formula(f"(B{totals['income']})-(B{totals[kind]})")]
+                )
+                totals["gross"] = len(rows)
             if kind == "expense":
-                operating = totals["income"] - totals["cost_of_sales"] - totals[kind]
-                rows.append(["Net Operating Income", Formula(operating)])
-        other = totals["other_income"] - totals["other_expense"]
-        net = totals["income"] - totals["cost_of_sales"] - totals["expense"] + other
-        rows += [["Net Other Income", Formula(other)], ["Net Income", Formula(net)]]
-        rows += [[], self.footer()]
+                rows.append(
+                    ["Net Operating Income", Formula(f"(B{totals['gross']})-(B{totals[kind]})")]
+                )
+                totals["operating"] = len(rows)
+        other = f"(B{totals['other_income']})-(B{totals['other_expense']})"
+        rows.append(["Net Other Income", Formula(other)])
+        rows.append(["Net Income", Formula(f"(B{totals['operating']})+(B{len(rows)})")])
+        rows += [[], [], [], self.footer()]
         return rows
 
     def balance_sheet(self) -> list[Row]:
-        presented = self.as_presented(self.end)
-        year_start = self.fiscal_year_start(self.end)
+        """The balance sheet over the report's span: over all dates, as Export Data runs it,
+        no year is closed, so Net Income is every year's and Retained Earnings holds only what
+        was posted to it; from a start, the fiscal year's income, earlier years closed."""
+        if self.start is None:
+            presented = self.all_dates(self.end)
+            year_start: date | None = None
+        else:
+            presented = self.as_presented(self.end)
+            year_start = self.fiscal_year_start(self.end)
         net_income = -sum(
             (
                 v
@@ -481,86 +580,111 @@ class Report:
             for k, v in presented.items()
             if self.type_of(k) not in PROFIT_AND_LOSS_TYPES
         }
-        rows: list[Row] = [
-            *self.title("Balance Sheet", f"As of {long_date(self.end)}"),
-            [None, "Total"],
-        ]
+        rows: list[Row] = [*self.title("Balance Sheet", self.as_of()), [None, "Total"]]
 
-        def group(label: str, kinds: tuple[str, ...], indent: int) -> tuple[list[Row], Decimal]:
-            body, total = self.statement_rows(kinds, figures, indent + 1)
-            if not body:
-                return [], total
+        def group(label: str, kinds: tuple[str, ...], indent: int) -> int | None:
+            at = len(rows)
             pad = "   " * indent
-            return [[pad + label, None], *body, [f"{pad}Total {label}", Formula(total)]], total
+            rows.append([pad + label, None])
+            refs = self.statement_rows(rows, kinds, figures, indent + 1)
+            if not refs:
+                del rows[at:]
+                return None
+            rows.append([f"{pad}Total {label}", self.sum_of(refs)])
+            return len(rows)
 
-        bank, bank_total = group("Bank Accounts", ("bank",), 2)
-        receivable, receivable_total = group("Accounts Receivable", ("receivable",), 2)
-        other_current, other_total = group("Other Current Assets", ("other_current_asset",), 2)
-        current = bank_total + receivable_total + other_total
-        fixed, fixed_total = group("Fixed Assets", ("fixed_asset",), 1)
-        rows += [
-            ["ASSETS", None],
-            ["   Current Assets", None],
-            *bank,
-            *receivable,
-            *other_current,
+        def total(label: str, refs: list[int | None]) -> int:
+            rows.append([label, self.sum_of([r for r in refs if r is not None])])
+            return len(rows)
+
+        rows += [["ASSETS", None], ["   Current Assets", None]]
+        current = [
+            group("Bank Accounts", ("bank",), 2),
+            group("Accounts Receivable", ("receivable",), 2),
+            group("Other Current Assets", ("other_current_asset",), 2),
         ]
-        rows += [["   Total Current Assets", Formula(current)], *fixed]
-        rows += [["TOTAL ASSETS", Formula(current + fixed_total)]]
+        current_assets = total("   Total Current Assets", current)
+        fixed = group("Fixed Assets", ("fixed_asset",), 1)
+        total("TOTAL ASSETS", [current_assets, fixed])
 
-        payable, payable_total = group("Accounts Payable", ("payable",), 3)
-        cards, cards_total = group("Credit Cards", ("credit_card",), 3)
-        other_liabilities, other_liabilities_total = group(
-            "Other Current Liabilities", ("other_current_liability",), 3
-        )
-        current_liabilities = payable_total + cards_total + other_liabilities_total
-        long_term, long_term_total = group("Long-Term Liabilities", ("long_term_liability",), 2)
-        liabilities = current_liabilities + long_term_total
         rows += [["LIABILITIES AND EQUITY", None], ["   Liabilities", None]]
-        rows += [["      Current Liabilities", None], *payable, *cards, *other_liabilities]
-        rows += [["      Total Current Liabilities", Formula(current_liabilities)], *long_term]
-        rows += [["   Total Liabilities", Formula(liabilities)]]
+        rows.append(["      Current Liabilities", None])
+        current = [
+            group("Accounts Payable", ("payable",), 3),
+            group("Credit Cards", ("credit_card",), 3),
+            group("Other Current Liabilities", ("other_current_liability",), 3),
+        ]
+        current_liabilities = total("      Total Current Liabilities", current)
+        long_term = group("Long-Term Liabilities", ("long_term_liability",), 2)
+        liabilities = total("   Total Liabilities", [current_liabilities, long_term])
 
         # Retained Earnings is always printed, and printed blank when it has no figure.
         figures.setdefault(RETAINED_EARNINGS, ZERO)
-        equity_rows, equity = self.statement_rows(("equity",), figures, 2)
-        equity_rows = [
-            [row[0], None]
-            if row[1] == Formula(ZERO) and row[0] == "      Retained Earnings"
-            else row
-            for row in equity_rows
-        ]
-        rows += [["   Equity", None], *equity_rows, ["      Net Income", Formula(net_income)]]
-        rows += [["   Total Equity", Formula(equity + net_income)]]
-        rows += [["TOTAL LIABILITIES AND EQUITY", Formula(liabilities + equity + net_income)]]
-        rows += [[], self.footer()]
+        rows.append(["   Equity", None])
+        equity = self.statement_rows(rows, ("equity",), figures, 2)
+        for ref in equity:
+            if rows[ref - 1] == ["      Retained Earnings", Formula.of(ZERO)]:
+                rows[ref - 1] = ["      Retained Earnings", None]
+        rows.append(["      Net Income", Formula.of(net_income)])
+        equity_total = total("   Total Equity", [*equity, len(rows)])
+        total("TOTAL LIABILITIES AND EQUITY", [liabilities, equity_total])
+        rows += [[], [], [], self.footer()]
         return rows
 
     def trial_balance_report(self) -> list[Row]:
+        """The trial balance over the report's span, each figure a formula and the totals sums
+        of every row above: over all dates, as Export Data runs it, nothing is closed; from a
+        start, as it stands at the end."""
         rows: list[Row] = [
-            *self.title("Trial Balance", f"As of {long_date(self.end)}"),
+            *self.title("Trial Balance", self.as_of()),
             [None, "Debit", "Credit"],
         ]
-        debit_total = credit_total = ZERO
-        for name, debit, credit in self.trial_balance(self.end):
+        first = len(rows) + 1
+        for name, debit, credit in self.trial_balance(self.end, closing=self.start is not None):
             rows.append(
                 [
                     name,
-                    Number(debit) if debit or not credit else None,
-                    Number(credit) if credit else None,
+                    Formula.of(debit) if debit or not credit else None,
+                    Formula.of(credit) if credit else None,
                 ]
             )
-            debit_total += debit
-            credit_total += credit
-        rows += [["TOTAL", Number(debit_total), Number(credit_total)], [], self.footer()]
+        refs = list(range(first, len(rows) + 1))
+        rows.append(["TOTAL", self.sum_of(refs, "B"), self.sum_of(refs, "C")])
+        rows += [[], [], [], self.footer()]
         return rows
 
+    def contact_list(self, title: str, header: Row, names: Iterable[str]) -> list[Row]:
+        """A contact list as Export Data writes one: each name, and nothing else the company
+        never entered."""
+        rows: list[Row] = [[COMPANY], [title], [""], [], header]
+        listed: list[Row] = [[None, name] for name in sorted(names)]
+        rows += listed or [[], ["This report contains no data."]]
+        rows += [[], [], [RUN_AT]] if listed else [[], [RUN_AT]]
+        return rows
 
+    def customers(self) -> list[Row]:
+        return self.contact_list(
+            "Customer Contact List", CUSTOMER_HEADER, self.books.customers.values()
+        )
+
+    def vendors(self) -> list[Row]:
+        return self.contact_list(
+            "Vendor Contact List", VENDOR_HEADER, self.books.vendors.values()
+        )
+
+    def employees(self) -> list[Row]:
+        return self.contact_list("Employee Contact List", EMPLOYEE_HEADER, ())
+
+
+# In the order Export Data writes them.
 REPORTS = (
-    ("Journal.xlsx", Report.journal),
-    ("General_ledger.xlsx", Report.general_ledger),
-    ("Profit_and_loss.xlsx", Report.profit_and_loss),
     ("Balance_sheet.xlsx", Report.balance_sheet),
+    ("Customers.xlsx", Report.customers),
+    ("Employees.xlsx", Report.employees),
+    ("General_ledger.xlsx", Report.general_ledger),
+    ("Journal.xlsx", Report.journal),
+    ("Profit_and_loss.xlsx", Report.profit_and_loss),
+    ("Vendors.xlsx", Report.vendors),
     ("Trial_balance.xlsx", Report.trial_balance_report),
 )
 

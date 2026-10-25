@@ -147,6 +147,9 @@ class Books:
     documents: dict[str, list[Posting]] = field(default_factory=dict)
     # The same documents as recorded, by key.
     sources: dict[str, Transaction] = field(default_factory=dict)
+    # Customers and vendors as QuickBooks names them, a sub-customer by its full path.
+    customers: dict[str, str] = field(default_factory=dict)
+    vendors: dict[str, str] = field(default_factory=dict)
 
     def path(self, key: str, *, numbers: bool = False) -> str:
         """The account as every report names it: its full path, as it is called at the end."""
@@ -188,8 +191,8 @@ class Recorder:
             fiscal_start_month=1,
             accounts={k: Account(k, n, t) for k, (n, t) in SYSTEM_ACCOUNTS.items()},
         )
-        self.customers: dict[str, str] = {}
-        self.vendors: dict[str, str] = {}
+        self.customers = self.books.customers
+        self.vendors = self.books.vendors
         self.services: dict[str, str] = {}  # service -> income account
         self.by_key: dict[str, Transaction] = {}
 

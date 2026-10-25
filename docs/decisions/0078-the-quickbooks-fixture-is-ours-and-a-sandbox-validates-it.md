@@ -117,8 +117,11 @@ in QuickBooks itself — the same day comes back in another order for another da
 day's entries are compared as a set, with the balance the day ends on.
 
 **Layout** is validated by comparing our archive with one Export Data download, cell by cell, after
-decoding each sheet into rows of cells, with a named list of cells that differ by nature (the time a
-report was run). This is repeated only when QuickBooks changes its export format. Bytes are never
+decoding each sheet into rows of cells, with a named list of cells that differ by nature: the
+company's name, which is the sandbox's own, and the time a report was run. A general ledger's days
+are compared as sets, its order within a day being QuickBooks' own. This is repeated only when
+QuickBooks changes its export format. The API is asked each report as Export Data runs it, over
+all dates, so content and layout are checks of the same reports. Bytes are never
 compared: an archive's timestamps, compression and style tables differ between any two writers, and
 between two exports of the same company.
 

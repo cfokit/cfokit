@@ -12,7 +12,7 @@ import io
 import re
 from collections.abc import Callable
 
-from synthetic_books.xlsx import archive, contents, rows
+from synthetic_books.xlsx import archive, contents, rows, values
 
 JOURNAL = "Journal.xlsx"
 SHEET = "xl/worksheets/sheet1.xml"
@@ -92,7 +92,18 @@ def excel_resave(data: bytes) -> bytes:
     for name, body in members.items():
         parts = contents(body)
         sheet = parts[SHEET].decode()
-        sheet = re.sub(r"<f>([^<]*)</f>", r"<f>\1</f><v>\1</v>", sheet)
+        worked = values(body)
+
+        def cached(match: re.Match[str], worked: list[list[str | None]] = worked) -> str:
+            ref, formula = match.group(1), match.group(2)
+            letters = re.match(r"[A-Z]+", ref).group()  # type: ignore[union-attr]
+            col = 0
+            for letter in letters:
+                col = col * 26 + ord(letter) - 64
+            result = worked[int(ref[len(letters) :]) - 1][col - 1]
+            return f'<c r="{ref}"><f>{formula}</f><v>{result}</v></c>'
+
+        sheet = re.sub(r'<c r="([A-Z]+\d+)"><f>([^<]*)</f><v>0</v></c>', cached, sheet)
         sheet = re.sub(r"<v>(-?\d+)\.(\d*?)0*</v>", _trimmed, sheet)
         parts[SHEET] = sheet.encode()
         parts["xl/styles.xml"] = (

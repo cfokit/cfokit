@@ -21,7 +21,7 @@ import pytest
 from synthetic_books import business
 from synthetic_books.__main__ import GENERATED, catalog, render, same
 from synthetic_books.mutations import MUTATIONS
-from synthetic_books.xlsx import contents, rows
+from synthetic_books.xlsx import contents, rows, values
 
 FIXTURE = Path(__file__).parent / "fixtures" / "quickbooks"
 CHECK_KINDS = {"balance", "stated", "account", "text", "skipped", "refused", "reconciliation"}
@@ -261,7 +261,8 @@ def test_every_archive_case_has_an_archive(manifest: dict[str, Any]) -> None:
 
 
 def grid(archive: str, member: str) -> list[list[str | None]]:
-    return rows(contents((ARCHIVES / archive / "export.zip").read_bytes())[member])
+    """A member's cells, each formula worked out: a statement's totals sum the rows above."""
+    return values(contents((ARCHIVES / archive / "export.zip").read_bytes())[member])
 
 
 def labeled(rows: list[list[str | None]], label: str) -> list[str | None]:

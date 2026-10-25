@@ -1,8 +1,9 @@
 """A workbook of one worksheet, written the way QuickBooks writes its exports.
 
-Strings go into a shared table; a figure is a number cell or, in a statement, a formula with no
-cached result; a row holding nothing is left out of the XML. This is the shape the reader in
-`web/src/quickbooks/` was built against, and the shape `web/src/quickbooks/synthetic.ts` writes.
+Strings go into a shared table; a figure is a number cell or, in a statement or a trial balance,
+a formula; a row holding nothing is left out of the XML. QuickBooks writes each formula with a
+cached result of zero, which a spreadsheet recalculates and a reader must not take for the
+figure. This is the shape of an Export Data download, compared cell by cell (ADR-0078).
 
 The archive's bytes are not stable across zlib builds, so nothing should compare them: compare
 the members' contents, which are.
@@ -28,9 +29,15 @@ class Number:
 
 @dataclass(frozen=True, slots=True)
 class Formula:
-    """A formula cell with no cached result, as QuickBooks writes a statement's figures."""
+    """A formula cell: a figure written as a formula, or a sum of cells above, such as
+    `(B9)+(B10)`. Its cached result is zero, as QuickBooks writes it."""
 
-    value: Decimal
+    text: str
+
+    @classmethod
+    def of(cls, value: Decimal) -> Formula:
+        """A figure as QuickBooks writes it in a formula: to the cent, and a zero unsigned."""
+        return cls(digits((value + 0).quantize(Decimal("0.01"))))
 
 
 type Cell = str | Number | Formula | None
@@ -70,8 +77,8 @@ def sheet_xml(rows: list[Row]) -> tuple[str, list[str]]:
                     continue
                 case Number(value=value):
                     cells.append(f'<c r="{ref}"><v>{digits(value)}</v></c>')
-                case Formula(value=value):
-                    cells.append(f'<c r="{ref}"><f>{digits(value)}</f></c>')
+                case Formula(text=text):
+                    cells.append(f'<c r="{ref}"><f>{escape(text)}</f><v>0</v></c>')
                 case str():
                     if cell not in index:
                         index[cell] = len(strings)
@@ -151,8 +158,15 @@ def contents(data: bytes) -> dict[str, bytes]:
 
 def rows(data: bytes) -> list[list[str | None]]:
     """A workbook's first worksheet as text: a string as itself, a number's digits, a formula's
-    body. Reads ours and QuickBooks' alike; refuses a document type declaration, as the reader
-    in `web/` does, because that is the only way an XML part can expand.
+    body. Reads ours and QuickBooks' alike."""
+    return [[None if cell is None else cell[1] for cell in row] for row in cells(data)]
+
+
+def cells(data: bytes) -> list[list[tuple[str, str] | None]]:
+    """A workbook's first worksheet as typed cells: `("s", text)` for a string, `("n", digits)`
+    for a number, `("f", body)` for a formula, whatever it caches. Refuses a document type
+    declaration, as the reader in `web/` does, because that is the only way an XML part can
+    expand.
     """
     parts = contents(data)
 
@@ -171,13 +185,13 @@ def rows(data: bytes) -> list[list[str | None]]:
     strings = []
     if "xl/sharedStrings.xml" in parts:
         strings = [text_of(si) for si in parse("xl/sharedStrings.xml") if local(si.tag) == "si"]
-    out: list[list[str | None]] = []
+    out: list[list[tuple[str, str] | None]] = []
     for row in parse("xl/worksheets/sheet1.xml").iter():
         if local(row.tag) != "row":
             continue
         while len(out) < int(row.get("r", len(out) + 1)) - 1:
             out.append([])
-        cells: dict[int, str] = {}
+        found: dict[int, tuple[str, str]] = {}
         for cell in row:
             if local(cell.tag) != "c":
                 continue
@@ -186,11 +200,72 @@ def rows(data: bytes) -> list[list[str | None]]:
                 at = at * 26 + ord(letter) - 64
             children = {local(child.tag): child for child in cell}
             if "f" in children:
-                cells[at - 1] = children["f"].text or ""
+                found[at - 1] = ("f", children["f"].text or "")
             elif cell.get("t") == "inlineStr" and "is" in children:
-                cells[at - 1] = text_of(children["is"])
+                found[at - 1] = ("s", text_of(children["is"]))
             elif "v" in children and children["v"].text is not None:
                 value = children["v"].text
-                cells[at - 1] = strings[int(value)] if cell.get("t") == "s" else value
-        out.append([cells.get(i) for i in range(max(cells, default=-1) + 1)])
+                found[at - 1] = (
+                    ("s", strings[int(value)]) if cell.get("t") == "s" else ("n", value)
+                )
+        out.append([found.get(i) for i in range(max(found, default=-1) + 1)])
     return out
+
+
+def values(data: bytes) -> list[list[str | None]]:
+    """A worksheet as its figures: as `rows`, but each formula worked out, as a spreadsheet
+    would. QuickBooks' formulas are a number, or sums and differences of cells and bracketed
+    terms, such as `((B11)+(B14))+(B18)` or `(B9)-(B16)`."""
+    grid = cells(data)
+    worked: dict[tuple[int, int], Decimal] = {}
+
+    def figure(row: int, col: int) -> Decimal:
+        cell = grid[row][col] if row < len(grid) and col < len(grid[row]) else None
+        if cell is None or cell[0] == "s":
+            return Decimal(0)
+        if (row, col) not in worked:
+            worked[row, col] = evaluate(cell[1]) if cell[0] == "f" else Decimal(cell[1])
+        return worked[row, col]
+
+    def evaluate(text: str) -> Decimal:
+        parts = re.findall(r"[A-Z]+\d+|\d+(?:\.\d+)?|[()+-]", text)
+        if "".join(parts) != text.replace(" ", ""):
+            raise ValueError(f"a formula this does not read: {text}")
+        at = 0
+
+        def term() -> Decimal:
+            nonlocal at
+            part = parts[at]
+            at += 1
+            if part == "-":
+                return -term()
+            if part == "(":
+                inner = expression()
+                at += 1  # the closing bracket
+                return inner
+            if part[0].isalpha():
+                letters = re.match(r"[A-Z]+", part).group()  # type: ignore[union-attr]
+                col = 0
+                for letter in letters:
+                    col = col * 26 + ord(letter) - 64
+                return figure(int(part[len(letters) :]) - 1, col - 1)
+            return Decimal(part)
+
+        def expression() -> Decimal:
+            nonlocal at
+            total = term()
+            while at < len(parts) and parts[at] in "+-":
+                sign = parts[at]
+                at += 1
+                total = total + term() if sign == "+" else total - term()
+            return total
+
+        return expression()
+
+    return [
+        [
+            None if cell is None else format(figure(r, c), "f") if cell[0] == "f" else cell[1]
+            for c, cell in enumerate(row)
+        ]
+        for r, row in enumerate(grid)
+    ]
