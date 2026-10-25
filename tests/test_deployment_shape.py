@@ -67,7 +67,7 @@ def test_the_issuer_is_reachable_at_the_same_address_inside_and_out() -> None:
 
     Mapping the container's port to a different host port breaks it for exactly one side, and
     silently: on this network 8080 is the ledger, so a browser following the chain to
-    `keycloak:8080` reaches the ledger and is answered.
+    `keycloak.localhost:8080` reaches the ledger and is answered.
     """
     issuer_port = urlparse(setting("AUTH_ISSUER_URL")).port
     container_port = setting("KC_HTTPS_PORT")
