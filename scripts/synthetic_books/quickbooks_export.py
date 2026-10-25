@@ -161,7 +161,8 @@ class Report:
     def as_presented(self, until: date) -> dict[str, Decimal]:
         """Debit-positive balances as QuickBooks presents them at `until`: balance-sheet
         accounts all time; income and expense from the fiscal year's start; and earlier years'
-        profit carried into Retained Earnings.
+        profit carried into Retained Earnings. An account with any line in its span is kept at
+        zero, because QuickBooks prints it; Retained Earnings, only when it has a figure.
         """
         year_start = self.fiscal_year_start(until)
         out = {
@@ -177,7 +178,9 @@ class Report:
         for k, v in self.balances(year_start, until).items():
             if self.type_of(k) in PROFIT_AND_LOSS_TYPES:
                 out[k] = v
-        return {k: v for k, v in out.items() if v != 0}
+        if not out[RETAINED_EARNINGS]:
+            del out[RETAINED_EARNINGS]
+        return out
 
     def trial_balance(self, until: date) -> list[tuple[str, Decimal, Decimal]]:
         presented = self.as_presented(until)
@@ -247,14 +250,21 @@ class Report:
 
     def general_ledger(self) -> list[Row]:
         rows: list[Row] = [*self.title("General Ledger", self.period()), LEDGER_HEADER]
-        by_account: dict[str, list[tuple[Transaction, Posting, list[Posting]]]] = defaultdict(
-            list
-        )
+        by_account: dict[str, list[tuple[Transaction, Posting]]] = defaultdict(list)
         for transaction, lines in self.postings:
             if self.in_range(transaction):
                 for line in lines:
-                    by_account[line.account].append((transaction, line, lines))
-        opening = self.balances(None, self.start - timedelta(days=1)) if self.start else {}
+                    by_account[line.account].append((transaction, line))
+        opening: dict[str, Decimal] = {}
+        if self.start is not None:
+            # Balance-sheet accounts open with everything before the range; income and expense,
+            # with what their fiscal year had booked before it.
+            before = self.start - timedelta(days=1)
+            year = self.balances(self.fiscal_year_start(self.start), before)
+            opening = {
+                k: year.get(k, ZERO) if self.type_of(k) in PROFIT_AND_LOSS_TYPES else v
+                for k, v in self.balances(None, before).items()
+            }
         roots = [
             k
             for k in self.ordered(self.books.accounts)
@@ -270,34 +280,56 @@ class Report:
             k for child in self.ordered(self.children(key)) for k in self.subtree(child)
         ]
 
+    def shown(self, transaction: Transaction, line: Posting) -> tuple[Transaction, str]:
+        """The transaction a ledger line is shown as, and its Split: the other side of the line
+        as it was recorded, whatever the basis.
+
+        A line the cash basis recognizes from an invoice or a bill is shown as that document,
+        split against its first line. Every line of a journal entry is "-Split-". A document's
+        first line is split against the rest, which is "-Split-" when the rest is more than one
+        line; any other line, against the first.
+        """
+        if line.source is not None:
+            document = self.books.sources[line.source]
+            return document, self.path(document.lines[0].account)
+        if transaction.type == "Journal Entry":
+            return transaction, "-Split-"
+        first, *rest = transaction.lines
+        if line.account != first.account:
+            return transaction, self.path(first.account)
+        return transaction, self.path(rest[0].account) if len(rest) == 1 else "-Split-"
+
     def ledger_block(
         self,
         key: str,
-        by_account: dict[str, list[tuple[Transaction, Posting, list[Posting]]]],
+        by_account: dict[str, list[tuple[Transaction, Posting]]],
         opening: dict[str, Decimal],
     ) -> list[Row]:
+        """One account's entries and its children's, as the ledger lists them.
+
+        Amounts sit on their debit or credit side; the running balance is on the account's
+        natural side, as QuickBooks keeps it. A beginning balance is printed only where there is
+        one. A parent's own entries are totalled apart from its children's only when it has any.
+        """
         if not any(by_account.get(k) or opening.get(k) for k in self.subtree(key)):
             return []
         rows: list[Row] = [[self.path(key)]]
-        balance = (
-            opening.get(key, ZERO) if self.type_of(key) not in PROFIT_AND_LOSS_TYPES else ZERO
-        )
-        if self.start is not None:
+        balance = self.natural(key, opening.get(key, ZERO))
+        if balance:
             rows.append([None, "Beginning Balance", *[None] * 7, Number(balance)])
         debit = credit = ZERO
-        for transaction, line, lines in by_account.get(key, []):
-            others = {p.account for p in lines if p.account != line.account}
-            split = self.path(next(iter(others))) if len(others) == 1 else "-Split-"
-            balance += line.amount
+        for transaction, line in by_account.get(key, []):
+            shown, split = self.shown(transaction, line)
+            balance += self.natural(key, line.amount)
             debit += max(line.amount, ZERO)
             credit += max(-line.amount, ZERO)
             rows.append(
                 [
                     None,
                     short_date(transaction.on),
-                    transaction.type,
-                    transaction.number or None,
-                    line.name or None,
+                    shown.type,
+                    shown.number or None,
+                    line.name or shown.name or None,
                     line.memo or None,
                     split,
                     *self.sides(line.amount),
@@ -305,7 +337,8 @@ class Report:
                 ]
             )
         children = self.ordered(self.children(key))
-        if by_account.get(key) or not children:
+        own = bool(by_account.get(key) or opening.get(key))
+        if own or not children:
             rows.append(
                 [f"Total for {self.path(key)}", *[None] * 6, Number(debit), Number(credit)]
             )
@@ -314,17 +347,11 @@ class Report:
                 rows += self.ledger_block(child, by_account, opening)
             sub_debit = sub_credit = ZERO
             for k in self.subtree(key):
-                for _, line, _ in by_account.get(k, []):
+                for _, line in by_account.get(k, []):
                     sub_debit += max(line.amount, ZERO)
                     sub_credit += max(-line.amount, ZERO)
-            rows.append(
-                [
-                    f"Total for {self.path(key)} with sub-accounts",
-                    *[None] * 6,
-                    Number(sub_debit),
-                    Number(sub_credit),
-                ]
-            )
+            label = f"Total for {self.path(key)}" + (" with sub-accounts" if own else "")
+            rows.append([label, *[None] * 6, Number(sub_debit), Number(sub_credit)])
         return rows
 
     def statement_rows(
@@ -338,7 +365,7 @@ class Report:
         """
 
         def block(key: str, depth: int) -> list[Row]:
-            if not any(figures.get(k) for k in self.subtree(key)):
+            if not any(k in figures for k in self.subtree(key)):
                 return []
             pad = "   " * depth
             own = figures.get(key, ZERO)
@@ -448,7 +475,15 @@ class Report:
         rows += [["      Total Current Liabilities", Formula(current_liabilities)], *long_term]
         rows += [["   Total Liabilities", Formula(liabilities)]]
 
+        # Retained Earnings is always printed, and printed blank when it has no figure.
+        figures.setdefault(RETAINED_EARNINGS, ZERO)
         equity_rows, equity = self.statement_rows(("equity",), figures, 2)
+        equity_rows = [
+            [row[0], None]
+            if row[1] == Formula(ZERO) and row[0] == "      Retained Earnings"
+            else row
+            for row in equity_rows
+        ]
         rows += [["   Equity", None], *equity_rows, ["      Net Income", Formula(net_income)]]
         rows += [["   Total Equity", Formula(equity + net_income)]]
         rows += [["TOTAL LIABILITIES AND EQUITY", Formula(liabilities + equity + net_income)]]
@@ -463,7 +498,11 @@ class Report:
         debit_total = credit_total = ZERO
         for name, debit, credit in self.trial_balance(self.end):
             rows.append(
-                [name, Number(debit) if debit else None, Number(credit) if credit else None]
+                [
+                    name,
+                    Number(debit) if debit or not credit else None,
+                    Number(credit) if credit else None,
+                ]
             )
             debit_total += debit
             credit_total += credit

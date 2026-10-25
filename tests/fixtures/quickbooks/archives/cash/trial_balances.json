@@ -11,6 +11,11 @@
    "credit": "0"
   },
   {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
    "account": "Computer Equipment:Accumulated Depreciation",
    "debit": "0",
    "credit": "500.00"
@@ -130,6 +135,11 @@
   {
    "account": "Reserve Savings",
    "debit": "25042.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
    "credit": "0"
   },
   {
@@ -272,6 +282,11 @@
   {
    "account": "Reserve Savings",
    "debit": "25073.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
    "credit": "0"
   },
   {
@@ -419,6 +434,11 @@
   {
    "account": "Reserve Savings",
    "debit": "25097.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
    "credit": "0"
   },
   {
@@ -571,6 +591,11 @@
   {
    "account": "Reserve Savings",
    "debit": "25123.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
    "credit": "0"
   },
   {
@@ -893,6 +918,11 @@
    "credit": "0"
   },
   {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
    "account": "Computer Equipment:Accumulated Depreciation",
    "debit": "0",
    "credit": "3500.00"
@@ -1050,9 +1080,9 @@
    "credit": "0"
   },
   {
-   "account": "Accounts Receivable (A/R)",
+   "account": "Undeposited Funds",
    "debit": "0",
-   "credit": "400.00"
+   "credit": "0"
   },
   {
    "account": "Computer Equipment:Accumulated Depreciation",
@@ -1093,6 +1123,11 @@
    "account": "Design Services",
    "debit": "0",
    "credit": "378205.00"
+  },
+  {
+   "account": "Unapplied Cash Payment Income",
+   "debit": "0",
+   "credit": "400.00"
   },
   {
    "account": "Cost of Services:Contractors",
@@ -1212,9 +1247,9 @@
    "credit": "0"
   },
   {
-   "account": "Accounts Receivable (A/R)",
+   "account": "Undeposited Funds",
    "debit": "0",
-   "credit": "400.00"
+   "credit": "0"
   },
   {
    "account": "Computer Equipment:Accumulated Depreciation",
@@ -1255,6 +1290,11 @@
    "account": "Design Services",
    "debit": "0",
    "credit": "429105.00"
+  },
+  {
+   "account": "Unapplied Cash Payment Income",
+   "debit": "0",
+   "credit": "400.00"
   },
   {
    "account": "Workshops",
@@ -1379,9 +1419,9 @@
    "credit": "0"
   },
   {
-   "account": "Accounts Receivable (A/R)",
+   "account": "Undeposited Funds",
    "debit": "0",
-   "credit": "400.00"
+   "credit": "0"
   },
   {
    "account": "Computer Equipment:Accumulated Depreciation",
@@ -1422,6 +1462,11 @@
    "account": "Design Services",
    "debit": "0",
    "credit": "474105.00"
+  },
+  {
+   "account": "Unapplied Cash Payment Income",
+   "debit": "0",
+   "credit": "400.00"
   },
   {
    "account": "Workshops",
@@ -1551,11 +1596,6 @@
    "credit": "0"
   },
   {
-   "account": "Accounts Receivable (A/R)",
-   "debit": "0",
-   "credit": "400.00"
-  },
-  {
    "account": "Undeposited Funds",
    "debit": "8400.00",
    "credit": "0"
@@ -1599,6 +1639,11 @@
    "account": "Design Services",
    "debit": "0",
    "credit": "519105.00"
+  },
+  {
+   "account": "Unapplied Cash Payment Income",
+   "debit": "0",
+   "credit": "400.00"
   },
   {
    "account": "Workshops",
@@ -1728,9 +1773,9 @@
    "credit": "0"
   },
   {
-   "account": "Accounts Receivable (A/R)",
+   "account": "Undeposited Funds",
    "debit": "0",
-   "credit": "400.00"
+   "credit": "0"
   },
   {
    "account": "Computer Equipment:Accumulated Depreciation",
@@ -1771,6 +1816,11 @@
    "account": "Design Services",
    "debit": "0",
    "credit": "567205.00"
+  },
+  {
+   "account": "Unapplied Cash Payment Income",
+   "debit": "0",
+   "credit": "400.00"
   },
   {
    "account": "Workshops",
@@ -1900,13 +1950,13 @@
    "credit": "0"
   },
   {
-   "account": "Accounts Receivable (A/R)",
-   "debit": "0",
-   "credit": "400.00"
-  },
-  {
    "account": "Prepaid Expenses",
    "debit": "4400.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
    "credit": "0"
   },
   {
@@ -1947,7 +1997,7 @@
   {
    "account": "Retained Earnings",
    "debit": "0",
-   "credit": "138459.50"
+   "credit": "138859.50"
   },
   {
    "account": "Design Services",
@@ -2047,13 +2097,13 @@
    "credit": "0"
   },
   {
-   "account": "Accounts Receivable (A/R)",
-   "debit": "0",
-   "credit": "400.00"
-  },
-  {
    "account": "Prepaid Expenses",
    "debit": "4000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
    "credit": "0"
   },
   {
@@ -2094,7 +2144,7 @@
   {
    "account": "Retained Earnings",
    "debit": "0",
-   "credit": "137847.50"
+   "credit": "138247.50"
   },
   {
    "account": "Design Services",
@@ -2209,13 +2259,13 @@
    "credit": "0"
   },
   {
-   "account": "Accounts Receivable (A/R)",
-   "debit": "0",
-   "credit": "400.00"
-  },
-  {
    "account": "Prepaid Expenses",
    "debit": "3600.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
    "credit": "0"
   },
   {
@@ -2256,7 +2306,7 @@
   {
    "account": "Retained Earnings",
    "debit": "0",
-   "credit": "137847.50"
+   "credit": "138247.50"
   },
   {
    "account": "Design Services",
@@ -2376,13 +2426,13 @@
    "credit": "0"
   },
   {
-   "account": "Accounts Receivable (A/R)",
-   "debit": "0",
-   "credit": "400.00"
-  },
-  {
    "account": "Prepaid Expenses",
    "debit": "3200.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
    "credit": "0"
   },
   {
@@ -2423,7 +2473,7 @@
   {
    "account": "Retained Earnings",
    "debit": "0",
-   "credit": "137847.50"
+   "credit": "138247.50"
   },
   {
    "account": "Design Services",
@@ -2448,6 +2498,11 @@
   {
    "account": "Bank Fees",
    "debit": "100.00",
+   "credit": "0"
+  },
+  {
+   "account": "Conference Fees",
+   "debit": "0",
    "credit": "0"
   },
   {
@@ -2545,7 +2600,7 @@
   {
    "account": "Accounts Receivable (A/R)",
    "debit": "0",
-   "credit": "900.00"
+   "credit": "500.00"
   },
   {
    "account": "Prepaid Expenses",
@@ -2595,7 +2650,7 @@
   {
    "account": "Retained Earnings",
    "debit": "0",
-   "credit": "137847.50"
+   "credit": "138247.50"
   },
   {
    "account": "Design Services",
@@ -2620,6 +2675,11 @@
   {
    "account": "Bank Fees",
    "debit": "125.00",
+   "credit": "0"
+  },
+  {
+   "account": "Conference Fees",
+   "debit": "0",
    "credit": "0"
   },
   {
@@ -2722,7 +2782,7 @@
   {
    "account": "Accounts Receivable (A/R)",
    "debit": "0",
-   "credit": "900.00"
+   "credit": "500.00"
   },
   {
    "account": "Prepaid Expenses",
@@ -2772,7 +2832,7 @@
   {
    "account": "Retained Earnings",
    "debit": "0",
-   "credit": "137847.50"
+   "credit": "138247.50"
   },
   {
    "account": "Design Services",
@@ -2797,6 +2857,11 @@
   {
    "account": "Bank Fees",
    "debit": "150.00",
+   "credit": "0"
+  },
+  {
+   "account": "Conference Fees",
+   "debit": "0",
    "credit": "0"
   },
   {
@@ -2899,11 +2964,16 @@
   {
    "account": "Accounts Receivable (A/R)",
    "debit": "0",
-   "credit": "900.00"
+   "credit": "500.00"
   },
   {
    "account": "Prepaid Expenses",
    "debit": "2000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
    "credit": "0"
   },
   {
@@ -2944,7 +3014,7 @@
   {
    "account": "Retained Earnings",
    "debit": "0",
-   "credit": "137847.50"
+   "credit": "138247.50"
   },
   {
    "account": "Design Services",
@@ -2969,6 +3039,11 @@
   {
    "account": "Bank Fees",
    "debit": "175.00",
+   "credit": "0"
+  },
+  {
+   "account": "Conference Fees",
+   "debit": "0",
    "credit": "0"
   },
   {
@@ -3071,11 +3146,16 @@
   {
    "account": "Accounts Receivable (A/R)",
    "debit": "0",
-   "credit": "900.00"
+   "credit": "500.00"
   },
   {
    "account": "Prepaid Expenses",
    "debit": "1600.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
    "credit": "0"
   },
   {
@@ -3116,7 +3196,7 @@
   {
    "account": "Retained Earnings",
    "debit": "0",
-   "credit": "137847.50"
+   "credit": "138247.50"
   },
   {
    "account": "Design Services",
@@ -3141,6 +3221,11 @@
   {
    "account": "Bank Fees",
    "debit": "200.00",
+   "credit": "0"
+  },
+  {
+   "account": "Conference Fees",
+   "debit": "0",
    "credit": "0"
   },
   {
@@ -3243,11 +3328,16 @@
   {
    "account": "Accounts Receivable (A/R)",
    "debit": "0",
-   "credit": "900.00"
+   "credit": "500.00"
   },
   {
    "account": "Prepaid Expenses",
    "debit": "1200.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
    "credit": "0"
   },
   {
@@ -3288,7 +3378,7 @@
   {
    "account": "Retained Earnings",
    "debit": "0",
-   "credit": "137847.50"
+   "credit": "138247.50"
   },
   {
    "account": "Design Services",
@@ -3318,6 +3408,11 @@
   {
    "account": "Bank Fees",
    "debit": "225.00",
+   "credit": "0"
+  },
+  {
+   "account": "Conference Fees",
+   "debit": "0",
    "credit": "0"
   },
   {
@@ -3420,11 +3515,16 @@
   {
    "account": "Accounts Receivable (A/R)",
    "debit": "0",
-   "credit": "900.00"
+   "credit": "500.00"
   },
   {
    "account": "Prepaid Expenses",
    "debit": "800.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
    "credit": "0"
   },
   {
@@ -3465,7 +3565,7 @@
   {
    "account": "Retained Earnings",
    "debit": "0",
-   "credit": "137847.50"
+   "credit": "138247.50"
   },
   {
    "account": "Design Services",
@@ -3495,6 +3595,11 @@
   {
    "account": "Bank Fees",
    "debit": "250.00",
+   "credit": "0"
+  },
+  {
+   "account": "Conference Fees",
+   "debit": "0",
    "credit": "0"
   },
   {
@@ -3602,11 +3707,16 @@
   {
    "account": "Accounts Receivable (A/R)",
    "debit": "0",
-   "credit": "900.00"
+   "credit": "500.00"
   },
   {
    "account": "Prepaid Expenses",
    "debit": "400.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
    "credit": "0"
   },
   {
@@ -3647,7 +3757,7 @@
   {
    "account": "Retained Earnings",
    "debit": "0",
-   "credit": "137847.50"
+   "credit": "138247.50"
   },
   {
    "account": "Design Services",
@@ -3677,6 +3787,11 @@
   {
    "account": "Bank Fees",
    "debit": "275.00",
+   "credit": "0"
+  },
+  {
+   "account": "Conference Fees",
+   "debit": "0",
    "credit": "0"
   },
   {
@@ -3784,7 +3899,17 @@
   {
    "account": "Accounts Receivable (A/R)",
    "debit": "0",
-   "credit": "900.00"
+   "credit": "500.00"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
   },
   {
    "account": "Computer Equipment:Accumulated Depreciation",
@@ -3824,7 +3949,7 @@
   {
    "account": "Retained Earnings",
    "debit": "0",
-   "credit": "137847.50"
+   "credit": "138247.50"
   },
   {
    "account": "Design Services",
@@ -3854,6 +3979,11 @@
   {
    "account": "Bank Fees",
    "debit": "300.00",
+   "credit": "0"
+  },
+  {
+   "account": "Conference Fees",
+   "debit": "0",
    "credit": "0"
   },
   {
@@ -3961,7 +4091,17 @@
   {
    "account": "Accounts Receivable (A/R)",
    "debit": "0",
-   "credit": "900.00"
+   "credit": "500.00"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
   },
   {
    "account": "Computer Equipment:Accumulated Depreciation",
@@ -4001,7 +4141,7 @@
   {
    "account": "Retained Earnings",
    "debit": "0",
-   "credit": "326483.00"
+   "credit": "326883.00"
   },
   {
    "account": "Design Services",
@@ -4103,7 +4243,17 @@
   {
    "account": "Accounts Receivable (A/R)",
    "debit": "0",
-   "credit": "900.00"
+   "credit": "500.00"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
   },
   {
    "account": "Computer Equipment:Accumulated Depreciation",
@@ -4143,7 +4293,7 @@
   {
    "account": "Retained Earnings",
    "debit": "0",
-   "credit": "326483.00"
+   "credit": "326883.00"
   },
   {
    "account": "Design Services",
@@ -4260,7 +4410,17 @@
   {
    "account": "Accounts Receivable (A/R)",
    "debit": "0",
-   "credit": "900.00"
+   "credit": "500.00"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
   },
   {
    "account": "Computer Equipment:Accumulated Depreciation",
@@ -4300,7 +4460,7 @@
   {
    "account": "Retained Earnings",
    "debit": "0",
-   "credit": "326483.00"
+   "credit": "326883.00"
   },
   {
    "account": "Design Services",
@@ -4422,7 +4582,17 @@
   {
    "account": "Accounts Receivable (A/R)",
    "debit": "0",
-   "credit": "900.00"
+   "credit": "500.00"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
   },
   {
    "account": "Computer Equipment:Accumulated Depreciation",
@@ -4462,7 +4632,7 @@
   {
    "account": "Retained Earnings",
    "debit": "0",
-   "credit": "326483.00"
+   "credit": "326883.00"
   },
   {
    "account": "Design Services",
@@ -4589,7 +4759,12 @@
   {
    "account": "Accounts Receivable (A/R)",
    "debit": "0",
-   "credit": "900.00"
+   "credit": "500.00"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "0",
+   "credit": "0"
   },
   {
    "account": "Undeposited Funds",
@@ -4634,7 +4809,7 @@
   {
    "account": "Retained Earnings",
    "debit": "0",
-   "credit": "326483.00"
+   "credit": "326883.00"
   },
   {
    "account": "Design Services",
@@ -4766,7 +4941,17 @@
   {
    "account": "Accounts Receivable (A/R)",
    "debit": "0",
-   "credit": "4100.00"
+   "credit": "3700.00"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
   },
   {
    "account": "Computer Equipment:Accumulated Depreciation",
@@ -4806,7 +4991,7 @@
   {
    "account": "Retained Earnings",
    "debit": "0",
-   "credit": "326483.00"
+   "credit": "326883.00"
   },
   {
    "account": "Design Services",
@@ -4943,7 +5128,12 @@
   {
    "account": "Accounts Receivable (A/R)",
    "debit": "0",
-   "credit": "4100.00"
+   "credit": "3700.00"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "0",
+   "credit": "0"
   },
   {
    "account": "Undeposited Funds",
@@ -4988,7 +5178,7 @@
   {
    "account": "Retained Earnings",
    "debit": "0",
-   "credit": "326483.00"
+   "credit": "326883.00"
   },
   {
    "account": "Design Services",
@@ -5125,7 +5315,12 @@
   {
    "account": "Accounts Receivable (A/R)",
    "debit": "0",
-   "credit": "4100.00"
+   "credit": "3700.00"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "0",
+   "credit": "0"
   },
   {
    "account": "Undeposited Funds",
@@ -5170,7 +5365,7 @@
   {
    "account": "Retained Earnings",
    "debit": "0",
-   "credit": "326483.00"
+   "credit": "326883.00"
   },
   {
    "account": "Design Services",
@@ -5307,7 +5502,17 @@
   {
    "account": "Accounts Receivable (A/R)",
    "debit": "0",
-   "credit": "4100.00"
+   "credit": "3700.00"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
   },
   {
    "account": "Computer Equipment:Accumulated Depreciation",
@@ -5347,7 +5552,7 @@
   {
    "account": "Retained Earnings",
    "debit": "0",
-   "credit": "326483.00"
+   "credit": "326883.00"
   },
   {
    "account": "Design Services",
@@ -5484,7 +5689,17 @@
   {
    "account": "Accounts Receivable (A/R)",
    "debit": "0",
-   "credit": "4100.00"
+   "credit": "3700.00"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
   },
   {
    "account": "Computer Equipment:Accumulated Depreciation",
@@ -5524,7 +5739,7 @@
   {
    "account": "Retained Earnings",
    "debit": "0",
-   "credit": "326483.00"
+   "credit": "326883.00"
   },
   {
    "account": "Design Services",
@@ -5666,7 +5881,17 @@
   {
    "account": "Accounts Receivable (A/R)",
    "debit": "0",
-   "credit": "4100.00"
+   "credit": "3700.00"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
   },
   {
    "account": "Computer Equipment:Accumulated Depreciation",
@@ -5706,7 +5931,7 @@
   {
    "account": "Retained Earnings",
    "debit": "0",
-   "credit": "326483.00"
+   "credit": "326883.00"
   },
   {
    "account": "Design Services",
@@ -5848,7 +6073,17 @@
   {
    "account": "Accounts Receivable (A/R)",
    "debit": "0",
-   "credit": "4100.00"
+   "credit": "3700.00"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
   },
   {
    "account": "Computer Equipment:Accumulated Depreciation",
@@ -5888,7 +6123,7 @@
   {
    "account": "Retained Earnings",
    "debit": "0",
-   "credit": "326483.00"
+   "credit": "326883.00"
   },
   {
    "account": "Design Services",

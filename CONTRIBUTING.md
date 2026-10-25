@@ -232,8 +232,10 @@ it is done, `tests/test_quickbooks_sandbox.py` skips its validation check and sa
 
 - **An Intuit developer account** and an app, at [developer.intuit.com](https://developer.intuit.com).
   The app gives you a **client ID** and a **client secret**.
-- **An empty sandbox company.** Intuit's sample data must not end up in the comparison
-  (ADR-0044).
+- **An empty sandbox company.** A new sandbox company comes with Intuit's sample data, which
+  must not end up in the comparison (ADR-0044). Empty it from the developer portal's Sandboxes
+  list ("Clear data and reset", or "Delete all data"). What stays is QuickBooks' default chart
+  of accounts and two items, which every new company has.
 - **Intuit's Developer Terms read** by whoever accepts them, § 3.1 in particular.
 
 **Four values, from Intuit's OAuth 2.0 Playground** (Tools, then OAuth 2.0 Playground). Select
@@ -268,8 +270,19 @@ PYTHONPATH=scripts uv run python -m synthetic_books.sandbox validate
 ```
 
 A payload QuickBooks rejects means an event was modeled wrong, so fix the generator, not the
-post. Differences that `validate` finds are written under `.local/qbo-sandbox/`, which git
-ignores, and are fixed in the writer. When every comparison agrees, `validate` writes
+post. So does one it accepts but keeps differently, which `post` checks for. A payload changed
+after it was posted stops `post`, because the company holds the old one: empty the company,
+delete `.local/qbo-sandbox/`, and post again.
+
+**Some settings only a person can make.** The API accepts the fiscal year, account numbers and
+"Automatically apply credits" and ignores them. `post` checks them first and names any that
+need changing; make them in the sandbox company under Settings, Account and settings,
+Advanced. The renderings print under different ones too, so `validate` compares the renderings
+the current settings allow, remembers those that agreed, and names the setting the next one
+needs. Run it again after each change.
+
+Differences that `validate` finds are written under `.local/qbo-sandbox/`, which git ignores,
+and are fixed in the writer. When every rendering agrees, `validate` writes
 `tests/fixtures/quickbooks/validation.json`; commit that. **Never commit anything QuickBooks
 returned.** Intuit's terms do not permit it, and nothing under `.local/` can reach a commit.
 

@@ -16,6 +16,11 @@
    "credit": "0"
   },
   {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
    "account": "Computer Equipment:Accumulated Depreciation",
    "debit": "0",
    "credit": "500.00"
@@ -153,6 +158,11 @@
    "credit": "0"
   },
   {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
    "account": "Computer Equipment:Accumulated Depreciation",
    "debit": "0",
    "credit": "1000.00"
@@ -160,6 +170,11 @@
   {
    "account": "Computer Equipment:Original Cost Basis",
    "debit": "18000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Accounts Payable (A/P)",
+   "debit": "0",
    "credit": "0"
   },
   {
@@ -297,6 +312,11 @@
   {
    "account": "Accounts Receivable (A/R)",
    "debit": "18000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
    "credit": "0"
   },
   {
@@ -462,6 +482,11 @@
    "credit": "0"
   },
   {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
    "account": "Computer Equipment:Accumulated Depreciation",
    "debit": "0",
    "credit": "2000.00"
@@ -621,6 +646,11 @@
   {
    "account": "Accounts Receivable (A/R)",
    "debit": "16112.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
    "credit": "0"
   },
   {
@@ -963,6 +993,11 @@
    "credit": "0"
   },
   {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
    "account": "Computer Equipment:Accumulated Depreciation",
    "debit": "0",
    "credit": "3500.00"
@@ -1112,6 +1147,11 @@
   {
    "account": "Accounts Receivable (A/R)",
    "debit": "20700.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
    "credit": "0"
   },
   {
@@ -1279,6 +1319,11 @@
   {
    "account": "Accounts Receivable (A/R)",
    "debit": "14800.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
    "credit": "0"
   },
   {
@@ -1451,6 +1496,11 @@
   {
    "account": "Accounts Receivable (A/R)",
    "debit": "14800.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
    "credit": "0"
   },
   {
@@ -1813,6 +1863,11 @@
    "credit": "0"
   },
   {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
    "account": "Computer Equipment:Accumulated Depreciation",
    "debit": "0",
    "credit": "6000.00"
@@ -1992,6 +2047,11 @@
   {
    "account": "Prepaid Expenses",
    "debit": "4400.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
    "credit": "0"
   },
   {
@@ -2177,6 +2237,11 @@
    "credit": "0"
   },
   {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
    "account": "Computer Equipment:Accumulated Depreciation",
    "debit": "0",
    "credit": "7000.00"
@@ -2356,6 +2421,11 @@
   {
    "account": "Prepaid Expenses",
    "debit": "3600.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
    "credit": "0"
   },
   {
@@ -2541,6 +2611,11 @@
    "credit": "0"
   },
   {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
    "account": "Computer Equipment:Accumulated Depreciation",
    "debit": "0",
    "credit": "8000.00"
@@ -2613,6 +2688,11 @@
   {
    "account": "Bank Fees",
    "debit": "250.00",
+   "credit": "0"
+  },
+  {
+   "account": "Conference Fees",
+   "debit": "0",
    "credit": "0"
   },
   {
@@ -2800,6 +2880,11 @@
   {
    "account": "Bank Fees",
    "debit": "275.00",
+   "credit": "0"
+  },
+  {
+   "account": "Conference Fees",
+   "debit": "0",
    "credit": "0"
   },
   {
@@ -2995,6 +3080,11 @@
    "credit": "0"
   },
   {
+   "account": "Conference Fees",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
    "account": "Depreciation",
    "debit": "6000.00",
    "credit": "0"
@@ -3104,6 +3194,11 @@
   {
    "account": "Prepaid Expenses",
    "debit": "2000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
    "credit": "0"
   },
   {
@@ -3261,6 +3356,11 @@
   {
    "account": "Prepaid Expenses",
    "debit": "1600.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
    "credit": "0"
   },
   {
@@ -3433,6 +3533,11 @@
   {
    "account": "Prepaid Expenses",
    "debit": "1200.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
    "credit": "0"
   },
   {
@@ -3610,6 +3715,11 @@
   {
    "account": "Prepaid Expenses",
    "debit": "800.00",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
    "credit": "0"
   },
   {
@@ -3795,6 +3905,11 @@
    "credit": "0"
   },
   {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
    "account": "Computer Equipment:Accumulated Depreciation",
    "debit": "0",
    "credit": "11500.00"
@@ -3972,6 +4087,16 @@
    "credit": "0"
   },
   {
+   "account": "Prepaid Expenses",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
    "account": "Computer Equipment:Accumulated Depreciation",
    "debit": "0",
    "credit": "12000.00"
@@ -4146,6 +4271,16 @@
   {
    "account": "Accounts Receivable (A/R)",
    "debit": "19100.00",
+   "credit": "0"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
    "credit": "0"
   },
   {
@@ -4331,6 +4466,16 @@
    "credit": "0"
   },
   {
+   "account": "Prepaid Expenses",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
    "account": "Computer Equipment:Accumulated Depreciation",
    "debit": "0",
    "credit": "13000.00"
@@ -4510,6 +4655,16 @@
   {
    "account": "Accounts Receivable (A/R)",
    "debit": "19200.00",
+   "credit": "0"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
    "credit": "0"
   },
   {
@@ -4695,6 +4850,16 @@
    "credit": "0"
   },
   {
+   "account": "Prepaid Expenses",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
    "account": "Computer Equipment:Accumulated Depreciation",
    "debit": "0",
    "credit": "14000.00"
@@ -4874,6 +5039,11 @@
   {
    "account": "Accounts Receivable (A/R)",
    "debit": "53609.67",
+   "credit": "0"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "0",
    "credit": "0"
   },
   {
@@ -5069,6 +5239,16 @@
    "credit": "0"
   },
   {
+   "account": "Prepaid Expenses",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
    "account": "Computer Equipment:Accumulated Depreciation",
    "debit": "0",
    "credit": "15000.00"
@@ -5261,6 +5441,11 @@
    "credit": "0"
   },
   {
+   "account": "Prepaid Expenses",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
    "account": "Undeposited Funds",
    "debit": "3000.00",
    "credit": "0"
@@ -5415,6 +5600,11 @@
   {
    "account": "Accounts Receivable (A/R)",
    "debit": "16000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "0",
    "credit": "0"
   },
   {
@@ -5590,6 +5780,16 @@
    "credit": "0"
   },
   {
+   "account": "Prepaid Expenses",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
    "account": "Computer Equipment:Accumulated Depreciation",
    "debit": "0",
    "credit": "16500.00"
@@ -5759,6 +5959,16 @@
   {
    "account": "Accounts Receivable (A/R)",
    "debit": "16000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
    "credit": "0"
   },
   {
@@ -5939,6 +6149,16 @@
    "credit": "0"
   },
   {
+   "account": "Prepaid Expenses",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
    "account": "Computer Equipment:Accumulated Depreciation",
    "debit": "0",
    "credit": "17500.00"
@@ -6113,6 +6333,16 @@
   {
    "account": "Accounts Receivable (A/R)",
    "debit": "16000.00",
+   "credit": "0"
+  },
+  {
+   "account": "Prepaid Expenses",
+   "debit": "0",
+   "credit": "0"
+  },
+  {
+   "account": "Undeposited Funds",
+   "debit": "0",
    "credit": "0"
   },
   {

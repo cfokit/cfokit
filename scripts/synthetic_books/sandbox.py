@@ -51,16 +51,24 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from collections.abc import Iterator, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
+from synthetic_books import business, quickbooks_books
 from synthetic_books.business import END, START
 from synthetic_books.events import dumps
 from synthetic_books.quickbooks import MONTHS
-from synthetic_books.quickbooks_export import RENDERINGS, Rendering, month_ends
+from synthetic_books.quickbooks_export import (
+    COMPANY,
+    CREDIT_NATURE,
+    RENDERINGS,
+    Rendering,
+    Report,
+    month_ends,
+)
 from synthetic_books.xlsx import contents, rows
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -412,14 +420,139 @@ def comparable(row: Sequence[str | None]) -> tuple[str, ...]:
     return tuple(out)
 
 
+def api_date(text: str) -> str:
+    """A date as the export prints it. The API writes `0-00-00` where a row has none."""
+    if text == "0-00-00":
+        return ""
+    if len(text) == 10 and text[4] == text[7] == "-":
+        return f"{text[5:7]}/{text[8:10]}/{text[:4]}"
+    return text
+
+
+def api_rows(answer: Json) -> list[tuple[str, ...]]:
+    """An answer's rows in the archive's terms, without the blank rows the API puts between a
+    journal's transactions."""
+    out = [comparable([api_date(cell) for cell in row]) for row in flatten(answer)]
+    return [row for row in out if row]
+
+
+def amount(text: str | None) -> Decimal:
+    return figure(text) or Decimal(0)
+
+
+def ledger_rows(items: list[tuple[Any, ...]]) -> list[tuple[str, ...]]:
+    """A general ledger's entries as rows to compare, whoever wrote it.
+
+    QuickBooks sorts a ledger by date and leaves a day's entries in no settled order: the same
+    day comes back differently for different date ranges. So a day's entries are compared as a
+    set, and the running balance where the day ends.
+    """
+    out: list[tuple[str, ...]] = []
+    day: list[tuple[Any, ...]] = []
+
+    def flush() -> None:
+        if day:
+            out.extend(sorted((p, d, *f, format(a, "f")) for p, d, f, a, _ in day))
+            out.append((day[-1][0], day[-1][1], "balance", format(day[-1][4], "f")))
+            day.clear()
+
+    for kind, *rest in items:
+        if kind == "entry":
+            if day and day[-1][:2] != tuple(rest[:2]):
+                flush()
+            day.append(tuple(rest))
+        else:
+            flush()
+            out.append(tuple(str(part) for part in rest))
+    flush()
+    return [comparable(row) for row in out]
+
+
+def api_ledger(answer: Json) -> list[tuple[str, ...]]:
+    """The API's general ledger, each account named by its full path as the export names it."""
+    items: list[tuple[Any, ...]] = []
+
+    def walk(container: Json, path: str) -> None:
+        for row in container.get("Rows", {}).get("Row", []):
+            here = path
+            if "Header" in row:
+                leaf = row["Header"]["ColData"][0]["value"]
+                here = f"{path}:{leaf}" if path else leaf
+            if "ColData" in row:
+                c = [str(cell.get("value", "")) for cell in row["ColData"]]
+                if c[0] == "Beginning Balance":
+                    items.append(("begin", path, "Beginning Balance", amount(c[7])))
+                else:
+                    items.append(
+                        (
+                            "entry",
+                            path,
+                            api_date(c[0]),
+                            tuple(c[1:6]),
+                            amount(c[6]),
+                            amount(c[7]),
+                        )
+                    )
+            if "Rows" in row:
+                walk(row, here)
+            if "Summary" in row:
+                c = [str(cell.get("value", "")) for cell in row["Summary"]["ColData"]]
+                own = c[0].removeprefix("Total for ")
+                suffix = " with sub-accounts" if own.endswith(" with sub-accounts") else ""
+                label = c[0]
+                if own.removesuffix(suffix) == here.rsplit(":", 1)[-1]:
+                    label = f"Total for {here}{suffix}"
+                items.append(("total", label, amount(c[6])))
+
+    walk(answer, "")
+    return ledger_rows(items)
+
+
 # --- what our archives say, in the same terms -----------------------------------------------
 
 
-def ours(rendering: Rendering, member: str) -> list[tuple[str, ...]]:
+def grid(rendering: Rendering, member: str) -> list[list[str | None]]:
     archive = (FIXTURE / "archives" / rendering.name / "export.zip").read_bytes()
-    grid = rows(contents(archive)[member])[5:]  # past the title and header rows
-    body = [comparable(row) for row in grid if any(cell is not None for cell in row)]
-    return [row for row in body if row and not row[0].startswith(("Wednesday,",))]
+    return rows(contents(archive)[member])[5:]  # past the title and header rows
+
+
+def ours(rendering: Rendering, member: str) -> list[tuple[str, ...]]:
+    body = [comparable(row) for row in grid(rendering, member)]
+    body = [row for row in body if row and not row[0].startswith(("Wednesday,",))]
+    if member == "Journal.xlsx":  # the first column holds nothing but the TOTAL label
+        body = [(row[0] or row[1], *row[2:]) if len(row) > 1 else row for row in body]
+    return body
+
+
+def our_ledger(rendering: Rendering) -> list[tuple[str, ...]]:
+    """Our general ledger in the API's terms: each amount on the account's natural side, as
+    the API states it, rather than as a debit or a credit."""
+    report = Report(quickbooks_books.record(COMPANY, business.write()), rendering)
+    return ledger_of(report, grid(rendering, "General_ledger.xlsx"))
+
+
+def ledger_of(report: Report, ledger: list[list[str | None]]) -> list[tuple[str, ...]]:
+    sign = {
+        report.path(k): -1 if report.type_of(k) in CREDIT_NATURE else 1
+        for k in report.books.accounts
+    }
+    items: list[tuple[Any, ...]] = []
+    path = ""
+    for row in ledger:
+        c = [*row, *[None] * (10 - len(row))]
+        label = (c[0] or "").strip()
+        if label.startswith("Total for "):
+            account = label.removeprefix("Total for ").removesuffix(" with sub-accounts")
+            items.append(("total", label, sign[account] * (amount(c[7]) - amount(c[8]))))
+        elif label and not label.startswith("Wednesday,"):
+            path = label
+        elif c[1] == "Beginning Balance":
+            items.append(("begin", path, "Beginning Balance", amount(c[9])))
+        elif c[1]:
+            fields = tuple(cell or "" for cell in c[2:7])
+            change = sign[path] * (amount(c[7]) - amount(c[8]))
+            items.append(("entry", path, c[1], fields, change, amount(c[9])))
+    return ledger_rows(items)
 
 
 def our_trial_balances(rendering: Rendering) -> dict[str, list[tuple[str, ...]]]:
@@ -477,10 +610,14 @@ def validate(sandbox: Sandbox) -> int:
     failed: dict[str, int] = {}
 
     def compare(
-        name: str, expected: list[tuple[str, ...]], answer: Json, counted: dict[str, int]
+        name: str,
+        expected: list[tuple[str, ...]],
+        answer: Json,
+        counted: dict[str, int],
+        read: Callable[[Json], list[tuple[str, ...]]] = api_rows,
     ) -> None:
         (raw / f"{name}.json").write_text(json.dumps(answer, default=str, indent=1))
-        actual = [comparable(row) for row in flatten(answer)]
+        actual = read(answer)
         diff = differences(name, expected, actual)
         counted[name] = len(expected)
         (raw / f"{name}.diff").write_text("\n".join(diff))
@@ -513,6 +650,13 @@ def validate(sandbox: Sandbox) -> int:
             sandbox.report("ProfitAndLoss", **span),
             comparisons,
         )
+        compare(
+            f"{rendering.name}-general-ledger",
+            our_ledger(rendering),
+            sandbox.report("GeneralLedger", **span),
+            comparisons,
+            api_ledger,
+        )
         as_of = {
             "start_date": START.isoformat(),
             "end_date": END.isoformat(),
@@ -530,9 +674,9 @@ def validate(sandbox: Sandbox) -> int:
                 compare(
                     f"{rendering.name}-trial-balance-{day.isoformat()}",
                     months[day.isoformat()],
-                    sandbox.report(
-                        "TrialBalance", end_date=day.isoformat(), accounting_method=method
-                    ),
+                    # Without a start the API reports the fiscal year to today, whatever
+                    # the end; income and expense are the fiscal year's to the end either way.
+                    sandbox.report("TrialBalance", **{**as_of, "end_date": day.isoformat()}),
                     comparisons,
                 )
         if not any(name in failed for name in comparisons):

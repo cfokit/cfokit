@@ -57,6 +57,7 @@ from synthetic_books.events import (
 )
 
 OPENING_EQUITY = "opening-equity"
+UNAPPLIED_INCOME = "unapplied-cash-payment-income"
 CENT = Decimal("0.01")
 ZERO = Decimal(0)
 
@@ -67,6 +68,8 @@ SYSTEM_ACCOUNTS: dict[str, tuple[str, str]] = {
     HELD: ("Undeposited Funds", "other_current_asset"),
     OPENING_EQUITY: ("Opening Balance Equity", "equity"),
     RETAINED_EARNINGS: ("Retained Earnings", "equity"),
+    # Only the cash basis posts here: it is where QuickBooks reports a payment no invoice took.
+    UNAPPLIED_INCOME: ("Unapplied Cash Payment Income", "income"),
 }
 
 
@@ -88,6 +91,8 @@ class Posting:
     amount: Decimal
     memo: str = ""
     name: str = ""
+    # On the cash basis, the document a line recognizes part of, which the ledger shows it as.
+    source: str | None = None
 
 
 @dataclass(slots=True)
@@ -116,6 +121,8 @@ class Books:
     # Each invoice's, credit memo's, bill's and vendor credit's own lines, by document key, as
     # positive amounts of what the document is for. A discount line is negative.
     documents: dict[str, list[Posting]] = field(default_factory=dict)
+    # The same documents as recorded, by key.
+    sources: dict[str, Transaction] = field(default_factory=dict)
 
     def path(self, key: str, *, numbers: bool = False) -> str:
         """The account as every report names it: its full path, as it is called at the end."""
@@ -175,6 +182,8 @@ class Recorder:
         self.books.transactions.append(transaction)
         if key is not None:
             self.by_key[key] = transaction
+            if key in self.books.documents:
+                self.books.sources[key] = transaction
 
     def record(self, event_id: str, event: Event) -> None:
         books, day = self.books, event.on
@@ -205,7 +214,7 @@ class Recorder:
                 detail = self.sale(lines, -1, name)
                 total = -sum((p.amount for p in detail), ZERO)
                 books.documents[key] = [replace(p, amount=-p.amount) for p in detail]
-                receivable = Posting(RECEIVABLE, total, lines[0].memo, name)
+                receivable = Posting(RECEIVABLE, total, "", name)
                 self.add(
                     Transaction(
                         event_id,
@@ -223,7 +232,7 @@ class Recorder:
                 detail = self.sale(lines, 1, name)
                 total = sum((p.amount for p in detail), ZERO)
                 books.documents[key] = detail
-                receivable = Posting(RECEIVABLE, -total, lines[0].memo, name)
+                receivable = Posting(RECEIVABLE, -total, "", name)
                 self.add(
                     Transaction(event_id, day, "Credit Memo", [receivable, *detail], name=name),
                     key,
@@ -266,13 +275,34 @@ class Recorder:
             case Void(target=target):
                 voided = self.by_key[target]
                 voided.voided = True
-                voided.lines = [replace(p, amount=ZERO, memo="Voided") for p in voided.lines]
+                # Every line is kept at nothing; the first says it was voided.
+                voided.lines = [
+                    replace(p, amount=ZERO, memo="Voided" if i == 0 else p.memo)
+                    for i, p in enumerate(voided.lines)
+                ]
             case BankDeposit(into=into, payments=payments, lines=lines):
+                # QuickBooks lists deposited payments by the day each was received, then in the
+                # order they were made, whatever order the deposit names them in.
+                payments = tuple(
+                    sorted(
+                        payments,
+                        key=lambda p: (self.by_key[p.target].on, self.by_key[p.target].event),
+                    )
+                )
                 postings = [Posting(HELD, -p.amount, "", "") for p in payments]
                 postings += [Posting(line.account, -line.amount, line.memo) for line in lines]
                 total = -sum((p.amount for p in postings), ZERO)
+                # The bank line names whoever paid in, where that is one customer.
+                payers = {self.by_key[p.target].name for p in payments}
+                payer = payers.pop() if len(payers) == 1 and not lines else ""
                 self.add(
-                    Transaction(event_id, day, "Deposit", [Posting(into, total), *postings])
+                    Transaction(
+                        event_id,
+                        day,
+                        "Deposit",
+                        [Posting(into, total, "", payer), *postings],
+                        name=payer,
+                    )
                 )
             case CashSale(customer=customer, into=into, lines=lines):
                 name = self.name(customer)
@@ -283,7 +313,7 @@ class Recorder:
                         event_id,
                         day,
                         "Sales Receipt",
-                        [Posting(into, total, lines[0].memo, name), *detail],
+                        [Posting(into, total, "", name), *detail],
                         name=name,
                     )
                 )
@@ -296,7 +326,7 @@ class Recorder:
                         event_id,
                         day,
                         "Refund",
-                        [Posting(out_of, -total, lines[0].memo, name), *detail],
+                        [Posting(out_of, -total, "", name), *detail],
                         name=name,
                     )
                 )
@@ -310,7 +340,7 @@ class Recorder:
                         event_id,
                         day,
                         "Bill",
-                        [Posting(PAYABLE, -total, lines[0].memo, name), *detail],
+                        [Posting(PAYABLE, -total, "", name), *detail],
                         number,
                         name,
                         document=key,
@@ -329,7 +359,7 @@ class Recorder:
                         event_id,
                         day,
                         "Vendor Credit",
-                        [Posting(PAYABLE, total, lines[0].memo, name), *detail],
+                        [Posting(PAYABLE, total, "", name), *detail],
                         name=name,
                         document=key,
                     ),
@@ -347,7 +377,7 @@ class Recorder:
                         event_id,
                         day,
                         "Bill Payment (Check)",
-                        [Posting(PAYABLE, total, "", name), Posting(out_of, -total, "", name)],
+                        [Posting(out_of, -total, "", name), Posting(PAYABLE, total, "", name)],
                         number,
                         name,
                         settles=bills,
@@ -365,7 +395,7 @@ class Recorder:
                         event_id,
                         day,
                         label,
-                        [Posting(out_of, -total, lines[0].memo, name), *detail],
+                        [Posting(out_of, -total, "", name), *detail],
                         number,
                         name,
                     )
@@ -381,7 +411,7 @@ class Recorder:
                         event_id,
                         day,
                         "Credit Card Credit",
-                        [Posting(card, total, lines[0].memo, name), *detail],
+                        [Posting(card, total, "", name), *detail],
                         name=name,
                     )
                 )
@@ -391,14 +421,12 @@ class Recorder:
                         event_id,
                         day,
                         "Transfer",
-                        [Posting(into, amount, memo), Posting(out_of, -amount, memo)],
+                        [Posting(out_of, -amount, memo), Posting(into, amount, memo)],
                     )
                 )
-            case Journal(memo=memo, lines=lines):
+            case Journal(lines=lines):
                 postings = [
-                    Posting(
-                        line.account, line.amount, line.memo or memo, self.name(line.customer)
-                    )
+                    Posting(line.account, line.amount, line.memo, self.name(line.customer))
                     for line in lines
                 ]
                 self.add(Transaction(event_id, day, "Journal Entry", postings))
@@ -436,7 +464,9 @@ def _recognized(books: Books, applied: Applied, sign: int) -> list[Posting]:
     """The applied amount of a document, spread over its own lines, signed as `sign` says."""
     lines = books.documents[applied.target]
     shares = allocate(applied.amount, lines, sum((p.amount for p in lines), ZERO))
-    return [replace(share, amount=sign * share.amount) for share in shares]
+    return [
+        replace(share, amount=sign * share.amount, source=applied.target) for share in shares
+    ]
 
 
 def _cash_receipt(books: Books, payment: Transaction) -> list[Posting]:
@@ -453,7 +483,7 @@ def _cash_receipt(books: Books, payment: Transaction) -> list[Posting]:
             Posting(payment.deposit_account, received + payment.unapplied, "", payment.name)
         )
     if payment.unapplied:
-        out.append(Posting(RECEIVABLE, -payment.unapplied, "", payment.name))
+        out.append(Posting(UNAPPLIED_INCOME, -payment.unapplied, "", payment.name))
     return [replace(p, name=payment.name) for p in out]
 
 

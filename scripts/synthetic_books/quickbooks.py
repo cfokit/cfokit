@@ -79,6 +79,14 @@ ACCOUNT_TYPES: dict[AccountType, str] = {
     "other_expense": "Other Expense",
 }
 
+# The detail type an account is given where QuickBooks' own choice will not do. It refuses a
+# fixed asset without one; an equity account it would make the company's one Opening Balance
+# Equity. For every other type it picks one itself, and no report prints it.
+DETAIL_TYPES: dict[AccountType, str] = {
+    "fixed_asset": "MachineryAndEquipment",
+    "equity": "OwnersEquity",
+}
+
 MONTHS = (
     "January",
     "February",
@@ -282,6 +290,8 @@ def _calls(event: Event) -> Iterator[tuple[str, str, dict[str, Json], str | None
             yield "Account", "update", body, f"account:{key}"
         case OpenAccount(key=key, name=name, type=kind, number=number, parent=parent):
             body = {"Name": name, "AccountType": ACCOUNT_TYPES[kind]}
+            if kind in DETAIL_TYPES:
+                body["AccountSubType"] = DETAIL_TYPES[kind]
             if number:
                 body["AcctNum"] = number
             if parent is not None:
