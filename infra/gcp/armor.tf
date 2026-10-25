@@ -76,12 +76,6 @@ resource "google_compute_security_policy" "identity" {
       }
     }
   }
-
-  # Created before the one it replaces is removed (moved.tf), so sign-in stays up through the
-  # rename. Removed with moved.tf: a later replacement under the same name could not be created first.
-  lifecycle {
-    create_before_destroy = true
-  }
 }
 
 resource "google_compute_security_policy" "api" {
