@@ -74,9 +74,9 @@ locals {
   hsts = "Strict-Transport-Security: max-age=31536000; includeSubDomains"
 
   run_backends = {
-    rest   = google_cloud_run_v2_service.api["rest"].name
-    mcp    = google_cloud_run_v2_service.api["mcp"].name
-    issuer = google_cloud_run_v2_service.issuer.name
+    rest     = google_cloud_run_v2_service.api["rest"].name
+    mcp      = google_cloud_run_v2_service.api["mcp"].name
+    identity = google_cloud_run_v2_service.identity.name
   }
 }
 
@@ -102,10 +102,10 @@ resource "google_compute_backend_service" "run" {
   }
 
   # armor.tf: rate limits in front of the sign-in endpoints and the API.
-  security_policy = each.key == "issuer" ? google_compute_security_policy.issuer.id : google_compute_security_policy.api.id
+  security_policy = each.key == "identity" ? google_compute_security_policy.identity.id : google_compute_security_policy.api.id
 
   # The issuer sends its own Strict-Transport-Security; the API's are added here, where TLS ends.
-  custom_response_headers = each.key == "issuer" ? [] : [local.hsts]
+  custom_response_headers = each.key == "identity" ? [] : [local.hsts]
 
   log_config {
     enable      = true
@@ -116,20 +116,20 @@ resource "google_compute_backend_service" "run" {
 # The admin console: the same issuer, through a backend that Identity-Aware Proxy guards. Only
 # the accounts in var.admin_members get through, with their Google sign-in and its second
 # factor, and every request is in the audit log (audit.tf; SOC2-19, SOC2-23).
-resource "google_compute_backend_service" "issuer_admin" {
-  name                  = "cfokit-issuer-admin"
+resource "google_compute_backend_service" "identity_admin" {
+  name                  = "cfokit-identity-admin"
   load_balancing_scheme = "EXTERNAL_MANAGED"
   protocol              = "HTTPS"
 
   backend {
-    group = google_compute_region_network_endpoint_group.run["issuer"].id
+    group = google_compute_region_network_endpoint_group.run["identity"].id
   }
 
   iap {
     enabled = true
   }
 
-  security_policy = google_compute_security_policy.issuer.id
+  security_policy = google_compute_security_policy.identity.id
 
   log_config {
     enable      = true
@@ -140,7 +140,7 @@ resource "google_compute_backend_service" "issuer_admin" {
 # IAP reaches Cloud Run as its own service agent, which must exist (setup/foundation.sh creates
 # it; a new project has none) and may invoke the issuer.
 resource "google_cloud_run_v2_service_iam_member" "iap" {
-  name     = google_cloud_run_v2_service.issuer.name
+  name     = google_cloud_run_v2_service.identity.name
   location = var.region
   role     = "roles/run.invoker"
   member   = "serviceAccount:service-${data.google_project.this.number}@gcp-sa-iap.iam.gserviceaccount.com"
@@ -148,7 +148,7 @@ resource "google_cloud_run_v2_service_iam_member" "iap" {
 
 resource "google_iap_web_backend_service_iam_member" "admin" {
   for_each            = toset(var.admin_members)
-  web_backend_service = google_compute_backend_service.issuer_admin.name
+  web_backend_service = google_compute_backend_service.identity_admin.name
   role                = "roles/iap.httpsResourceAccessor"
   member              = each.value
 }
@@ -227,7 +227,7 @@ resource "google_compute_url_map" "https" {
 
   path_matcher {
     name            = "auth"
-    default_service = google_compute_backend_service.run["issuer"].id
+    default_service = google_compute_backend_service.run["identity"].id
 
     # The public sign-in host never serves the admin console.
     path_rule {
@@ -244,13 +244,13 @@ resource "google_compute_url_map" "https" {
     # Proxy, as the console does. Served rather than redirected, so a POST arrives intact.
     path_rule {
       paths   = ["/realms/master", "/realms/master/*"]
-      service = google_compute_backend_service.issuer_admin.id
+      service = google_compute_backend_service.identity_admin.id
     }
   }
 
   path_matcher {
     name            = "admin"
-    default_service = google_compute_backend_service.issuer_admin.id
+    default_service = google_compute_backend_service.identity_admin.id
   }
 }
 

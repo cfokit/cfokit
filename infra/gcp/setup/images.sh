@@ -21,8 +21,8 @@ repository="${registry}/${CFOKIT_PROJECT}/cfokit"
 
 step "Images for ${sha:0:12}"
 gcloud auth configure-docker "$registry" --quiet >/dev/null 2>&1
-for name in app issuer; do
-  target=$([ "$name" = app ] && echo runtime || echo issuer)
+for name in app identity; do
+  target=$([ "$name" = app ] && echo runtime || echo identity)
   image="${repository}/${name}:${sha}"
   if gcloud artifacts docker images describe "$image" >/dev/null 2>&1; then
     done_ "$image exists"

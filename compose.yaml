@@ -73,12 +73,12 @@ services:
   # CFOKit from operating a login flow or storing a password, and `IAM-06` requires a running
   # deployment to be usable as it stands — so the issuer has to bring its own user store and
   # login pages, or a self-hoster is left to supply the one thing we may not write.
-  keycloak:
+  identity:
     # Keycloak with CFOKit's sign-in theme added, built from web/ (ADR-0054 § 1); the Dockerfile
     # pins the Keycloak image.
     build:
       context: .
-      target: issuer
+      target: identity
       secrets: [build_ca]
     restart: unless-stopped
     # HTTPS only, with the certificate from the `tls` step above. Cross-device access requires
@@ -136,7 +136,7 @@ services:
       # it directly, so it has to mean the same thing from both sides. Published on the
       # container's own port rather than mapped to a different one, because a mapping makes the
       # advertised address wrong for exactly one of the two — and on this network 8080 is the
-      # ledger, so a browser following the chain to `keycloak:8080` would reach the ledger and
+      # ledger, so a browser following the chain to `keycloak.localhost:8080` would reach the ledger and
       # be answered.
       KC_HTTPS_PORT: ${KEYCLOAK_PORT:-8443}
       KC_HTTPS_CERTIFICATE_FILE: /opt/keycloak/conf/tls/cert.pem
@@ -194,7 +194,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      keycloak:
+      identity:
         condition: service_healthy
     environment:
       # The complete configuration surface; infra/README.md names every variable. Changing its
@@ -265,7 +265,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      keycloak:
+      identity:
         condition: service_healthy
     environment:
       # The same surface the REST service reads, and the same issuer and audience: one
@@ -313,7 +313,7 @@ services:
     command: ["python", "-m", "cfokit.agent"]
     restart: unless-stopped
     depends_on:
-      keycloak:
+      identity:
         condition: service_healthy
       ledger:
         condition: service_healthy
@@ -391,7 +391,7 @@ services:
       # The issuer, because the conformance suite drives it. `infra/README.md` states a
       # contract any issuer must meet and once claimed a suite verified it; the suite now
       # exists, and it needs the thing it measures to be running (ADR-0019).
-      keycloak:
+      identity:
         condition: service_healthy
     environment:
       # As the application role, so an integration test sees exactly the privileges and the

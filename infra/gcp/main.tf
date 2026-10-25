@@ -39,13 +39,13 @@ resource "google_project_service" "this" {
 }
 
 # ---------------------------------------------------------------------------------------------
-# Images. One repository: the application image and the issuer image, tagged by commit.
+# Images. One repository: the application image and the identity image, tagged by commit.
 # ---------------------------------------------------------------------------------------------
 resource "google_artifact_registry_repository" "images" {
   repository_id = "cfokit"
   location      = var.region
   format        = "DOCKER"
-  description   = "The application and issuer images, tagged by commit (ADR-0023, ADR-0060)."
+  description   = "The application and identity images, tagged by commit (ADR-0023, ADR-0060)."
 
   # Tags are left mutable. Immutable tags would stop the cleanup below deleting any tagged image,
   # so the repository would only grow; and a moved tag cannot change what runs, because Cloud Run
