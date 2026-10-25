@@ -52,7 +52,6 @@ The tutorial runs the scripts in [`setup/`](setup/), in order, and they run the 
 | `github.sh` | The deploy workflow's repository variables |
 | `realm.sh --settings [COMMIT]` | Apply the realms' settings in place, keeping every account; once after the first deploy |
 | `realm.sh --replace [COMMIT]` | Replace the issuer's realm with the image's, removing its accounts |
-| `rename-identity.sh` | Once, on a project deployed before the sign-in service was renamed: replaces `cfokit-issuer` with `cfokit-identity` |
 
 `deploy.sh` is also what `.github/workflows/deploy.yml` runs on every merge, so the first deploy
 and every later one are the same code.

@@ -89,12 +89,6 @@ resource "google_compute_region_network_endpoint_group" "run" {
   cloud_run {
     service = each.value
   }
-
-  # Created before the one it replaces is removed (moved.tf), so sign-in stays up through the
-  # rename. Removed with moved.tf: a later replacement under the same name could not be created first.
-  lifecycle {
-    create_before_destroy = true
-  }
 }
 
 resource "google_compute_backend_service" "run" {
@@ -116,12 +110,6 @@ resource "google_compute_backend_service" "run" {
   log_config {
     enable      = true
     sample_rate = 1.0
-  }
-
-  # Created before the one it replaces is removed (moved.tf), so sign-in stays up through the
-  # rename. Removed with moved.tf: a later replacement under the same name could not be created first.
-  lifecycle {
-    create_before_destroy = true
   }
 }
 
@@ -147,12 +135,6 @@ resource "google_compute_backend_service" "identity_admin" {
     enable      = true
     sample_rate = 1.0
   }
-
-  # Created before the one it replaces is removed (moved.tf), so sign-in stays up through the
-  # rename. Removed with moved.tf: a later replacement under the same name could not be created first.
-  lifecycle {
-    create_before_destroy = true
-  }
 }
 
 # IAP reaches Cloud Run as its own service agent, which must exist (setup/foundation.sh creates
@@ -162,12 +144,6 @@ resource "google_cloud_run_v2_service_iam_member" "iap" {
   location = var.region
   role     = "roles/run.invoker"
   member   = "serviceAccount:service-${data.google_project.this.number}@gcp-sa-iap.iam.gserviceaccount.com"
-
-  # Created before the one it replaces is removed (moved.tf), so sign-in stays up through the
-  # rename. Removed with moved.tf: a later replacement under the same name could not be created first.
-  lifecycle {
-    create_before_destroy = true
-  }
 }
 
 resource "google_iap_web_backend_service_iam_member" "admin" {
