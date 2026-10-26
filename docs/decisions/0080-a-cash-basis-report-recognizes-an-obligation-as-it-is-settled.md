@@ -42,6 +42,13 @@ What exists:
   dated with the payment; each share is rounded half up to the cent and the last line takes the
   rest; a payment no invoice takes is income, reported as "Unapplied Cash Payment Income"; and a
   journal entry to receivables appears in a cash-basis report as posted.
+* **Money received that no invoice takes.** In the books, every system holds it for the
+  customer: QuickBooks and Xero as a credit on the customer's account, NetSuite in a Customer
+  Deposits liability, Sage Intacct as an overpayment to apply or refund. On a cash basis they part:
+  QuickBooks reports it as income on receipt; Xero's treatment is reported as inconsistent; NetSuite
+  and Sage Intacct document none, their customers reporting on accrual almost without exception.
+  CFOKit's cash-basis entities are QuickBooks' market — small businesses — and an imported one is
+  reconciled against QuickBooks' own cash-basis reports.
 * **Tax.** Under the cash method, income is included when actually or constructively received,
   and expenses are deducted when paid (IRS Publication 538).
 * **Allocation.** [ADR-0025](0025-rounding-and-allocation.md) forbids rounding in the ledger and
@@ -69,6 +76,7 @@ What exists:
   date, derived in the engine; present everything a link does not reach as posted, and say so
 * Recognize an obligation only once it is fully settled
 * Recognize a settled obligation's lines in their order, first line first
+* Hold money no obligation takes for the customer in the cash view too, as the books do
 * Round each settlement's shares to the cent, as QuickBooks does
 * Store the cash view as postings when a settlement is written
 * Infer links for unlinked postings, by customer and amount
@@ -83,13 +91,15 @@ to.
 
 > A cash-basis report is the ledger's postings, except that a transaction raising an obligation is
 > deferred to its settlements. Each settlement recognizes, on its own date, its share of the
-> raising transaction's other postings, in place of its own posting on the carrying account.
+> raising transaction's other postings, in place of its own posting on the carrying account. Money
+> received ahead of any obligation is income when it arrives.
 
 ### 1. What a settlement recognizes
 
-**A raising transaction contributes nothing to a cash view by itself.** Its postings other than on
-the carrying account — an invoice's income lines, a bill's expense lines, a tax line — wait for
-settlement, and its posting on the carrying account is never presented.
+**A transaction raising an obligation for money not yet paid contributes nothing to a cash view by
+itself.** Its postings other than on the carrying account — an invoice's income lines, a bill's
+expense lines, a tax line — wait for settlement, and its posting on the carrying account is never
+presented. Money already received is § 2's.
 
 **A settlement recognizes, on the settling transaction's date, the raising transaction's other
 postings in proportion to the amount settled over the obligation's amount.** Its own posting on
@@ -117,10 +127,22 @@ share cancel, so an invoice never collected was never income and its write-off i
 the cash method has it. This holds only if both are recorded as settlements of the obligation, which
 is the obligation this record puts on `AR-14` and `AR-18`.
 
-**An overpayment recognizes what it settles and no more.** A settlement records the amount it
-applies (`AR-12`). What the payment brought beyond that stays where it was posted, on the carrying
-account, as money held for the customer, until a later settlement applies it or a refund returns
-it. QuickBooks reports it as income instead; CFOKit does not infer that unapplied money was earned.
+**Money received that no obligation takes is income when it arrives**, as QuickBooks presents it
+on a cash basis: a payment beyond what it settles, or a payment on account before any invoice. What
+a cash view recognizes is what cash moved, and this cash has moved. In the books it stays what
+every system makes it, money held for the customer (`AR-12`). The cash view presents it, on the
+payment's date, on a line of its own among income, "Unapplied payments" — a line of the view, not
+an account in the chart, because nothing is posted to it.
+
+**That takes a stored mark, not an inference from the account the money lands on**, which would
+make a journal entry to receivables look like a payment (ADR-0037 § 3). A payment recorded with
+more than it settles, or settling nothing, records the excess as an obligation owed to the
+customer: carried by the same account, signed as its posting there, and marked as money received.
+The mark is what the view reads — a bill's obligation is signed the same way — and it is what makes
+the view recognize the money at once rather than defer it. When a later settlement applies
+it to an invoice, the cash view recognizes the invoice's share and takes the same amount off
+unapplied payments, so the income is counted once. A refund settles it and takes it off unapplied
+payments too, as the cash leaves.
 
 **A reversal is presented as the negation of what it reverses, on its own date.** A voided invoice
 is deferred with its original, so the pair recognizes nothing. A payment that bounces takes back
@@ -156,14 +178,19 @@ than a view of it**, and stay posted figures on every basis (ADR-0050 § 1).
 * Modified cash, and how `RPT-10` labels it (ADR-0037 § 4).
 * How a report spans a change of basis, which `LED-14` records with its date. A report is presented
   on the basis the entity declares.
-* Whether an advance payment is income on receipt for tax.
+* Whether money received on account under a duty to repay it — a refundable deposit — is income
+  on receipt for tax. This record presents all money received on account as income, as QuickBooks
+  does.
 
 ### Consequences
 
 * Good, because a cash-basis company's statements recognize income when it is paid (`AR-16`),
   exactly, from links stored when the money moved.
 * Good, because one rule covers payment, partial payment, later-period settlement, credit note,
-  write-off, overpayment and reversal, so the features still to be built inherit it.
+  write-off and reversal, so the features still to be built inherit it.
+* Good, because money received on account is income on receipt, as QuickBooks reports it and as
+  the cash method includes income when received, while the books hold it for the customer as every
+  system does.
 * Good, because the derivation is a pure function over integers, property-testable without a
   database, and an obligation fully settled recognizes exactly what raised it.
 * Good, because nothing is dropped or guessed: an unlinked posting is presented as posted and
@@ -171,9 +198,11 @@ than a view of it**, and stay posted figures on every basis (ADR-0050 § 1).
 * Good, because payables inherit it unchanged, as ADR-0037 requires.
 * Bad, because every balance-presenting report of a cash-basis entity reads links and runs a
   derivation, where today it sums postings in one query.
-* Bad, because an unapplied payment is not income here as it is in QuickBooks, so a cash-basis
-  company's statements differ from QuickBooks' — and possibly from its tax treatment of advance
-  payments — until the payment is applied.
+* Bad, because a payment's unapplied excess has to be recorded as an obligation owed to the
+  customer, which is a change to the write path, and a payment recorded without it reads as
+  posted.
+* Bad, because a refundable deposit is presented as income on receipt, which may not be its tax
+  treatment.
 * Bad, because a cash-basis company's imported history presents on accrual, and an invoice open at
   the cutover, imported unlinked, is recognized at its invoice date and never at its payment.
 * Bad, because a partial payment that does not divide evenly can put its odd cent on a different
@@ -194,7 +223,7 @@ than a view of it**, and stay posted figures on every basis (ADR-0050 § 1).
 * **A differential check against QuickBooks.** The fixture's events record which invoice each
   payment applies to, so posted to CFOKit with their links they can be compared with the cash-basis
   statements the sandbox agreed with: exactly, with each odd-cent line explained by the allocation
-  rule rather than tolerated.
+  rule rather than tolerated. Unapplied payments are QuickBooks' "Unapplied Cash Payment Income".
 * **Not gated:** that a report branches on the declared basis while no posting path does. That is
   review, as ADR-0037 says.
 
@@ -207,6 +236,19 @@ than a view of it**, and stay posted figures on every basis (ADR-0050 § 1).
 * Good, because it is exact by allocation and changes no figure a link does not reach.
 * Bad, because every cash-basis report carries a derivation and a second read.
 * Bad, because unlinked history stays accrual, which the report has to say.
+
+### Hold money no obligation takes for the customer in the cash view too, as the books do
+
+The books' own convention, which every system shares, and the more conservative reading of money
+that may yet be refunded.
+
+* Good, because the cash view and the books would agree about unapplied money, and nothing a
+  customer may reclaim is called income.
+* Bad, because no cash-basis system we can verify does it. QuickBooks, whose market CFOKit's
+  cash-basis entities are, reports the money as income on receipt; the mid-market systems that hold
+  it as a deposit in the books document no cash-basis treatment at all.
+* Bad, because it moves income from the month money arrived to the month it is applied — across a
+  year end, into the next tax year — when the cash method includes income when received.
 
 ### Recognize an obligation only once it is fully settled
 
@@ -289,6 +331,9 @@ The strictest reading of `NFR-16`: where the books cannot support the answer, gi
   on the face of each report.
 * `allocate` across weights of both signs.
 * `AR-14` and `AR-18`, when built, record a settlement of the obligation they correct.
+* The write path records a payment's unapplied excess as an obligation owed to the customer. That
+  is a change to the write path, which needs a person's review before it is built.
+* The cash view's "Unapplied payments" line.
 * The ledger's receivables service names a cash entity's own statements as `AR-16`'s, not
   `RPT-19`'s.
 * ADR-0079 notes that a cash-basis company's imported history is presented as posted.
@@ -314,8 +359,8 @@ as a sandbox reported them).
 
 ## Revisit when
 
-* A cash-basis company or its accountant needs unapplied payments as income on receipt, for tax or
-  to match QuickBooks.
+* Tax research, or a cash-basis company's accountant, finds income on receipt wrong for a class of
+  money received on account, such as refundable deposits.
 * A cash-basis company imports with receivables open at the cutover, which is when linking imported
   open items, by a person's confirmation, needs its own record.
 * A cash-basis report over a year's books takes an order of magnitude longer than the accrual one.
