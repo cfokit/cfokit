@@ -101,7 +101,8 @@ person would — open, entries, reconcile — and runs each catalog case's check
 * `balance` — CFOKit's balance for the account at the month end equals the trial balance the
   archive carries for that date.
 * `stated` — the figure the reading took from a statement equals the one the archive states.
-* `account` — the chart CFOKit holds has the account, of the type, or does not.
+* `account` — the chart CFOKit holds has the account, of the type, with the name and parent, or
+  does not.
 * `text` — an entry carrying the description, byte for byte, is in CFOKit's books, or is not.
 * `skipped` — the import plan declines the row with the refusal code.
 * `reconciliation` — the reconciliation's journal total agrees or does not, and its divergences

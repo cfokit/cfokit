@@ -312,6 +312,15 @@ and the time each report was run differ by nature, and are not compared:
 PYTHONPATH=scripts uv run python -m synthetic_books.sandbox compare-export ~/Downloads/export.zip
 ```
 
+The account-numbers archive is compared with a second download, made after also setting "Show
+account numbers" (Chart of accounts, under Advanced): QuickBooks prints numbers in a report only
+with both that and "Enable account numbers" set. Name the rendering, and clear the setting after,
+because the other archives are written without numbers:
+
+```bash
+PYTHONPATH=scripts uv run python -m synthetic_books.sandbox compare-export ~/Downloads/numbered.zip account-numbers
+```
+
 ## Opening a pull request
 
 - Work on a branch of your fork. Never commit to `main`.

@@ -39,10 +39,16 @@ company, asked as Export Data asks (ADR-0078):
   headings and totals, and named by full path in the journal, the trial balance and each
   ledger entry's Account column. A parent's own entries are totalled a level in. An indented
   total's empty amount holds its indentation as text.
+* With account numbers shown, a heading, a total or a statement row names an account by its
+  number and its own name; a full path carries only the account's own number, once, in front
+  of its path of names: `6211 Office Expenses:Software:Design Tools`. Accounts sort by number
+  among their siblings. An account with no number, as QuickBooks' own have none, is named as
+  without them. A parent's total over its own entries and its children's says "with subs".
 
-Only an accrual download over all dates has been compared. How a cash download, a numbered one
-or one over a fiscal year prints is still our belief; the Reports API never prints account
-numbers, so only a download can show them.
+Accrual downloads over all dates have been compared, with account numbers shown and without.
+How a cash download or one over a fiscal year prints is still our belief. The Reports API never
+prints account numbers, so only a download can show them, and only with "Show account numbers"
+set as well as "Enable account numbers".
 """
 
 from __future__ import annotations
@@ -180,7 +186,21 @@ class Report:
         return self.books.path(key, numbers=self.rendering.numbers)
 
     def leaf(self, key: str) -> str:
-        return self.path(key).rsplit(":", 1)[-1]
+        """The account as a heading or a statement row names it: its own name, after its own
+        number where numbers are shown."""
+        own = self.books.names(key).rsplit(":", 1)[-1]
+        number = self.books.accounts[key].number
+        return f"{number} {own}" if self.rendering.numbers and number else own
+
+    def with_subs(self) -> str:
+        """What a parent's total over its own entries and its children's says it is: shortened
+        where numbers are shown, as the one numbered download did for each such parent."""
+        return " with subs" if self.rendering.numbers else " with sub-accounts"
+
+    def lineage(self, key: str) -> tuple[str, ...]:
+        """The account and those above it, outermost first, each as a heading names it."""
+        parent = self.books.accounts[key].parent
+        return (self.leaf(key),) if parent is None else (*self.lineage(parent), self.leaf(key))
 
     def depth(self, key: str) -> int:
         parent, level = self.books.accounts[key].parent, 0
@@ -192,11 +212,9 @@ class Report:
         return str(self.books.accounts[key].type)
 
     def ordered(self, keys: Iterable[str]) -> list[str]:
-        """By type, then down the tree: a parent before its children, siblings by name."""
-        return sorted(
-            keys,
-            key=lambda k: (TYPE_ORDER.index(self.type_of(k)), tuple(self.path(k).split(":"))),
-        )
+        """By type, then down the tree: a parent before its children, siblings by name — by
+        number first, where numbers are shown."""
+        return sorted(keys, key=lambda k: (TYPE_ORDER.index(self.type_of(k)), self.lineage(k)))
 
     def children(self, key: str) -> list[str]:
         return [k for k, a in self.books.accounts.items() if a.parent == key]
@@ -468,7 +486,7 @@ class Report:
                 for _, line in by_account.get(k, []):
                     sub_debit += max(line.amount, ZERO)
                     sub_credit += max(-line.amount, ZERO)
-            label = f"Total for {self.leaf(key)}" + (" with sub-accounts" if own else "")
+            label = f"Total for {self.leaf(key)}" + (self.with_subs() if own else "")
             rows.append(self.ledger_total(label, level, sub_debit, sub_credit))
         return rows
 

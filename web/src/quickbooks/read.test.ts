@@ -7,7 +7,14 @@
 import Big from "big.js";
 import { read, type Export, type SourceBooks } from "./read";
 import { Refused } from "./refused";
-import { GENERAL_LEDGER, JOURNAL, PROFIT_AND_LOSS, syntheticExport, zip } from "./synthetic";
+import {
+  GENERAL_LEDGER,
+  JOURNAL,
+  PROFIT_AND_LOSS,
+  syntheticExport,
+  zip,
+  type SyntheticRows,
+} from "./synthetic";
 
 let books: SourceBooks;
 let company: Export["company"];
@@ -153,6 +160,54 @@ describe("account types and paths", () => {
       ["Meals:Client Meals", "Meals"],
     ]);
     expect(typeOf("Meals")).toBe("expense");
+  });
+});
+
+describe("account numbers", () => {
+  // The synthetic export with Meals numbered as QuickBooks prints numbers: each heading and
+  // statement row with its own, and a full path with only the account's own, in front.
+  const numbering = (renamed: Record<string, string>) => (rows: SyntheticRows) =>
+    rows.map((row) =>
+      row.map((cell) => (typeof cell === "string" ? (renamed[cell] ?? cell) : cell)),
+    );
+  const headings = {
+    Meals: "7100 Meals",
+    "   Meals": "   7100 Meals",
+    "   Client Meals": "   7110 Client Meals",
+    "      Client Meals": "      7110 Client Meals",
+    "Total for Meals": "Total for 7100 Meals",
+    "   Total for Client Meals": "   Total for 7110 Client Meals",
+  };
+  const numbered = async (full: string) => {
+    const number = numbering({ ...headings, "Meals:Client Meals": full });
+    return read(
+      await syntheticExport({
+        "Journal.xlsx": number(JOURNAL),
+        "General_ledger.xlsx": number(GENERAL_LEDGER),
+        "Profit_and_loss.xlsx": number(PROFIT_AND_LOSS),
+      }),
+    );
+  };
+
+  test("a numbered account's code is its number, and its name its path of names", async () => {
+    const { books: read_ } = await numbered("7110 Meals:Client Meals");
+    expect(read_.accounts.map((account) => [account.code, account.name, account.parent])).toEqual([
+      ["7100", "Meals", ""],
+      ["7110", "Meals:Client Meals", "7100"],
+      ["Accounts Receivable", "Accounts Receivable", ""],
+      ["Checking", "Checking", ""],
+      ["Income", "Income", ""],
+      ["Income:Consulting", "Income:Consulting", "Income"],
+    ]);
+    expect(read_.entries[1]?.lines.map((line) => line.account_code)).toEqual(["7110", "Checking"]);
+    expect(read_.balances.map((line) => line.account_code)).toContain("7110");
+    expect(read_.rollups.map((line) => line.account_code)).toContain("7100");
+  });
+
+  test("numbers the export contradicts are not read: every account keeps its path", async () => {
+    const { books: read_ } = await numbered("7110 Meals:Client Lunches");
+    expect(read_.accounts.map((account) => account.code)).toContain("7100 Meals:7110 Client Meals");
+    expect(read_.accounts.map((account) => account.code)).not.toContain("7110");
   });
 });
 
