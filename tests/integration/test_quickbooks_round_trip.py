@@ -94,7 +94,7 @@ class Imported:
     refusals: list[dict[str, Any]]
     reconciliation: dict[str, Any]
     fiscal_start_month: int
-    chart: dict[str, str]  # code -> type, every account including those with nothing posted
+    chart: dict[str, dict[str, str]]  # code -> its row, every account, posted to or not
     journal: list[dict[str, str]]
 
     def get(self, path: str, **query: str) -> dict[str, Any]:
@@ -121,7 +121,7 @@ class Imported:
         reports; CFOKit closes a year only when a person does (`LED-12`), so its Retained
         Earnings is presented with the earlier years' earnings its own profit and loss reports.
         """
-        kind = self.chart[account]
+        kind = self.chart[account]["type"]
         year_start = self.fiscal_year_start(day)
         if kind in BALANCE_SHEET:
             lines = self.get("trial-balance", as_of=day.isoformat())["lines"]
@@ -203,7 +203,7 @@ def imported(client: TestClient, database: Database, archive: str) -> Imported:
         def table(name: str) -> list[dict[str, str]]:
             return list(csv.DictReader(io.StringIO(archive_file.read(name).decode())))
 
-        chart = {row["code"]: row["type"] for row in table("accounts.csv")}
+        chart = {row["code"]: row for row in table("accounts.csv")}
         journal = table("journal.csv")
     return Imported(
         archive=archive,
@@ -303,12 +303,16 @@ def stated(done: Imported, case_id: str, check: dict[str, Any]) -> None:
 
 
 def account(done: Imported, case_id: str, check: dict[str, Any]) -> None:
-    for name in check.get("present", []):
-        assert name in done.chart, f"{name!r} is not in the chart"
+    for code in check.get("present", []):
+        assert code in done.chart, f"{code!r} is not in the chart"
         if "type" in check:
-            assert done.chart[name] == check["type"], f"{name!r} is {done.chart[name]}"
-    for name in check.get("absent", []):
-        assert name not in done.chart, f"{name!r} is in the chart"
+            assert done.chart[code]["type"] == check["type"], (code, done.chart[code])
+    for code, name in check.get("names", {}).items():
+        assert done.chart[code]["name"] == name, (code, done.chart[code])
+    for code, parent in check.get("parents", {}).items():
+        assert done.chart[code]["parent"] == parent, (code, done.chart[code])
+    for code in check.get("absent", []):
+        assert code not in done.chart, f"{code!r} is in the chart"
 
 
 def text(done: Imported, case_id: str, check: dict[str, Any]) -> None:

@@ -342,15 +342,21 @@ function resolve(path: string[], accounts: Set<string>): string | null {
 }
 
 /**
- * Every account the export shows: each the journal posts to; each the general ledger lists
- * entries under, which on a cash basis includes accounts only that basis has; each it opens with
- * a beginning balance, which a ledger run from a start date prints for an account with nothing
- * in its range; and each account above one of them. An entry names its account by its full path,
- * a ledger by its leaf under its parent's, and QuickBooks allows no colon in a name, so every
- * parent on a path is an account.
+ * What the general ledger shows of the accounts: how each entry names its account against the
+ * headings above it, and each account it lists entries under or opens with a beginning balance.
+ * An entry names its account by its full path; the headings name each account on that path by
+ * its own label, indented under its parent's, as the statements do. With account numbers shown
+ * the two differ — an entry puts the account's own number once in front of its path of names, a
+ * heading puts each account's in front of its name — so the headings' path is the one an account
+ * is known by here. A ledger run from a start date opens an account with nothing in its range
+ * with a beginning balance; on a cash basis it lists accounts only that basis has.
  */
-function accountsOf(entries: SourceEntry[], ledger: Row[] | undefined): Set<string> {
-  const named = entries.flatMap((entry) => entry.lines.map((line) => line.account_code));
+function ledgerAccounts(ledger: Row[] | undefined): {
+  paths: Map<string, string>;
+  listed: string[];
+} {
+  const paths = new Map<string, string>();
+  const listed: string[] = [];
   const open: string[] = [];
   for (const row of ledger?.slice(HEADER_ROWS) ?? []) {
     const label = at(row, 0);
@@ -359,17 +365,65 @@ function accountsOf(entries: SourceEntry[], ledger: Row[] | undefined): Set<stri
       open.length = Math.floor((label.length - label.trimStart().length) / 3);
       open.push(label.trim());
     } else if (label === null && account !== null) {
-      named.push(account);
+      paths.set(account, open.join(":"));
+      listed.push(open.join(":"));
     } else if (label === null && at(row, DATE)?.trim() === "Beginning Balance") {
-      named.push(open.join(":"));
+      listed.push(open.join(":"));
     }
   }
+  return { paths, listed };
+}
+
+/**
+ * Every account the export shows, and each account above one of them. QuickBooks allows no colon
+ * in a name, so every parent on a path is an account.
+ */
+function accountsOf(named: string[]): Set<string> {
   const accounts = new Set<string>();
   for (const name of named) {
     const parts = name.split(":");
     for (let cut = 1; cut <= parts.length; cut++) accounts.add(parts.slice(0, cut).join(":"));
   }
   return accounts;
+}
+
+/** An account as CFOKit's chart holds it. */
+interface Charted {
+  code: string;
+  name: string;
+}
+
+/**
+ * Each account's code and name. Without account numbers, both are its path. With them, its code
+ * is its own number and its name its path of names, as a full path in the export prints them
+ * after the number: `6211`, named `Office Expenses:Software:Design Tools`.
+ *
+ * **Numbers are read only where the export proves them.** They are shown when an entry's full
+ * path differs from its headings' path, and each heading is then a number and a name — except
+ * QuickBooks' own accounts, which have no number. Every account an entry names is checked: its
+ * number, if it has one, then its path of names, must be exactly what the entry printed. If any
+ * is not, the numbers are not as this reads them, and every account keeps its path.
+ */
+function chart(accounts: Set<string>, paths: Map<string, string>): Map<string, Charted> {
+  const asPrinted = new Map([...accounts].map((path) => [path, { code: path, name: path }]));
+  if (![...paths].some(([full, path]) => full !== path)) return asPrinted;
+
+  const split = (label: string) => /^(\d+) (.+)$/.exec(label)?.slice(1) ?? [null, label];
+  const charted = new Map<string, Charted>();
+  for (const path of accounts) {
+    const labels = path.split(":").map(split);
+    const number = labels[labels.length - 1]?.[0] ?? null;
+    const name = labels.map(([, own]) => own).join(":");
+    charted.set(path, { code: number ?? name, name });
+  }
+  for (const [full, path] of paths) {
+    const account = charted.get(path);
+    if (account === undefined) continue;
+    const printed =
+      account.code === account.name ? account.name : `${account.code} ${account.name}`;
+    if (printed !== full) return asPrinted;
+  }
+  return charted;
 }
 
 /**
@@ -414,9 +468,9 @@ function journalTotal(rows: Row[]): SourceBooks["journal_total"] {
  * The general ledger's own stated balances — the source's, which `IMP-08` reconciles against —
  * split from the rollups. The ledger names each account by its leaf, indented under its parent,
  * and closes it with "Total for" the leaf. A parent's own entries are totalled one level in from
- * the parent; "Total for X with sub-accounts", or a bare "Total for X" over a parent with no
- * entries of its own, is a subtotal over a parent and its children, and comparing it against a
- * chart account would manufacture a divergence.
+ * the parent; "Total for X with sub-accounts" (or "with subs"), or a bare "Total for X" over a
+ * parent with no entries of its own, is a subtotal over a parent and its children, and comparing
+ * it against a chart account would manufacture a divergence.
  *
  * A balance is the account's at the ledger's end: the total's debits less its credits, and the
  * beginning balance a ledger run from a start date prints, which is on the account's natural
@@ -448,11 +502,10 @@ function ledgerTotals(
       open.push(name);
       continue;
     }
-    const subtotal = name.endsWith(" with sub-accounts");
-    const leaf = name.slice(
-      "Total for ".length,
-      subtotal ? -" with sub-accounts".length : undefined,
-    );
+    // "with subs" where account numbers are shown, as the one numbered export printed it.
+    const suffix = [" with sub-accounts", " with subs"].find((ending) => name.endsWith(ending));
+    const subtotal = suffix !== undefined;
+    const leaf = name.slice("Total for ".length, subtotal ? -suffix.length : undefined);
     const own = open[level] === leaf ? level : open[level - 1] === leaf ? level - 1 : -1;
     if (own < 0) {
       throw new Refused(
@@ -514,7 +567,16 @@ export async function read(archive: Uint8Array): Promise<Export> {
 
   const entries = entriesOf(journal);
   const ledger = sheets.get("General_ledger.xlsx");
-  const accounts = accountsOf(entries, ledger);
+  const { paths, listed } = ledgerAccounts(ledger);
+  // Every account by the path its headings give it, the statements' and the ledger's own.
+  for (const entry of entries) {
+    for (const line of entry.lines)
+      line.account_code = paths.get(line.account_code) ?? line.account_code;
+  }
+  const accounts = accountsOf([
+    ...entries.flatMap((entry) => entry.lines.map((line) => line.account_code)),
+    ...listed,
+  ]);
   const types = accountTypes(sheets, accounts);
 
   const [balances, rollups, balancesBasis] =
@@ -529,6 +591,11 @@ export async function read(archive: Uint8Array): Promise<Export> {
     if (rows !== undefined) statements.push(statement(rows, report, sections, accounts));
   }
 
+  // Then as CFOKit's chart holds it: by number where the export shows numbers.
+  const charted = chart(accounts, paths);
+  const code = (path: string) => charted.get(path)?.code ?? path;
+  const coded = (stated: StatedBalance) => ({ ...stated, account_code: code(stated.account_code) });
+
   return {
     books: {
       shape_version: "1",
@@ -540,17 +607,23 @@ export async function read(archive: Uint8Array): Promise<Export> {
       basis: basisOf(journal),
       balances_basis: balancesBasis,
       commodity: COMMODITY,
-      accounts: [...accounts].sort().map((name) => ({
-        code: name,
-        name,
-        account_type: typed(name, types),
-        parent: parentOf(name, accounts),
+      accounts: [...accounts].sort().map((path) => {
+        const parent = parentOf(path, accounts);
+        return {
+          code: code(path),
+          name: charted.get(path)?.name ?? path,
+          account_type: typed(path, types),
+          parent: parent === "" ? "" : code(parent),
+        };
+      }),
+      entries: entries.map((entry) => ({
+        ...entry,
+        lines: entry.lines.map((line) => ({ ...line, account_code: code(line.account_code) })),
       })),
-      entries,
       journal_total: journalTotal(journal),
-      balances,
-      rollups,
-      statements,
+      balances: balances.map(coded),
+      rollups: rollups.map(coded),
+      statements: statements.map((stated) => ({ ...stated, lines: stated.lines.map(coded) })),
     },
     company: {
       name: (at(journal[0], 0) ?? "").trim(),

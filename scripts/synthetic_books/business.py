@@ -151,7 +151,14 @@ ACCOUNTS: tuple[Account, ...] = (
     ("employer-taxes", "6120", "Employer Taxes", "expense", "payroll", ()),
     ("office", "6200", "Office Expenses", "expense", None, ("d-same-leaf",)),
     ("office-software", "6210", "Software", "expense", "office", ("d-same-leaf",)),
-    ("design-tools", "6211", "Design Tools", "expense", "office-software", ("d-three-levels",)),
+    (
+        "design-tools",
+        "6211",
+        "Design Tools",
+        "expense",
+        "office-software",
+        ("d-three-levels", "d-numbered-sub-account"),
+    ),
     ("supplies", "6300", "Office Supplies", "expense", None, ()),
     ("meals", "6400", "Meals & Entertainment", "expense", None, ("d-punctuation-names",)),
     ("repairs", "6500", "Repairs/Maintenance", "expense", None, ("d-punctuation-names",)),
@@ -745,7 +752,7 @@ class Business:
             "design-tools",
             5400,
             "Vectorly",
-            ("d-three-levels",) if first == START else (),
+            ("d-three-levels", "d-numbered-sub-account") if first == START else (),
         )
         self._card_charge(
             first.replace(day=4), "vectorly", "office-software", 1500, "Cloud Docs", same_leaf

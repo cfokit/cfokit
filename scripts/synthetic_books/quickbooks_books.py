@@ -152,16 +152,16 @@ class Books:
     vendors: dict[str, str] = field(default_factory=dict)
 
     def path(self, key: str, *, numbers: bool = False) -> str:
-        """The account as every report names it: its full path, as it is called at the end."""
+        """The account as a report names it in full: its path of names, as each is called at
+        the end, and where numbers are shown, its own number once in front of the whole path."""
+        number = self.accounts[key].number
+        return f"{number} {self.names(key)}" if numbers and number else self.names(key)
+
+    def names(self, key: str) -> str:
+        """The account's path of names, each as it is called at the end."""
         account = self.accounts[key]
-        own = f"{account.number} {account.name}" if numbers and account.number else account.name
-        if not account.active:
-            own += " (deleted)"
-        return (
-            own
-            if account.parent is None
-            else f"{self.path(account.parent, numbers=numbers)}:{own}"
-        )
+        own = account.name if account.active else f"{account.name} (deleted)"
+        return own if account.parent is None else f"{self.names(account.parent)}:{own}"
 
 
 def allocate(amount: Decimal, lines: Sequence[Posting], total: Decimal) -> list[Posting]:

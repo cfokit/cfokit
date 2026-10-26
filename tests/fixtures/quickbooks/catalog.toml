@@ -213,6 +213,12 @@ description = "A sub-account two levels down, Office Expenses:Software:Design To
 check = { kind = "account", present = ["Office Expenses:Software:Design Tools"], type = "expense" }
 
 [[case]]
+id = "d-numbered-sub-account"
+category = "data"
+description = "With account numbers shown, Design Tools prints as 6211 Office Expenses:Software:Design Tools in full and 6211 Design Tools under its parents' headings: account 6211, named for its path, under 6210 under 6200."
+check = { kind = "account", archive = "account-numbers", present = ["6200", "6210", "6211"], type = "expense", names = { "6211" = "Office Expenses:Software:Design Tools" }, parents = { "6211" = "6210", "6210" = "6200" } }
+
+[[case]]
 id = "d-zero-balance-account"
 category = "data"
 description = "Conference Fees, charged once and refunded in full, so it nets to zero; QuickBooks still prints it, at zero."
@@ -351,7 +357,7 @@ check = { kind = "reconciliation", journal_total = "agrees", divergences = "nets
 [[case]]
 id = "a-account-numbers"
 category = "archive"
-description = "Account numbers turned on, so every account prints as '1000 Operating Checking'."
+description = "Account numbers shown, so each account prints its number: '1010 Operating Checking', and in full only its own, '6211 Office Expenses:Software:Design Tools'."
 check = { kind = "reconciliation", journal_total = "agrees", divergences = "none", archive = "account-numbers" }
 
 [[case]]

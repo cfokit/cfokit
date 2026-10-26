@@ -21,7 +21,7 @@
 {"id":"ev-00021","date":"2023-07-01","kind":"open_account","key":"employer-taxes","name":"Employer Taxes","type":"expense","number":"6120","parent":"payroll","cases":[]}
 {"id":"ev-00022","date":"2023-07-01","kind":"open_account","key":"office","name":"Office Expenses","type":"expense","number":"6200","parent":null,"cases":["d-same-leaf"]}
 {"id":"ev-00023","date":"2023-07-01","kind":"open_account","key":"office-software","name":"Software","type":"expense","number":"6210","parent":"office","cases":["d-same-leaf"]}
-{"id":"ev-00024","date":"2023-07-01","kind":"open_account","key":"design-tools","name":"Design Tools","type":"expense","number":"6211","parent":"office-software","cases":["d-three-levels"]}
+{"id":"ev-00024","date":"2023-07-01","kind":"open_account","key":"design-tools","name":"Design Tools","type":"expense","number":"6211","parent":"office-software","cases":["d-three-levels","d-numbered-sub-account"]}
 {"id":"ev-00025","date":"2023-07-01","kind":"open_account","key":"supplies","name":"Office Supplies","type":"expense","number":"6300","parent":null,"cases":[]}
 {"id":"ev-00026","date":"2023-07-01","kind":"open_account","key":"meals","name":"Meals & Entertainment","type":"expense","number":"6400","parent":null,"cases":["d-punctuation-names"]}
 {"id":"ev-00027","date":"2023-07-01","kind":"open_account","key":"repairs","name":"Repairs/Maintenance","type":"expense","number":"6500","parent":null,"cases":["d-punctuation-names"]}
@@ -79,7 +79,7 @@
 {"id":"ev-00079","date":"2023-07-01","kind":"pay","key":"rent-0009","by":"check","out_of":"checking","payee":"elm-street","lines":[{"account":"rent","amount":"6500.00","memo":"July rent","customer":null}],"number":"5001","cases":["d-check"]}
 {"id":"ev-00080","date":"2023-07-01","kind":"receive_bill","key":"bill-keystone-2023-07-01","vendor":"keystone","number":"KM-202307","due":"2023-07-31","lines":[{"account":"insurance","amount":"2100.00","memo":"Quarterly premium","customer":null}],"cases":["d-bill"]}
 {"id":"ev-00081","date":"2023-07-02","kind":"pay","key":"card-0020","by":"card","out_of":"card","payee":"hotel-row","lines":[{"account":"meals","amount":"44.00","memo":"Client lunch","customer":null}],"number":"","cases":[]}
-{"id":"ev-00082","date":"2023-07-03","kind":"pay","key":"card-0012","by":"card","out_of":"card","payee":"vectorly","lines":[{"account":"design-tools","amount":"54.00","memo":"Vectorly","customer":null}],"number":"","cases":["d-three-levels"]}
+{"id":"ev-00082","date":"2023-07-03","kind":"pay","key":"card-0012","by":"card","out_of":"card","payee":"vectorly","lines":[{"account":"design-tools","amount":"54.00","memo":"Vectorly","customer":null}],"number":"","cases":["d-three-levels","d-numbered-sub-account"]}
 {"id":"ev-00083","date":"2023-07-04","kind":"pay","key":"card-0013","by":"card","out_of":"card","payee":"vectorly","lines":[{"account":"office-software","amount":"15.00","memo":"Cloud Docs","customer":null}],"number":"","cases":["d-same-leaf"]}
 {"id":"ev-00084","date":"2023-07-07","kind":"pay","key":"card-0014","by":"card","out_of":"card","payee":"renderfarm","lines":[{"account":"render-software","amount":"218.00","memo":"Render hours","customer":null}],"number":"","cases":["d-same-leaf"]}
 {"id":"ev-00085","date":"2023-07-10","kind":"pay","key":"loan-0017","by":"debit","out_of":"checking","payee":"first-harbor-bank","lines":[{"account":"loan","amount":"600.00","memo":"Principal","customer":null},{"account":"interest-expense","amount":"130.00","memo":"Interest","customer":null}],"number":"","cases":[]}
