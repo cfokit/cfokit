@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# The four DNS records, and whether the certificate has seen them.
+# The five DNS records, and whether the certificate has seen them.
 #
 #   dns.sh          print the records to set
-#   dns.sh --wait   then wait until all four resolve and the certificate is ACTIVE
+#   dns.sh --wait   then wait until all five resolve and the certificate is ACTIVE
 # shellcheck source=env.sh
 . "$(dirname "$0")/env.sh"
 
 ip=$(tf output -raw load_balancer_ip)
-hosts=("app.$CFOKIT_DOMAIN" "mcp.$CFOKIT_DOMAIN" "auth.$CFOKIT_DOMAIN" "admin.$CFOKIT_DOMAIN")
+hosts=("app.$CFOKIT_DOMAIN" "mcp.$CFOKIT_DOMAIN" "auth.$CFOKIT_DOMAIN" "admin.$CFOKIT_DOMAIN" "agent.$CFOKIT_DOMAIN")
 
 step "Set these at your DNS provider"
 for h in "${hosts[@]}"; do printf '  %-28s A  %s\n' "$h" "$ip"; done

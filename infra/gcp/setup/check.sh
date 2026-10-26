@@ -28,6 +28,7 @@ step "Deployment check"
 
 check "REST ready: $app/readyz" curl -fsS "$app/readyz"
 check "MCP ready: https://mcp.$CFOKIT_DOMAIN/readyz" curl -fsS "https://mcp.$CFOKIT_DOMAIN/readyz"
+check "Agent live: https://agent.$CFOKIT_DOMAIN/healthz" curl -fsS "https://agent.$CFOKIT_DOMAIN/healthz"
 check "Issuer discovery: https://auth.$CFOKIT_DOMAIN/realms/cfokit" \
   curl -fsS "https://auth.$CFOKIT_DOMAIN/realms/cfokit/.well-known/openid-configuration"
 check "Web client carries its CSP: $app/app/" has_header "$app/app/" "content-security-policy:"

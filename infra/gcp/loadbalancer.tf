@@ -1,8 +1,9 @@
-# One global external Application Load Balancer for three hostnames (ADR-0055, ADR-0060 § 2).
+# One global external Application Load Balancer for five hostnames (ADR-0055, ADR-0060 § 2).
 #
 #   app  — /app/* from the web bucket behind Cloud CDN; / redirects to /app/; everything else,
 #          /.well-known/ included, to the REST service.
 #   mcp  — everything to the MCP service.
+#   agent — everything to CFOKit's agent (ADR-0075).
 #   auth — everything to the issuer, except its admin console, which redirects to admin.
 #   admin — the issuer, behind Identity-Aware Proxy: named Google accounts only.
 
@@ -55,7 +56,7 @@ resource "google_compute_backend_bucket" "web" {
   # The same headers the REST service sends for /app/, from one source: security_headers() in
   # src/cfokit/server/web.py. tests/test_gcp_infrastructure.py asserts they agree.
   custom_response_headers = [
-    "Content-Security-Policy: default-src 'self'; connect-src 'self' ${local.issuer_origin}; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'",
+    "Content-Security-Policy: default-src 'self'; connect-src 'self' ${local.issuer_origin} https://${local.agent_host}; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'",
     "X-Content-Type-Options: nosniff",
     "Referrer-Policy: same-origin",
     local.hsts,
@@ -66,7 +67,7 @@ resource "google_compute_backend_bucket" "web" {
 # Each Cloud Run service, as a serverless network endpoint group and a backend.
 # ---------------------------------------------------------------------------------------------
 locals {
-  cert_domains = [local.app_host, local.mcp_host, local.auth_host, local.admin_host]
+  cert_domains = [local.app_host, local.mcp_host, local.auth_host, local.admin_host, local.agent_host]
 
   # A browser that has reached a hostname over HTTPS never tries it over HTTP again, for a year,
   # so nothing on the path can strip TLS from a later visit. Set where TLS ends, at the load
@@ -77,6 +78,7 @@ locals {
     rest     = google_cloud_run_v2_service.api["rest"].name
     mcp      = google_cloud_run_v2_service.api["mcp"].name
     identity = google_cloud_run_v2_service.identity.name
+    agent    = google_cloud_run_v2_service.agent.name
   }
 }
 
@@ -169,6 +171,10 @@ resource "google_compute_url_map" "https" {
     path_matcher = "mcp"
   }
   host_rule {
+    hosts        = [local.agent_host]
+    path_matcher = "agent"
+  }
+  host_rule {
     hosts        = [local.auth_host]
     path_matcher = "auth"
   }
@@ -223,6 +229,11 @@ resource "google_compute_url_map" "https" {
   path_matcher {
     name            = "mcp"
     default_service = google_compute_backend_service.run["mcp"].id
+  }
+
+  path_matcher {
+    name            = "agent"
+    default_service = google_compute_backend_service.run["agent"].id
   }
 
   path_matcher {

@@ -10,7 +10,7 @@
 # infra/keycloak/cfokit-realm.json does not reach a running deployment by itself.
 #
 # --settings sets the values infra/keycloak/realm-settings.sh lists (lockout, password policy,
-# events, token lifetime) on the realm that exists, and points the master realm's frontend URL at
+# events, token lifetime, CFOKit's agent's client) on the realm that exists, and points the master realm's frontend URL at
 # the admin console's host, without which the console cannot finish signing in. Run it once after
 # the first deploy, and again whenever those values change. Safe to repeat.
 #

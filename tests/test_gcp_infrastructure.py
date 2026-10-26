@@ -28,12 +28,19 @@ def _default(name: str) -> str:
 
 def test_the_bucket_sends_the_headers_the_rest_service_sends() -> None:
     """ADR-0055 § 2: one set of security headers, from `security_headers()`, in two serving
-    paths. The OpenTofu writes the issuer's origin as a reference; resolved, every header the
-    REST service sends for /app/ must be configured on the backend bucket verbatim."""
-    issuer_origin = f"https://auth.{_default('domain')}"
-    configured = _terraform().replace("${local.issuer_origin}", issuer_origin)
+    paths. The OpenTofu writes the issuer's and the agent's origins as references; resolved,
+    every header the REST service sends for /app/, told where the agent is, must be configured
+    on the backend bucket verbatim."""
+    domain = _default("domain")
+    issuer_origin, agent_origin = f"https://auth.{domain}", f"https://agent.{domain}"
+    configured = (
+        _terraform()
+        .replace("${local.issuer_origin}", issuer_origin)
+        .replace("https://${local.agent_host}", agent_origin)
+    )
 
-    for name, value in security_headers(f"{issuer_origin}/realms/cfokit").items():
+    headers = security_headers(f"{issuer_origin}/realms/cfokit", agent_origin)
+    for name, value in headers.items():
         assert f'"{name}: {value}"' in configured, name
 
 
@@ -238,3 +245,22 @@ def test_schema_and_role_changes_are_audited() -> None:
     assert re.search(r'"pgaudit\.log"\s*value\s*=\s*"ddl,role"', database)
     setup = (GCP / "setup" / "database.sh").read_text(encoding="utf-8")
     assert "CREATE EXTENSION IF NOT EXISTS pgaudit" in setup
+
+
+def test_the_rest_service_tells_the_web_client_where_the_agent_is() -> None:
+    """The client shows the chat only when the REST service names the agent (ADR-0075 § 1), and
+    the bucket's CSP lets the page reach the same origin."""
+    terraform = _terraform()
+    assert 'AGENT_PUBLIC_BASE_URL = "https://${local.agent_host}"' in terraform
+    assert 'agent_host = "agent.${var.domain}"' in terraform
+
+
+def test_the_agent_holds_no_database_credential() -> None:
+    """ADR-0075: the agent reaches the books only through MCP, so it is given no DATABASE_URL
+    and no way into the private network."""
+    agent = re.search(
+        r'resource "google_cloud_run_v2_service" "agent" \{(.*?)\n\}\n', _terraform(), re.DOTALL
+    )
+    assert agent
+    assert "DATABASE_URL" not in agent.group(1)
+    assert "vpc_access" not in agent.group(1)

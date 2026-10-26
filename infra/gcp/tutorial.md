@@ -6,8 +6,10 @@ This puts CFOKit into production in a Google Cloud project of yours, the way
 [ADR-0060](https://github.com/cfokit/cfokit/blob/main/docs/decisions/0060-production-is-one-gcp-project-deployed-on-merge.md)
 describes it:
 
-* one load balancer serving three hostnames you own: `app.`, `mcp.` and `auth.` your domain;
-* the REST and MCP services and the issuer (Keycloak) on Cloud Run;
+* one load balancer serving the hostnames you own: `app.`, `mcp.`, `auth.` and `agent.` your
+  domain, and `admin.` for the issuer's console;
+* the REST and MCP services, the issuer (Keycloak) and CFOKit's agent, behind the web app's chat,
+  on Cloud Run;
 * PostgreSQL on Cloud SQL, reachable only on a private address;
 * a deploy on every merge to `main` of your repository, signed in without keys.
 
@@ -78,6 +80,10 @@ infra/gcp/setup/foundation.sh
 Creates the three database roles and fills every secret. The application's role is made with
 SQL from a one-off job inside the network, so row-level security applies to it.
 
+It asks for one value it cannot make: an Anthropic API key from the
+[Claude Console](https://console.anthropic.com/), which the chat's agent answers with. Paste it
+when asked; it is not shown.
+
 ```sh
 infra/gcp/setup/database.sh
 ```
@@ -109,7 +115,7 @@ infra/gcp/setup/apply.sh
 
 ## DNS
 
-Prints four A records: `app`, `mcp`, `auth`, and `admin`, the issuer's admin console, which only accounts you name can reach. Add them at your DNS provider **with any proxy turned off** — at
+Prints five A records: `app`, `mcp`, `auth`, `agent`, and `admin`, the issuer's admin console, which only accounts you name can reach. Add them at your DNS provider **with any proxy turned off** — at
 Cloudflare, "DNS only", the grey cloud — so Google's certificate can validate each name.
 
 ```sh

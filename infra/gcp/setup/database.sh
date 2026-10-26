@@ -91,6 +91,33 @@ else
   done_ "generated; read it with: gcloud secrets versions access latest --secret keycloak-admin-password"
 fi
 
+# The issuer gives CFOKit's agent's client this secret, and the agent presents it (ADR-0077).
+# Hex, so it needs no quoting in the realm's JSON.
+step "CFOKit's agent's client secret"
+if has_value agent-client-secret; then
+  done_ "already set"
+else
+  password | tr -d '\n' | put agent-client-secret
+  done_ "generated"
+fi
+
+# The one credential this deployment does not make: the agent's, from the Claude Console. Read
+# without echo, and sent on stdin, like every other.
+step "The agent's Anthropic API key"
+if has_value anthropic-api-key; then
+  done_ "already set"
+elif [ -t 0 ]; then
+  read -r -s -p "Paste the Anthropic API key (not shown): " key
+  echo
+  [ -n "$key" ] || { need "no key given; run this again to set it"; exit 1; }
+  printf '%s' "$key" | put anthropic-api-key
+  unset key
+  done_ "set"
+else
+  need "anthropic-api-key has no value: run this in a terminal to paste one"
+  exit 1
+fi
+
 # `cfokit_app` is an ordinary role made with SQL, so it is not a member of cloudsqlsuperuser and
 # row-level security applies to it (infra/README.md, "Two database roles"). The database has a
 # private IP only, so the SQL runs from a one-off job inside the network, as the migration

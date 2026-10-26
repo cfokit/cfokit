@@ -10,6 +10,8 @@ locals {
     "database-url-app"        = "DATABASE_URL for the REST and MCP services: cfokit_app."
     "keycloak-db-password"    = "The issuer's database role's password."
     "keycloak-admin-password" = "The issuer's first administrator's password."
+    "agent-client-secret"     = "CFOKit's agent's client secret at the issuer, read by both."
+    "anthropic-api-key"       = "The agent's inference credential."
   }
 }
 

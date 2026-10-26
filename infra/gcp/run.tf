@@ -24,8 +24,11 @@ locals {
 
 resource "google_cloud_run_v2_service" "api" {
   for_each = {
-    rest = { host = local.app_host, extra = { MCP_PUBLIC_BASE_URL = "https://${local.mcp_host}" } }
-    mcp  = { host = local.mcp_host, extra = { WEB_PUBLIC_BASE_URL = "https://${local.app_host}" } }
+    rest = { host = local.app_host, extra = {
+      MCP_PUBLIC_BASE_URL   = "https://${local.mcp_host}"
+      AGENT_PUBLIC_BASE_URL = "https://${local.agent_host}"
+    } }
+    mcp = { host = local.mcp_host, extra = { WEB_PUBLIC_BASE_URL = "https://${local.app_host}" } }
   }
 
   name                = "cfokit-${each.key}"
@@ -125,6 +128,95 @@ resource "google_cloud_run_v2_service" "api" {
 }
 
 # ---------------------------------------------------------------------------------------------
+# CFOKit's agent, behind the web app's chat (ADR-0075): a separate component, reaching the books
+# only through MCP and the issuer only to exchange a person's token, both at their public
+# addresses, as any client does. It holds no database credential, so it needs no VPC.
+# ---------------------------------------------------------------------------------------------
+resource "google_cloud_run_v2_service" "agent" {
+  name                = "cfokit-agent"
+  location            = var.region
+  ingress             = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
+  deletion_protection = true
+
+  template {
+    service_account = google_service_account.agent.email
+
+    scaling {
+      min_instance_count = 0
+      max_instance_count = 4
+    }
+
+    containers {
+      image   = local.app_image
+      command = ["python", "-m", "cfokit.agent"]
+
+      ports {
+        container_port = 8080
+      }
+
+      dynamic "env" {
+        for_each = {
+          CFOKIT_API_URL      = "https://${local.app_host}"
+          CFOKIT_MCP_URL      = "https://${local.mcp_host}/mcp"
+          AUTH_ISSUER_URL     = local.issuer_url
+          AUTH_CLIENT_ID      = "cfokit-agent"
+          WEB_PUBLIC_BASE_URL = "https://${local.app_host}"
+          LOG_LEVEL           = "info"
+        }
+        content {
+          name  = env.key
+          value = env.value
+        }
+      }
+
+      dynamic "env" {
+        for_each = {
+          AUTH_CLIENT_SECRET = "agent-client-secret"
+          ANTHROPIC_API_KEY  = "anthropic-api-key"
+        }
+        content {
+          name = env.key
+          value_source {
+            secret_key_ref {
+              secret  = google_secret_manager_secret.this[env.value].secret_id
+              version = "latest"
+            }
+          }
+        }
+      }
+
+      resources {
+        limits = {
+          cpu    = "1"
+          memory = "512Mi"
+        }
+        startup_cpu_boost = true
+      }
+
+      # As the API's: it scales to zero, so most turns start cold.
+      startup_probe {
+        http_get {
+          path = "/healthz"
+        }
+        period_seconds    = 5
+        timeout_seconds   = 3
+        failure_threshold = 24
+      }
+    }
+  }
+
+  lifecycle {
+    ignore_changes = [
+      template[0].containers[0].image,
+      client,
+      client_version,
+    ]
+  }
+
+  depends_on = [google_secret_manager_secret_iam_member.reader]
+}
+
+# ---------------------------------------------------------------------------------------------
 # The issuer: Keycloak, one instance, never scaled to zero (ADR-0060 § 3).
 # ---------------------------------------------------------------------------------------------
 locals {
@@ -155,6 +247,9 @@ locals {
     # The issuer is reachable from anywhere, so a client that registers itself may send a
     # person's sign-in only to Claude or back to their own machine (ADR-0064).
     CFOKIT_RESTRICT_REGISTERED_REDIRECTS = "true"
+    # CFOKit's agent's client, which exchanges a person's web-client token for one of its own
+    # (ADR-0077). Read at import, and by the settings job for a realm that predates it.
+    CFOKIT_AGENT_ENABLED = "true"
     # Every sign-in, success or failure, and every administrator's change, in the issuer's log
     # at a level Cloud Logging keeps and monitoring.tf alerts on (PLT-17, SOC2-24). Keycloak logs
     # successes at debug otherwise. Identifiers and the sign-in name; never a credential.
@@ -164,6 +259,7 @@ locals {
   identity_secrets = {
     KC_DB_PASSWORD              = "keycloak-db-password"
     KC_BOOTSTRAP_ADMIN_PASSWORD = "keycloak-admin-password"
+    CFOKIT_AGENT_CLIENT_SECRET  = "agent-client-secret"
   }
 }
 resource "google_cloud_run_v2_service" "identity" {
@@ -368,6 +464,7 @@ resource "google_cloud_run_v2_job" "identity_settings" {
             CFOKIT_ACCESS_TOKEN_LIFESPAN         = local.identity_env.CFOKIT_ACCESS_TOKEN_LIFESPAN
             CFOKIT_RESTRICT_REGISTERED_REDIRECTS = local.identity_env.CFOKIT_RESTRICT_REGISTERED_REDIRECTS
             CFOKIT_MASTER_FRONTEND_URL           = "https://${local.admin_host}"
+            CFOKIT_AGENT_ENABLED                 = local.identity_env.CFOKIT_AGENT_ENABLED
           }
           content {
             name  = env.key
@@ -375,12 +472,18 @@ resource "google_cloud_run_v2_job" "identity_settings" {
           }
         }
 
-        env {
-          name = "KC_DB_PASSWORD"
-          value_source {
-            secret_key_ref {
-              secret  = google_secret_manager_secret.this["keycloak-db-password"].secret_id
-              version = "latest"
+        dynamic "env" {
+          for_each = {
+            KC_DB_PASSWORD             = "keycloak-db-password"
+            CFOKIT_AGENT_CLIENT_SECRET = "agent-client-secret"
+          }
+          content {
+            name = env.key
+            value_source {
+              secret_key_ref {
+                secret  = google_secret_manager_secret.this[env.value].secret_id
+                version = "latest"
+              }
             }
           }
         }
@@ -414,6 +517,7 @@ resource "google_cloud_run_v2_service_iam_member" "public" {
     rest     = google_cloud_run_v2_service.api["rest"].name
     mcp      = google_cloud_run_v2_service.api["mcp"].name
     identity = google_cloud_run_v2_service.identity.name
+    agent    = google_cloud_run_v2_service.agent.name
   }
   name     = each.value
   location = var.region
