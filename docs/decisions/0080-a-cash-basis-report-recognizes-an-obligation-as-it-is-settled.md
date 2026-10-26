@@ -49,8 +49,13 @@ What exists:
   and Sage Intacct document none, their customers reporting on accrual almost without exception.
   CFOKit's cash-basis entities are QuickBooks' market — small businesses — and an imported one is
   reconciled against QuickBooks' own cash-basis reports.
-* **Tax.** Under the cash method, income is included when actually or constructively received,
-  and expenses are deducted when paid (IRS Publication 538).
+* **Tax.** *"Under the cash method, you include in your gross income all items of income you
+  actually or constructively received during the tax year"*, and *"generally, you deduct expenses
+  in the tax year in which you actually pay them"* (IRS Publication 538, January 2022; Treas. Reg.
+  § 1.446-1(c)(1)(i)). An advance payment for work still to be done is income when received, with no
+  deferral for a cash-method taxpayer: § 451(c) and § 1.451-8 reach only the accrual method. A
+  refundable deposit is not income at all while the customer keeps the right to its return
+  (*Commissioner v. Indianapolis Power & Light Co.*, 493 U.S. 203 (1990)).
 * **Allocation.** [ADR-0025](0025-rounding-and-allocation.md) forbids rounding in the ledger and
   makes allocation largest remainder, ties broken by line order, in the pure engine. The engine's
   `allocate` takes non-negative integer weights and an increment, and refuses rather than rounds.
@@ -124,8 +129,14 @@ cash-basis balance sheet.
 corrects: its own debit to income and the share it recognizes cancel, so a credited invoice
 recognizes nothing on a cash basis. A write-off settles the invoice: its bad-debt expense and the
 share cancel, so an invoice never collected was never income and its write-off is no expense, as
-the cash method has it. This holds only if both are recorded as settlements of the obligation, which
-is the obligation this record puts on `AR-14` and `AR-18`.
+the cash method has it (Treas. Reg. § 1.166-1(e)). This holds only if both are recorded as
+settlements of the obligation, which is the obligation this record puts on `AR-14` and `AR-18`.
+
+**A credit note against an invoice already paid raises an obligation instead**, owed to the
+customer, because there is nothing left to settle. Like any obligation for money not yet paid, it
+waits for its settlements: the refund that pays it, or the later invoice it is applied to. The
+reduction in income lands then, when the cash leaves or the credit is used, which is when the cash
+method deducts a refund — not as a reversal of income already received.
 
 **Money received that no obligation takes is income when it arrives**, as QuickBooks presents it
 on a cash basis: a payment beyond what it settles, or a payment on account before any invoice. What
@@ -143,6 +154,17 @@ the view recognize the money at once rather than defer it. When a later settleme
 it to an invoice, the cash view recognizes the invoice's share and takes the same amount off
 unapplied payments, so the income is counted once. A refund settles it and takes it off unapplied
 payments too, as the cash leaves.
+
+**A refundable deposit is recorded to a liability account, as QuickBooks records a retainer or
+deposit**, not as a payment on account. It is then a posting no link reaches, presented as posted on
+both bases (§ 3): held, not income, which is right while the customer can reclaim it. Applied to an
+invoice, it settles the invoice like a payment, and the invoice's share is recognized on that date —
+when the money becomes the business's to keep. Which a receipt is, a prepayment or a deposit, is a
+fact of the bargain recorded where it is booked, not a default the view chooses.
+
+**The date is the day the money was received.** A settlement recognizes on its transaction's date,
+so a payment is recorded on the day it arrives — a check received on December 31 is December
+income, though deposited in January — and the deposit is a transfer.
 
 **A reversal is presented as the negation of what it reverses, on its own date.** A voided invoice
 is deferred with its original, so the pair recognizes nothing. A payment that bounces takes back
@@ -178,6 +200,10 @@ than a view of it**, and stay posted figures on every basis (ADR-0050 § 1).
 * Modified cash, and how `RPT-10` labels it (ADR-0037 § 4).
 * How a report spans a change of basis, which `LED-14` records with its date. A report is presented
   on the basis the entity declares.
+* The tax return. A cash-basis report presents what the books recorded: a prepayment booked to a
+  prepaid asset is presented as posted, and one booked to expense is expensed when paid, though a
+  prepaid expense past the 12-month rule is capitalized for tax (§ 1.263(a)-4). Whether an entity
+  may use the cash method for tax (§ 448) is a fact about the entity, not a property of its reports.
 
 ### Consequences
 
@@ -345,8 +371,12 @@ report derives and nothing stored. Not nothing for what was issued. An issued st
 keeps the figures it was issued with, and a changed rule would re-derive different ones with no
 posting to show why, so supersession would not detect it.
 
-**Sources.** IRS Publication 538, *Accounting Periods and Methods*, "Cash Method", as secondary
-sources quote it.
+**Sources.** IRS Publication 538, *Accounting Periods and Methods*, rev. January 2022, "Cash
+Method", read at irs.gov/publications/p538. Treas. Reg. §§ 1.446-1(c)(1)(i), 1.451-2(a),
+1.451-8(b), 1.461-1(a)(1), 1.263(a)-4 and 1.166-1(e); 26 U.S.C. §§ 451, 448 and 1341;
+*Commissioner v. Indianapolis Power & Light Co.*, 493 U.S. 203 (1990). QuickBooks' recording of a
+retainer or deposit to a liability account, from Intuit's help article "Record a retainer or
+deposit". Research input, not tax advice; an entity's accountant decides its return.
 
 Related: ADR-0037 (the model this derives from), ADR-0025 (allocation), ADR-0050 (the import's
 basis difference), ADR-0059 (a person confirms a proposed match), ADR-0078 (the incumbent's rules,
