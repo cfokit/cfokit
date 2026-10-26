@@ -124,6 +124,7 @@ nothing cites these but this repository. They are added when something breaks wi
 | [0078](0078-the-quickbooks-fixture-is-ours-and-a-sandbox-validates-it.md) | The QuickBooks fixture is ours, written from business events, with a sandbox as its validator | Proposed |
 | [0079](0079-the-quickbooks-round-trip-imports-what-the-reader-read.md) | The QuickBooks round trip imports what the web client's reader read from the fixture | Proposed |
 | [0080](0080-a-cash-basis-report-recognizes-an-obligation-as-it-is-settled.md) | A cash-basis report recognizes each obligation as it is settled, and changes nothing a stored link does not reach | Proposed |
+| [0081](0081-an-import-brings-what-is-open-at-the-cutover-as-open-obligations.md) | An import marks each invoice and bill still open at the cutover as an open obligation, from the source's own list of what is open | Proposed |
 
 ## Deferred — decided in principle, waiting on a need
 
