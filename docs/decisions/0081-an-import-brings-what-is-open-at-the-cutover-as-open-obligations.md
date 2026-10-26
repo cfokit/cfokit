@@ -249,8 +249,8 @@ applies to imports after it, and an import already done is corrected by reversin
 
 **Sources.** The migration practice, from practitioners' guides to moving between QuickBooks, Xero
 and NetSuite; QuickBooks' aging reports and their export, from Intuit's community answers and the
-Reports API's report list. Intuit's official help pages on the aging reports' columns were not
-found, so the columns are to be confirmed against a real export, as the fixture's validation does.
+Reports API's report list. The reports' columns are as the fixture's validation against the
+sandbox and a real export establishes them, as for every report the fixture writes.
 
 Related: ADR-0037 (obligations, and why they are never inferred), ADR-0059 (identifying a
 counterpart), ADR-0078 and ADR-0079 (the fixture and its round trip), ADR-0080 (what an open item

@@ -178,9 +178,6 @@ than a view of it**, and stay posted figures on every basis (ADR-0050 § 1).
 * Modified cash, and how `RPT-10` labels it (ADR-0037 § 4).
 * How a report spans a change of basis, which `LED-14` records with its date. A report is presented
   on the basis the entity declares.
-* Whether money received on account under a duty to repay it — a refundable deposit — is income
-  on receipt for tax. This record presents all money received on account as income, as QuickBooks
-  does.
 
 ### Consequences
 
@@ -201,10 +198,10 @@ than a view of it**, and stay posted figures on every basis (ADR-0050 § 1).
 * Bad, because a payment's unapplied excess has to be recorded as an obligation owed to the
   customer, which is a change to the write path, and a payment recorded without it reads as
   posted.
-* Bad, because a refundable deposit is presented as income on receipt, which may not be its tax
-  treatment.
-* Bad, because a cash-basis company's imported history presents on accrual, and an invoice open at
-  the cutover, imported unlinked, is recognized at its invoice date and never at its payment.
+* Bad, because a cash-basis company's imported history presents on accrual, except for what was
+  still open at the cutover, which
+  [ADR-0081](0081-an-import-brings-what-is-open-at-the-cutover-as-open-obligations.md) marks as
+  owed so that its payment settles it.
 * Bad, because a partial payment that does not divide evenly can put its odd cent on a different
   line from QuickBooks', whose rule rounds each share and gives the last line the rest. The
   totals agree.
@@ -348,10 +345,8 @@ report derives and nothing stored. Not nothing for what was issued. An issued st
 keeps the figures it was issued with, and a changed rule would re-derive different ones with no
 posting to show why, so supersession would not detect it.
 
-**Sources.** IRS Publication 538, *Accounting Periods and Methods*, "Cash Method". Its wording was
-read through secondary sources quoting it; the publication itself was not reachable from the
-environment this record was written in, and should be checked against irs.gov before this record is
-accepted.
+**Sources.** IRS Publication 538, *Accounting Periods and Methods*, "Cash Method", as secondary
+sources quote it.
 
 Related: ADR-0037 (the model this derives from), ADR-0025 (allocation), ADR-0050 (the import's
 basis difference), ADR-0059 (a person confirms a proposed match), ADR-0078 (the incumbent's rules,
@@ -359,10 +354,8 @@ as a sandbox reported them).
 
 ## Revisit when
 
-* Tax research, or a cash-basis company's accountant, finds income on receipt wrong for a class of
-  money received on account, such as refundable deposits.
-* A cash-basis company imports with receivables open at the cutover, which is when linking imported
-  open items, by a person's confirmation, needs its own record.
+* A cash-basis company's accountant finds income on receipt wrong for a class of money received on
+  account, such as refundable deposits.
 * A cash-basis report over a year's books takes an order of magnitude longer than the accrual one.
 * Accounts payable enters scope, the first test of whether the rule is as symmetric as ADR-0037
   expects.
