@@ -45,10 +45,16 @@ company, asked as Export Data asks (ADR-0078):
   among their siblings. An account with no number, as QuickBooks' own have none, is named as
   without them. A parent's total over its own entries and its children's says "with subs".
 
-Accrual downloads over all dates have been compared, with account numbers shown and without.
-How a cash download or one over a fiscal year prints is still our belief. The Reports API never
-prints account numbers, so only a download can show them, and only with "Show account numbers"
-set as well as "Enable account numbers".
+* Over a span, a period of whole months is named by its months — "July 2025 - June 2026" — and
+  a balance is "As of" the span's last day. A beginning balance is indented to its account's
+  level, and an account the span opens with a beginning balance and nothing else totals no
+  amount.
+
+Every rendering has been compared with a download of it: the accrual one with account numbers
+shown and without, and the cash, fiscal-year and calendar-year ones with them shown. Account
+numbers print only with "Show account numbers" set as well as "Enable account numbers", in a
+download and in the Reports API alike; the API's validation runs with it off, so a download is
+how the numbered layout is checked.
 """
 
 from __future__ import annotations
@@ -291,13 +297,22 @@ class Report:
         return [[COMPANY], [name], [period], []]
 
     def period(self) -> str:
+        """A span's period: all dates, as Export Data runs it, or by month where the span is
+        whole months, as a download over a fiscal year names it. How QuickBooks names a span of
+        part months is not yet seen in a download."""
         if self.start is None:
             return "All Dates"
+        if self.start.day == 1 and self.end == month_end(self.end):
+            first, last = self.start, self.end
+            return (
+                f"{MONTH_NAMES[first.month - 1]} {first.year} - "
+                f"{MONTH_NAMES[last.month - 1]} {last.year}"
+            )
         return f"{long_date(self.start)} - {long_date(self.end)}"
 
     def as_of(self) -> str:
-        """A balance's period: all dates when the report has no start, as Export Data runs it.
-        With a start, how QuickBooks names the period is not yet seen in a download."""
+        """A balance's period: all dates when the report has no start, as Export Data runs it,
+        and as of its last day when it has one."""
         return "All Dates" if self.start is None else f"As of {long_date(self.end)}"
 
     def footer(self) -> Row:
@@ -412,17 +427,22 @@ class Report:
         return transaction if line.source is None else self.books.sources[line.source]
 
     @staticmethod
-    def ledger_total(label: str, level: int, debit: Decimal, credit: Decimal) -> Row:
+    def ledger_total(
+        label: str, level: int, debit: Decimal, credit: Decimal, *, entries: bool = True
+    ) -> Row:
         """A ledger's total, indented to its level. An indented total's empty amount carries
-        the indentation as text, as QuickBooks writes it; a total of nothing shows a zero
-        debit."""
+        the indentation as text, as QuickBooks writes it; a total of entries that come to
+        nothing shows a zero debit, and a total of no entries at all — an account the span
+        opens with a beginning balance and nothing else — shows no amount."""
         pad = "   " * level
 
         def side(amount: Decimal) -> Cell:
             return Number(amount) if amount else (pad or None)
 
         amounts = (
-            [Number(ZERO), pad or None]
+            [pad or None, pad or None]
+            if not entries
+            else [Number(ZERO), pad or None]
             if not debit and not credit
             else [
                 side(debit),
@@ -451,7 +471,9 @@ class Report:
         rows: list[Row] = [["   " * level + self.leaf(key)]]
         balance = self.natural(key, opening.get(key, ZERO))
         if balance:
-            rows.append([None, "Beginning Balance", *[None] * 7, Number(balance)])
+            rows.append(
+                [None, "   " * level + "Beginning Balance", *[None] * 7, Number(balance)]
+            )
         debit = credit = ZERO
         for transaction, line in by_account.get(key, []):
             shown = self.shown(transaction, line)
@@ -476,7 +498,13 @@ class Report:
         if own or not children:
             leaf = self.leaf(key)
             rows.append(
-                self.ledger_total(f"Total for {leaf}", level + bool(children), debit, credit)
+                self.ledger_total(
+                    f"Total for {leaf}",
+                    level + bool(children),
+                    debit,
+                    credit,
+                    entries=bool(by_account.get(key)),
+                )
             )
         if children:
             for child in children:
@@ -487,7 +515,8 @@ class Report:
                     sub_debit += max(line.amount, ZERO)
                     sub_credit += max(-line.amount, ZERO)
             label = f"Total for {self.leaf(key)}" + (self.with_subs() if own else "")
-            rows.append(self.ledger_total(label, level, sub_debit, sub_credit))
+            entries = any(by_account.get(k) for k in self.subtree(key))
+            rows.append(self.ledger_total(label, level, sub_debit, sub_credit, entries=entries))
         return rows
 
     @staticmethod

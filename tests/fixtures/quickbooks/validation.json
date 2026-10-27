@@ -1,13 +1,13 @@
 {
- "validated_on": "2026-10-25",
+ "validated_on": "2026-10-27",
  "archives": {
   "accrual": "1095bf03edfa261cc4309a9dc8ed30e950bd09cc9ccd3cbbbd2ae3130a49aa60",
   "cash": "a9ebf3aa5e004a0df84175fd08ac49bf86d1d0aac1c1508a03ae2731bd9a5889",
-  "partial-range": "64c10aea777e25587bd129d758ab97db574206a495fe7622e10ab101f01c8291",
+  "partial-range": "005765d090c3cac6fa39becb132b08a2f9bdab712a62149112fde2ba4029cf0d",
   "calendar-year": "1095bf03edfa261cc4309a9dc8ed30e950bd09cc9ccd3cbbbd2ae3130a49aa60"
  },
  "not_compared": {
-  "account-numbers": "the Reports API prints no account numbers, whatever the setting"
+  "account-numbers": "the Reports API prints account numbers only with \"Show account numbers\" set, which validation runs without; compare-export is its check"
  },
  "comparisons": 128,
  "rows_compared": 43503,

@@ -110,19 +110,21 @@ anything is posted. A rendering under another fiscal year needs the setting chan
 so validation compares what the current settings allow, keeps each rendering that agreed, and
 names the change the next one needs.
 
-**What the API cannot show is left to the download.** The API prints no account numbers whatever
-the setting, so a numbered rendering is checked by its layout alone, and the validation record
-names it as not compared, with the reason. The general ledger's order within a day is not settled
+**What the API is not asked is left to the download.** The API prints account numbers only with
+"Show account numbers" set, and then in a column the export does not have, so validation runs with
+it off: a numbered rendering is checked by its layout alone, against a download, and the
+validation record names it as not compared, with the reason. The general ledger's order within a day is not settled
 in QuickBooks itself — the same day comes back in another order for another date range — so a
 day's entries are compared as a set, with the balance the day ends on.
 
 **Layout** is validated by comparing our archive with one Export Data download, cell by cell, after
 decoding each sheet into rows of cells, with a named list of cells that differ by nature: the
 company's name, which is the sandbox's own, and the time a report was run. A general ledger's days
-are compared as sets, its order within a day being QuickBooks' own. The numbered rendering is
-compared with a second download, made with account numbers shown as well as enabled: QuickBooks
-prints them in a report only with both. This is repeated only when QuickBooks changes its export
-format. The API is asked each report as Export Data runs it, over
+are compared as sets, its order within a day being QuickBooks' own. Each rendering is compared
+with a download of it. Account numbers print in a report only with "Show account numbers" set as
+well as enabled, and how they print is compared on its own, accrual with and without them, so a
+rendering compared with numbers shown is compared without them too. This is repeated only when
+QuickBooks changes its export format. The API is asked each report as Export Data runs it, over
 all dates, so content and layout are checks of the same reports. Bytes are never
 compared: an archive's timestamps, compression and style tables differ between any two writers, and
 between two exports of the same company.
@@ -152,8 +154,8 @@ accounting is right; that stays with the conformance corpus (ADR-0050 § 3).
 * Bad, because our writer must reproduce QuickBooks' presentation rules — ordering of a day's
   transactions, which rows a report prints — learned by comparison, and a rule it never exercised is
   a rule it may have wrong.
-* Bad, because the API cannot show every rendering: a numbered archive's content is checked only
-  through the accrual archive it shares, and its numbers only against a download.
+* Bad, because the API validation does not reach every rendering: a numbered archive's content is
+  checked only through the accrual archive it shares, and its numbers only against a download.
 * Bad, because the fixture covers only what QuickBooks accepts. A colon in an account's own name, or
   one name as both customer and vendor, cannot be posted, and the catalog records the nearest form
   QuickBooks allows.
@@ -239,7 +241,9 @@ with QuickBooks proves), ADR-0041 (the neutral shape this mirrors on the reading
   the stronger option.
 * QuickBooks changes the Export Data format, or a customer's export disagrees with the fixture's
   layout.
-* The API starts writing the settings it now ignores, or printing account numbers, which removes
-  a person's part in validation or a rendering left to the download.
+* The API starts writing the settings it now ignores, which removes a person's part in
+  validation.
+* The validation compares the numbered rendering through the API too, with "Show account numbers"
+  set, which removes the one rendering left to the download.
 * A second adapter lands, which tests whether the events are neutral or QuickBooks-shaped.
 * `LED-18` activates.
