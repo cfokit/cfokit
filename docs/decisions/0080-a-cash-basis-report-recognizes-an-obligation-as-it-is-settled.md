@@ -187,6 +187,8 @@ A cash-basis company's imported history therefore reads on accrual. Its differen
 source's own cash-basis statements is what the import's reconciliation records, and a difference
 that nets to zero is reported there as the basis
 ([ADR-0050](0050-the-import-oracle-is-basis-free.md) § 2).
+An import that reads the source's payment links
+([ADR-0083](0083-a-quickbooks-online-import-reads-the-api.md)) would give that history a cash view.
 
 ### 4. Where it lives
 
