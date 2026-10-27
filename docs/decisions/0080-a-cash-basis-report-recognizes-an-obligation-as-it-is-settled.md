@@ -164,7 +164,12 @@ fact of the bargain recorded where it is booked, not a default the view chooses.
 
 **The date is the day the money was received.** A settlement recognizes on its transaction's date,
 so a payment is recorded on the day it arrives — a check received on December 31 is December
-income, though deposited in January — and the deposit is a transfer.
+income, though deposited in January — and the deposit is a transfer. **A payment through a
+processor is the same, at its full amount:** it settles the invoice for what the customer paid, on
+the day they paid, into an account for what the processor holds; the processor's fee is an expense
+of its own, and the payout to the bank is a transfer (`BKP-02`). Recorded from the payout alone, an
+invoice would read as part unpaid, income would be short by every fee, and a payment late in a year
+would fall in the next.
 
 **A reversal is presented as the negation of what it reverses, on its own date.** A voided invoice
 is deferred with its original, so the pair recognizes nothing. A payment that bounces takes back
