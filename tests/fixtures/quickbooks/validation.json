@@ -4,12 +4,13 @@
   "accrual": "76a550419d06522cf35ccde113d6d693f98bfb8c88444b582dca61e4d542ad19",
   "cash": "216c99a8d3aab29742c16beea4506b9862a6c3ccb64a444fe6827f0de975b75a",
   "partial-range": "d4d613a9f483ffc32e6ec755ce94c789989d4e2eecf7678625b626cfb1ce794b",
-  "calendar-year": "76a550419d06522cf35ccde113d6d693f98bfb8c88444b582dca61e4d542ad19"
+  "calendar-year": "76a550419d06522cf35ccde113d6d693f98bfb8c88444b582dca61e4d542ad19",
+  "aging": "aefa1617214b8076cb5b8f6c567d5c5482f1595914dc8726c0e9a875ccef633c"
  },
  "not_compared": {
   "account-numbers": "the Reports API prints account numbers only with \"Show account numbers\" set, which validation runs without; compare-export is its check"
  },
- "comparisons": 128,
- "rows_compared": 43743,
+ "comparisons": 130,
+ "rows_compared": 43769,
  "result": "agrees"
 }

@@ -16,7 +16,8 @@ never receives an answer QuickBooks remembers from before.
 
 `validate` asks the Reports API what QuickBooks makes of those postings — the journal, the
 general ledger, both statements, and the trial balance at every month end, on each basis and
-under each rendering's settings — and compares it with what our writer put in the archives. The
+under each rendering's settings, and A/R and A/P Aging Detail as of the books' last day — and
+compares it with what our writer put in the archives. The
 API reports by the company's fiscal year but cannot change it, so a person changes it in
 QuickBooks between runs: each run compares the
 renderings the company's settings allow, remembers those that agreed, and names the setting the
@@ -38,7 +39,8 @@ the newest is kept under `.local/qbo-sandbox/`, readable by its owner only, and 
 preference to the variable. `QBO_BASE_URL` defaults to the sandbox host.
 
 The layout — header rows, indentation, formulas, footers — is not something the API can show. It
-is checked once, by hand, against a real Export Data download (`compare-export`).
+is checked once, by hand, against a real Export Data download (`compare-export`), and each aging
+report against a download of it (`compare-aging`).
 """
 
 from __future__ import annotations
@@ -63,9 +65,10 @@ from typing import Any
 
 from synthetic_books import business, quickbooks_books, quickbooks_export
 from synthetic_books.business import END, START
-from synthetic_books.events import dumps
+from synthetic_books.events import PAYABLE, dumps
 from synthetic_books.quickbooks import MONTHS
 from synthetic_books.quickbooks_export import (
+    AGING,
     COMPANY,
     CREDIT_NATURE,
     RENDERINGS,
@@ -590,6 +593,66 @@ def our_trial_balances(rendering: Rendering) -> dict[str, list[tuple[str, ...]]]
     return out
 
 
+def by_group(rows: list[tuple[str, ...]]) -> list[tuple[str, ...]]:
+    """An aging with each group's rows in one order. The API lists rows of one due date in the
+    reverse of the export's order, so neither side's order within a group is compared; the
+    export's is checked against a download (`compare-aging`)."""
+    out: list[tuple[str, ...]] = []
+    group: list[tuple[str, ...]] = []
+    for row in rows:
+        if len(row) > 1 and row[0] == "" and DATE.match(row[1]):
+            group.append(row)
+            continue
+        out += sorted(group)
+        group.clear()
+        out.append(row)
+    return out + sorted(group)
+
+
+def our_aging(file: str, account: str) -> list[tuple[str, ...]]:
+    """Our aging past its title and header rows, without its footer, and on A/P without the
+    Past due column, which counts to the day the report is run."""
+    body = [comparable(row) for row in values((FIXTURE / "aging" / file).read_bytes())[5:]]
+    body = [row for row in body if row and not AGING_RUN_TIME.match(row[0])]
+    if account == PAYABLE:
+        body = [row[:6] + row[7:] if len(row) > 6 else row for row in body]
+    return by_group(body)
+
+
+def api_aging(answer: Json) -> list[tuple[str, ...]]:
+    """An aging answer in the export's terms: its groups named as the export names them, and
+    A/P's vendor where the export prints it, without the Past due the API counts to today."""
+    titles = [c["MetaData"][0]["Value"] for c in answer["Columns"]["Column"]]
+    keep = ["tx_date", "txn_type", "doc_num", "cust_name", "due_date", "subt_amount"]
+    keep += ["subt_open_bal"]
+    if "vend_name" in titles:
+        keep = ["tx_date", "txn_type", "doc_num", "vend_name", "due_date"]
+        keep += ["subt_neg_amount", "subt_neg_open_bal"]
+    out: list[tuple[str, ...]] = []
+    for row in flatten(answer):
+        cell = dict(zip(titles, row, strict=True))
+        label = row[0].replace("Current", "CURRENT")
+        if DATE.match(api_date(row[0])):
+            out.append(comparable(["", *(api_date(cell[k]) for k in keep)]))
+        elif label.startswith(("Total for ", "TOTAL")):
+            amount, open_ = cell[keep[5]], cell[keep[6]]
+            out.append(comparable([label, *[""] * 5, amount, open_]))
+        else:
+            out.append(comparable([label]))
+    return by_group(out)
+
+
+def aging_digest() -> str:
+    """The aging reports' identity by content, as an archive's."""
+    digest = hashlib.sha256()
+    for file, _ in sorted(AGING):
+        workbook = contents((FIXTURE / "aging" / file).read_bytes())
+        for part in sorted(workbook):
+            digest.update(f"{file}/{part}\n".encode())
+            digest.update(workbook[part])
+    return digest.hexdigest()
+
+
 # --- validate -------------------------------------------------------------------------------
 
 
@@ -734,6 +797,28 @@ def validate(sandbox: Sandbox) -> int:
             }
             progress_file.write_text(json.dumps(progress, indent=1))
 
+    aging = aging_digest()
+    if progress.get("aging", {}).get("archive") == aging:
+        print("aging: agreed already")
+    else:
+        comparisons = {}
+        for file, account in AGING:
+            report = "AgedPayableDetail" if account == PAYABLE else "AgedReceivableDetail"
+            compare(
+                f"aging-{'payable' if account == PAYABLE else 'receivable'}",
+                our_aging(file, account),
+                sandbox.report(report, report_date=END.isoformat(), aging_method="Report_Date"),
+                comparisons,
+                api_aging,
+            )
+        if not any(name in failed for name in comparisons):
+            progress["aging"] = {
+                "archive": aging,
+                "comparisons": len(comparisons),
+                "rows": sum(comparisons.values()),
+            }
+            progress_file.write_text(json.dumps(progress, indent=1))
+
     if failed:
         print(f"{len(failed)} comparisons differ; diffs in {raw}")
         return 1
@@ -744,13 +829,13 @@ def validate(sandbox: Sandbox) -> int:
         if others:
             print(f"after it: {others}")
         return 1
-    compared = [r for r in RENDERINGS if r.name not in NOT_COMPARED]
+    compared = [r.name for r in RENDERINGS if r.name not in NOT_COMPARED] + ["aging"]
     record = {
         "validated_on": datetime.now(UTC).date().isoformat(),
-        "archives": {r.name: progress[r.name]["archive"] for r in compared},
+        "archives": {name: progress[name]["archive"] for name in compared},
         "not_compared": NOT_COMPARED,
-        "comparisons": sum(progress[r.name]["comparisons"] for r in compared),
-        "rows_compared": sum(progress[r.name]["rows"] for r in compared),
+        "comparisons": sum(progress[name]["comparisons"] for name in compared),
+        "rows_compared": sum(progress[name]["rows"] for name in compared),
         "result": "agrees",
     }
     (FIXTURE / "validation.json").write_text(json.dumps(record, indent=1) + "\n")
@@ -779,6 +864,7 @@ BY_NATURE = (
     "each footer's time: when the report was run",
 )
 RUN_TIME = re.compile(r"\w+day, \w{3} \d{2}, \d{4} \d{2}:\d{2}:\d{2} [AP]M GMT[+-]\d+")
+AGING_RUN_TIME = re.compile(r" ?\w+day, \w+ \d{1,2}, \d{4} \d{2}:\d{2} [AP]M GMT\w*")
 DATE = re.compile(r"\d{2}/\d{2}/\d{4}$")
 
 
@@ -875,7 +961,38 @@ def compare_export(path: Path, rendering_name: str, *, numbers_shown: bool = Fal
     return status
 
 
+def compare_aging(path: Path) -> int:
+    """Our aging report against a download of it, cell by cell, in order. Which report the
+    download is, is read from its title. The company, the time it was run and each Past due,
+    which counts to that time, differ by nature and are not compared."""
+    theirs = path.read_bytes()
+    title = cells(theirs)[1][0]
+    payable = title is not None and title[1].startswith("A/P")
+    file = next(f for f, account in AGING if (account == PAYABLE) == payable)
+    mine = (FIXTURE / "aging" / file).read_bytes()
+
+    def normal(data: bytes) -> list[tuple[str, ...]]:
+        out: list[tuple[str, ...]] = []
+        for row in exact(data):
+            text = list(row)
+            if text and AGING_RUN_TIME.fullmatch(text[0]):
+                text[0] = "<run time>"
+            if payable and len(text) > 6 and DATE.match(text[1]) and text[6]:
+                text[6] = "<days to the run time>"
+            out.append(tuple(text))
+        return out
+
+    print("not compared, by nature: the company, the time the report was run, each Past due")
+    diff = differences(file, normal(mine), normal(theirs))
+    print(f"{file}: {'same cells' if not diff else f'{len(diff)} diff lines'}")
+    for line in diff[:40]:
+        print("   " + line)
+    return 1 if diff else 0
+
+
 def main(argv: list[str]) -> int:
+    if argv and argv[0] == "compare-aging" and len(argv) == 2:
+        return compare_aging(Path(argv[1]))
     if not argv or argv[0] not in ("post", "validate", "compare-export"):
         print(__doc__)
         return 2

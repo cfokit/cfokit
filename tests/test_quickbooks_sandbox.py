@@ -175,3 +175,6 @@ def test_the_fixture_is_what_quickbooks_last_agreed_with() -> None:
         assert validated["archives"][rendering.name] == sandbox.archive_digest(rendering), (
             f"{rendering.name} changed after its validation; run the sandbox validation again"
         )
+    assert validated["archives"]["aging"] == sandbox.aging_digest(), (
+        "the aging reports changed after their validation; run the sandbox validation again"
+    )

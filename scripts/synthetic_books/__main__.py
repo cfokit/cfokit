@@ -88,16 +88,19 @@ def render() -> dict[str, bytes]:
             files[f"{directory}/trial_balances.json"] = quickbooks_export.trial_balances(
                 books, rendering
             ).encode()
+    for name, account in quickbooks_export.AGING:
+        files[f"aging/{name}"] = xlsx.workbook(quickbooks_export.aging(books, account))
     return files
 
 
 def same(name: str, content: bytes) -> bool:
-    """Whether the committed file says what `content` says. An archive is compared by its
-    members' contents, because a zip's bytes depend on the zlib that wrote it."""
+    """Whether the committed file says what `content` says. An archive or a workbook is
+    compared by its members' contents, because a zip's bytes depend on the zlib that wrote
+    it."""
     path = FIXTURE / name
     if not path.exists():
         return False
-    if name.endswith(".zip"):
+    if name.endswith((".zip", ".xlsx")):
         return xlsx.contents(path.read_bytes()) == xlsx.contents(content)
     return path.read_bytes() == content
 
