@@ -22,8 +22,20 @@ resource "google_secret_manager_secret" "this" {
 
   annotations = { description = each.value }
 
+  # In the deployment's region: automatic replication is a global location, which the resource
+  # locations policy refuses (orgpolicy.tf). Secrets created before that policy replicate
+  # automatically, and replication cannot change in place, so a difference is ignored rather than
+  # replacing a secret and its values.
   replication {
-    auto {}
+    user_managed {
+      replicas {
+        location = var.region
+      }
+    }
+  }
+
+  lifecycle {
+    ignore_changes = [replication]
   }
 
   depends_on = [google_project_service.this]
