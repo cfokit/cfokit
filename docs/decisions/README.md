@@ -126,7 +126,8 @@ nothing cites these but this repository. They are added when something breaks wi
 | [0080](0080-a-cash-basis-report-recognizes-an-obligation-as-it-is-settled.md) | A cash-basis report recognizes each obligation as it is settled, and changes nothing a stored link does not reach | Proposed |
 | [0081](0081-an-import-brings-what-is-open-at-the-cutover-as-open-obligations.md) | An import marks each invoice and bill open at the switch as owed, on its own imported transaction | Proposed |
 | [0082](0082-a-quickbooks-online-import-requires-the-aging-reports.md) | A QuickBooks Online file import requires the A/R and A/P Aging Detail reports, and refuses unless they tie | Proposed |
-| [0083](0083-a-quickbooks-online-import-reads-the-api.md) | A later QuickBooks Online import reads its API, with an optional one-way shadow sync | Proposed |
+| [0083](0083-a-quickbooks-online-import-reads-the-api.md) | A QuickBooks Online import is a component that archives the API, with its own skill, and exports as tie-out evidence | Proposed |
+| [0084](0084-a-parallel-run-records-each-transaction-in-both-systems.md) | A parallel run records each transaction in both systems, and CFOKit checks itself against the source | Proposed |
 
 ## Deferred — decided in principle, waiting on a need
 
