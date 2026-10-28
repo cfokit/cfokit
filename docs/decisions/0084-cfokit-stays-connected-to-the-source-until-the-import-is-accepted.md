@@ -59,7 +59,7 @@ has no suitable API, the same check reads a fresh file export, with the file imp
 
 ### 3. At acceptance
 
-As ADR-0083 § 5 sets out: the source's closing date is set, a last change capture and a last check
+As ADR-0083 § 5 and § 6 set out: the source's closing date is set, a last change capture and a last check
 run, the connection is revoked and its credential deleted, and the import skill is turned off.
 
 ### Consequences
