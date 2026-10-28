@@ -55,6 +55,30 @@ shown and without, and the cash, fiscal-year and calendar-year ones with them sh
 numbers print only with "Show account numbers" set as well as "Enable account numbers", in a
 download and in the Reports API alike; the API's validation runs with it off, so a download is
 how the numbered layout is checked.
+
+**The aging reports** — A/R Aging Detail and A/P Aging Detail, as of the books' last day with
+the aging method "Report date" — are written beside the archives, as a person downloads them
+for a file import (ADR-0082). As the API and two downloads showed them:
+
+* What is open: each invoice, credit memo, bill and vendor credit at its amount less what
+  payments and credits applied to it; a payment at what it left unapplied; and each line a
+  deposit or a journal entry put on the account, under the name it carries. A/R is signed as
+  owed to the company, A/P as owed by it.
+* An invoice's or bill's due date is its own; a payment's, deposit's, journal entry's and credit
+  memo's is its date; a vendor credit has none. No number but an invoice's or a bill's is
+  printed, and a number is text, whatever its digits.
+* Rows are grouped by days past due at the as-of date, oldest group first: "91 or more days past
+  due", "1 - 30 days past due", "CURRENT", which holds a vendor credit too. Within a group, by
+  due date, then in the order they were made. Each group ends with its total, and the report
+  with one: sums of the cells above, as `G7+G8+G9` and `G10+G13+G23`.
+* Three title rows — the company, the report, "As of Jun 30, 2026" — a blank row, and the
+  header; three blank rows before the footer, which is the time it was run, after a space.
+  A/P has a Past due column, the days from the due date to that time, which A/R does not.
+* An empty cell in a row is an empty string.
+
+Not yet seen in a download: the names of the 31 - 60 and 61 - 90 day groups, which the writer
+gives the others' pattern, and a Past due at or before the due date, which no row here has,
+because the reports are run after every due date.
 """
 
 from __future__ import annotations
@@ -68,7 +92,7 @@ from decimal import Decimal
 from typing import Literal
 
 from synthetic_books.business import END, MONTH_NAMES, month_end, months
-from synthetic_books.events import RECEIVABLE, RETAINED_EARNINGS
+from synthetic_books.events import PAYABLE, RECEIVABLE, RETAINED_EARNINGS
 from synthetic_books.quickbooks_books import (
     NOT_SPECIFIED,
     ZERO,
@@ -77,10 +101,13 @@ from synthetic_books.quickbooks_books import (
     Transaction,
     cash_lines,
 )
-from synthetic_books.xlsx import Cell, Formula, Number, Row, archive, workbook
+from synthetic_books.xlsx import Cell, Formula, Number, Row, archive, column, workbook
 
 COMPANY = "Brightwater Design Studio"
 RUN_AT = "Wednesday, Jul 01, 2026 09:00:00 AM GMT-7"
+# The aging reports are run a month later, after every open item's due date.
+AGING_RUN_ON = date(2026, 7, 31)
+AGING_RUN_AT = "Friday, July 31, 2026 09:00 AM GMTZ"
 JOURNAL_HEADER: Row = [
     None,
     "Date",
@@ -746,6 +773,147 @@ def export(books: Books, rendering: Rendering) -> bytes:
     return archive(
         {member: workbook(rows) for member, rows in sheets(books, rendering).items()}
     )
+
+
+# --- the aging reports ---------------------------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class OpenItem:
+    on: date
+    type: str
+    number: str
+    name: str
+    due: date | None
+    amount: Decimal
+    open: Decimal
+
+
+def open_items(books: Books, account: str, as_of: date) -> list[OpenItem]:
+    """What is open on A/R or A/P at the end of `as_of`, as an aging lists it, in the order the
+    transactions were made."""
+    sign = 1 if account == RECEIVABLE else -1
+    taken: dict[str, Decimal] = defaultdict(Decimal)
+    for transaction in books.transactions:
+        if transaction.on <= as_of and not transaction.voided:
+            for applied in (*transaction.settles, *transaction.credits):
+                taken[applied.target] += applied.amount
+    out: list[OpenItem] = []
+    for t in books.transactions:
+        lines = [p for p in t.lines if p.account == account]
+        if t.on > as_of or t.voided or not lines:
+            continue
+        due = t.due if t.due is not None else (None if t.type == "Vendor Credit" else t.on)
+        items: list[tuple[str, Decimal, Decimal]]
+        if t.document is not None:
+            amount = sign * sum((p.amount for p in lines), ZERO)
+            left = abs(amount) - taken[t.document]
+            items = [(t.name, amount, left if amount > 0 else -left)]
+        elif t.deposit_account is not None:  # a payment, or a bill payment
+            items = [(t.name, sign * sum((p.amount for p in lines), ZERO), -sign * t.unapplied)]
+        else:  # a deposit's or a journal entry's own lines
+            items = [(p.name or t.name, sign * p.amount, sign * p.amount) for p in lines]
+        out += [
+            OpenItem(t.on, t.type, t.number, name, due, amount, left)
+            for name, amount, left in items
+            if left
+        ]
+    return out
+
+
+AGING_GROUPS = (  # the fewest days past due a group holds, oldest group first
+    (91, "91 or more days past due"),
+    (61, "61 - 90 days past due"),
+    (31, "31 - 60 days past due"),
+    (1, "1 - 30 days past due"),
+)
+
+
+def aging_group(item: OpenItem, as_of: date) -> str:
+    days = 0 if item.due is None else (as_of - item.due).days
+    return next((label for least, label in AGING_GROUPS if days >= least), "CURRENT")
+
+
+def aging(books: Books, account: str) -> list[Row]:
+    """A/R or A/P Aging Detail as of the books' last day, as a download writes it."""
+    payable = account == PAYABLE
+    header: Row = [
+        None,
+        "Date",
+        "Transaction type",
+        "Num",
+        "Vendor display name" if payable else "Customer full name",
+        "Due date",
+        *(["Past due"] if payable else []),
+        "Amount",
+        "Open balance",
+    ]
+    amount_at, open_at = column(len(header) - 2), column(len(header) - 1)
+    title = "A/P Aging Detail Report" if payable else "A/R Aging Detail Report"
+    rows: list[Row] = [
+        [COMPANY],
+        [title],
+        [f"As of {MONTH_NAMES[END.month - 1][:3]} {END.day}, {END.year}"],
+        [],
+        header,
+    ]
+    items = sorted(
+        open_items(books, account, END),
+        key=lambda item: (item.due is None, item.due or END),  # stable: the order made
+    )
+    totals: list[int] = []
+    for label in [label for _, label in AGING_GROUPS] + ["CURRENT"]:
+        group = [item for item in items if aging_group(item, END) == label]
+        if not group:
+            continue
+        rows.append([label])
+        first = len(rows) + 1  # rows are numbered from 1
+        for item in group:
+            past_due: list[Cell] = []
+            if payable:
+                past_due = [
+                    "" if item.due is None else Number(Decimal((AGING_RUN_ON - item.due).days))
+                ]
+            rows.append(
+                [
+                    None,
+                    short_date(item.on),
+                    item.type,
+                    item.number,
+                    item.name,
+                    "" if item.due is None else short_date(item.due),
+                    *past_due,
+                    Number(item.amount),
+                    Number(item.open),
+                ]
+            )
+        above = range(first, len(rows) + 1)
+        rows.append(
+            [
+                f"Total for {label}",
+                *[None] * (len(header) - 3),
+                Formula("+".join(f"{amount_at}{r}" for r in above)),
+                Formula("+".join(f"{open_at}{r}" for r in above)),
+            ]
+        )
+        totals.append(len(rows))
+    rows.append(
+        [
+            "TOTAL",
+            *[None] * (len(header) - 3),
+            Formula("+".join(f"{amount_at}{r}" for r in totals)),
+            Formula("+".join(f"{open_at}{r}" for r in totals)),
+        ]
+    )
+    rows += [[], [], [], [f" {AGING_RUN_AT}"]]
+    return rows
+
+
+# As a download names them, after the company.
+AGING = (
+    (f"{COMPANY.replace(' ', '_')}_A_R_Aging_Detail_Report.xlsx", RECEIVABLE),
+    (f"{COMPANY.replace(' ', '_')}_A_P_Aging_Detail_Report.xlsx", PAYABLE),
+)
 
 
 def month_ends() -> Iterator[date]:

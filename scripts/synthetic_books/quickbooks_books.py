@@ -135,6 +135,8 @@ class Transaction:
     unapplied: Decimal = ZERO
     deposit_account: str | None = None
     credits: tuple[Applied, ...] = ()
+    # An invoice's or a bill's own due date; an aging takes any other's from its date.
+    due: date | None = None
 
 
 @dataclass(slots=True)
@@ -243,7 +245,7 @@ class Recorder:
                 equity = -sum((line.amount for line in lines), ZERO)
                 postings.append(Posting(OPENING_EQUITY, equity, "Opening balance"))
                 self.add(Transaction(event_id, day, "Journal Entry", postings))
-            case IssueInvoice(key=key, customer=customer, lines=lines, number=number):
+            case IssueInvoice(key=key, customer=customer, due=due, lines=lines, number=number):
                 name = self.name(customer)
                 detail = self.sale(lines, -1, name)
                 total = -sum((p.amount for p in detail), ZERO)
@@ -259,6 +261,7 @@ class Recorder:
                         number,
                         name,
                         document=key,
+                        due=due,
                     ),
                     key,
                 )
@@ -380,7 +383,7 @@ class Recorder:
                         name=name,
                     )
                 )
-            case ReceiveBill(key=key, vendor=vendor, number=number, lines=lines):
+            case ReceiveBill(key=key, vendor=vendor, number=number, due=due, lines=lines):
                 name = self.vendors[vendor]
                 detail = [Posting(line.account, line.amount, line.memo, name) for line in lines]
                 total = sum((p.amount for p in detail), ZERO)
@@ -394,6 +397,7 @@ class Recorder:
                         number,
                         name,
                         document=key,
+                        due=due,
                     ),
                     key,
                 )

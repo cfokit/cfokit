@@ -82,7 +82,9 @@ names every case the company must contain, and each event carries the catalog id
 ### 2. The fixture is written by us
 
 The committed archives — Journal, General Ledger, Profit and Loss, Balance Sheet, Trial Balance — and
-the month-end trial balances beside them are written by our own code from the events. They are our
+the month-end trial balances beside them are written by our own code from the events, as are the A/R
+and A/P Aging Detail reports a file import asks for
+([ADR-0082](0082-a-quickbooks-online-import-requires-the-aging-reports.md)). They are our
 expression; nothing in them was produced by QuickBooks.
 
 **One company's events, several renderings.** A setting QuickBooks applies only when it prints —

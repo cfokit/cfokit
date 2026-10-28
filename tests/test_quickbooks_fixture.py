@@ -10,16 +10,18 @@ question, not this file's.
 from __future__ import annotations
 
 import json
+import re
 import tomllib
-from collections import Counter
+from collections import Counter, defaultdict
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
 from xml.etree import ElementTree
 
 import pytest
-from synthetic_books import business
+from synthetic_books import business, quickbooks_books, quickbooks_export
 from synthetic_books.__main__ import GENERATED, catalog, render, same
+from synthetic_books.events import PAYABLE, RECEIVABLE
 from synthetic_books.mutations import MUTATIONS
 from synthetic_books.xlsx import contents, rows, values
 
@@ -384,3 +386,23 @@ def test_the_rezipped_and_nested_archives_carry_the_same_reports() -> None:
     assert any(name.startswith("__MACOSX/") for name in rezipped)
     nested = contents(MUTATIONS["f-nested-folder"](baseline()))
     assert {name.removeprefix("export/"): body for name, body in nested.items()} == reports
+
+
+@pytest.mark.parametrize("account", [RECEIVABLE, PAYABLE])
+def test_each_aging_ties_to_the_books_name_by_name(account: str) -> None:
+    """ADR-0082 § 2: what an aging lists as open, customer by customer and vendor by vendor, is
+    what the books hold on A/R or A/P under each name on the last day."""
+    books = quickbooks_books.record(quickbooks_export.COMPANY, business.write())
+    sign = 1 if account == RECEIVABLE else -1
+    held: defaultdict[str, Decimal] = defaultdict(Decimal)
+    for transaction in books.transactions:
+        if transaction.on <= business.END:
+            for line in transaction.lines:
+                if line.account == account:
+                    held[line.name or transaction.name] += sign * line.amount
+    file = next(f for f, a in quickbooks_export.AGING if a == account)
+    listed: defaultdict[str, Decimal] = defaultdict(Decimal)
+    for row in values((FIXTURE / "aging" / file).read_bytes()):
+        if len(row) > 4 and re.fullmatch(r"\d{2}/\d{2}/\d{4}", row[1] or ""):
+            listed[str(row[4])] += Decimal(str(row[-1]))
+    assert dict(listed) == {name: amount for name, amount in held.items() if amount}

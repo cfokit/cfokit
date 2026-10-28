@@ -345,6 +345,15 @@ numbers shown compares with `--numbers-shown`:
 PYTHONPATH=scripts uv run python -m synthetic_books.sandbox compare-export ~/Downloads/cash.zip cash --numbers-shown
 ```
 
+The aging reports are compared each with its own download: A/R Aging Detail and A/P Aging
+Detail (Reports), as of June 30, 2026, with the aging method "Report date" and nothing else
+customized. Which report it is, is read from its title; each Past due counts to the time the
+report was run, and is not compared:
+
+```bash
+PYTHONPATH=scripts uv run python -m synthetic_books.sandbox compare-aging ~/Downloads/A_R_Aging_Detail_Report.xlsx
+```
+
 ## Opening a pull request
 
 - Work on a branch of your fork. Never commit to `main`.
