@@ -60,7 +60,9 @@ date: the report's Transaction type, Num, name and Date columns. A/R Aging Detai
 Date, Transaction type, Num, Customer full name, Due date, Amount and Open balance; A/P Aging
 Detail names the vendor in place of the customer and adds Past due, which counts to the day the
 report is run rather than its as-of date, so the importer does not read it. A sub-customer is named
-by its full path. Rows are grouped by days past due, each group with a total, and the report with
+by its full path. A payment, deposit, journal entry or credit memo carries no number there, and a
+vendor credit no due date, so those match on type, name and date, one to one
+([ADR-0081](0081-an-import-brings-what-is-open-at-the-cutover-as-open-obligations.md) § 4). Rows are grouped by days past due, each group with a total, and the report with
 one.
 
 ### 2. Tied out before anything is posted
