@@ -120,11 +120,11 @@ difference, to the cent, blocks the switch-over and names the year.
 
 ### 5. The archive stays current until the approved switch-over
 
-Changes made during the pull are captured by CDC from the archive's start timestamp. Through a
-parallel run ([ADR-0084](0084-a-parallel-run-records-each-transaction-in-both-systems.md)), CDC
+Changes made during the pull are captured by CDC from the archive's start timestamp. While CFOKit
+stays connected to QBO ([ADR-0084](0084-cfokit-stays-connected-to-the-source-until-the-import-is-accepted.md)), CDC
 runs at least every 30 days, since it looks back no further; past that, the changed entities are
-pulled again. When the switch-over is approved, QBO's closing date is set, a last CDC and a last
-comparison run, and the connection is revoked and its credential deleted.
+pulled again. The switch-over completes when the import is accepted: QBO's closing date is set, a
+last CDC and a last comparison run, and the connection is revoked and its credential deleted.
 
 ### 6. A component, with its own skill
 
@@ -249,7 +249,7 @@ company. While proposed, low.
 
 Related: ADR-0040 (import as a module, and what would separate it), ADR-0041 (the neutral shape),
 ADR-0050 (the import's reconciliation), ADR-0075 (skills enabled per company), ADR-0076 (files),
-ADR-0081 and ADR-0082 (the file import), ADR-0084 (a parallel run).
+ADR-0081 and ADR-0082 (the file import), ADR-0084 (connected to QBO until the import is accepted).
 
 **Sources.**
 
