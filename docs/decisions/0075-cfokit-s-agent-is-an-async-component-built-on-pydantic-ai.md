@@ -7,7 +7,7 @@ decision-makers: [Geoff]
 
 # ADR-0075: CFOKit's agent is an async component built on Pydantic AI, streaming AG-UI to an assistant-ui chat window
 
-**Requirements served:** `PLT-04`, `PLT-24`, `PLT-23`, `BKP-20`, `IAM-11`, `SOC1-06`, `SOC1-35`.
+**Requirements served:** `PLT-04`, `PLT-24`, `PLT-23`, `PLT-26`, `PLT-27`, `PLT-28`, `BKP-20`, `IAM-11`, `SOC1-06`, `SOC1-35`.
 
 ## Context and Problem Statement
 
@@ -59,7 +59,7 @@ Facts that bear on the answer:
 
 * **Build on maintained open-source parts**, adopting their protocols and patterns rather than
   inventing ours.
-* **The same agent in both hosts**: the bookkeeper skill and the published tools, nothing more
+* **The same agent in both hosts**: CFOKit's skills and the published tools, nothing more
   (ADR-0034 § 4).
 * **Runs on the local stack**: `docker compose up`, a self-hoster's credential, no public address.
 * **The books are reached as a client would reach them**, with the person's authority and no more.
@@ -82,8 +82,9 @@ between them is an open standard rather than one vendor's, and together they lea
 is CFOKit's own.
 
 > The agent is an async component, an entrypoint of the one image, built on Pydantic AI. A turn
-> is a Pydantic AI run with the bookkeeper skill as its instructions and the published MCP tools as
-> its only tools, called as the agent's own client acting for the person. It streams AG-UI events
+> is a Pydantic AI run whose instructions name each skill enabled for the company, loaded when the
+> turn needs it, and whose tools are the published MCP tools and one that loads a skill, called as
+> the agent's own client acting for the person. It streams AG-UI events
 > over SSE to a chat window built from assistant-ui. The agent stores nothing: it reads and
 > appends the conversation through the published API (ADR-0076).
 
@@ -112,8 +113,9 @@ person's next turn, with their token (ADR-0077).
 The model is Claude through Pydantic AI's Anthropic model, its identifier pinned in the
 deployment's configuration and recorded with every message (`SOC1-35`); each call's usage is
 recorded for the company (ADR-0072). Its tools are the published MCP tools, listed from CFOKit's
-own MCP endpoint, and no others: no file, shell or web tool. The bookkeeper skill's `SKILL.md`, at
-the version the image carries, is the instructions, and its version is recorded too (`SOC1-06`).
+own MCP endpoint, and the one that loads an enabled skill's instructions (§ 4), and no others: no
+file, shell or web tool. Each skill's `SKILL.md` is at the version the image carries, and the
+version of every skill a turn loads is recorded too (`SOC1-06`).
 
 **Once a conversation holds content the organization did not author, the model is offered no
 tool that posts, for the rest of that conversation** (`PLT-23`, `BKP-20`). A receipt or a
@@ -143,6 +145,29 @@ elements, never as raw HTML (ADR-0049 § 6). Attachments go through an upload ad
 published API (ADR-0076). `assistant-cloud` is never configured, and the CSP would refuse its
 backend if it were.
 
+### 4. Skills, loaded when needed
+
+**Skills load on demand.** The system prompt carries only each enabled skill's name and
+description. A load-skill tool returns the full instructions when the agent needs them.
+
+**Skills are enabled per company by deterministic state, not by the model.** The import skill is
+enabled when an owner starts an import and disabled at the switch-over
+([ADR-0083](0083-a-quickbooks-online-import-reads-the-api.md)). The owner never installs or removes
+anything.
+
+**Skills use the Claude plugin's folder format** (`SKILL.md` and what it carries), so one skill
+serves CFOKit's agent and self-hosters using the Claude plugin.
+
+The agent runs no skill's scripts. Work too long for a turn belongs to a component, as the
+import's does, and the agent reads its status (ADR-0083 § 6).
+
+Three alternatives lose. Loading every skill's instructions up front costs context that grows with
+every skill, including ones a company will never use again. Owners installing and removing plugins
+in the hosted app is configuration work owners have said they don't want. A general skill
+marketplace, or user-authored skills, is not needed. Every skill is CFOKit's own, in this
+repository, so enabling one is the company's state and not an extension point: this is not
+[ADR-0012](0012-binding-non-goals-and-scope-discipline.md)'s plugin system.
+
 ### Consequences
 
 * Good, because the loop, the MCP client, the stream protocol, the chat components and the test
@@ -162,6 +187,9 @@ backend if it were.
 * Bad, because a turn cut off mid-way stops, and the person continues it by asking again.
 * Bad, because a stream keeps an instance billed while it is open; the window closes it when the
   tab is hidden (the Page Visibility API's `visibilitychange`).
+* Good, because skill loading is a small loader, not a vendor feature, so the runtime stays
+  independent of any model vendor.
+* Good, because a temporary skill costs no context once disabled.
 * Neutral, because SSE passes ADR-0012's gate here, for this one stream; websockets stay gated.
 
 ### Confirmation
@@ -172,7 +200,10 @@ backend if it were.
 * Pydantic AI's test model drives a turn in the suite: its stream, its appended messages, and
   that once a conversation holds an untrusted file no later turn in it is offered a posting tool,
   including when the model is scripted to try (`PLT-23`'s acceptance).
-* Review: no tool is offered that the published MCP surface does not publish.
+* Review: no tool is offered that the published MCP surface does not publish, except the one that
+  loads an enabled skill's instructions.
+* A turn's instructions carry only enabled skills' names and descriptions, and a disabled skill
+  cannot be loaded.
 
 ## Pros and Cons of the Options
 
@@ -240,3 +271,5 @@ ADR-0074 (the use cases as clips), ADR-0076 (where conversations are stored).
   under one of Pydantic AI's durable-execution engines, earns its cost.
 * Pydantic AI, AG-UI or assistant-ui stops being maintained, or changes license.
 * Open streams on an instance cost more than the requests they replace would.
+* The agent would run code it generated or a skill's scripts, or a skill would come from anyone
+  other than CFOKit, including self-hosters adding their own: isolation is then revisited.

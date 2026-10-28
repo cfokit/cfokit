@@ -7,7 +7,7 @@ decision-makers: [Geoff]
 
 # ADR-0076: Conversations and the files in them are the company's records, stored in core's database
 
-**Requirements served:** `PLT-04`, `SOC1-06`, `SOC2-01`, `SOC2-16`, `SOC2-18`, `BKP-19`, `EXP-02`.
+**Requirements served:** `PLT-04`, `PLT-29`, `SOC1-06`, `SOC2-01`, `SOC2-16`, `SOC2-18`, `BKP-19`, `EXP-02`.
 
 ## Context and Problem Statement
 

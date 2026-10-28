@@ -148,6 +148,22 @@ Getting an existing company's books in, from whatever the company runs today.
 | **IMP-07** | An import carrying amounts in a currency other than the entity's functional currency is refused, on the same terms as any other foreign amount. | Should | Approved |
 | **IMP-08** | An import produces a reconciliation the operator can check against the source system — balances by account, and totals by period — so that agreement is demonstrated rather than assumed. | Should | Approved |
 | **IMP-09** | An operator can import a company's books with no figure passing through a model and none retyped by a person. | Should | Approved |
+| **IMP-10** | A QuickBooks Online import stores every API response unmodified in an append-only archive, and the ledger can be rebuilt from the archive alone. | Should | Proposed |
+| **IMP-11** | Every QuickBooks Online entity type is pulled for all years of the company's history. | Should | Proposed |
+| **IMP-12** | Payment application from `LinkedTxn` is preserved for every payment and bill payment. | Should | Proposed |
+| **IMP-13** | Every Attachable's file is downloaded, linked to its record, size-checked against `Size`, and stored with a SHA-256 checksum. | Should | Proposed |
+| **IMP-14** | The number of imported attachments matches QuickBooks Online's attachment list. A mismatch blocks the switch-over. | Should | Proposed |
+| **IMP-15** | CFOKit's trial balance matches QuickBooks Online's at every fiscal year-end, to the cent. A mismatch blocks the switch-over and names the year. | Should | Proposed |
+| **IMP-16** | Reconciliation statement dates and ending balances can be imported from an owner-supplied CSV. | Should | Proposed |
+| **IMP-17** | The owner's audit log export, yearly Export Data files, and optional reconciliation PDFs are stored as evidence with checksums. | Should | Proposed |
+| **IMP-18** | Changes made in QuickBooks Online between the start of the pull and the switch-over are captured through change data capture, or by pulling again if more than 30 days have passed. | Should | Proposed |
+| **IMP-19** | The pull stays within Intuit's rate limits and, on HTTP 429, waits 60 seconds before retrying. | Should | Proposed |
+| **IMP-20** | The import stores the latest refresh token after every token refresh. | Should | Proposed |
+| **IMP-21** | The import's operations run only through declared entry points with validated parameters. Invalid parameters are rejected before execution. | Should | Proposed |
+| **IMP-22** | The import holds credentials for one company only, and credentials never appear in model context, logs, or job output. | Should | Proposed |
+| **IMP-23** | A long-running pull resumes after failure without repeating completed work, and reports its status to the agent. | Should | Proposed |
+| **IMP-24** | Check results reach the agent as structured pass or fail data that the agent cannot override. | Should | Proposed |
+| **IMP-25** | When the switch-over is approved, the connection to QuickBooks Online is revoked and its credential deleted. | Should | Proposed |
 
 **Acceptance, IMP-08.** The operator compares two figures per account and either agrees the
 import or rejects it, without exporting anything from the source system a second time.
@@ -380,6 +396,10 @@ records about itself.
 | **PLT-06** | CFOKit sends email on an entity's behalf where the deployment supplies a mail service, and requires no particular provider. Where none is supplied, invoices and reminders remain available as documents and stable links for an operator to deliver by hand (AR-07), and CFOKit records that it did not send rather than reporting a delivery it cannot make (AR-19). | Should | Approved |
 | **PLT-07** | CFOKit reaches the people who operate an entity when something needs them — a transaction no rule resolves, a delivery that failed, a change in cash position beyond an alerting threshold the entity sets, a scheduled run that did not complete. Where they are reached is theirs to set, and any class of it can be turned off. | Must | Approved |
 | **PLT-24** | The operator can reach CFOKit through a web client — in a browser on a desktop, tablet or phone, or installed to a home screen — signed in as themselves through the identity provider (IAM-10). The web client and an agent act on the same books through the same published interface, with the same permissions. | Should | Approved |
+| **PLT-26** | Only enabled skills' names and descriptions are in the agent's system prompt. Full instructions load through a load-skill tool. | Should | Proposed |
+| **PLT-27** | Skills are enabled and disabled per company by runtime state. The import skill is disabled automatically at the switch-over. | Should | Proposed |
+| **PLT-28** | The agent runtime loads skills in the Claude plugin's folder format. | Should | Proposed |
+| **PLT-29** | Owner-uploaded files are stored append-only with a checksum. | Should | Proposed |
 
 #### Entity settings and lifecycle
 
@@ -998,13 +1018,13 @@ serving no objective does not belong here.
 |---|---|
 | **OBJ-1** Kept without the company keeping them | BKP-01, BKP-06, BKP-09, BKP-12, BKP-22, BKP-25, BKP-27, BKP-28, RPT-15 |
 | **OBJ-2** Current, and a close never waiting on us | BKP-16, LED-11, LED-12, PLT-07, PLT-14, NFR-15 |
-| **OBJ-3** Exact, and unchanged once posted | LED-03, LED-04, LED-05, LED-06, LED-07, LED-08, BKP-07, BKP-08, BKP-11, BKP-12, BKP-14, BKP-20, BKP-21, IMP-05, IMP-08, PLT-23, RPT-09, RPT-12, NFR-01, NFR-02, NFR-03, NFR-22, NFR-23 |
-| **OBJ-4** Every number explains itself | LED-08, LED-09, LED-20, BKP-10, BKP-19, BKP-26, IMP-04, IAM-13, PLT-16, PLT-20, RPT-08, RPT-11, NFR-02, NFR-23, SOC1-14, SOC1-15, SOC1-22, SOC1-23, SOC1-36 |
-| **OBJ-5** The recurring cost goes away | BKP-01–BKP-06, BKP-13–BKP-18, AR-01–AR-19, RPT-01–RPT-09, IMP-01–IMP-09, PLT-24, NFR-19, NFR-20 |
+| **OBJ-3** Exact, and unchanged once posted | LED-03, LED-04, LED-05, LED-06, LED-07, LED-08, BKP-07, BKP-08, BKP-11, BKP-12, BKP-14, BKP-20, BKP-21, IMP-05, IMP-08, IMP-14, IMP-15, IMP-18, IMP-24, PLT-23, RPT-09, RPT-12, NFR-01, NFR-02, NFR-03, NFR-22, NFR-23 |
+| **OBJ-4** Every number explains itself | LED-08, LED-09, LED-20, BKP-10, BKP-19, BKP-26, IMP-04, IMP-10, IMP-12, IMP-13, IMP-17, IAM-13, PLT-16, PLT-20, RPT-08, RPT-11, NFR-02, NFR-23, SOC1-14, SOC1-15, SOC1-22, SOC1-23, SOC1-36 |
+| **OBJ-5** The recurring cost goes away | BKP-01–BKP-06, BKP-13–BKP-18, AR-01–AR-19, RPT-01–RPT-09, IMP-01–IMP-25, PLT-24, PLT-26, PLT-27, PLT-29, NFR-19, NFR-20 |
 | **OBJ-6** Output accepted as it stands | LED-01, LED-02, LED-14, LED-17, RPT-01–RPT-05, RPT-07, RPT-09, RPT-10, RPT-12, RPT-13, RPT-14, RPT-16, RPT-17, RPT-18, RPT-19, NFR-01, NFR-16, NFR-22 |
 | **OBJ-7** Never forced off by growing | LED-10, LED-13, LED-14, LED-15, LED-16, LED-17, LED-18, LED-19, RPT-19, RPT-20, RPT-21, IAM-08, IAM-09, PLT-04, PLT-08, NFR-09 |
-| **OBJ-8** Only authorized people reach the books | IAM-01–IAM-07, IAM-11, IAM-12, IAM-15, IAM-16, IAM-17, IAM-20, IAM-21, IAM-22–IAM-26, AR-08, PLT-05, PLT-23, NFR-04, NFR-05, NFR-06 |
+| **OBJ-8** Only authorized people reach the books | IAM-01–IAM-07, IAM-11, IAM-12, IAM-15, IAM-16, IAM-17, IAM-20, IAM-21, IAM-22–IAM-26, AR-08, PLT-05, PLT-23, IMP-22, IMP-25, NFR-04, NFR-05, NFR-06 |
 | **OBJ-9** Provable to an examiner | IAM-13, IAM-14, IAM-18, IAM-19, PLT-15–PLT-19, PLT-22, NFR-18, SOC1-01–SOC1-37, SOC2-01–SOC2-24, SOC2-27–SOC2-30 |
 | **OBJ-10** Leave with everything, at any time | BKP-23, BKP-24, EXP-01–EXP-04, PLT-09, PLT-10, PLT-11, PLT-12, PLT-13, PLT-21, NFR-07, NFR-17 |
-| **OBJ-11** Runs with no vendor relationship | BKP-03, IAM-10, PLT-01, PLT-02, PLT-03, PLT-06, NFR-10, NFR-11, NFR-14, NFR-17 |
+| **OBJ-11** Runs with no vendor relationship | BKP-03, IAM-10, PLT-01, PLT-02, PLT-03, PLT-06, PLT-28, NFR-10, NFR-11, NFR-14, NFR-17 |
 | **OBJ-12** Outsiders can work on it | NFR-11, NFR-12, NFR-13, NFR-14, NFR-21 |
