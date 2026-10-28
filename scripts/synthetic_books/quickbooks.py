@@ -226,11 +226,13 @@ def _journal_lines(lines: Sequence[Line]) -> list[Json]:
             "AccountRef": account(line.account),
         }
         if line.customer is not None:
-            # A line on A/R must name whose receivable it is.
+            # A line on A/R must name whose receivable it is, and one on A/P whose payable.
             detail["Entity"] = {
                 "Type": "Customer",
                 "EntityRef": ref(f"customer:{line.customer}"),
             }
+        if line.vendor is not None:
+            detail["Entity"] = {"Type": "Vendor", "EntityRef": ref(f"vendor:{line.vendor}")}
         out.append(
             {
                 "DetailType": "JournalEntryLineDetail",
@@ -408,7 +410,14 @@ def _calls(event: Event) -> Iterator[tuple[str, str, dict[str, Json], str | None
                     "DetailType": "DepositLineDetail",
                     "Amount": line.amount,
                     "Description": line.memo,
-                    "DepositLineDetail": {"AccountRef": account(line.account)},
+                    "DepositLineDetail": {
+                        "AccountRef": account(line.account),
+                        **(
+                            {}
+                            if line.customer is None
+                            else {"Entity": ref(f"customer:{line.customer}", type="Customer")}
+                        ),
+                    },
                 }
                 for line in lines
             ]

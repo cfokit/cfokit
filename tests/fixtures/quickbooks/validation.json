@@ -1,15 +1,15 @@
 {
- "validated_on": "2026-10-27",
+ "validated_on": "2026-10-28",
  "archives": {
-  "accrual": "1095bf03edfa261cc4309a9dc8ed30e950bd09cc9ccd3cbbbd2ae3130a49aa60",
-  "cash": "a9ebf3aa5e004a0df84175fd08ac49bf86d1d0aac1c1508a03ae2731bd9a5889",
-  "partial-range": "005765d090c3cac6fa39becb132b08a2f9bdab712a62149112fde2ba4029cf0d",
-  "calendar-year": "1095bf03edfa261cc4309a9dc8ed30e950bd09cc9ccd3cbbbd2ae3130a49aa60"
+  "accrual": "76a550419d06522cf35ccde113d6d693f98bfb8c88444b582dca61e4d542ad19",
+  "cash": "216c99a8d3aab29742c16beea4506b9862a6c3ccb64a444fe6827f0de975b75a",
+  "partial-range": "d4d613a9f483ffc32e6ec755ce94c789989d4e2eecf7678625b626cfb1ce794b",
+  "calendar-year": "76a550419d06522cf35ccde113d6d693f98bfb8c88444b582dca61e4d542ad19"
  },
  "not_compared": {
   "account-numbers": "the Reports API prints account numbers only with \"Show account numbers\" set, which validation runs without; compare-export is its check"
  },
  "comparisons": 128,
- "rows_compared": 43503,
+ "rows_compared": 43743,
  "result": "agrees"
 }

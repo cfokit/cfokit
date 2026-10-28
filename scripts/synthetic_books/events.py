@@ -51,6 +51,7 @@ class Line:
     amount: Decimal
     memo: str = ""
     customer: str | None = None
+    vendor: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

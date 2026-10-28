@@ -93,10 +93,15 @@ It settles the document. On a cash basis the income or expense is recognized at 
 the document's own lines (ADR-0080). On accrual nothing moves: the document's lines stay on its
 date.
 
-### 4. An open item that matches nothing
+### 4. An open item that matches nothing, or more than one
 
-The import is refused, naming the item, as Xero will not save conversion balances until the unpaid
-invoices and bills support A/R and A/P
+Matching is one to one, as a bank line's is
+([ADR-0059](0059-a-line-is-matched-before-it-is-coded.md) § 2): a transaction is claimed by one
+open item at most. Two open items alike in everything the aging shows, such as two payments of one
+amount from one customer on one day, claim two transactions. An item that matches no transaction,
+or whose candidates differ in anything else the books record, refuses the import, naming the item,
+since which transaction is open would be a guess. Xero, likewise, will not save conversion balances
+until the unpaid invoices and bills support A/R and A/P
 ([Enter conversion balances](https://central.xero.com/s/article/Enter-conversion-balances)).
 Nothing is guessed (`IMP-05`, `NFR-16`).
 

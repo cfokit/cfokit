@@ -340,6 +340,56 @@ category = "data"
 description = "Invoices and bills still open when the books end, the whole divergence the netting check explains."
 check = { kind = "reconciliation", journal_total = "agrees", divergences = "nets_to_zero", archive = "cash" }
 
+# --- Open when the books end: what an import's list of open items carries -------------------------
+
+[[case]]
+id = "d-open-partial-invoice"
+category = "data"
+description = "A project invoice with a deposit paid against it, the rest still open when the books end."
+check = { kind = "balance", account = "Accounts Receivable (A/R)", as_of = "month-end" }
+
+[[case]]
+id = "d-open-partial-bill"
+category = "data"
+description = "A repair bill paid in part, the rest still open when the books end."
+check = { kind = "balance", account = "Accounts Payable (A/P)", as_of = "month-end" }
+
+[[case]]
+id = "d-open-credit-memo"
+category = "data"
+description = "A credit memo applied to nothing, still open when the books end."
+check = { kind = "balance", account = "Accounts Receivable (A/R)", as_of = "month-end" }
+
+[[case]]
+id = "d-open-vendor-credit"
+category = "data"
+description = "An insurer's credit taken against no bill, still open when the books end."
+check = { kind = "balance", account = "Accounts Payable (A/P)", as_of = "month-end" }
+
+[[case]]
+id = "d-deposit-to-receivable"
+category = "data"
+description = "A client's check banked by deposit straight to A/R, naming the client, rather than received as a payment."
+check = { kind = "balance", account = "Accounts Receivable (A/R)", as_of = "month-end" }
+
+[[case]]
+id = "d-journal-to-payable"
+category = "data"
+description = "A year-end accrual journaled to A/P, naming the vendor, still open when the books end."
+check = { kind = "balance", account = "Accounts Payable (A/P)", as_of = "month-end" }
+
+[[case]]
+id = "d-open-sub-customer"
+category = "data"
+description = "A sub-customer's invoice still open when the books end, named by its full path."
+check = { kind = "balance", account = "Accounts Receivable (A/R)", as_of = "month-end" }
+
+[[case]]
+id = "d-identical-open-payments"
+category = "data"
+description = "Two payments from one client, of one amount on one day, applied to nothing."
+check = { kind = "balance", account = "Accounts Receivable (A/R)", as_of = "month-end" }
+
 # --- Archives: the same events, rendered differently ----------------------------------------------
 
 [[case]]
