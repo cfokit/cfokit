@@ -166,6 +166,21 @@ profile. `migrate run` builds it on first use, or build it explicitly with
 
 Once it is up, `/healthz` and `/readyz` should both respond.
 
+**The chat needs an inference credential.** CFOKit's agent (`python -m cfokit.agent`, on `:8082`)
+starts without one and answers every turn `agent_off`. To use the chat against Claude, put your
+own Anthropic API key in `.env` at the repository root, which Compose reads and git ignores, and
+recreate the agent:
+
+```bash
+read -rsp 'Anthropic API key: ' key && printf 'ANTHROPIC_API_KEY=%s\n' "$key" >> .env && unset key
+chmod 600 .env
+docker compose up -d agent
+```
+
+`CFOKIT_AGENT_MODEL` in the same file picks the model: `claude-sonnet-5-5` costs less than the
+default, and `scripted` needs no key at all, answering from the stand-in the documentation's clips
+are recorded with (ADR-0074). Never commit a key, and never put one in `compose.yaml`.
+
 **Every service copies the source into its image rather than mounting it.** After editing code,
 rebuild before you run, or you are running the previous copy:
 

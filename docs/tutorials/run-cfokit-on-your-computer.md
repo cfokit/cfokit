@@ -85,6 +85,10 @@ stack whenever the flow it shows changes.</sub>
 | The web app and the REST API | `https://localhost:8080` |
 | The MCP endpoint Claude connects to | `https://localhost:8081/mcp` |
 | The sign-in service | `https://keycloak.localhost:8443` |
+| CFOKit's own agent, behind the app's chat | `https://localhost:8082` |
+
+The app's chat is off until you give the agent an Anthropic API key;
+[Ask CFOKit about your books](../how-to/ask-about-your-books.md) says how.
 
 This is the real thing, not a demo. The books live in a Docker volume, and
 `docker compose down -v` destroys them.
