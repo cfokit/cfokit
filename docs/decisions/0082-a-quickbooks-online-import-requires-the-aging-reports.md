@@ -7,9 +7,13 @@ decision-makers: [Geoff]
 
 # ADR-0082: A QuickBooks Online file import requires the A/R and A/P Aging Detail reports, and refuses unless they tie
 
-**Requirements served:** `IMP-02`, `IMP-05`, `IMP-08`, `IMP-09`, `NFR-16`.
+**Requirements served:** `IMP-02`, `IMP-03`, `IMP-05`, `IMP-08`, `IMP-09`, `AR-16`, `NFR-16`.
 
 ## Context and Problem Statement
+
+An import reads the source's API where it can, and its file export where it cannot
+([ADR-0083](0083-a-quickbooks-online-import-reads-the-api.md)). This record is the QuickBooks
+Online file import's list of what is open.
 
 [ADR-0081](0081-an-import-brings-what-is-open-at-the-cutover-as-open-obligations.md) marks each
 invoice and bill open at the switch as owed, on its own imported transaction. That needs a list of
@@ -57,7 +61,10 @@ date.
 ### 2. Tied out before anything is posted
 
 The import is refused unless the open amounts, totaled customer by customer and vendor by vendor,
-tie to the A/R and A/P balances the source states for the last day of history.
+tie to the A/R and A/P balances the source states for the last day of history. Export Data states
+no balance per customer or vendor, but every General Ledger line carries a name, so each
+customer's and vendor's balance is the sum of the A/R and A/P lines that carry it, and their sum
+ties to the trial balance.
 
 ### 3. Every kind of open item, the same way
 
@@ -66,7 +73,14 @@ carried as open documents are: their own imported transactions, marked open at t
 amount. On a cash basis, money received on account is recognized as
 [ADR-0080](0080-a-cash-basis-report-recognizes-an-obligation-as-it-is-settled.md) § 2 sets out.
 
-### 4. Not the Open Invoices report
+### 4. On either basis
+
+Both reports are required whatever basis the company keeps. On accrual the statements are right
+without them, but CFOKit would not know which invoices and bills are open: the receivables ledger
+would arrive empty (`IMP-03`), and a payment after the switch would have nothing to settle. On a
+cash basis that payment's income would be lost as well (`AR-16`).
+
+### 5. Not the Open Invoices report
 
 The Open Invoices report is not accepted as the source, because an invoice paid after its report
 date drops off it.
@@ -114,6 +128,12 @@ date drops off it.
 ## Open questions
 
 * The exact Aging Detail column set, to confirm against a real export.
+* Whether Invoices and Received Payments, a standard QuickBooks Online report in the US, and its
+  payables counterpart, Bills and Applied Payments, state the amount each payment applied to each
+  document. Practitioners' reports conflict
+  ([Invoices and Received Payments](https://quickbooks.intuit.com/learn-support/en-us/reports-and-accounting/invoices-and-received-payments/00/947258)).
+  If they do, a file import asks for them as well, and its history gains the links Export Data
+  lacks. Both are confirmed against a sandbox download, as Export Data was (ADR-0078).
 
 ## More Information
 

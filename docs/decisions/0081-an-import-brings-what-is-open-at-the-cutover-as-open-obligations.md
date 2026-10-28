@@ -7,7 +7,7 @@ decision-makers: [Geoff]
 
 # ADR-0081: An import marks each invoice and bill open at the switch as owed, on its own imported transaction
 
-**Requirements served:** `IMP-02`, `IMP-03`, `IMP-09`, `AR-16`, `LED-17`, `NFR-16`.
+**Requirements served:** `IMP-02`, `IMP-03`, `IMP-05`, `IMP-07`, `IMP-09`, `AR-16`, `LED-15`, `LED-17`, `NFR-16`.
 
 ## Context and Problem Statement
 
@@ -93,6 +93,25 @@ It settles the document. On a cash basis the income or expense is recognized at 
 the document's own lines (ADR-0080). On accrual nothing moves: the document's lines stay on its
 date.
 
+### 4. An open item that matches nothing
+
+The import is refused, naming the item, as Xero will not save conversion balances until the unpaid
+invoices and bills support A/R and A/P
+([Enter conversion balances](https://central.xero.com/s/article/Enter-conversion-balances)).
+Nothing is guessed (`IMP-05`, `NFR-16`).
+
+### 5. Where the document is kept
+
+The ledger's obligation holds the transaction, the account and the amount, and knows nothing about
+customers or vendors ([ADR-0022](0022-tiny-ledger-modules-and-components.md)). An open invoice is recorded in the
+receivables module, on its imported transaction, with its customer, number, and issue and due
+dates. An open bill is recorded the same way in a payables module, with its vendor.
+
+### 6. In another currency
+
+An open item in a currency other than the entity's functional currency is refused, as any foreign
+amount is (`LED-15`, `IMP-07`).
+
 Where the open items come from, and how they are checked, is
 [ADR-0082](0082-a-quickbooks-online-import-requires-the-aging-reports.md).
 
@@ -113,6 +132,7 @@ Where the open items come from, and how they are checked, is
   settlement has none; changing that needs a person's review.
 * Bad, because obligations are append-only once raised: a wrongly marked document is corrected by
   reversal.
+* Bad, because an open bill needs a payables module to keep its vendor and due date.
 
 ### Confirmation
 
@@ -121,7 +141,8 @@ Where the open items come from, and how they are checked, is
   the switch.
 * The round trip ([ADR-0079](0079-the-quickbooks-round-trip-imports-what-the-reader-read.md))
   checks that each open item owes its open balance, that a payment after the import settles it, and
-  that a cash-basis profit and loss recognizes that payment's share of the document's own lines.
+  that a cash-basis profit and loss recognizes that payment's share of the document's own lines. A
+  file case checks that an open item matching no imported transaction is refused.
 
 ## Pros and Cons of the Options
 
@@ -152,14 +173,6 @@ The QuickBooks-to-NetSuite consultants' practice.
 * Bad, because a payment after the switch has nothing to settle, and a cash-basis company's income
   from invoices open at the switch is lost.
 
-## Open questions
-
-* An open item with no matching imported transaction.
-* Open items in a currency other than the functional one.
-* Where the due date, number and counterparty are kept: the ledger's obligation holds the
-  transaction, account and amount, and knows nothing about customers; customers and invoices as
-  documents are the receivables module's (`IMP-03`).
-
 ## More Information
 
 **Follow-on obligations.** The neutral shape and the import endpoints carry the mark of an open
@@ -175,5 +188,7 @@ basis), ADR-0082 (the open-item list), ADR-0083 (an API import).
 ## Revisit when
 
 * An API import (ADR-0083) delivers real payment dates, which replaces the synthetic settlement.
-* A real company's import has open items that match no imported transaction.
+* A real company's import is refused for an open item that matches no imported transaction, and the
+  source's own records explain the item.
+* `LED-16` activates or `IMP-07` changes, so that an open item can carry its own currency.
 * An import of opening balances without history is built.
