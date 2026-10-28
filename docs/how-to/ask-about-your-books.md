@@ -4,9 +4,21 @@ Once your books are in, you can ask about them in CFOKit itself: open your compa
 question. CFOKit answers from your books, through the same tools Claude uses, and shows which ones
 it read. Your own Claude works too, and [Connect Claude](connect-claude.md) explains how.
 
-The chat needs the deployment to run CFOKit's agent with an inference credential. On a CFOKit you
-run, set `ANTHROPIC_API_KEY` for the `agent` service in `compose.yaml`. Without one, the chat
-says it is off.
+The chat needs the deployment to run CFOKit's agent with an inference credential, an Anthropic API
+key from the [Claude Console](https://console.anthropic.com/). Without one, the chat says it is
+off. On a CFOKit you run on your computer, put the key in a file named `.env` in the folder you
+cloned CFOKit into, then start it again. Docker Compose reads the file and gives the key to the
+agent alone, and git ignores the file, so it is never committed:
+
+```bash
+read -rsp 'Anthropic API key: ' key && printf 'ANTHROPIC_API_KEY=%s\n' "$key" >> .env && unset key
+chmod 600 .env
+docker compose up -d --wait
+```
+
+The key is not shown as you paste it. Every question is billed to it. To try the chat without
+one, add `CFOKIT_AGENT_MODEL=scripted` to `.env`: the answers then come from a script, not from
+Claude, as in the clips below. Delete `.env` to remove the key.
 
 The clips below are recorded by CI from a passing run against the compose stack. The answers in
 them come from a scripted stand-in for the model, because CI holds no credential. The tool it
