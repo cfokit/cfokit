@@ -321,6 +321,15 @@ because the other archives are written without numbers:
 PYTHONPATH=scripts uv run python -m synthetic_books.sandbox compare-export ~/Downloads/numbered.zip account-numbers
 ```
 
+Each other rendering is compared with a download made with its one setting changed: the
+accounting method Cash, a custom range over the last fiscal year, or the fiscal year starting in
+January. Change one at a time, and put it back before the next. A download made with account
+numbers shown compares with `--numbers-shown`:
+
+```bash
+PYTHONPATH=scripts uv run python -m synthetic_books.sandbox compare-export ~/Downloads/cash.zip cash --numbers-shown
+```
+
 ## Opening a pull request
 
 - Work on a branch of your fork. Never commit to `main`.

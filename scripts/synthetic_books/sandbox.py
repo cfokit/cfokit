@@ -20,8 +20,9 @@ under each rendering's settings — and compares it with what our writer put in 
 API reports by the company's fiscal year but cannot change it, so a person changes it in
 QuickBooks between runs: each run compares the
 renderings the company's settings allow, remembers those that agreed, and names the setting the
-next one needs. The API never prints account numbers, so the numbered rendering is left to
-`compare-export`, and the record says so. QuickBooks' answers and the
+next one needs. The API prints account numbers only with "Show account numbers" set, and then
+in a column the export does not have, so validation runs with it off and the numbered rendering
+is left to `compare-export`, and the record says so. QuickBooks' answers and the
 differences are written under `.local/qbo-sandbox/`, which git ignores: **nothing QuickBooks
 returns is ever committed**. What is committed is the record that it agreed,
 `tests/fixtures/quickbooks/validation.json`, written only when every rendering has.
@@ -60,7 +61,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
-from synthetic_books import business, quickbooks_books
+from synthetic_books import business, quickbooks_books, quickbooks_export
 from synthetic_books.business import END, START
 from synthetic_books.events import dumps
 from synthetic_books.quickbooks import MONTHS
@@ -562,7 +563,7 @@ def ledger_of(report: Report, ledger: list[list[str | None]]) -> list[tuple[str,
         elif label and RUN_TIME.match(label) is None and not any(c[1:]):
             del open_[level:]
             open_.append(f"{open_[-1]}:{label}" if open_ else label)
-        elif c[1] == "Beginning Balance":
+        elif (c[1] or "").strip() == "Beginning Balance":  # indented to its account's level
             items.append(("begin", open_[-1], "Beginning Balance", amount(c[9])))
         elif c[1]:
             if c[6] not in (open_[-1], None):
@@ -604,7 +605,10 @@ def differences(
 
 # Renderings the Reports API cannot show, and why: they are checked by `compare-export` alone.
 NOT_COMPARED = {
-    "account-numbers": "the Reports API prints no account numbers, whatever the setting",
+    "account-numbers": (
+        'the Reports API prints account numbers only with "Show account numbers" set, which'
+        " validation runs without; compare-export is its check"
+    ),
 }
 
 
@@ -828,16 +832,31 @@ def settled(ledger: list[tuple[str, ...]]) -> list[tuple[str, ...]]:
     return out
 
 
-def compare_export(path: Path, rendering_name: str) -> int:
+def compare_export(path: Path, rendering_name: str, *, numbers_shown: bool = False) -> int:
     """Our archive against one Export Data download, cell by cell, member by member.
 
     The download is read from wherever it was saved and never copied into the repository. The
     cells that differ by nature are listed, not compared; a general ledger's days are compared
     as sets, because QuickBooks orders a day's entries differently from one run to the next.
+
+    `numbers_shown` compares a download made with "Show account numbers" set against the
+    rendering with numbers, written for the comparison and not committed: how numbers print is
+    checked on its own, so a rendering checked with them is checked without them too.
     """
     rendering = next(r for r in RENDERINGS if r.name == rendering_name)
     theirs = contents(path.read_bytes())
-    mine = contents((FIXTURE / "archives" / rendering.name / "export.zip").read_bytes())
+    if numbers_shown and not rendering.numbers:
+        books = quickbooks_books.record(COMPANY, business.write())
+        numbered = Rendering(
+            rendering.name,
+            basis=rendering.basis,
+            numbers=True,
+            start=rendering.start,
+            fiscal_start_month=rendering.fiscal_start_month,
+        )
+        mine = contents(quickbooks_export.export(books, numbered))
+    else:
+        mine = contents((FIXTURE / "archives" / rendering.name / "export.zip").read_bytes())
     print("not compared, by nature: " + "; ".join(BY_NATURE))
     status = 0
     for member in sorted(set(theirs) | set(mine)):
@@ -861,7 +880,12 @@ def main(argv: list[str]) -> int:
         print(__doc__)
         return 2
     if argv[0] == "compare-export":
-        return compare_export(Path(argv[1]), argv[2] if len(argv) > 2 else "accrual")
+        rest = [arg for arg in argv[2:] if arg != "--numbers-shown"]
+        return compare_export(
+            Path(argv[1]),
+            rest[0] if rest else "accrual",
+            numbers_shown="--numbers-shown" in argv[2:],
+        )
     sandbox = Sandbox()
     if argv[0] == "post":
         post(sandbox)
