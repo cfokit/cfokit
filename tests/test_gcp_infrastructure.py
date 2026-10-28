@@ -264,3 +264,15 @@ def test_the_agent_holds_no_database_credential() -> None:
     assert agent
     assert "DATABASE_URL" not in agent.group(1)
     assert "vpc_access" not in agent.group(1)
+
+
+def test_every_secret_is_encrypted_with_the_deployment_s_own_key() -> None:
+    """SOC2-14: the secrets, like the database, are under a key CFOKit holds, in the region the
+    location policy allows, never Google's default key or automatic (global) replication."""
+    secret = re.search(
+        r'resource "google_secret_manager_secret" "this" \{(.*?)\n\}\n', _terraform(), re.DOTALL
+    )
+    assert secret
+    assert "kms_key_name = google_kms_crypto_key.secrets.id" in secret.group(1)
+    assert "location = var.region" in secret.group(1)
+    assert "auto {}" not in secret.group(1)

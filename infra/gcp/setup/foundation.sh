@@ -6,10 +6,11 @@
 . "$(dirname "$0")/env.sh"
 
 step "Service agents"
-# Cloud SQL's encrypts the database with the project's own key, and IAP's reaches the issuer's
-# admin console; each must exist before a policy can name it, and on a new project neither does.
-gcloud services enable sqladmin.googleapis.com iap.googleapis.com --quiet
-for service in sqladmin.googleapis.com iap.googleapis.com; do
+# Cloud SQL's and Secret Manager's encrypt the database and the secrets with the project's own keys,
+# and IAP's reaches the issuer's admin console; each must exist before a policy can name it, and on
+# a new project none does.
+gcloud services enable sqladmin.googleapis.com secretmanager.googleapis.com iap.googleapis.com --quiet
+for service in sqladmin.googleapis.com secretmanager.googleapis.com iap.googleapis.com; do
   gcloud beta services identity create --service="$service" --quiet >/dev/null
 done
 done_ "exist"
