@@ -12,13 +12,19 @@
 # shellcheck source=env.sh
 . "$(dirname "$0")/env.sh"
 
-secrets=(database-url-owner database-url-app keycloak-db-password keycloak-admin-password
-  agent-client-secret anthropic-api-key)
 key="projects/${CFOKIT_PROJECT}/locations/${CFOKIT_REGION}/keyRings/cfokit/cryptoKeys/secrets"
 
 under_key() {
   gcloud secrets describe "$1" --format=json 2>/dev/null | grep -q "\"kmsKeyName\": \"$key\""
 }
+
+# Every secret OpenTofu manages, read from its state, so a secret added to secrets.tf is never
+# replaced without its value being read first.
+secrets=()
+while IFS= read -r s; do secrets+=("$s"); done < <(
+  tf state list | sed -n 's/^google_secret_manager_secret\.this\["\(.*\)"\]$/\1/p'
+)
+[ "${#secrets[@]}" -gt 0 ] || { need "no secrets in the OpenTofu state"; exit 1; }
 
 step "Secret Manager's service agent"
 gcloud beta services identity create --service=secretmanager.googleapis.com --quiet >/dev/null
@@ -33,10 +39,11 @@ for s in "${secrets[@]}"; do
     done_ "$s already under the key"
     continue
   fi
-  v=$(gcloud secrets versions access latest --secret "$s") ||
+  # The marker keeps a trailing newline, which command substitution would strip.
+  v=$(gcloud secrets versions access latest --secret "$s" && printf x) ||
     { need "$s has no value; fill it with database.sh first"; exit 1; }
   names+=("$s")
-  values+=("$v")
+  values+=("${v%x}")
   unset v
   done_ "$s read"
 done
@@ -49,6 +56,27 @@ tf plan -input=false -target=google_secret_manager_secret_iam_member.reader
 read -r -p "Replace these secrets, putting each value back? [y/N] " answer
 [ "$answer" = y ] || { need "nothing changed"; exit 1; }
 
+# From the moment a secret may be replaced, its value is in this shell only. However the script
+# ends, interrupted or failing, it tries to put back every value not yet back, and names any it
+# could not, which then has to be filled by hand.
+restored=0
+put_back() {
+  status=$?
+  trap - EXIT INT TERM HUP
+  set +e
+  lost=()
+  for ((i = restored; i < ${#names[@]}; i++)); do
+    printf '%s' "${values[$i]}" | gcloud secrets versions add "${names[$i]}" --data-file=- \
+      --quiet >/dev/null 2>&1 || lost+=("${names[$i]}")
+  done
+  unset values
+  if [ "${#lost[@]}" -gt 0 ]; then
+    need "These have no value and must be filled by hand: ${lost[*]}"
+  fi
+  exit "$status"
+}
+trap put_back EXIT INT TERM HUP
+
 step "Replace the secrets"
 tf apply -input=false -auto-approve -target=google_secret_manager_secret_iam_member.reader
 done_ "applied"
@@ -56,8 +84,10 @@ done_ "applied"
 step "Put every value back"
 for i in "${!names[@]}"; do
   printf '%s' "${values[$i]}" | gcloud secrets versions add "${names[$i]}" --data-file=- --quiet >/dev/null
+  restored=$((i + 1))
   done_ "${names[$i]}"
 done
+trap - EXIT INT TERM HUP
 unset values
 
 step "Check"
