@@ -5997,7 +5997,7 @@
  "2026-06-30": [
   {
    "account": "Operating Checking",
-   "debit": "391703.00",
+   "debit": "403703.00",
    "credit": "0"
   },
   {
@@ -6029,6 +6029,11 @@
    "account": "Computer Equipment:Original Cost Basis",
    "debit": "18000.00",
    "credit": "0"
+  },
+  {
+   "account": "Accounts Payable (A/P)",
+   "debit": "0",
+   "credit": "1500.00"
   },
   {
    "account": "Business Card",
@@ -6063,7 +6068,12 @@
   {
    "account": "Design Services",
    "debit": "0",
-   "credit": "673632.00"
+   "credit": "679632.00"
+  },
+  {
+   "account": "Unapplied Cash Payment Income",
+   "debit": "0",
+   "credit": "6800.00"
   },
   {
    "account": "Workshops",
@@ -6147,7 +6157,7 @@
   },
   {
    "account": "Professional Fees:Legal & Accounting",
-   "debit": "6087.00",
+   "debit": "7587.00",
    "credit": "0"
   },
   {
@@ -6157,7 +6167,7 @@
   },
   {
    "account": "Repairs/Maintenance",
-   "debit": "3020.00",
+   "debit": "3820.00",
    "credit": "0"
   },
   {

@@ -21,16 +21,16 @@ What QuickBooks records, as the sandbox showed it for every posting of the synth
   is never printed. A transfer's memo is on both its lines.
 * A bill payment lists the bank first, then A/P; a transfer, the account the money left first.
 * A deposit lists its payments by the day each was received, then in the order they were made,
-  whatever order it names them in. Its bank line names the customer when all of them are one
-  customer's.
+  whatever order it names them in. Its bank line names the customer when every payment and line
+  in it is that one customer's.
 * A void keeps every line, at nothing; its first line says "Voided", the rest keep their memos.
 * A payment of nothing, which applies a credit memo, keeps two lines of nothing: a bank side
   with no account ("Not Specified"), and A/R.
 * On the cash basis a payment no invoice took is income, reported as "Unapplied Cash Payment
-  Income". A vendor credit a bill payment takes is applied on the credit's own day, against as
-  much of the bill; the rest of the bill is recognized when it is paid. (The one such credit is
-  dated after its bill, so whether QuickBooks uses the credit's day or the later of the two is
-  not yet shown.)
+  Income", and so is a deposit's line to A/R. A vendor credit a bill payment takes is applied
+  on the credit's own day, against as much of the bill; the rest of the bill is recognized when
+  it is paid. (The one such credit is dated after its bill, so whether QuickBooks uses the
+  credit's day or the later of the two is not yet shown.)
 """
 
 from __future__ import annotations
@@ -59,6 +59,7 @@ from synthetic_books.events import (
     IssueInvoice,
     IssueQuote,
     Journal,
+    Line,
     OpenAccount,
     OpenBalances,
     Pay,
@@ -199,6 +200,12 @@ class Recorder:
     def name(self, customer: str | None) -> str:
         return "" if customer is None else self.customers[customer]
 
+    def whose(self, line: Line) -> str:
+        """The name a line carries: its customer's, or its vendor's."""
+        return (
+            self.vendors[line.vendor] if line.vendor is not None else self.name(line.customer)
+        )
+
     def sale(self, lines: Sequence[SaleLine], sign: int, name: str) -> list[Posting]:
         return [
             Posting(self.services[line.service], sign * line.amount, line.memo, name)
@@ -328,11 +335,16 @@ class Recorder:
                     )
                 )
                 postings = [Posting(HELD, -p.amount, "", "") for p in payments]
-                postings += [Posting(line.account, -line.amount, line.memo) for line in lines]
+                postings += [
+                    Posting(line.account, -line.amount, line.memo, self.whose(line))
+                    for line in lines
+                ]
                 total = -sum((p.amount for p in postings), ZERO)
-                # The bank line names whoever paid in, where that is one customer.
+                # The bank line names whoever paid in, where every payment and line is one
+                # customer's.
                 payers = {self.by_key[p.target].name for p in payments}
-                payer = payers.pop() if len(payers) == 1 and not lines else ""
+                payers |= {self.whose(line) for line in lines}
+                payer = payers.pop() if len(payers) == 1 else ""
                 self.add(
                     Transaction(
                         event_id,
@@ -467,7 +479,7 @@ class Recorder:
             case Journal(lines=lines):
                 # Each line carries only its own description; the entry's memo is not printed.
                 postings = [
-                    Posting(line.account, line.amount, line.memo, self.name(line.customer))
+                    Posting(line.account, line.amount, line.memo, self.whose(line))
                     for line in lines
                 ]
                 self.add(Transaction(event_id, day, "Journal Entry", postings))
@@ -490,7 +502,8 @@ def cash_lines(books: Books, transaction: Transaction) -> list[Posting]:
     An invoice, credit memo, bill or vendor credit recognizes nothing when issued. A payment
     against one recognizes the document's own lines in proportion to the amount paid, against
     the account the money went to; whatever the payment leaves unapplied stays on A/R. A voided
-    payment recognizes nothing. Everything else is the same on both bases.
+    payment recognizes nothing. A deposit's line to A/R is income, as a payment no invoice took
+    is. Everything else is the same on both bases.
     """
     if transaction.document is not None or transaction.voided:
         return []
@@ -498,6 +511,11 @@ def cash_lines(books: Books, transaction: Transaction) -> list[Posting]:
         return _cash_receipt(books, transaction)
     if transaction.type == "Bill Payment (Check)":
         return _cash_disbursement(books, transaction)
+    if transaction.type == "Deposit":
+        return [
+            replace(p, account=UNAPPLIED_INCOME) if p.account == RECEIVABLE else p
+            for p in transaction.lines
+        ]
     return list(transaction.lines)
 
 

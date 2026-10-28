@@ -6322,7 +6322,7 @@
  "2026-06-30": [
   {
    "account": "Operating Checking",
-   "debit": "391703.00",
+   "debit": "403703.00",
    "credit": "0"
   },
   {
@@ -6332,7 +6332,7 @@
   },
   {
    "account": "Accounts Receivable (A/R)",
-   "debit": "16000.00",
+   "debit": "16850.00",
    "credit": "0"
   },
   {
@@ -6358,7 +6358,7 @@
   {
    "account": "Accounts Payable (A/P)",
    "debit": "0",
-   "credit": "1831.00"
+   "credit": "3831.00"
   },
   {
    "account": "Business Card",
@@ -6393,7 +6393,7 @@
   {
    "account": "Design Services",
    "debit": "0",
-   "credit": "664832.00"
+   "credit": "678482.00"
   },
   {
    "account": "Workshops",
@@ -6437,7 +6437,7 @@
   },
   {
    "account": "Insurance",
-   "debit": "8400.00",
+   "debit": "8100.00",
    "credit": "0"
   },
   {
@@ -6477,7 +6477,7 @@
   },
   {
    "account": "Professional Fees:Legal & Accounting",
-   "debit": "6087.00",
+   "debit": "7587.00",
    "credit": "0"
   },
   {
@@ -6487,7 +6487,7 @@
   },
   {
    "account": "Repairs/Maintenance",
-   "debit": "3020.00",
+   "debit": "4620.00",
    "credit": "0"
   },
   {

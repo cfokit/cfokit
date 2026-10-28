@@ -56,7 +56,12 @@ before anything is posted.
 ### 1. Matched to the imported transaction
 
 The importer matches each aging row to its imported transaction by type, number, counterparty and
-date.
+date: the report's Transaction type, Num, name and Date columns. A/R Aging Detail's columns are
+Date, Transaction type, Num, Customer full name, Due date, Amount and Open balance; A/P Aging
+Detail names the vendor in place of the customer and adds Past due, which counts to the day the
+report is run rather than its as-of date, so the importer does not read it. A sub-customer is named
+by its full path. Rows are grouped by days past due, each group with a total, and the report with
+one.
 
 ### 2. Tied out before anything is posted
 
@@ -68,10 +73,13 @@ ties to the trial balance.
 
 ### 3. Every kind of open item, the same way
 
-Unapplied customer payments, customer credits, vendor credits and deposits on the aging reports are
-carried as open documents are: their own imported transactions, marked open at their unapplied
-amount. On a cash basis, money received on account is recognized as
-[ADR-0080](0080-a-cash-basis-report-recognizes-an-obligation-as-it-is-settled.md) § 2 sets out.
+Unapplied customer payments, customer credits, vendor credits, deposits, and journal entries
+naming a customer or vendor on A/R or A/P, are carried as open documents are: their own imported
+transactions, marked open at the open balance the aging states. An open payment or deposit is money
+received, recognized on a cash basis as
+[ADR-0080](0080-a-cash-basis-report-recognizes-an-obligation-as-it-is-settled.md) § 2 sets out; the
+sandbox's cash basis reports a deposit to A/R as unapplied payment income, as it does a payment. An
+open credit or journal entry is not money received.
 
 ### 4. On either basis
 
@@ -80,10 +88,16 @@ without them, but CFOKit would not know which invoices and bills are open: the r
 would arrive empty (`IMP-03`), and a payment after the switch would have nothing to settle. On a
 cash basis that payment's income would be lost as well (`AR-16`).
 
-### 5. Not the Open Invoices report
+### 5. Not the Open Invoices report, nor the payment reports
 
 The Open Invoices report is not accepted as the source, because an invoice paid after its report
 date drops off it.
+
+Invoices and Received Payments and Bills and Applied Payments are not asked for either. A payment
+that pays several documents is listed once, at its total, and no column ties a payment to the
+documents it paid, so the links they seem to offer would be a guess (`NFR-16`). The sandbox shows
+it: a bill payment the API applies to three bills appears in Bills and Applied Payments as one row
+at its total.
 
 ### Consequences
 
@@ -102,6 +116,8 @@ date drops off it.
 
 * The fixture writes both reports, validated against the sandbox's `AgedReceivableDetail` and
   `AgedPayableDetail` and a real download (ADR-0078).
+* The fixture carries an open item of each kind § 3 names, and two alike in everything the aging
+  shows, all open on the books' last day.
 * The round trip ([ADR-0079](0079-the-quickbooks-round-trip-imports-what-the-reader-read.md))
   checks that every row matches its transaction, and a file case checks that an aging that does not
   tie is refused.
@@ -124,16 +140,6 @@ date drops off it.
 * Good, because a partial or mismatched aging still imports.
 * Bad, because receivables that disagree with the source would land as fact, and the disagreement
   would surface later, against a customer.
-
-## Open questions
-
-* The exact Aging Detail column set, to confirm against a real export.
-* Whether Invoices and Received Payments, a standard QuickBooks Online report in the US, and its
-  payables counterpart, Bills and Applied Payments, state the amount each payment applied to each
-  document. Practitioners' reports conflict
-  ([Invoices and Received Payments](https://quickbooks.intuit.com/learn-support/en-us/reports-and-accounting/invoices-and-received-payments/00/947258)).
-  If they do, a file import asks for them as well, and its history gains the links Export Data
-  lacks. Both are confirmed against a sandbox download, as Export Data was (ADR-0078).
 
 ## More Information
 

@@ -24,6 +24,7 @@ from typing import Literal
 
 from synthetic_books.events import (
     HELD,
+    PAYABLE,
     RECEIVABLE,
     RETAINED_EARNINGS,
     AccountType,
@@ -335,6 +336,7 @@ class Business:
         self._card_payments()
         self._remittances()
         self._northwind_payments()
+        self._open_at_year_end()
         return self._ordered()
 
     def _ordered(self) -> list[tuple[str, Event]]:
@@ -1259,6 +1261,119 @@ class Business:
                 cases=("d-vendor-credit", "d-cash-vendor-credit"),
             )
         )
+
+    # --- open when the books end ------------------------------------------------------------
+
+    def _open_at_year_end(self) -> None:
+        """What is still open on the books' last day in a form other than an invoice or a bill
+        nothing has touched: each is a row an import's list of open items carries. Written last,
+        on the last day, so every event and document number before them is as it was."""
+        glacier = next(c for c in CLIENTS if c.key == "glacier")
+        juniper = next(c for c in CLIENTS if c.key == "juniper")
+        due = END + timedelta(days=30)
+
+        # A project invoice with a deposit paid against it; the rest is owed in July.
+        tag = ("d-open-partial-invoice",)
+        invoice = "inv-glacier-2026-06-30-project"
+        self.add(
+            IssueInvoice(
+                on=END,
+                key=invoice,
+                customer=glacier.key,
+                due=due,
+                lines=(SaleLine("project", money(1200000), "Fall catalog design"),),
+                cases=tag,
+            )
+        )
+        self._payment(glacier, END, ((invoice, 600000),), 600000, cases=tag)
+
+        # A bill paid in part; the rest is owed in July.
+        tag = ("d-open-partial-bill",)
+        bill = "bill-fixit-2026-06-30"
+        self.add(
+            ReceiveBill(
+                on=END,
+                key=bill,
+                vendor="fixit",
+                number="FX-4618",
+                due=due,
+                lines=(Line("repairs", money(160000), "Annual HVAC service"),),
+                cases=tag,
+            )
+        )
+        self._pay_bills("fixit", END, bill, 80000, tag)
+
+        # A credit issued and applied to nothing yet.
+        self.add(
+            IssueCredit(
+                on=END,
+                key="credit-sable-finch-2026-06-30",
+                customer="sable-finch",
+                lines=(SaleLine("project", money(75000), "Credit — reduced rebrand scope"),),
+                cases=("d-open-credit-memo",),
+            )
+        )
+
+        # An insurer's credit, taken against no bill yet.
+        self.add(
+            VendorCredit(
+                on=END,
+                key="vcredit-keystone-2026-06-30",
+                vendor="keystone",
+                lines=(Line("insurance", money(30000), "Premium adjustment credit"),),
+                cases=("d-open-vendor-credit",),
+            )
+        )
+
+        # A client's check banked by deposit straight to A/R, rather than received as a payment.
+        self.add(
+            BankDeposit(
+                on=END,
+                key=self.key("dep"),
+                into="checking",
+                lines=(
+                    Line(
+                        RECEIVABLE, money(180000), "Check for July retainer", customer="lantern"
+                    ),
+                ),
+                cases=("d-deposit-to-receivable",),
+            )
+        )
+
+        # The CPAs' year-end review, accrued to A/P in their name; they bill it in August.
+        self.add(
+            Journal(
+                on=END,
+                key=self.key("accrual"),
+                memo="Accrue year-end review",
+                lines=(
+                    Line("legal", money(150000), "Year-end review, accrued"),
+                    Line(
+                        PAYABLE,
+                        money(-150000),
+                        "Year-end review, accrued",
+                        vendor="ledger-lane",
+                    ),
+                ),
+                cases=("d-journal-to-payable",),
+            )
+        )
+
+        # A sub-customer's invoice, which the aging names by its full path.
+        self.add(
+            IssueInvoice(
+                on=END,
+                key="inv-harbor-downtown-2026-06-30-project",
+                customer="harbor-downtown",
+                due=due,
+                lines=(SaleLine("project", money(240000), "Patient signage refresh"),),
+                cases=("d-open-sub-customer",),
+            )
+        )
+
+        # A prepayment sent twice by mistake: one amount, one day, applied to nothing.
+        for _ in range(2):
+            self._payment(juniper, END, (), 250000, cases=("d-identical-open-payments",))
 
     # --- what follows from the month's activity ----------------------------------------------
 
