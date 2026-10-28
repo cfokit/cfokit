@@ -15,6 +15,26 @@ locals {
   }
 }
 
+# Every secret is encrypted with a key CFOKit holds, as the database is (database.tf): its rotation
+# is ours, every use of it is in the audit log, and disabling it makes every secret unreadable
+# (SOC2-14, SOC2-17).
+resource "google_kms_crypto_key" "secrets" {
+  name            = "secrets"
+  key_ring        = google_kms_key_ring.data.id
+  rotation_period = "7776000s" # 90 days; older versions stay to decrypt what they encrypted
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+# Secret Manager's service agent encrypts and decrypts with it, and nothing else does.
+resource "google_kms_crypto_key_iam_member" "secrets" {
+  crypto_key_id = google_kms_crypto_key.secrets.id
+  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+  member        = "serviceAccount:service-${data.google_project.this.number}@gcp-sa-secretmanager.iam.gserviceaccount.com"
+}
+
 resource "google_secret_manager_secret" "this" {
   for_each  = local.secrets
   secret_id = each.key
@@ -22,21 +42,19 @@ resource "google_secret_manager_secret" "this" {
 
   annotations = { description = each.value }
 
-  # In the deployment's region: automatic replication is a global location, which the resource
-  # locations policy refuses (orgpolicy.tf). Secrets created before that policy replicate
-  # automatically, and replication cannot change in place, so a difference is ignored rather than
-  # replacing a secret and its values.
+  # In the deployment's region, under the key above: automatic replication is a global location,
+  # which the resource locations policy refuses (orgpolicy.tf). Replication cannot change in place,
+  # so changing it replaces the secret, and its values with it.
   replication {
     user_managed {
       replicas {
         location = var.region
+        customer_managed_encryption {
+          kms_key_name = google_kms_crypto_key.secrets.id
+        }
       }
     }
   }
 
-  lifecycle {
-    ignore_changes = [replication]
-  }
-
-  depends_on = [google_project_service.this]
+  depends_on = [google_project_service.this, google_kms_crypto_key_iam_member.secrets]
 }
