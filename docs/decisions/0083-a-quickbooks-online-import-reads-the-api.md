@@ -124,8 +124,8 @@ this one.
 
 ## More Information
 
-**Reversal cost.** Low while proposed and unbuilt. Once built, an import's links are append-only
-records in the books it landed.
+**Reversal cost.** Low for the decision, which writes nothing itself. The links an API import
+records are append-only in the books it landed, so a different rule reaches only later imports.
 
 Related: ADR-0040 (import as a module, and what would separate it), ADR-0062 (a synchronized feed),
 ADR-0078 (the sandbox), ADR-0080 to ADR-0082 (what the file import cannot do).

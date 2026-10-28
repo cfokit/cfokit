@@ -27,7 +27,7 @@ What exists:
   `settlement` row names the obligation, the transaction that settled it, and the amount. Both are
   written by the ledger's write path in the same transaction as the posting, and both are
   append-only. A payment can settle several obligations and an obligation can be settled by
-  several payments (`AR-12`). Credit notes (`AR-14`) and write-offs (`AR-18`) are not built.
+  several payments (`AR-12`).
 * **The reports.** One query sums postings by account over a window, whatever the basis. A
   cash-basis entity's trial balance, profit and loss and balance sheet are therefore accrual
   figures under a heading that says "cash". The ledger's receivables service describes the cash
@@ -227,7 +227,7 @@ than a view of it**, and stay posted figures on every basis (ADR-0050 § 1).
   counted on the report.
 * Good, because payables inherit it unchanged, as ADR-0037 requires.
 * Bad, because every balance-presenting report of a cash-basis entity reads links and runs a
-  derivation, where today it sums postings in one query.
+  derivation, rather than summing postings in one query.
 * Bad, because a payment's unapplied excess has to be recorded as an obligation owed to the
   customer, which is a change to the write path, and a payment recorded without it reads as
   posted.
@@ -360,9 +360,9 @@ The strictest reading of `NFR-16`: where the books cannot support the answer, gi
   services applying it where the declared basis is cash; the count of unlinked and imported postings
   on the face of each report.
 * `allocate` across weights of both signs.
-* `AR-14` and `AR-18`, when built, record a settlement of the obligation they correct.
+* `AR-14` and `AR-18` record a settlement of the obligation they correct.
 * The write path records a payment's unapplied excess as an obligation owed to the customer. That
-  is a change to the write path, which needs a person's review before it is built.
+  is a change to the write path, which needs a person's review.
 * The cash view's "Unapplied payments" line.
 * The ledger's receivables service names a cash entity's own statements as `AR-16`'s, not
   `RPT-19`'s.

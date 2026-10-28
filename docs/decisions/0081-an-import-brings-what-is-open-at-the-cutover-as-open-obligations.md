@@ -106,11 +106,11 @@ Where the open items come from, and how they are checked, is
 * Bad, because the synthetic settlement moves the cash-basis timing of the part paid before the
   switch to the last day of history when the real payment date is unknown, so periods already
   reported may differ slightly on a cash basis from QuickBooks.
-* Bad, because invoices fully paid before the switch still lack payment-to-invoice links from
+* Bad, because invoices fully paid before the switch have no payment-to-invoice links from
   Export Data, so cash-basis reports of pre-switch history are not fixed by this decision (see
   ADR-0083).
-* Bad, because a synthetic settlement has no payment of its own, which the write path does not yet
-  take; that change needs a person's review before it is built.
+* Bad, because the write path takes a settlement only with a payment of its own, and a synthetic
+  settlement has none; changing that needs a person's review.
 * Bad, because obligations are append-only once raised: a wrongly marked document is corrected by
   reversal.
 
