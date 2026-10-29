@@ -130,7 +130,8 @@ resource "google_cloud_run_v2_service" "api" {
 # ---------------------------------------------------------------------------------------------
 # CFOKit's agent, behind the web app's chat (ADR-0075): a separate component, reaching the books
 # only through MCP and the issuer only to exchange a person's token, both at their public
-# addresses, as any client does. It holds no database credential, so it needs no VPC.
+# addresses, as any client does. It holds no database credential. Its egress is private ranges
+# only, as the organization policy requires of every service, so public calls go out directly.
 # ---------------------------------------------------------------------------------------------
 resource "google_cloud_run_v2_service" "agent" {
   name                = "cfokit-agent"
@@ -144,6 +145,14 @@ resource "google_cloud_run_v2_service" "agent" {
     scaling {
       min_instance_count = 0
       max_instance_count = 4
+    }
+
+    vpc_access {
+      network_interfaces {
+        network    = local.vpc_egress.network
+        subnetwork = local.vpc_egress.subnetwork
+      }
+      egress = "PRIVATE_RANGES_ONLY"
     }
 
     containers {
@@ -349,7 +358,6 @@ resource "google_cloud_run_v2_service" "identity" {
   lifecycle {
     ignore_changes = [
       template[0].containers[0].image,
-      template[0].revision,
       client,
       client_version,
     ]

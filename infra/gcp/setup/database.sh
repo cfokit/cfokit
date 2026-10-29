@@ -131,7 +131,8 @@ else
   gcloud secrets delete cfokit-app-verifier --quiet >/dev/null 2>&1 || true
 
   pw=$(password)
-  printf '%s' "$pw" | scram | gcloud secrets create cfokit-app-verifier --data-file=- --quiet >/dev/null
+  printf '%s' "$pw" | scram | gcloud secrets create cfokit-app-verifier --data-file=- --quiet \
+    --replication-policy user-managed --locations "$CFOKIT_REGION" >/dev/null
   gcloud secrets add-iam-policy-binding cfokit-app-verifier --quiet >/dev/null \
     --member "serviceAccount:cfokit-migrate@${CFOKIT_PROJECT}.iam.gserviceaccount.com" \
     --role roles/secretmanager.secretAccessor
