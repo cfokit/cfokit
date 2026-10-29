@@ -256,7 +256,7 @@ def test_the_rest_service_tells_the_web_client_where_the_agent_is() -> None:
 
 
 def test_the_agent_holds_no_database_credential() -> None:
-    """ADR-0075: the agent reaches the books only through MCP, so it is given no DATABASE_URL."""
+    """ADR-0075: the agent reaches the books only through MCP, so it holds no DATABASE_URL."""
     agent = re.search(
         r'resource "google_cloud_run_v2_service" "agent" \{(.*?)\n\}\n', _terraform(), re.DOTALL
     )
