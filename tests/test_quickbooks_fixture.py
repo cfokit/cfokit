@@ -13,13 +13,14 @@ import json
 import re
 import tomllib
 from collections import Counter, defaultdict
+from datetime import date
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
 from xml.etree import ElementTree
 
 import pytest
-from synthetic_books import business, quickbooks_books, quickbooks_export
+from synthetic_books import business, quickbooks_books, quickbooks_export, xlsx
 from synthetic_books.__main__ import GENERATED, catalog, render, same
 from synthetic_books.events import PAYABLE, RECEIVABLE
 from synthetic_books.mutations import MUTATIONS
@@ -406,3 +407,27 @@ def test_each_aging_ties_to_the_books_name_by_name(account: str) -> None:
         if len(row) > 4 and re.fullmatch(r"\d{2}/\d{2}/\d{4}", row[1] or ""):
             listed[str(row[4])] += Decimal(str(row[-1]))
     assert dict(listed) == {name: amount for name, amount in held.items() if amount}
+
+
+def test_an_aging_counts_an_item_without_a_due_date_from_its_date() -> None:
+    """A vendor credit has no due date; a download as of July 31, 2026 put the one dated June 30
+    with the items 31 to 60 days past due, not with the current ones."""
+    books = quickbooks_books.record(quickbooks_export.COMPANY, business.write())
+    report = values(xlsx.workbook(quickbooks_export.aging(books, PAYABLE, date(2026, 7, 31))))
+    group = ""
+    for row in report:
+        if len(row) == 1 and row[0]:
+            group = str(row[0])
+        if len(row) > 2 and row[2] == "Vendor Credit":
+            assert group == "31 - 60 days past due"
+            return
+    pytest.fail("no vendor credit is open")
+
+
+def test_an_aging_refuses_a_past_due_it_has_not_seen(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Every Past due a download has shown counts days after the due date; run before one, the
+    writer refuses rather than guess what QuickBooks prints."""
+    books = quickbooks_books.record(quickbooks_export.COMPANY, business.write())
+    monkeypatch.setattr(quickbooks_export, "AGING_RUN_ON", date(2026, 7, 1))
+    with pytest.raises(ValueError, match="not past due"):
+        quickbooks_export.aging(books, PAYABLE)

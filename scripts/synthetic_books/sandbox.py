@@ -58,7 +58,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from collections.abc import Callable, Iterator, Sequence
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -76,7 +76,7 @@ from synthetic_books.quickbooks_export import (
     Report,
     month_ends,
 )
-from synthetic_books.xlsx import cells, contents, values
+from synthetic_books.xlsx import cells, contents, values, workbook
 
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURE = ROOT / "tests" / "fixtures" / "quickbooks"
@@ -609,10 +609,10 @@ def by_group(rows: list[tuple[str, ...]]) -> list[tuple[str, ...]]:
     return out + sorted(group)
 
 
-def our_aging(file: str, account: str) -> list[tuple[str, ...]]:
+def our_aging(data: bytes, account: str) -> list[tuple[str, ...]]:
     """Our aging past its title and header rows, without its footer, and on A/P without the
     Past due column, which counts to the day the report is run."""
-    body = [comparable(row) for row in values((FIXTURE / "aging" / file).read_bytes())[5:]]
+    body = [comparable(row) for row in values(data)[5:]]
     body = [row for row in body if row and not AGING_RUN_TIME.match(row[0])]
     if account == PAYABLE:
         body = [row[:6] + row[7:] if len(row) > 6 else row for row in body]
@@ -806,7 +806,7 @@ def validate(sandbox: Sandbox) -> int:
             report = "AgedPayableDetail" if account == PAYABLE else "AgedReceivableDetail"
             compare(
                 f"aging-{'payable' if account == PAYABLE else 'receivable'}",
-                our_aging(file, account),
+                our_aging((FIXTURE / "aging" / file).read_bytes(), account),
                 sandbox.report(report, report_date=END.isoformat(), aging_method="Report_Date"),
                 comparisons,
                 api_aging,
@@ -961,15 +961,28 @@ def compare_export(path: Path, rendering_name: str, *, numbers_shown: bool = Fal
     return status
 
 
+def as_of(title: str) -> date:
+    """An aging's day, from its title row: `As of Jun 30, 2026`."""
+    month, day, year = title.removeprefix("As of ").replace(",", "").split()
+    short = [name[:3] for name in business.MONTH_NAMES]
+    return date(int(year), short.index(month) + 1, int(day))
+
+
 def compare_aging(path: Path) -> int:
     """Our aging report against a download of it, cell by cell, in order. Which report the
-    download is, is read from its title. The company, the time it was run and each Past due,
-    which counts to that time, differ by nature and are not compared."""
+    download is, and as of what day, is read from its title rows; a day other than the books'
+    last is written for the comparison and not committed. The company, the time it was run and
+    each Past due, which counts to that time, differ by nature and are not compared."""
     theirs = path.read_bytes()
-    title = cells(theirs)[1][0]
-    payable = title is not None and title[1].startswith("A/P")
-    file = next(f for f, account in AGING if (account == PAYABLE) == payable)
-    mine = (FIXTURE / "aging" / file).read_bytes()
+    grid = cells(theirs)
+    payable = grid[1][0] is not None and grid[1][0][1].startswith("A/P")
+    file, account = next((f, a) for f, a in AGING if (a == PAYABLE) == payable)
+    day = as_of(grid[2][0][1] if grid[2][0] is not None else "")
+    if day == END:
+        mine = (FIXTURE / "aging" / file).read_bytes()
+    else:
+        books = quickbooks_books.record(COMPANY, business.write())
+        mine = workbook(quickbooks_export.aging(books, account, day))
 
     def normal(data: bytes) -> list[tuple[str, ...]]:
         out: list[tuple[str, ...]] = []
