@@ -347,8 +347,9 @@ PYTHONPATH=scripts uv run python -m synthetic_books.sandbox compare-export ~/Dow
 
 The aging reports are compared each with its own download: A/R Aging Detail and A/P Aging
 Detail (Reports), as of June 30, 2026, with the aging method "Report date" and nothing else
-customized. Which report it is, is read from its title; each Past due counts to the time the
-report was run, and is not compared:
+customized. Which report it is, and as of what day, is read from its title rows; a download as
+of another day is compared with the report written for that day, which is not committed. Each
+Past due counts to the time the report was run, and is not compared:
 
 ```bash
 PYTHONPATH=scripts uv run python -m synthetic_books.sandbox compare-aging ~/Downloads/A_R_Aging_Detail_Report.xlsx

@@ -58,7 +58,8 @@ how the numbered layout is checked.
 
 **The aging reports** — A/R Aging Detail and A/P Aging Detail, as of the books' last day with
 the aging method "Report date" — are written beside the archives, as a person downloads them
-for a file import (ADR-0082). As the API and two downloads showed them:
+for a file import (ADR-0082). As the API and downloads as of June 30 and July 31, 2026 showed
+them:
 
 * What is open: each invoice, credit memo, bill and vendor credit at its amount less what
   payments and credits applied to it; a payment at what it left unapplied; and each line a
@@ -67,18 +68,18 @@ for a file import (ADR-0082). As the API and two downloads showed them:
 * An invoice's or bill's due date is its own; a payment's, deposit's, journal entry's and credit
   memo's is its date; a vendor credit has none. No number but an invoice's or a bill's is
   printed, and a number is text, whatever its digits.
-* Rows are grouped by days past due at the as-of date, oldest group first: "91 or more days past
-  due", "1 - 30 days past due", "CURRENT", which holds a vendor credit too. Within a group, by
-  due date, then in the order they were made. Each group ends with its total, and the report
-  with one: sums of the cells above, as `G7+G8+G9` and `G10+G13+G23`.
+* Rows are grouped by days past due at the as-of date, counted from the due date or, where
+  there is none, the date; oldest group first: "91 or more days past due", "61 - 90 days past
+  due", "31 - 60 days past due", "1 - 30 days past due", "CURRENT". Within a group, by due date,
+  one without last, then in the order they were made. Each group ends with its total, and the
+  report with one: sums of the cells above, as `G7+G8+G9` and `G10+G13+G23`.
 * Three title rows — the company, the report, "As of Jun 30, 2026" — a blank row, and the
   header; three blank rows before the footer, which is the time it was run, after a space.
   A/P has a Past due column, the days from the due date to that time, which A/R does not.
 * An empty cell in a row is an empty string.
 
-Not yet seen in a download: the names of the 31 - 60 and 61 - 90 day groups, which the writer
-gives the others' pattern, and a Past due at or before the due date, which no row here has,
-because the reports are run after every due date.
+The reports are run after every due date, so every Past due is a positive count of days. The
+writer refuses one that would not be, which no download has shown.
 """
 
 from __future__ import annotations
@@ -830,12 +831,13 @@ AGING_GROUPS = (  # the fewest days past due a group holds, oldest group first
 
 
 def aging_group(item: OpenItem, as_of: date) -> str:
-    days = 0 if item.due is None else (as_of - item.due).days
+    days = (as_of - (item.due or item.on)).days
     return next((label for least, label in AGING_GROUPS if days >= least), "CURRENT")
 
 
-def aging(books: Books, account: str) -> list[Row]:
-    """A/R or A/P Aging Detail as of the books' last day, as a download writes it."""
+def aging(books: Books, account: str, as_of: date = END) -> list[Row]:
+    """A/R or A/P Aging Detail, as a download writes it: as of the books' last day, unless
+    another day is named."""
     payable = account == PAYABLE
     header: Row = [
         None,
@@ -853,27 +855,30 @@ def aging(books: Books, account: str) -> list[Row]:
     rows: list[Row] = [
         [COMPANY],
         [title],
-        [f"As of {MONTH_NAMES[END.month - 1][:3]} {END.day}, {END.year}"],
+        [f"As of {MONTH_NAMES[as_of.month - 1][:3]} {as_of.day}, {as_of.year}"],
         [],
         header,
     ]
     items = sorted(
-        open_items(books, account, END),
-        key=lambda item: (item.due is None, item.due or END),  # stable: the order made
+        open_items(books, account, as_of),
+        key=lambda item: (item.due is None, item.due or as_of),  # stable: the order made
     )
     totals: list[int] = []
     for label in [label for _, label in AGING_GROUPS] + ["CURRENT"]:
-        group = [item for item in items if aging_group(item, END) == label]
+        group = [item for item in items if aging_group(item, as_of) == label]
         if not group:
             continue
         rows.append([label])
         first = len(rows) + 1  # rows are numbered from 1
         for item in group:
             past_due: list[Cell] = []
-            if payable:
-                past_due = [
-                    "" if item.due is None else Number(Decimal((AGING_RUN_ON - item.due).days))
-                ]
+            if payable and item.due is not None:
+                days = (AGING_RUN_ON - item.due).days
+                if days <= 0:
+                    raise ValueError(f"{item.type} {item.number} is not past due when run")
+                past_due = [Number(Decimal(days))]
+            elif payable:
+                past_due = [""]
             rows.append(
                 [
                     None,
