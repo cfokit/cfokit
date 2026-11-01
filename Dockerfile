@@ -23,7 +23,7 @@
 # The web client (ADR-0054). Node and pnpm at the versions web/.nvmrc and web/package.json pin;
 # keep the tag in step with web/.nvmrc. Only web/ is copied in, which is the whole of what the
 # client may read, apart from the contract it is typed against.
-FROM node:24.21.0-slim@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6 AS web
+FROM node:26.12.0-slim@sha256:e556a144463cc8dc53afe8de6d2fa0db5c132fd39ffa232c17641bd40df2bf11 AS web
 
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 WORKDIR /web
