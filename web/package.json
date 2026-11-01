@@ -20,7 +20,7 @@
     "design-system": "node design/publish/build.mjs && node design/publish/check.mjs"
   },
   "dependencies": {
-    "@ag-ui/client": "0.0.59",
+    "@ag-ui/client": "1.0.1",
     "@assistant-ui/react": "0.15.29",
     "@assistant-ui/react-ag-ui": "0.0.70",
     "@assistant-ui/react-markdown": "0.14.23",
