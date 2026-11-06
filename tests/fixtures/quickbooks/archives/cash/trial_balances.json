@@ -2766,7 +2766,7 @@
  "2024-12-31": [
   {
    "account": "Operating Checking",
-   "debit": "208474.75",
+   "debit": "208774.75",
    "credit": "0"
   },
   {
@@ -2831,7 +2831,7 @@
   },
   {
    "account": "Cost of Services:Contractors",
-   "debit": "15100.00",
+   "debit": "14800.00",
    "credit": "0"
   },
   {
@@ -2943,7 +2943,7 @@
  "2025-01-31": [
   {
    "account": "Operating Checking",
-   "debit": "222288.75",
+   "debit": "222588.75",
    "credit": "0"
   },
   {
@@ -3008,7 +3008,7 @@
   },
   {
    "account": "Cost of Services:Contractors",
-   "debit": "19888.00",
+   "debit": "19588.00",
    "credit": "0"
   },
   {
@@ -3120,7 +3120,7 @@
  "2025-02-28": [
   {
    "account": "Operating Checking",
-   "debit": "238849.00",
+   "debit": "239149.00",
    "credit": "0"
   },
   {
@@ -3185,7 +3185,7 @@
   },
   {
    "account": "Cost of Services:Contractors",
-   "debit": "21432.00",
+   "debit": "21132.00",
    "credit": "0"
   },
   {
@@ -3297,7 +3297,7 @@
  "2025-03-31": [
   {
    "account": "Operating Checking",
-   "debit": "247927.50",
+   "debit": "248227.50",
    "credit": "0"
   },
   {
@@ -3367,7 +3367,7 @@
   },
   {
    "account": "Cost of Services:Contractors",
-   "debit": "21847.00",
+   "debit": "21547.00",
    "credit": "0"
   },
   {
@@ -3479,7 +3479,7 @@
  "2025-04-30": [
   {
    "account": "Operating Checking",
-   "debit": "258817.25",
+   "debit": "259117.25",
    "credit": "0"
   },
   {
@@ -3549,7 +3549,7 @@
   },
   {
    "account": "Cost of Services:Contractors",
-   "debit": "23131.00",
+   "debit": "22831.00",
    "credit": "0"
   },
   {
@@ -3666,7 +3666,7 @@
  "2025-05-31": [
   {
    "account": "Operating Checking",
-   "debit": "286577.25",
+   "debit": "286877.25",
    "credit": "0"
   },
   {
@@ -3736,7 +3736,7 @@
   },
   {
    "account": "Cost of Services:Contractors",
-   "debit": "24816.00",
+   "debit": "24516.00",
    "credit": "0"
   },
   {
@@ -3853,7 +3853,7 @@
  "2025-06-30": [
   {
    "account": "Operating Checking",
-   "debit": "270446.50",
+   "debit": "270746.50",
    "credit": "0"
   },
   {
@@ -3923,7 +3923,7 @@
   },
   {
    "account": "Cost of Services:Contractors",
-   "debit": "26781.00",
+   "debit": "26481.00",
    "credit": "0"
   },
   {
@@ -4040,7 +4040,7 @@
  "2025-07-31": [
   {
    "account": "Operating Checking",
-   "debit": "288729.00",
+   "debit": "289029.00",
    "credit": "0"
   },
   {
@@ -4096,7 +4096,7 @@
   {
    "account": "Retained Earnings",
    "debit": "0",
-   "credit": "327383.00"
+   "credit": "327683.00"
   },
   {
    "account": "Design Services",
@@ -4187,7 +4187,7 @@
  "2025-08-31": [
   {
    "account": "Operating Checking",
-   "debit": "294842.75",
+   "debit": "295142.75",
    "credit": "0"
   },
   {
@@ -4243,7 +4243,7 @@
   {
    "account": "Retained Earnings",
    "debit": "0",
-   "credit": "327383.00"
+   "credit": "327683.00"
   },
   {
    "account": "Design Services",
@@ -4349,7 +4349,7 @@
  "2025-09-30": [
   {
    "account": "Operating Checking",
-   "debit": "287383.75",
+   "debit": "287683.75",
    "credit": "0"
   },
   {
@@ -4405,7 +4405,7 @@
   {
    "account": "Retained Earnings",
    "debit": "0",
-   "credit": "327383.00"
+   "credit": "327683.00"
   },
   {
    "account": "Design Services",
@@ -4516,7 +4516,7 @@
  "2025-10-31": [
   {
    "account": "Operating Checking",
-   "debit": "287889.33",
+   "debit": "288189.33",
    "credit": "0"
   },
   {
@@ -4572,7 +4572,7 @@
   {
    "account": "Retained Earnings",
    "debit": "0",
-   "credit": "327383.00"
+   "credit": "327683.00"
   },
   {
    "account": "Design Services",
@@ -4688,7 +4688,7 @@
  "2025-11-30": [
   {
    "account": "Operating Checking",
-   "debit": "321354.83",
+   "debit": "321654.83",
    "credit": "0"
   },
   {
@@ -4744,7 +4744,7 @@
   {
    "account": "Retained Earnings",
    "debit": "0",
-   "credit": "327383.00"
+   "credit": "327683.00"
   },
   {
    "account": "Design Services",
@@ -4865,7 +4865,7 @@
  "2025-12-31": [
   {
    "account": "Operating Checking",
-   "debit": "346363.25",
+   "debit": "346663.25",
    "credit": "0"
   },
   {
@@ -4926,7 +4926,7 @@
   {
    "account": "Retained Earnings",
    "debit": "0",
-   "credit": "327383.00"
+   "credit": "327683.00"
   },
   {
    "account": "Design Services",
@@ -5052,7 +5052,7 @@
  "2026-01-31": [
   {
    "account": "Operating Checking",
-   "debit": "356689.25",
+   "debit": "356989.25",
    "credit": "0"
   },
   {
@@ -5113,7 +5113,7 @@
   {
    "account": "Retained Earnings",
    "debit": "0",
-   "credit": "327383.00"
+   "credit": "327683.00"
   },
   {
    "account": "Design Services",
@@ -5239,7 +5239,7 @@
  "2026-02-28": [
   {
    "account": "Operating Checking",
-   "debit": "367465.50",
+   "debit": "367765.50",
    "credit": "0"
   },
   {
@@ -5300,7 +5300,7 @@
   {
    "account": "Retained Earnings",
    "debit": "0",
-   "credit": "327383.00"
+   "credit": "327683.00"
   },
   {
    "account": "Design Services",
@@ -5426,7 +5426,7 @@
  "2026-03-31": [
   {
    "account": "Operating Checking",
-   "debit": "378190.00",
+   "debit": "378490.00",
    "credit": "0"
   },
   {
@@ -5487,7 +5487,7 @@
   {
    "account": "Retained Earnings",
    "debit": "0",
-   "credit": "327383.00"
+   "credit": "327683.00"
   },
   {
    "account": "Design Services",
@@ -5613,7 +5613,7 @@
  "2026-04-30": [
   {
    "account": "Operating Checking",
-   "debit": "390569.75",
+   "debit": "390869.75",
    "credit": "0"
   },
   {
@@ -5674,7 +5674,7 @@
   {
    "account": "Retained Earnings",
    "debit": "0",
-   "credit": "327383.00"
+   "credit": "327683.00"
   },
   {
    "account": "Design Services",
@@ -5805,7 +5805,7 @@
  "2026-05-31": [
   {
    "account": "Operating Checking",
-   "debit": "408906.75",
+   "debit": "409206.75",
    "credit": "0"
   },
   {
@@ -5866,7 +5866,7 @@
   {
    "account": "Retained Earnings",
    "debit": "0",
-   "credit": "327383.00"
+   "credit": "327683.00"
   },
   {
    "account": "Design Services",
@@ -5997,7 +5997,7 @@
  "2026-06-30": [
   {
    "account": "Operating Checking",
-   "debit": "403703.00",
+   "debit": "404003.00",
    "credit": "0"
   },
   {
@@ -6063,7 +6063,7 @@
   {
    "account": "Retained Earnings",
    "debit": "0",
-   "credit": "327383.00"
+   "credit": "327683.00"
   },
   {
    "account": "Design Services",
