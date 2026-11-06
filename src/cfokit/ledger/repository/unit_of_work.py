@@ -34,6 +34,7 @@ from cfokit.ledger.repository import (
     administration,
     archive,
     audit,
+    cash,
     closes,
     connections,
     grants,
@@ -433,6 +434,28 @@ class EntityWrite:
             since=since,
             as_of=as_of,
             watermark=watermark,
+        )
+
+    def cash_links(self, *, watermark: datetime | None = None) -> cash.Links:
+        """Every obligation, settlement and reversal, for the cash view (ADR-0080 § 4)."""
+        return cash.links(self._conn, entity_id=self._entity_id, watermark=watermark)
+
+    def unlinked(
+        self, *, as_of: date, since: date | None = None, watermark: datetime | None = None
+    ) -> cash.Unlinked:
+        """What a cash-basis report presents as posted, counted (ADR-0080 § 3)."""
+        return cash.unlinked(
+            self._conn,
+            entity_id=self._entity_id,
+            as_of=as_of,
+            since=since,
+            watermark=watermark,
+        )
+
+    def transaction_headers(self, transaction_ids: list[str]) -> dict[str, cash.Header]:
+        """The posted transactions among `transaction_ids`, by id (`RPT-05`)."""
+        return cash.headers(
+            self._conn, entity_id=self._entity_id, transaction_ids=transaction_ids
         )
 
     def closing_entries(self, year: FiscalYear) -> list[str]:

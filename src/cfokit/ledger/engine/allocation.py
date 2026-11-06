@@ -32,21 +32,29 @@ def allocate(total: Decimal, weights: Sequence[int], scale: int) -> list[Decimal
     Returns one `Decimal` per weight, in the order the weights were given, summing to exactly
     `total`. Handles negative totals — a reversal allocates the same way the original did.
 
-    Raises `AllocationInvalid` when the request cannot be satisfied exactly: no weights, a
-    negative weight, weights summing to zero, a negative scale, or a `total` carrying more
-    precision than `scale` can express. That last case is a refusal rather than a rounding,
-    because rounding it would make the parts sum to something other than what was asked for.
+    **Weights may have both signs**, so long as they do not sum to zero. Each part is still
+    `total * weight / sum(weights)`, floored, with the shortfall going to the largest
+    remainders. A cash-basis share of an invoice with a discount line is the case that needs
+    it: the line is negative, and its share of a payment is negative too (ADR-0080 § 1).
+
+    Raises `AllocationInvalid` when the request cannot be satisfied exactly: no weights,
+    weights summing to zero, a negative scale, or a `total` carrying more precision than
+    `scale` can express. That last case is a refusal rather than a rounding, because rounding
+    it would make the parts sum to something other than what was asked for.
     """
     if scale < 0:
         raise AllocationInvalid(f"scale must not be negative, got {scale}")
     if not weights:
         raise AllocationInvalid("allocation needs at least one weight")
-    if any(weight < 0 for weight in weights):
-        raise AllocationInvalid("weights must not be negative")
 
     total_weight = sum(weights)
     if total_weight == 0:
         raise AllocationInvalid("weights must not sum to zero")
+    # A negative sum is the same division with every sign turned over: w / W is -w / -W. A
+    # positive divisor is what keeps each remainder in [0, W) and the shortfall in [0, n).
+    if total_weight < 0:
+        weights = [-weight for weight in weights]
+        total_weight = -total_weight
 
     # Shift into whole units of the target increment rather than dividing by it: scaleb only
     # moves the exponent, so nothing can be lost on the way in.
@@ -59,7 +67,7 @@ def allocate(total: Decimal, weights: Sequence[int], scale: int) -> list[Decimal
 
     # Integer arithmetic from here, so "the parts sum to the whole" is arithmetic rather than
     # something to verify afterwards. Floor division leaves a non-negative shortfall smaller
-    # than the number of parts, for negative totals as well as positive ones.
+    # than the number of parts, for negative totals and negative weights as well as positive.
     floors: list[int] = []
     remainders: list[int] = []
     for weight in weights:

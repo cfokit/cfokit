@@ -1,0 +1,54 @@
+# A recognition case: a published *rule*, and a fact pattern of our own (ADR-0044).
+#
+# Nothing is copied. A rule is a procedure, which 17 USC § 102(b) excludes from copyright,
+# and the authority here is a work of the United States Government, which carries no
+# copyright at all (17 USC § 105).
+
+name = "cash-method-invoice-paid-across-year-end"
+
+[rule]
+authority = "IRS Publication 538 (01/2022), Accounting Periods and Methods"
+locator = "Cash Method — Income: constructive receipt"
+url = "https://www.irs.gov/publications/p538"
+license = "public-domain"
+# US Government work. No term, no renewal, no determination needed.
+basis = "tax"
+
+[coverage]
+areas = ["cash-accrual-method"]
+requirements = ["LED-14", "AR-16"]
+
+[entity]
+accounting_basis = "cash"
+fiscal_year_end_month = 12
+fiscal_year_end_day = 31
+functional_currency = "USD"
+
+[expected]
+answer = "profit_and_loss"
+since = 2025-01-01
+as_of = 2025-12-31
+source_is_rounded = false
+
+[derivation]
+# The fact pattern, ours: a calendar-year studio on the cash method invoices a client
+# 1,000.00 on 14 December 2025, for 600.00 of design and 400.00 of workshops. The client pays
+# 400.00 on 20 December 2025 and the remaining 600.00 on 15 January 2026. `links.csv` records
+# which payment settles which invoice, as the write path stores it (ADR-0037).
+#
+# The rule, cited: under the cash method gross income includes all items actually or
+# constructively received during the tax year. An invoice issued is not income received, so
+# none of the 1,000.00 is income of 2025 by virtue of the invoice; the 400.00 received on 20
+# December is; the 600.00 received in January is income of 2026.
+#
+# The arithmetic, ours and checkable: income of 2025 is the 400.00 received, nothing else.
+# No expense was paid. So total income 400.00, total expenses 0.00, net income 400.00.
+#
+# **What the rule does not decide.** How the 400.00 divides between design and workshops is
+# not the IRS's question. ADR-0080 § 1 recognizes in proportion, 240.00 and 160.00, and this
+# case asserts only the totals the rule determines, not that split.
+#
+# **What this case does and does not evidence.** It supplies its own journal and links, so it
+# shows that the cash view of linked books reports what the cited rule says was received. It
+# is not a published answer disagreeing or agreeing with us, which is why the coverage map
+# marks the area `shape` rather than `case`.
