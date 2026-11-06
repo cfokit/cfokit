@@ -2,7 +2,7 @@
  "books": {
   "shape_version": "1",
   "system": "QuickBooks Online",
-  "fingerprint": "d844019703a06a9078f45c23080d9b75905d0ac6418f14137a3036fedc10a0fb",
+  "fingerprint": "859e81b0d03e718acd05ae4e5e772cab4725a820bc0a30cbecd824fcd1e3198d",
   "basis": "unknown",
   "balances_basis": "accrual",
   "commodity": "USD",
@@ -670,7 +670,7 @@
   ],
   "journal_total": {"debits":"2305967.5","credits":"2305967.5"},
   "balances": [
-   {"account_code":"Operating Checking","balance":"403703"},
+   {"account_code":"Operating Checking","balance":"404003"},
    {"account_code":"Reserve Savings","balance":"10861"},
    {"account_code":"Accounts Receivable (A/R)","balance":"16850"},
    {"account_code":"Undeposited Funds","balance":"0"},
@@ -682,7 +682,7 @@
    {"account_code":"Equipment Loan","balance":"-2400"},
    {"account_code":"Opening Balance Equity","balance":"-61000"},
    {"account_code":"Owner Draws","balance":"180000"},
-   {"account_code":"Retained Earnings","balance":"-353486"},
+   {"account_code":"Retained Earnings","balance":"-353786"},
    {"account_code":"Design Services","balance":"-678482"},
    {"account_code":"Workshops","balance":"-39600"},
    {"account_code":"Cost of Services:Contractors","balance":"34223"},
@@ -720,7 +720,7 @@
   ],
   "statements": [
    {"report":"profit_and_loss","basis":"accrual","lines":[{"account_code":"Design Services","balance":"678482"},{"account_code":"Workshops","balance":"39600"},{"account_code":"Cost of Services:Contractors","balance":"34223"},{"account_code":"Cost of Services:Software","balance":"3120"},{"account_code":"Cost of Services:Stock Media","balance":"588"},{"account_code":"Bad Debts","balance":"3200"},{"account_code":"Bank Fees","balance":"300"},{"account_code":"Depreciation","balance":"6000"},{"account_code":"Gross Receipts Tax","balance":"1016"},{"account_code":"Insurance","balance":"8100"},{"account_code":"Internet & Phone","balance":"2220"},{"account_code":"Meals & Entertainment","balance":"2140"},{"account_code":"Office Expenses:Software","balance":"180"},{"account_code":"Office Expenses:Software:Design Tools","balance":"648"},{"account_code":"Office Supplies","balance":"1849"},{"account_code":"Payroll Expenses:Employer Taxes","balance":"26622"},{"account_code":"Payroll Expenses:Wages","balance":"348000"},{"account_code":"Professional Fees:Legal & Accounting","balance":"7587"},{"account_code":"Rent","balance":"81600"},{"account_code":"Repairs/Maintenance","balance":"4620"},{"account_code":"Totally Promotional Merch","balance":"1089"},{"account_code":"Travel","balance":"1453"},{"account_code":"Travel:Airfare","balance":"2478"},{"account_code":"Interest Earned","balance":"262"},{"account_code":"Interest Expense","balance":"409.5"}],"unmatched":[]},
-   {"report":"balance_sheet","basis":"accrual","lines":[{"account_code":"Operating Checking","balance":"403703"},{"account_code":"Reserve Savings","balance":"10861"},{"account_code":"Accounts Receivable (A/R)","balance":"16850"},{"account_code":"Undeposited Funds","balance":"0"},{"account_code":"Computer Equipment:Accumulated Depreciation","balance":"-18000"},{"account_code":"Computer Equipment:Original Cost Basis","balance":"18000"},{"account_code":"Accounts Payable (A/P)","balance":"3831"},{"account_code":"Business Card","balance":"585"},{"account_code":"Payroll Liabilities","balance":"9210.5"},{"account_code":"Equipment Loan","balance":"2400"},{"account_code":"Opening Balance Equity","balance":"61000"},{"account_code":"Owner Draws","balance":"-180000"},{"account_code":"Retained Earnings","balance":"353486"}],"unmatched":["Prepaid Expenses"]}
+   {"report":"balance_sheet","basis":"accrual","lines":[{"account_code":"Operating Checking","balance":"404003"},{"account_code":"Reserve Savings","balance":"10861"},{"account_code":"Accounts Receivable (A/R)","balance":"16850"},{"account_code":"Undeposited Funds","balance":"0"},{"account_code":"Computer Equipment:Accumulated Depreciation","balance":"-18000"},{"account_code":"Computer Equipment:Original Cost Basis","balance":"18000"},{"account_code":"Accounts Payable (A/P)","balance":"3831"},{"account_code":"Business Card","balance":"585"},{"account_code":"Payroll Liabilities","balance":"9210.5"},{"account_code":"Equipment Loan","balance":"2400"},{"account_code":"Opening Balance Equity","balance":"61000"},{"account_code":"Owner Draws","balance":"-180000"},{"account_code":"Retained Earnings","balance":"353786"}],"unmatched":["Prepaid Expenses"]}
   ]
  },
  "company": {
