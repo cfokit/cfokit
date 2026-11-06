@@ -42,9 +42,10 @@ Getting started asks for your QuickBooks Online export: the .zip from **Settings
 all dates. It is read in your browser and never uploaded.
 
 No export to hand? This writes a small synthetic one to `.local/quickbooks-sample.zip` (it needs
-the Node version in `web/.nvmrc`):
+the Node version in `web/.nvmrc`, which no longer ships corepack, hence the first command):
 
 ```bash
+npm install --global corepack
 cd web && corepack pnpm install && corepack pnpm sample-export
 ```
 

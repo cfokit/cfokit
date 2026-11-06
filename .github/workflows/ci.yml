@@ -188,6 +188,8 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: web/.nvmrc
+      # Node 25 and later ship no corepack; keep the version in step with the Dockerfile's.
+      - run: npm install --global corepack@0.36.0
       # The pnpm version is the one package.json pins in `packageManager`.
       - run: corepack pnpm install --frozen-lockfile
       - run: corepack pnpm lint
@@ -307,6 +309,8 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: web/.nvmrc
+      # Node 25 and later ship no corepack; keep the version in step with the Dockerfile's.
+      - run: npm install --global corepack@0.36.0
       - run: corepack pnpm install --frozen-lockfile
         working-directory: web
       - run: corepack pnpm exec playwright install --with-deps chromium
@@ -390,6 +394,8 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: web/.nvmrc
+      # Node 25 and later ship no corepack; keep the version in step with the Dockerfile's.
+      - run: npm install --global corepack@0.36.0
       - run: corepack pnpm install --frozen-lockfile
         working-directory: web
       - run: corepack pnpm exec playwright install --with-deps chromium
