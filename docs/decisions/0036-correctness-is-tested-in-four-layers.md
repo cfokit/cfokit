@@ -154,6 +154,13 @@ the skill changed the outcome.
 The harness is a tool, not the layer. Where it cannot express a case the layer needs, it is replaced,
 and the layer's rules stand.
 
+**A documentation recording is not a layer 4 case.** A clip of a conversation with a live model is
+cut from a Playwright run against the stack that asserts on the records the run leaves (ADR-0074).
+Those assertions keep a page from showing an outcome nothing checked. They measure nothing about
+the skill, because one run against one model shows no difference with and without it. The use case
+it shows is a case here, and a run with the agent's scripted stand-in in place of a model is
+layer 3.
+
 ### 5. The rules that make the layers hold
 
 - **Layers 1 to 3 are deterministic and gate every commit. Layer 4 does not.** Evals are slow,

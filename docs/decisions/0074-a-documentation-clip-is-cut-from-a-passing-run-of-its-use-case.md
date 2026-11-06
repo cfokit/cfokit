@@ -37,8 +37,9 @@ Facts that bear on the answer:
   (`docs/how-to/connect-claude.md`), so driving one against the compose stack needs a public
   deployment and a signed-in account. Consumer terms for these products restrict automated access
   outside their APIs; the current wording was not verified for this record.
-* **A model's output varies between runs**, even with the model pinned. The records a turn leaves
-  can be checked; its prose cannot be checked as a value (ADR-0036 § 4).
+* **A model's output varies between runs**, even with the model pinned. What a turn does can be
+  checked, in the calls it makes and the records they leave; its prose cannot be checked as a value
+  (ADR-0036 § 4).
 
 ## Decision Drivers
 
@@ -106,10 +107,16 @@ clips.
 
 * **A spec with no model in it** is a protocol integration test (ADR-0036 layer 3): it runs unpaced
   on every pull request that changes code, records on a push to main that changes a path its flow
-  shows, and publishes automatically, as getting started does.
-* **A spec with a model in it** is an eval (layer 4): it does not run on a pull request and gates
-  no commit. It records on the same trigger, against the pinned model, and its clips are kept as a
-  workflow artifact. A person reviews them and publishes them by running the publish job by hand.
+  shows, and publishes automatically, as getting started does. A spec whose agent is the scripted
+  stand-in (`CFOKIT_AGENT_MODEL=scripted`) has no model in it: the tools it calls and the records
+  they leave are real, and only the words around them are a script's.
+* **A spec with a model in it** is a recording, not a test layer: it does not run on a pull request
+  and gates no commit. It records on the same trigger, against the pinned model, and its clips are
+  kept as a workflow artifact. A person reviews them and publishes them by running the publish job
+  by hand. Its assertions on records keep a clip from showing an outcome nothing checked; they are
+  not evidence of how the agent behaves. That is layer 4's to measure, with `claude plugin eval`
+  against the published tool surface (ADR-0036 § 4), so the use case such a spec shows is also a
+  case there.
 
 ### 5. Conversations are recorded in CFOKit's runtime
 
@@ -123,8 +130,8 @@ is shown with stills or text and is outside this record.
 
 * Good, because a clip can only be made by a run that passed, so a changed flow either re-records or
   fails visibly in CI.
-* Good, because each recorded spec is also a test, and the evals that ADR-0036 layer 4 lacks gain
-  cases as pages are written.
+* Good, because each recorded spec with no model in it is also a protocol integration test, and
+  each use case recorded with a model is also an eval case, so pages and tests grow together.
 * Good, because it reuses the getting-started pipeline: Playwright's video, the pace, ffmpeg, the
   path-triggered `record` output and release assets.
 * Good, because nothing depends on an interface CFOKit does not control.
