@@ -89,6 +89,11 @@ before proposing a change to a rule. (ADR-0001)
 **`CLAUDE.md` plus the decision records are the constitution.** A second rules document is a
 second source of truth, and it diverges silently.
 
+**A record is accepted in the change that builds it, and never before.** Acceptance marks what is
+about to become irreversible, not what has been reviewed: a proposed record stays proposed until
+the code it decides lands, and is accepted in that pull request. Never propose accepting a record
+that nothing builds yet. (`docs/decisions/README.md`, "Status of this corpus")
+
 Requirements carry stable domain-prefixed ids in `docs/product/requirements.md`. Derivation runs vision →
 requirements → decision records → these rules, and citation never runs against it. (ADR-0001)
 
