@@ -1,7 +1,8 @@
 """Loading a conformance case into the books (ADR-0036 § 2).
 
 A case is data, not code: a manifest naming its published source, a chart, a journal, and the
-answer that source printed. This reads one and posts it through the service layer — the same
+answer that source printed — and, where the answer turns on them, the links between an
+obligation and its settlements. This reads one and posts it through the service layer — the same
 path a customer's writes take, so a case exercises the product rather than a shortcut.
 
 Not a test module itself. `tests/integration/test_conformance.py` drives it.
@@ -23,7 +24,8 @@ from cfokit.ledger.presentation import SourceBalance
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.administration import create_account, create_entity
 from cfokit.ledger.service.principal import ActorClass, Principal
-from cfokit.ledger.service.write import WriteContext, record_transaction
+from cfokit.ledger.service.receivables import outstanding_obligations
+from cfokit.ledger.service.write import Applied, WriteContext, record_transaction
 
 FIXTURES = Path(__file__).resolve().parent.parent / "fixtures"
 CASES = FIXTURES / "conformance"
@@ -126,8 +128,16 @@ def load(database: Database, name: str, *, tree: Path = CASES) -> Case:
             parent_id=accounts.get(row["parent"]) if row["parent"] else None,
         )
 
+    # Which transactions raise or settle an obligation, where a case's answer depends on it:
+    # a cash-basis report is derived from the stored link (ADR-0080), which a journal alone
+    # does not state. Optional, because most cases have no obligations at all.
+    links = _by_reference(directory / "links.csv") if (directory / "links.csv").exists() else {}
+    obligations: dict[str, str] = {}
+
     for ref, lines in _by_reference(directory / "journal.csv").items():
-        record_transaction(
+        stated = links.get(ref, [])
+        raises = [Decimal(link["amount"]) for link in stated if link["kind"] == "raises"]
+        written = record_transaction(
             database,
             WriteContext(
                 entity_id=entity_id,
@@ -148,7 +158,25 @@ def load(database: Database, name: str, *, tree: Path = CASES) -> Case:
                 description=lines[0]["description"],
             ),
             post=True,
+            raises_obligation=raises[0] if raises else None,
+            settles=tuple(
+                Applied(
+                    obligation_id=obligations[link["obligation_ref"]],
+                    amount=Decimal(link["amount"]),
+                )
+                for link in stated
+                if link["kind"] == "settles"
+            ),
         )
+        if raises:
+            [raised] = [
+                owed
+                for owed in outstanding_obligations(
+                    database, entity_id=entity_id, principal=LOADER
+                )
+                if owed.transaction_id == written.transaction_id
+            ]
+            obligations[ref] = raised.obligation_id
 
     expected = manifest["expected"]
     answer = expected["answer"]

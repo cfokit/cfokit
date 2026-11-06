@@ -113,6 +113,17 @@
             "title": "Since",
             "type": "string"
           },
+          "unlinked": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UnlinkedModel"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "On a cash basis, what the report presents as posted because no link between an obligation and its settlement reaches it (ADR-0080 § 3). Null on an accrual basis."
+          },
           "watermark": {
             "anyOf": [
               {
@@ -498,6 +509,17 @@
             "title": "Unclosed Earnings",
             "type": "string"
           },
+          "unlinked": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UnlinkedModel"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "On a cash basis, what the report presents as posted because no link between an obligation and its settlement reaches it (ADR-0080 § 3). Null on an accrual basis."
+          },
           "watermark": {
             "anyOf": [
               {
@@ -766,6 +788,17 @@
           },
           "total_income": {
             "$ref": "#/components/schemas/ComparativeLineModel"
+          },
+          "unlinked": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UnlinkedModel"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "On a cash basis, what the report presents as posted because no link between an obligation and its settlement reaches it (ADR-0080 § 3). Null on an accrual basis."
           },
           "watermark": {
             "anyOf": [
@@ -2147,6 +2180,17 @@
             "title": "Total Income",
             "type": "string"
           },
+          "unlinked": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UnlinkedModel"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "On a cash basis, what the report presents as posted because no link between an obligation and its settlement reaches it (ADR-0080 § 3). Null on an accrual basis."
+          },
           "watermark": {
             "anyOf": [
               {
@@ -3317,6 +3361,17 @@
             "title": "Total Debit",
             "type": "string"
           },
+          "unlinked": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UnlinkedModel"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "On a cash basis, what the report presents as posted because no link between an obligation and its settlement reaches it (ADR-0080 § 3). Null on an accrual basis."
+          },
           "watermark": {
             "anyOf": [
               {
@@ -3341,6 +3396,27 @@
           "balances"
         ],
         "title": "TrialBalanceResponse",
+        "type": "object"
+      },
+      "UnlinkedModel": {
+        "description": "What a cash-basis report presents as posted, because no stored link reaches it.\n\nADR-0080 § 3 and NFR-16: a cash figure that rests on an accrual posting is disclosed on the\nreport's face rather than hidden.",
+        "properties": {
+          "imported_transactions": {
+            "description": "Transactions in the span that an import landed. No import records which invoice a payment settled, so that history reads as posted.",
+            "title": "Imported Transactions",
+            "type": "integer"
+          },
+          "postings": {
+            "description": "Postings in the report's span on an account that carries obligations, by a transaction that neither raises nor settles one, such as a journal entry to receivables. They read as posted.",
+            "title": "Postings",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "postings",
+          "imported_transactions"
+        ],
+        "title": "UnlinkedModel",
         "type": "object"
       },
       "WriteResponse": {

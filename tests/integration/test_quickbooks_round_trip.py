@@ -63,8 +63,9 @@ CHECKED = sorted(case_id for case_id, case in CATALOG.items() if case["category"
 # fails the suite until it comes off this list.
 NOT_YET = {
     "d-cash-year-boundary": (
-        "a cash-basis company's statements recognize income on settlement (AR-16); CFOKit's"
-        " reports present every company's books on accrual, whatever basis it declared"
+        "a cash-basis company's statements recognize income on settlement (AR-16); CFOKit"
+        " derives that from stored payment links (ADR-0080), and an import records none yet,"
+        " so imported history reads as posted"
     ),
 }
 BALANCE_SHEET = {"asset", "liability", "equity"}

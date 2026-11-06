@@ -1,0 +1,8 @@
+ref,date,description,account_code,amount,commodity
+1,2025-12-14,Invoice for design and workshops,1200,1000.00,USD
+1,2025-12-14,Invoice for design and workshops,4000,-600.00,USD
+1,2025-12-14,Invoice for design and workshops,4100,-400.00,USD
+2,2025-12-20,Part payment received,1000,400.00,USD
+2,2025-12-20,Part payment received,1200,-400.00,USD
+3,2026-01-15,Balance received,1000,600.00,USD
+3,2026-01-15,Balance received,1200,-600.00,USD

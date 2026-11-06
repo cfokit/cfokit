@@ -74,6 +74,7 @@ from cfokit.ledger.presentation import (
     present_reconciliation,
     present_trial_balance,
 )
+from cfokit.ledger.repository.cash import Unlinked
 from cfokit.ledger.repository.obligations import Obligation
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.administration import create_entity
@@ -223,7 +224,15 @@ def _produced_on(
         "watermark": report.watermark.isoformat() if report.watermark else None,
         "accounting_basis": report.accounting_basis,
         "commodity": report.commodity,
+        "unlinked": _unlinked(report.unlinked),
     }
+
+
+def _unlinked(found: Unlinked | None) -> dict[str, int] | None:
+    """What a cash-basis report presents as posted (ADR-0080 § 3), or None on accrual."""
+    if found is None:
+        return None
+    return {"postings": found.postings, "imported_transactions": found.imported_transactions}
 
 
 def refused(code: str, message: str) -> dict[str, Any]:
@@ -1100,6 +1109,7 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
                 "total_income": _comparative_line(report.total_income),
                 "total_expenses": _comparative_line(report.total_expenses),
                 "net_income": _comparative_line(report.net_income),
+                "unlinked": _unlinked(report.unlinked),
             }
 
         return _naming(database, entity_id, work)

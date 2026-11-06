@@ -11,9 +11,10 @@ same facts, asked for differently, rather than two records that could disagree.
 figure would be a second place the truth lives, and the two would part company the first time a
 settlement was recorded and the update was missed.
 
-Deriving the cash *view* from these events is `RPT-19`, which is deferred. What is here is the
-record that makes the derivation exact when it is built, which is ADR-0037 § 3's point: the
-incumbents infer the link at report time and it does not hold.
+A cash-basis entity's own statements are derived from these events (`AR-16`, ADR-0080), in
+`engine.cash` and `service.reports`. What is here is the record that makes the derivation
+exact, which is ADR-0037 § 3's point: the incumbents infer the link at report time and it does
+not hold. Showing an entity the *other* basis's view is `RPT-19`, which stays deferred.
 """
 
 from __future__ import annotations
