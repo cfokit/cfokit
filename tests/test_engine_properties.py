@@ -45,6 +45,11 @@ def amount(units: int, scale: int) -> Decimal:
 WEIGHTS = st.lists(st.integers(min_value=0, max_value=10_000), min_size=1, max_size=24).filter(
     lambda weights: sum(weights) > 0
 )
+# An invoice with a discount line has weights of both signs (ADR-0080 § 1). Anything that does
+# not sum to zero is a division `allocate` must perform exactly.
+SIGNED_WEIGHTS = st.lists(
+    st.integers(min_value=-10_000, max_value=10_000), min_size=1, max_size=24
+).filter(lambda weights: sum(weights) != 0)
 
 
 # --- Allocation: the parts sum to the whole, for any total and any line count -------------

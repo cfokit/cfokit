@@ -103,13 +103,33 @@ def test_a_total_finer_than_the_scale_is_refused_not_rounded() -> None:
         (Decimal("10.00"), [0, 0], 2),
         (Decimal("10.00"), [1, 1], -1),
     ],
-    ids=["no weights", "negative weight", "weights sum to zero", "negative scale"],
+    ids=["no weights", "signed weights sum to zero", "weights sum to zero", "negative scale"],
 )
 def test_unsatisfiable_requests_are_refused(
     total: Decimal, weights: list[int], scale: int
 ) -> None:
     with pytest.raises(AllocationInvalid):
         allocate(total, weights, scale)
+
+
+def test_a_negative_weight_takes_a_negative_share() -> None:
+    """An invoice of 1,000.00 is 1,100.00 of work less a 100.00 discount, and half is paid.
+
+    ADR-0080 § 1: a payment recognizes each line in proportion, so half the payment's share of
+    the discount is half the discount. 500.00 splits as 550.00 and -50.00, which is the
+    proportion and nothing else, and sums to what was paid.
+    """
+    parts = allocate(Decimal("500.00"), [110000, -10000], scale=2)
+
+    assert parts == [Decimal("550.00"), Decimal("-50.00")]
+
+
+def test_weights_summing_negative_divide_the_same_way() -> None:
+    """A bill's lines are signed the other way from an invoice's, and divide the same."""
+    assert allocate(Decimal("-500.00"), [-110000, 10000], scale=2) == [
+        Decimal("-550.00"),
+        Decimal("50.00"),
+    ]
 
 
 def test_allocate_evenly_needs_at_least_one_part() -> None:

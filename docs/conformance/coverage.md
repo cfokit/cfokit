@@ -30,7 +30,7 @@ tables below and fails if this section is wrong, so it cannot quietly go stale.
 |---|---|---|---|---|---|
 | **Band 1** — enforced | 2 | — | 5 | 7 | 14 |
 | **Band 2** — presented | 3 | — | 3 | 3 | 9 |
-| **Band 3** — recordable | 3 | — | — | 3 | 6 |
+| **Band 3** — recordable | 3 | 1 | — | 2 | 6 |
 | declined | — | — | — | — | 12 |
 | gap | — | — | — | — | 4 |
 
@@ -144,7 +144,7 @@ that a treatment someone else decided is recorded and presented correctly.
 
 | Area | ASC | Status | Evidence | Requirements |
 |---|---|---|---|---|
-| **cash-accrual-method** | — | `recordable` | `none` | LED-14, AR-16 |
+| **cash-accrual-method** | — | `recordable` | `shape` | LED-14, AR-16 |
 | **prepaid-expenses** | 340 | `recordable` | `case` | LED-04, BKP-04 |
 | **accrued-liabilities** | 405 | `recordable` | `none` | LED-04, BKP-04 |
 | **depreciation** | 360 | `recordable` | `case` | BKP-04 |
@@ -160,6 +160,11 @@ that a treatment someone else decided is recorded and presented correctly.
 | **business-combinations** | 805 | `declined` | — | — |
 | **share-based-payment** | 718 | `declined` | — | — |
 | **materiality** | — | `declined` | — | — |
+
+`cash-accrual-method` is `shape`: one recognition case, an invoice paid across a year end,
+cites IRS Publication 538's cash method and asserts the income it says was received
+(ADR-0080). The published cash-to-accrual worked problems ADR-0080's Confirmation asks for
+would make it `case`, and none is transcribed yet.
 
 `assignment` was the largest hole in this map and is now built (ADR-0045). It is `internal`
 rather than `case` for the reason the label exists: no examiner ever set a problem on whether

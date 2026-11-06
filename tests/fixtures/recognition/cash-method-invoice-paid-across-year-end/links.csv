@@ -1,0 +1,4 @@
+ref,kind,obligation_ref,amount
+1,raises,1,1000.00
+2,settles,1,400.00
+3,settles,1,600.00
