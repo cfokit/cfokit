@@ -48,6 +48,19 @@ import works around
 ([ADR-0081](0081-an-import-brings-what-is-open-at-the-cutover-as-open-obligations.md),
 [ADR-0082](0082-a-quickbooks-online-import-requires-the-aging-reports.md)).
 
+Reading a real company through the API takes Intuit's production keys, which Intuit issues only
+after its app assessment questionnaire: for every app that connects to a production company, a
+private app for the owner's own company included, and once per app. Its first part asks for the
+developer's profile and a verified email, a license agreement and a privacy policy, and the app's
+host domain, launch URL and disconnect URL. Its second asks how the app operates, how it manages
+data, uses the API and handles authorization and errors, and about its legal compliance and
+security. Intuit answers with keys or a request for more information; reviews are reported to take
+one to two weeks, and an app turned down can only open a support ticket. Apps in Intuit's App
+Store, and any app with over 500 connections, are reviewed every year. Intuit's App Partner
+Program meters the calls that take data out (CorePlus): its free tier allows 500,000 a month and
+blocks the rest. One app that moves a company's books from QBO to Xero, MMC Convert's, connects to
+QBO through the API, so Intuit has issued keys for that purpose at least once.
+
 An import that reads the API holds a third-party credential for as long as it runs.
 [ADR-0040](0040-import-is-the-first-module.md) kept import an in-process module because it held
 none, and named a QuickBooks API sync holding vendor credentials as what would earn separation:
@@ -157,8 +170,9 @@ reconciliation (`NFR-16`). Another source gets this component's shape where its 
 * Bad, because audit history older than two years at the time of export cannot be imported. That is
   a QBO retention limit, not a CFOKit choice.
 * Bad, because items left in QBO's review queues at the switch-over are not imported.
-* Bad, because the hosted tier needs Intuit production keys, which require completing Intuit's app
-  assessment questionnaire.
+* Bad, because every connection to a real company, the founder's own included, needs Intuit's
+  production keys, issued at Intuit's discretion after its app assessment questionnaire. Where
+  Intuit declines, a company imports through its files (§ 7).
 * Bad, because self-hosters register their own Intuit developer account and app and obtain their
   own production keys, including completing the app assessment questionnaire. Self-host setup
   documentation must walk them through it.
@@ -238,6 +252,15 @@ And for CFOKit's own design:
 11. How the agent reaches the component's operations: as tools on the published MCP surface
     (ADR-0014), or as the component's own.
 
+And for production keys, settled in Intuit's developer portal with the founder's private app first:
+
+12. The questionnaire's exact questions, which integration vendors describe but Intuit's pages
+    were not read for.
+13. Whether Intuit approves a public app whose purpose is moving a company's books out of QBO,
+    and whether its developer terms speak to it. They have not been checked for such a clause.
+14. How many CorePlus calls an eight-year pull with its attachments makes, against the free tier's
+    500,000 a month.
+
 ## More Information
 
 **Follow-on obligations.** The published import shape carries payment application, open balances
@@ -268,6 +291,22 @@ ADR-0081 and ADR-0082 (the file import), ADR-0084 (connected to QBO until the im
   https://developer.intuit.com/app/developer/qbo/docs/workflows/attach-images-and-notes
 * Publish your app (production keys):
   https://developer.intuit.com/app/developer/qbo/docs/go-live/publish-app
+* App assessment and compliance FAQ:
+  https://help.developer.intuit.com/s/article/New-app-assessment-process-FAQ
+* Production keys for a private app:
+  https://help.developer.intuit.com/s/question/0D5TR00000fHVqB0AW/
+* Security requirements and annual review:
+  https://developer.intuit.com/app/developer/qbo/docs/go-live/publish-app/security-requirements
+* Intuit App Partner Program FAQ:
+  https://developer.intuit.com/app/developer/qbo/docs/get-started/partner-faq
+* The questionnaire's sections, as an integration vendor describes them (third party):
+  https://developers.apideck.com/connectors/quickbooks/docs/application_owner+app_compliance
+* App Partner Program tiers (third party):
+  https://www.apideck.com/blog/quickbooks-api-pricing-and-the-intuit-app-partner-program
+* Review timing (third party):
+  https://satvasolutions.com/blog/intuit-app-store-approval-timeline-developer-guide
+* Migrate from QBO by MMC Convert, on Xero's app store:
+  https://apps.xero.com/us/function/conversions/app/migrate-from-qbo-by-mmc-convert
 * Intuit support, no API for the bank-feed review queue:
   https://help.developer.intuit.com/s/question/0D5TR00001VhrZq0AJ/
 * Audit log retention:
@@ -282,4 +321,5 @@ ADR-0081 and ADR-0082 (the file import), ADR-0084 (connected to QBO until the im
 
 * An open question's answer contradicts a decision here.
 * Intuit changes its limits or the CDC window.
+* Intuit declines production keys for the founder's private app, or for the hosted tier's.
 * A second source's import is built, the first test of whether this shape generalizes.
