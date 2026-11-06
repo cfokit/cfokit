@@ -215,7 +215,14 @@ jobs:
               gh pr merge "$PR" --auto --squash
               ;;
             fix)
-              git add -A
+              # On a pull request, claude-code-action replaces these with main's copies in the
+              # working tree before any model runs, and leaves them unstaged (SENSITIVE_PATHS in
+              # its src/github/operations/restore-config.ts, at the pinned version). Staging them
+              # would commit a silent revert of the pull request's own edits, so they are left
+              # out. They are code-owned or agent configuration, which a fix round never edits.
+              git add -A -- . ':(exclude).claude' ':(exclude).mcp.json' ':(exclude).claude.json' \
+                ':(exclude).gitmodules' ':(exclude).ripgreprc' ':(exclude)CLAUDE.md' \
+                ':(exclude)CLAUDE.local.md' ':(exclude).husky'
               if git diff --cached --quiet; then
                 gh pr edit "$PR" --add-label needs-human
                 exit 0
