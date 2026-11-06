@@ -21,8 +21,9 @@
 
 # ---------------------------------------------------------------------------
 # The web client (ADR-0054). Node and pnpm at the versions web/.nvmrc and web/package.json pin;
-# keep the tag in step with web/.nvmrc. Only web/ is copied in, which is the whole of what the
-# client may read, apart from the contract it is typed against.
+# keep the tag in step with web/.nvmrc. Node 25 and later no longer ship corepack, so it is
+# installed at the version ci.yml and the session hook pin. Only web/ is copied in, which is the
+# whole of what the client may read, apart from the contract it is typed against.
 FROM node:26.12.0-slim@sha256:e556a144463cc8dc53afe8de6d2fa0db5c132fd39ffa232c17641bd40df2bf11 AS web
 
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
@@ -33,6 +34,7 @@ COPY web/package.json web/pnpm-lock.yaml web/pnpm-workspace.yaml ./
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
     --mount=type=secret,id=build_ca,required=false \
     if [ -s /run/secrets/build_ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/build_ca; fi; \
+    npm install --global corepack@0.36.0 && \
     corepack pnpm install --frozen-lockfile
 
 COPY web/ ./
