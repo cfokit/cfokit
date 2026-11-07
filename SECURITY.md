@@ -5,7 +5,7 @@ privately, never in a public issue, pull request or discussion.
 
 ## Reporting a vulnerability
 
-Email **[security contact to add]** with:
+Email [security@cfokit.ai](mailto:security@cfokit.ai) with:
 
 - what you found, and where (file, endpoint or tool)
 - how to reproduce it
