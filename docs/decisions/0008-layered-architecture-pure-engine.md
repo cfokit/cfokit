@@ -11,12 +11,12 @@ decision-makers: [Geoff]
 
 ## Context and Problem Statement
 
-CFOKit's claim is that the books are correct, and the evidence for that claim is a differential
-comparison against an independent implementation (ADR-0010).
+CFOKit's claim is that the books are correct, and the evidence for that claim is property tests
+and a conformance corpus of published worked examples, run against the booking engine (ADR-0036).
 
 **That evidence is only affordable if booking semantics are testable without infrastructure.** If
-booking logic can only run with a database attached, every oracle comparison needs fixtures, a live
-Postgres, and transaction management — which makes the comparison slow, flaky, and therefore run
+booking logic can only run with a database attached, every property test and conformance case needs
+fixtures, a live Postgres, and transaction management, which makes the comparison slow, flaky, and therefore run
 rarely. Property-based testing of booking rules becomes impractical for the same reason. A
 correctness gate that is expensive to run is a correctness gate that stops running.
 
@@ -30,10 +30,10 @@ Whether the persistence layer uses an ORM is a separate decision, held in
 
 ## Decision Drivers
 
-* Booking logic must be evaluable with no database attached, or the differential oracle (ADR-0010)
-  becomes too slow to run often.
-* Purity is all-or-nothing: a booking function that reads a clock once is no longer differentially
-  testable.
+* Booking logic must be evaluable with no database attached, or its property and conformance tests
+  (ADR-0036) become too slow to run often.
+* Purity is all-or-nothing: a booking function that reads a clock once is no longer testable in
+  isolation.
 * Every write must pass through audit logging, entity locking, and grant validation, with no route
   around them.
 * The guarantee must be static and enforced, not a convention review protects.
@@ -67,8 +67,8 @@ engine        pure booking logic
 
 ### Consequences
 
-* Good, because booking logic is differentially testable against Beancount with no infrastructure
-  (ADR-0010).
+* Good, because booking logic is property-testable and checkable against published answers with no
+  infrastructure (ADR-0036).
 * Good, because there is exactly one route to a write, so the service-layer obligations cannot be
   bypassed by construction.
 * Good, because the boundary is statically enforceable at lint time rather than by review.
@@ -102,15 +102,15 @@ hold.
 * Good, because it removes a layer and the indirection that comes with it.
 * Bad, because the service layer necessarily touches configuration, the database, and the clock.
   Anything sharing a module with it inherits those dependencies, and the purity property is
-  all-or-nothing — a booking function that reads the current date once is no longer differentially
-  testable.
+  all-or-nothing: a booking function that reads the current date once is no longer testable in
+  isolation.
 
 ### Active Record, or models that persist themselves
 
 * Good, because it is the least code for simple cases, and familiar from other ecosystems.
 * Bad, because it makes the pure engine impossible by construction: booking logic and persistence
-  become the same object, so booking cannot be evaluated without a database. That forfeits the
-  differential oracle, which is the strongest correctness evidence CFOKit has.
+  become the same object, so booking cannot be evaluated without a database. That forfeits fast
+  property and conformance tests, which are the strongest correctness evidence CFOKit has.
 
 ### Hexagonal architecture with dependency injection throughout
 
@@ -133,8 +133,8 @@ The full ports-and-adapters treatment, with protocols and injected implementatio
   absent from the other.
 - Allocation lives in the engine, which is what makes it property-testable (ADR-0025).
 
-**Reversal cost. Moderate.** Collapsing layers is mechanical, but it forfeits the differential
-oracle, which is the correctness evidence the whole project rests on.
+**Reversal cost. Moderate.** Collapsing layers is mechanical, but it forfeits testing the engine in
+isolation, which is the correctness evidence the whole project rests on.
 
 Related: [ADR-0028](0028-hand-written-sql-no-orm.md) decides what `repository` is written in.
 
@@ -142,6 +142,7 @@ Related: [ADR-0028](0028-hand-written-sql-no-orm.md) decides what `repository` i
 
 - A capability genuinely cannot be expressed without the engine reaching for I/O, which would mean
   the layer boundary is drawn in the wrong place rather than that purity should be relaxed.
-- The differential oracle is retired, which would remove the main reason purity is worth its cost.
+- Property and conformance tests stop running against the engine alone, which would remove the main
+  reason purity is worth its cost.
 
 Neither developer familiarity nor lines of code is a revisit trigger.

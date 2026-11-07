@@ -14,8 +14,8 @@ decision-makers: [Geoff]
 [ADR-0005](0005-decimal-throughout-numeric-28-10.md) fixed how money is *represented* —
 `decimal.Decimal` and `NUMERIC(28,10)` — and explicitly left rounding undecided. That is the
 remaining gap before the booking engine can be written, and it surfaces immediately rather than
-eventually: the Beancount differential harness ([ADR-0010](0010-beancount-as-test-oracle.md)) cannot
-be built without knowing whether the two systems are expected to agree exactly.
+eventually: no balance check can be written without knowing whether a transaction must balance
+exactly.
 
 Three separate questions hide inside "rounding", and conflating them is how systems end up with
 money that does not add up:
@@ -33,8 +33,6 @@ a payment across several invoices, a discount across a basket.
 
 * Information captured must never be discarded irreversibly, which is the same principle ADR-0007
   applies to records.
-* The differential oracle needs a determinate answer about whether exact agreement is expected
-  (ADR-0010).
 * A displayed figure is compared by a human against a bank statement, an invoice, or a tax form.
 * Anything asserting "the parts sum to the whole" must be property-testable, or it will not stay
   true.
@@ -65,18 +63,16 @@ What this record decides is how they are met, and three things follow that requi
 **Allocation is largest remainder, ties broken by line order.** `LED-05` requires the parts to sum
 exactly and the division to be deterministic; it does not say which parts get the residual pennies.
 Largest remainder distributes by how close each line came to rounding up anyway. Line order settles
-ties so the result is reproducible, which the differential oracle and reproducible reports both need.
+ties so the result is reproducible, which tests and reproducible reports both need.
 
 **Allocation lives in the pure engine** (ADR-0008). It takes a total and a line count and returns
 parts: no I/O, no configuration, no clock. That makes it property-testable — the parts must sum to
 the whole, for any total and any line count — which is the only way a rule like this stays true.
 
-**Exact balance is a deliberate divergence from the oracle.** Beancount infers tolerances, because a
+**Exact balance is a deliberate difference from Beancount.** Beancount infers tolerances, because a
 text ledger is written by hand at whatever precision its author chose. CFOKit's input arrives through
 an API at full precision and is never rounded on the way in, so anything that fails to balance
-exactly is a real defect rather than a rounding artefact. The differential harness will report this
-on its first run, and it belongs in the divergence register as intended rather than being treated as
-a failure (ADR-0010).
+exactly is a real defect rather than a rounding artefact.
 
 **Rounding is applied once, at the edge.** Never to an intermediate, never stored back. If a rounding
 call appears in `engine`, `repository`, or `service`, the boundary has been misplaced.
@@ -104,9 +100,6 @@ Three mechanisms, of which two exist:
   precondition for any of this holding (ADR-0005).
 * **Property tests on the allocator** — the parts sum to the whole, for any total and any line count.
   These are written with the allocator, not after (`CLAUDE.md`, working style).
-* **CI gate 3**, the differential oracle, would confirm exact balance against Beancount with the
-  tolerance divergence documented in the register — this is the one of the three that does not
-  exist, and it stays deferred until `LED-18` (ADR-0010).
 
 Not gated: nothing mechanically prevents a rounding call appearing in `engine`, `repository`, or
 `service`. That is a review rule, and a candidate for a lint contract if it is ever violated.
@@ -185,8 +178,6 @@ Maximum flexibility, and some jurisdictions genuinely differ.
 
 * Allocation lives in the **pure engine** (ADR-0008): deterministic, no I/O, and therefore
   property-testable.
-* A divergence-register entry recording that CFOKit requires exact balance where Beancount infers
-  tolerance.
 * A commodity display-scale registry, defaulting to 2.
 * Rounding never appears in `engine`, `repository`, or `service`.
 

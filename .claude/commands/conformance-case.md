@@ -6,8 +6,8 @@ allowed-tools: Read, Write, Edit, Bash, Glob, Grep, WebFetch, Task
 
 Add a conformance case for: **$ARGUMENTS**
 
-The corpus carries `NFR-01` while the differential oracle stays deferred (ADR-0010, ADR-0036
-§ 2). A case is only worth what its independence is worth, and the threat to that is not
+The corpus carries `NFR-01`; there is no differential oracle (ADR-0036 § 2).
+A case is only worth what its independence is worth, and the threat to that is not
 ignorance — it is the transcription drifting toward what CFOKit already does, because whoever
 transcribes it has the implementation in context.
 

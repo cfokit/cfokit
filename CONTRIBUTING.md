@@ -18,8 +18,10 @@ rather than working around it.
 Open an issue. Include what you did, what you expected, what happened instead, and the
 versions of CFOKit, Python and Postgres you were running.
 
-**Do not open a public issue for a security vulnerability.** Contact the maintainers
-privately.
+**Do not open a public issue for a security vulnerability.** Report it privately, as
+[`SECURITY.md`](SECURITY.md) describes.
+
+Everyone taking part follows the [code of conduct](CODE_OF_CONDUCT.md).
 
 ## Suggesting a change
 

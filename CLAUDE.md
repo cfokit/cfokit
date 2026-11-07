@@ -227,8 +227,8 @@ These define "done". Do not write code that assumes an environment they forbid.
 1. `lint` clean — ruff, `mypy --strict`, import-linter layer rules.
 2. Full suite green against `compose.yaml` (without the dev overlay) **with no cloud credentials
    present**. (ADR-0004)
-3. **Deferred, not running.** The Beancount differential oracle activates with `LED-18`; until
-   then correctness rests on the layers below. (ADR-0010, ADR-0036)
+3. **Retired.** There is no differential oracle; correctness rests on the four layers. The number
+   stays so the other gates keep theirs. (ADR-0036)
 4. No float storage types anywhere in the schema. (ADR-0005)
 5. Generated OpenAPI and MCP tool descriptions match what's committed — a diff means a
    contract change and needs review. (ADR-0015)
