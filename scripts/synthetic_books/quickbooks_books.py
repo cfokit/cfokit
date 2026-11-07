@@ -28,9 +28,8 @@ What QuickBooks records, as the sandbox showed it for every posting of the synth
   with no account ("Not Specified"), and A/R.
 * On the cash basis a payment no invoice took is income, reported as "Unapplied Cash Payment
   Income", and so is a deposit's line to A/R. A vendor credit a bill payment takes is applied
-  on the credit's own day, against as much of the bill; the rest of the bill is recognized when
-  it is paid. (The one such credit is dated after its bill, so whether QuickBooks uses the
-  credit's day or the later of the two is not yet shown.)
+  on the later of its own day and the bill's, against as much of the bill; the rest of the bill
+  is recognized when it is paid. Of the two credits, one is dated after its bill and one before.
 """
 
 from __future__ import annotations
@@ -551,29 +550,28 @@ def _cash_receipt(books: Books, payment: Transaction) -> list[Posting]:
 
 
 def _cash_disbursement(books: Books, payment: Transaction) -> list[Posting]:
-    """A bill payment's lines on the cash basis. A vendor credit it takes is applied on the
-    credit's own day: that much of the bills, taken in order, is recognized then against the
-    credit's own lines. The rest of the bills is recognized on the payment's day, against the
-    bank."""
+    """A bill payment's lines on the cash basis. A vendor credit it takes is applied to the
+    bills in order, each on the later of the credit's day and the bill's: that much of the bill
+    is recognized then, against as much of the credit's own lines. The rest of the bills is
+    recognized on the payment's day, against the bank."""
     out: list[Posting] = []
-    unused = [(c.amount, books.sources[c.target].on) for c in payment.credits]
+    unused = [(c.target, c.amount) for c in payment.credits]
     for bill in payment.settles:
         left = bill.amount
         while unused and left:
-            amount, on = unused[0]
+            credit, amount = unused[0]
             taken = min(amount, left)
+            on = max(books.sources[credit].on, books.sources[bill.target].on)
             out += [
                 replace(p, on=on) for p in _recognized(books, Applied(bill.target, taken), 1)
             ]
+            out += [replace(p, on=on) for p in _recognized(books, Applied(credit, taken), -1)]
             left -= taken
-            unused[0] = (amount - taken, on)
-            if not unused[0][0]:
+            unused[0] = (credit, amount - taken)
+            if not unused[0][1]:
                 unused.pop(0)
         if left:
             out += _recognized(books, Applied(bill.target, left), 1)
-    for applied in payment.credits:  # each vendor credit's lines, recognized as a credit
-        on = books.sources[applied.target].on
-        out += [replace(p, on=on) for p in _recognized(books, applied, -1)]
     paid = sum((p.amount for p in out), ZERO)
     if payment.deposit_account is None:
         raise ValueError(f"{payment.event} pays bills out of no account")
