@@ -12,8 +12,7 @@ a schedule. Corrections are reversing entries rather than edits, so the history 
 construction. The books are queryable over MCP and a documented HTTP API, which means the
 questions do not have to be anticipated in advance.
 
-It runs on a laptop with no cloud account. The hosted service is the same software, operated
-under third-party audit.
+It runs on a laptop with no cloud account.
 
 ## Run it locally
 
@@ -31,7 +30,7 @@ step, including trusting the local certificate authority.
 
 [![Getting started, from creating an account to the first question](https://github.com/cfokit/cfokit/releases/download/onboarding-recording/onboarding.gif)](https://github.com/cfokit/cfokit/releases/download/onboarding-recording/onboarding.mp4)
 
-<sub>Recorded by CI from `main`, against this stack, on every push.</sub>
+<sub>Recorded by CI from `main`, against this stack, whenever a change touches the screens it shows.</sub>
 
 ## Start here
 

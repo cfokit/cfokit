@@ -24,7 +24,7 @@ is the only testing decision the corpus contains. Three things are unaddressed:
 meaningfully exercised by comparison with Beancount, eleven have no Beancount analogue at all, and
 the two where the comparison would be most valuable — `LED-18` and `LED-19`, lot booking and FIFO
 consumption — are `Deferred`. The subtle semantics an independent implementation is worth having for
-are precisely the ones not being built yet. ADR-0010 now records this.
+are precisely the ones not being built yet.
 
 **Nothing covers the protocol surfaces.** The MCP tool surface and the REST API are published
 interfaces with stability obligations (ADR-0015), and no record says how either is tested.
@@ -48,18 +48,20 @@ what takes the place of that.
 
 ## Considered Options
 
-* Four layers, with independence bought by a conformance corpus and the differential oracle deferred
+* Four layers, with independence bought by a conformance corpus, and no differential oracle
 * The differential oracle now, as the primary correctness evidence
+* The differential oracle later, when lot booking activates
 * Self-written tests only — API contract tests plus evals
 * A second differential oracle from the same family, such as Ledger or hledger
 * LLM-as-judge as the primary check on agent behavior
 
 ## Decision Outcome
 
-Chosen option: "Four layers, with independence bought by a conformance corpus and the differential
-oracle deferred", because independence can be had from published answers at a fraction of the
-oracle's cost, and because the oracle's remaining value is concentrated in requirements that are not
-being built yet.
+Chosen option: "Four layers, with independence bought by a conformance corpus, and no differential
+oracle", because independence can be had from published answers at a fraction of the oracle's cost,
+and because the oracle's costs (a translator, a second corpus format and a divergence register) stay
+the same whatever it covers. When lot booking activates, its cases join the conformance corpus with
+published answers, like every other requirement. This supersedes ADR-0010.
 
 ### 1. Unit and property tests — the engine and the service
 
@@ -196,16 +198,17 @@ layer 3.
 * Good, because evals run with no stack and no CFOKit credential, against the published contract.
 * Bad, because a conformance corpus is hand-built and grows slowly. It covers what someone took the
   trouble to encode, where a differential oracle covers whatever you throw at it.
-* Bad, because deferring the oracle means the arithmetic is unchecked against an independent
-  implementation until lots activate. Property tests reduce that exposure; they do not remove it.
+* Bad, because without an oracle the arithmetic is never checked against an independent
+  implementation. Property tests and the corpus reduce that exposure; they do not remove it.
 * Bad, because four layers is more testing apparatus to explain than one oracle, and the boundaries
   between them will occasionally be argued.
-* Neutral, because Beancount stays a pinned CI-only dependency, dormant rather than removed.
+* Neutral, because Beancount leaves the repository entirely: no dependency, no test marker and no
+  CI job.
 
 ### Confirmation
 
 Layer 1 runs inside the ordinary suite and gates every commit, as do the schema invariants of
-layer 3. Layer 2 carries `NFR-01` while the oracle stays deferred, which is why every case cites
+layer 3. Layer 2 carries `NFR-01`, which is why every case cites
 its published source: a case without one is a unit test that has been misfiled. The protocol half
 of layer 3 drives both adapters as a client does, and CI gate 5 diffs what they publish against
 the committed copies (ADR-0015). Layer 4 runs only through `uv run task eval` and the `eval`
@@ -242,13 +245,24 @@ ADR-0010 as written, and the option this narrows rather than replaces.
 
 * Good, because a differential comparison covers whatever inputs it is given, without anyone having
   to know the right answer in advance. That is a genuine advantage over a hand-built corpus.
-* Good, because it is already scaffolded — the marker exists and the dependency group is decided.
 * Bad, because its coverage today is four of twenty ledger requirements, and the two it would serve
   best are deferred.
 * Bad, because it needs a translator into Beancount syntax, and a defect there yields false agreement
   as readily as false divergence.
 * Bad, because the divergence register would be dominated by "Beancount has no concept of this",
   which is noise that buries signal.
+
+### The differential oracle later, when lot booking activates
+
+ADR-0010's final form: the oracle stays dormant and turns on with `LED-18` and `LED-19`.
+
+* Good, because lot booking is Beancount's strongest area and CFOKit's hardest problem, so the
+  comparison would be worth most there.
+* Bad, because the translator, the second corpus format and the divergence register cost the same
+  then as now, and the translator is untested code between the system and its own evidence.
+* Bad, because a comparison detects difference and cannot say which side is wrong, so every
+  divergence needs an authority to settle it. A published answer is that authority already.
+* Bad, because lot costing has published worked answers too, so the corpus can carry it.
 
 ### Self-written tests only — API contract tests plus evals
 
@@ -316,22 +330,22 @@ The rule this section's provenance rule replaces, and the one that looks like th
 - `NFR-01` is amended alongside this record: it named a mechanism — "an independent implementation" —
   where what it wants is independence.
 
-**Reversal cost. Low.** All of this is test infrastructure. The oracle is deferred rather than
-removed, and turning it on is the work ADR-0010 already describes.
+**Reversal cost. Low.** All of this is test infrastructure. Adding an oracle later is the work
+ADR-0010 describes, and nothing here would have to be undone for it.
 
-Related: [ADR-0010](0010-beancount-as-test-oracle.md) holds the oracle and now its activation
-trigger; ADR-0008 makes the engine pure enough for layer 1; ADR-0015 holds the contract half of layer
+Related: [ADR-0010](0010-beancount-as-test-oracle.md) is the oracle this supersedes; ADR-0008 makes the engine pure enough for layer 1; ADR-0015 holds the contract half of layer
 3 and the committed tool descriptions layer 4's mocks are written from.
 
 ## Revisit when
 
-* `LED-18` and `LED-19` activate, which turns the oracle on and is the trigger ADR-0010 now carries.
+* `LED-18` and `LED-19` activate and published lot-costing cases can't be found under a license the
+  corpus may use (ADR-0044), which would leave lot booking with no independent evidence.
 * A divergence or a conformance failure needs adjudicating and there is no agreed authority to settle
   it. That is the gap the corpus's source citations are meant to prevent, and its first occurrence
   will show whether they do.
 * Evals become the bottleneck on releases, which would mean the cadence rather than the approach
   needs changing.
 * A permissively licensed, independently derived double-entry implementation of comparable maturity
-  appears, which would lower the cost of the deferred oracle.
+  appears, which would lower the cost of an oracle.
 * The harness cannot express a case the layer needs — an exchange the mocks cannot model, or an
   assertion its graders cannot make. That replaces the harness, not the layer.

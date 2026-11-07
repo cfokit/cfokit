@@ -1,11 +1,17 @@
 ---
-status: "draft"
+status: "superseded by ADR-0036"
 kind: "requirement-driven"
 date: 2026-08-17
 decision-makers: [Geoff]
 ---
 
 # ADR-0010: Beancount is a differential test oracle, never a runtime dependency
+
+**Superseded by [ADR-0036](0036-correctness-is-tested-in-four-layers.md):** CFOKit has no
+differential oracle, now or when lot booking (`LED-18`, `LED-19`) activates. Nothing runs Beancount,
+and no CI gate, test marker or divergence register exists for it. Correctness rests on ADR-0036's
+four layers, with independence from the conformance corpus. The reasoning below is kept because it
+is the argument ADR-0036 answers.
 
 **Requirements served:** `NFR-01`.
 

@@ -444,22 +444,11 @@ jobs:
           gh release view onboarding-recording >/dev/null 2>&1 ||
             gh release create onboarding-recording --prerelease --target main \
               --title "Getting started, recorded" \
-              --notes "The getting-started flow, recorded by CI from main on every push. Not a release of CFOKit."
+              --notes "The getting-started flow, recorded by CI from main when a change touches the screens it shows. Not a release of CFOKit."
           gh release upload onboarding-recording recording/* --clobber
 
-  # Gate 3 — differential test against the Beancount oracle, every divergence documented
-  # (ADR-0010). Beancount is a CI-only dependency and never ships in the artifact.
-  #
-  # Enabled when LED-18 activates lot tracking, which is what the oracle is for (ADR-0010).
-  #
-  # oracle:
-  #   name: "Gate 3: Beancount oracle"
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-  #     - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
-  #     - run: uv sync --locked --group oracle
-  #     - run: uv run pytest -m oracle
+  # Gate 3 is retired: there is no differential oracle (ADR-0036). The number stays so the
+  # other gates keep theirs.
 
   # Gate 5 — generated OpenAPI, MCP tool descriptions and error codes match what is
   # committed; a diff means a contract change and needs review (ADR-0015).

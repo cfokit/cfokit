@@ -156,8 +156,8 @@ The conventional modern Python choice, and it would remove the boundary entirely
   second execution model in every layer including the pure engine.
 * Bad, because transaction and lock affinity becomes a discipline rather than a property: `async def`
   can yield mid-transaction in a way `def` cannot.
-* Bad, because the pure engine, the migration runner, the CLI, and the Beancount oracle harness are
-  all naturally synchronous. Async would be adopted for the sake of one adapter.
+* Bad, because the pure engine, the migration runner, the CLI, and the test suites are all naturally
+  synchronous. Async would be adopted for the sake of one adapter.
 
 ### Flask with APIFlask, to keep an event loop off the REST path entirely
 

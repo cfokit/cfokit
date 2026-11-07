@@ -43,8 +43,7 @@ Three constraints narrow what that fixture can be:
 * An expected value comes from outside the implementation (ADR-0036 § 5, `NFR-01`).
 * Nothing real, and nothing QuickBooks produced, is committed (ADR-0044, the terms above, `NFR-14`).
 * CI runs with no cloud credentials and calls no third party (ADR-0004).
-* No second accounting system becomes the answer key; that is `LED-18`'s deferred oracle
-  (ADR-0010).
+* No second accounting system becomes the answer key (ADR-0036).
 * Regenerable and reviewable: a change to the company is a diff in source, not a new binary from
   nowhere.
 * The seam that carries the business must be plain enough that a Xero or Sage adapter could be
@@ -218,7 +217,7 @@ fix plus a test on our own small fixture.
 
 * Good, because it is fully automated and needs no third party.
 * Bad, because its expected values are our arithmetic checked against our arithmetic (ADR-0050), and
-  a second system as an oracle is `LED-18`'s decision, deferred (ADR-0010).
+  a second system as an oracle was rejected (ADR-0036).
 
 ## More Information
 
