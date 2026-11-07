@@ -9,5 +9,5 @@ Harassment of any kind isn't tolerated.
 
 ## Reporting
 
-To report behavior that breaks this code, email **[conduct contact to add]**. Reports are kept
+To report behavior that breaks this code, email [conduct@cfokit.ai](mailto:conduct@cfokit.ai). Reports are kept
 confidential, and the maintainers will respond to every one.
