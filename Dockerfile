@@ -44,7 +44,7 @@ RUN corepack pnpm build
 # The issuer's sign-in theme (ADR-0054 § 1), built by Keycloakify from the same project into a
 # JAR. That needs Maven and a JDK beside Node, taken from the Maven image into the client's stage.
 # The `identity` target below puts the JAR into Keycloak's image.
-FROM maven:3.9-eclipse-temurin-26@sha256:b2c1ad85954592f9928e84327c65201f308ad9b5d8ed7d5b823717c97bf23fbb AS maven
+FROM maven:3.9.16-eclipse-temurin-25@sha256:93b8a14ea2f412782e4e842651273b4d903e35cc496284f178fbbe2d67d00976 AS maven
 
 FROM web AS sign-in-theme
 COPY --from=maven /opt/java/openjdk /opt/java/openjdk
@@ -97,7 +97,7 @@ COPY infra/keycloak/realm-settings.sh /opt/cfokit/realm-settings.sh
 # ---------------------------------------------------------------------------
 FROM python:3.15.0-slim@sha256:f5b92f2a669a4c347044f29367f31983280b648250ca94dea66f98c53bc87e58 AS builder
 
-COPY --from=ghcr.io/astral-sh/uv:0.11.33@sha256:77280f2f771df71f90786c314fe1bbc1e023feac652969bbf139c280babf2eb7 /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.13.6@sha256:af22a52f5eafef3d78e551599d405c02df61919d18028f0cea8eda93bc9986d0 /uv /usr/local/bin/uv
 
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \

@@ -37,7 +37,7 @@ on:
 permissions: {}
 
 env:
-  UV_VERSION: "0.11.33"
+  UV_VERSION: "0.13.6"
   VERDICT_SCHEMA: >-
     {"type":"object","required":["verdict","summary","findings"],"properties":{
     "verdict":{"type":"string","enum":["approve","changes","escalate"]},

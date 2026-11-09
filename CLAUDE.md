@@ -124,7 +124,7 @@ The web client has its own commands, run from `web/`; `web/CLAUDE.md` lists them
 it, so `test` runs the previous copy after an edit and `migrate` reports "no migrations to apply"
 for a migration that is on disk. Both have cost real debugging time.
 
-**Cloud sessions are provisioned by `.claude/hooks/session-start.sh`** — CI's uv, Python 3.14,
+**Cloud sessions are provisioned by `.claude/hooks/session-start.sh`** — CI's uv, Python 3.15,
 `uv sync --locked`, and a running Docker daemon. The commands above are unchanged there.
 
 **`uv run task test` is not the whole suite.** Every test of row-level security, the entity lock
@@ -173,7 +173,7 @@ otherwise get wrong, because absence isn't visible in a manifest:
   outside the database: what starts a pass knows only that one should start. Not a task-queue
   library, Cloud Tasks, Pub/Sub, Redis or `pg_cron`. A handler opens its own transactions and
   must tolerate running again from the start. (ADR-0061)
-- **Python 3.14**, `ruff`, `mypy --strict`, `import-linter`, and the image and CI run it.
+- **Python 3.15**, `ruff`, `mypy --strict`, `import-linter`, and the image and CI run it.
 
 ## Money and correctness
 
