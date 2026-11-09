@@ -40,7 +40,7 @@ expected, and a worse one:
 | Dauderis & Annand, *Introduction to Financial Accounting* | CC BY-**NC**-SA 3.0 | No |
 | FASB Accounting Standards Codification, including Basic View | Copyright, plus a license accepted at registration | No |
 | FASB / XBRL US GAAP Financial Reporting Taxonomy | Verbatim and unmodified only, with its own notice | No |
-| Beancount's test corpus | GPL-2.0 | No as fixtures; fine as CI tooling (ADR-0010) |
+| Beancount's test corpus | GPL-2.0 | No |
 
 The open textbooks are the surprise. Most OpenStax titles are plain CC BY, but the accounting
 ones are not, and neither is any other open accounting text checked. Every large body of
@@ -251,8 +251,7 @@ on a source later found unfree has to be deleted along with whatever it evidence
 the rule is set narrow now rather than relaxed and tightened later.
 
 Related: ADR-0043 (what the evidence is for), ADR-0036 (the layers and the provenance rule),
-ADR-0026 (Apache 2.0), ADR-0010 (Beancount as CI-only tooling, the same license question
-answered for a dependency rather than a fixture).
+ADR-0026 (Apache 2.0).
 
 ## Revisit when
 
@@ -262,5 +261,3 @@ answered for a dependency rather than a fixture).
   cite-not-reproduce option unnecessary rather than merely premature.
 * A band-3 case is needed that a cited rule cannot carry, which is the trigger for the
   cite-not-reproduce class and for reading the Codification's license properly.
-* `LED-18` activates and the differential oracle turns on, which supplies evidence with no
-  license question at all and may reduce how much corpus band 1 needs.

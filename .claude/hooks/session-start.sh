@@ -44,7 +44,9 @@ if [ "$(node --version 2>/dev/null)" != "v$NODE_VERSION" ]; then
   export PATH="$HOME/.local/node/bin:$PATH"
   hash -r
 fi
-# corepack fetches the pnpm that web/package.json pins, from the npm registry, without asking.
+# Node 25 and later ship no corepack, so it comes from the npm registry, at the version the
+# Dockerfile and ci.yml pin. It fetches the pnpm that web/package.json pins, without asking.
+npm install --global --silent corepack@0.36.0
 export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 (cd web && corepack pnpm install --frozen-lockfile --silent)
 

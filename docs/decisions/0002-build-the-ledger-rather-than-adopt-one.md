@@ -145,9 +145,8 @@ either direction.
 
 ### Confirmation
 
-The Beancount differential oracle (ADR-0010) is scaffolded as CI gate 3 and **is not running** — it
-activates with `LED-18`. Its substitute until then, the conformance corpus of ADR-0036 § 2, is
-written and runs in CI gate 2: one case so far, a 1907 state examination question published in 1911,
+There is no differential oracle (ADR-0036 supersedes ADR-0010). Independent evidence comes from
+the conformance corpus of ADR-0036 § 2, which is written and runs in CI gate 2: one case so far, a 1907 state examination question published in 1911,
 whose citation `tests/integration/test_conformance.py` requires rather than trusts. One case is
 narrow, so production exposure an adopted system would have brought is still only partly replaced,
 and the answer is more cases. The accountability properties are enforced by schema and by CI
@@ -208,7 +207,8 @@ rejection now rests on.
 * Good, because it is a correct, independently maintained double-entry implementation.
 * Bad, because it is file-based and single-writer, exactly the model ADR-0003 rejected once
   multi-tenant hosting became the point.
-* Neutral, because it is retained in the role it does suit: the differential test oracle (ADR-0010).
+* Neutral, because it was later considered as a differential test oracle, and that was rejected too
+  (ADR-0036).
 
 ### Build on TigerBeetle
 
@@ -297,8 +297,8 @@ constraint for the server. The license question is left open and is not load-bea
 
 ### Follow-on obligations
 
-* The Beancount differential oracle is not optional. It substitutes for the production exposure an
-  adopted system would have brought (ADR-0010, CI gate 3).
+* The conformance corpus is not optional. It substitutes for the production exposure an adopted
+  system would have brought (ADR-0036 § 2, CI gate 2), and the answer to its narrowness is more cases.
 * Scope discipline is load-bearing. A first-party ledger has no natural boundary; the scope table is
   the boundary, and anything beyond it needs a requirement first.
 * Validate the agent hypotheses **early and against fixtures**, so the uncertain work is not gated on

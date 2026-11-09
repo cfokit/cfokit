@@ -19,8 +19,7 @@ entity locking, and grant validation in one move.
 
 **`engine` is pure.** No I/O, no configuration, no database, no clock, no environment. Every
 input is an argument and every output a return value. This is what makes booking semantics
-testable with no infrastructure — layer 1 of ADR-0036, and the differential oracle later, when
-`LED-18` activates it (ADR-0010). If a function in `engine` needs the current date, take it as a
+testable with no infrastructure: layers 1 and 2 of ADR-0036. If a function in `engine` needs the current date, take it as a
 parameter.
 
 **Two adapters, one service layer.** `mcp` calls the service in-process — it does not loop

@@ -30,8 +30,8 @@ opinion by a person who is liable for having given it. No ledger, however correc
 "GAAP compliant", and a product that says it is has said something false.
 
 **The evidence has to exist before the claim does.** `NFR-01` demands correctness against a
-source CFOKit did not author, and ADR-0036 § 2 puts the conformance corpus in that role while
-the differential oracle stays deferred to `LED-18`. The corpus has one case. ADR-0002 already
+source CFOKit did not author, and ADR-0036 § 2 puts the conformance corpus in that role, with no
+differential oracle beside it. The corpus has one case. ADR-0002 already
 states the remedy — "the answer is more cases" — which makes the size of the claim a function
 of how much corpus can actually be built.
 
@@ -220,16 +220,13 @@ on them. Higher once published, because a conformance claim that narrows after c
 relied on it costs more than the claim was ever worth. Widening it later is free.
 
 Related: ADR-0036 (the four layers and the corpus), ADR-0044 (which sources may supply
-evidence), ADR-0022 (the boundary this one restates), ADR-0010 (the oracle this substitutes
-for until `LED-18`), ADR-0002 ("the answer is more cases").
+evidence), ADR-0022 (the boundary this one restates), ADR-0002 ("the answer is more cases").
 
 ## Revisit when
 
 * `BKP-06` ships, which puts accounting policy into stored rules and gives band 3 a mechanism
   to describe rather than a gap to admit.
 * `RPT-04` ships, which closes the largest band 2 gap on the map.
-* `LED-18` activates and CI gate 3 turns on, which adds a second independent source of evidence
-  for band 1 and may make part of the corpus redundant.
 * A CPA reviews the corpus and disputes a band boundary. That is the review this record is
   written to invite, and the first such dispute is worth more than the next ten cases.
 * An entity needs statements *audited* rather than accepted, at which point the question stops

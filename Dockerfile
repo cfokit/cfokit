@@ -21,9 +21,10 @@
 
 # ---------------------------------------------------------------------------
 # The web client (ADR-0054). Node and pnpm at the versions web/.nvmrc and web/package.json pin;
-# keep the tag in step with web/.nvmrc. Only web/ is copied in, which is the whole of what the
-# client may read, apart from the contract it is typed against.
-FROM node:24.21.0-slim@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6 AS web
+# keep the tag in step with web/.nvmrc. Node 25 and later no longer ship corepack, so it is
+# installed at the version ci.yml and the session hook pin. Only web/ is copied in, which is the
+# whole of what the client may read, apart from the contract it is typed against.
+FROM node:26.12.0-slim@sha256:e556a144463cc8dc53afe8de6d2fa0db5c132fd39ffa232c17641bd40df2bf11 AS web
 
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 WORKDIR /web
@@ -33,6 +34,7 @@ COPY web/package.json web/pnpm-lock.yaml web/pnpm-workspace.yaml ./
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
     --mount=type=secret,id=build_ca,required=false \
     if [ -s /run/secrets/build_ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/build_ca; fi; \
+    npm install --global corepack@0.36.0 && \
     corepack pnpm install --frozen-lockfile
 
 COPY web/ ./
@@ -82,7 +84,7 @@ RUN LC_ALL=C awk 'length($0) >= 12 && length($0) <= 128' /tmp/passwords.txt \
     | LC_ALL=C tr 'A-Z' 'a-z' | LC_ALL=C sort -u > /out/cfokit-breached.txt \
     && rm /tmp/passwords.txt
 
-FROM quay.io/keycloak/keycloak:26.8.1@sha256:a78d6b79572168cb25886b80a8b5b8d4ed4390743e3eecb810538683e209dd6b AS identity
+FROM quay.io/keycloak/keycloak:26.8.1@sha256:3f3c5f8e03c614774b4bd9173b88391fefa4153bfc010d8012d59ad825377332 AS identity
 COPY --from=breached-passwords /out/ /opt/keycloak/data/password-blacklists/
 COPY --from=sign-in-theme /web/dist_keycloak/cfokit-theme.jar /opt/keycloak/providers/
 # The realm, imported on first start where nothing mounts it — Cloud Run mounts nothing

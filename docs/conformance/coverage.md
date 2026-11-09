@@ -178,5 +178,5 @@ about a set of statements, not a setting the system holds, and CFOKit does not o
 it."
 
 `inventory-costing` cites `LED-18` and `LED-19` because both are `Could`/Deferred and carry the
-activation trigger. Their activation also turns on the Beancount differential oracle
-(ADR-0010), which is where lot semantics get independent evidence.
+activation trigger. When they activate, lot semantics get independent evidence the same way as
+everything else: published cases in this corpus (ADR-0036).

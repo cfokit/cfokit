@@ -20,11 +20,12 @@ became visible when invoicing and accounts receivable entered scope (`AR-01`–`
 whole domain — customers, invoices, line items, payment application, aging — with its own vocabulary.
 Absorbing it into the ledger would roughly double what "the ledger" means.
 
-There is a reason specific to this project to resist that. The differential oracle
-([ADR-0010](0010-beancount-as-test-oracle.md)) compares CFOKit's booking against Beancount, and that
-comparison is meaningful only while the thing being compared is *about* double-entry. Once invoice
-concepts are inside the booking engine, the oracle is comparing two different systems and the
-strongest correctness evidence available quietly degrades.
+There is a reason specific to this project to resist that. The conformance corpus
+([ADR-0036](0036-correctness-is-tested-in-four-layers.md) § 2) checks CFOKit's booking against
+published double-entry answers, and that check is meaningful only while the thing being checked is
+*about* double-entry. Once invoice concepts are inside the booking engine, a published double-entry
+answer no longer isolates what the engine does, and the strongest correctness evidence available
+quietly degrades.
 
 More components are coming — email delivery, notifications, a Slack surface, reconciliation,
 categorization rules — and each will arrive with an argument for where it belongs. What is needed is
@@ -168,8 +169,8 @@ customer is — that is review, and the signal is a ledger module acquiring a do
 Simplest, no boundaries to police, and everything can call everything.
 
 * Good, because there is no classification question, no import contract, and no HTTP hop anywhere.
-* Bad, because it degrades the oracle. Once invoicing lives inside the booking engine, the Beancount
-  comparison no longer isolates double-entry semantics.
+* Bad, because it degrades the conformance corpus. Once invoicing lives inside the booking engine, a
+  published double-entry answer no longer isolates double-entry semantics.
 * Bad, because "the ledger" comes to mean whatever has accumulated, which is exactly the drift a
   first-party ledger with no natural boundary is prone to (ADR-0002).
 

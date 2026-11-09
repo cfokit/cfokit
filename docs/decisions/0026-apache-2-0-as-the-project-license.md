@@ -150,10 +150,9 @@ Reaching for reciprocity to stop a hyperscaler hosting CFOKit in competition.
   is unaffected — BUSL is not permissive under `NFR-14` whichever permissive license we hold.
 - Source files carry no per-file license header. Apache 2.0's appendix offers one and it is
   declined: the repository is single-licensed and a header on every file is noise.
-- Beancount stays GPL-2.0 and CI-only (ADR-0010). Apache 2.0 is one-way incompatible with GPLv2 —
-  Apache code cannot be folded into a GPLv2 work — and that direction never arises, because
-  Beancount is never combined, never linked, and never distributed. Recorded because it will be
-  raised as an objection.
+- Beancount (GPL-2.0), once considered as a CI-only oracle (ADR-0010), is not used (ADR-0036), so
+  its license no longer arises. Apache 2.0 is one-way incompatible with GPLv2: Apache code cannot be
+  folded into a GPLv2 work. Recorded because it will be raised as an objection.
 
 **Reversal cost. Asymmetric, and this is the cheapest moment.** Copyright is currently held by one
 person, so relicensing is a file change. Once outside contributors land, moving to Apache 2.0 needs

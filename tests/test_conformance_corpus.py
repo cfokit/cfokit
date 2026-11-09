@@ -4,8 +4,8 @@
 expected value to come from outside the implementation, and says plainly that authorship cannot
 be the control because every commit here is generated. What it puts in its place is provenance,
 and provenance is only a control where something checks it. This is that something: layer 2
-carries `NFR-01` while the differential oracle stays deferred (ADR-0010), so it is the layer
-where the check has to be mechanical rather than reviewed.
+carries `NFR-01`, with no differential oracle beside it (ADR-0036), so it is the layer where the
+check has to be mechanical rather than reviewed.
 
 Three things are checked here, and they are three because ADR-0043 and ADR-0044 draw two lines
 a reader would otherwise blur.

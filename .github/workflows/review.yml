@@ -106,7 +106,7 @@ jobs:
           ref: main
           path: .trusted
           persist-credentials: false
-      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
         with:
           version: ${{ env.UV_VERSION }}
 
@@ -125,7 +125,7 @@ jobs:
 
       - id: review
         continue-on-error: true
-        uses: anthropics/claude-code-action@8ce9314fa9a404564fa7e954cd84f25bcba2b829 # v1.0.236
+        uses: anthropics/claude-code-action@925afb53776cf1a2b738c6bdbed37b4d4000ef13 # v1.0.262
         with:
           # One of the two is set: a subscription token from `claude setup-token`, or an API key.
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -169,7 +169,7 @@ jobs:
       - id: fix
         if: steps.decide.outputs.action == 'fix' && env.REVIEW_MODE == 'enforce'
         continue-on-error: true
-        uses: anthropics/claude-code-action@8ce9314fa9a404564fa7e954cd84f25bcba2b829 # v1.0.236
+        uses: anthropics/claude-code-action@925afb53776cf1a2b738c6bdbed37b4d4000ef13 # v1.0.262
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -192,7 +192,7 @@ jobs:
 
       # The only credential that can write. Minted after every model step has finished.
       - id: app
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
           client-id: ${{ vars.REVIEWER_CLIENT_ID }}
           private-key: ${{ secrets.REVIEWER_APP_KEY }}
@@ -215,7 +215,14 @@ jobs:
               gh pr merge "$PR" --auto --squash
               ;;
             fix)
-              git add -A
+              # On a pull request, claude-code-action replaces these with main's copies in the
+              # working tree before any model runs, and leaves them unstaged (SENSITIVE_PATHS in
+              # its src/github/operations/restore-config.ts, at the pinned version). Staging them
+              # would commit a silent revert of the pull request's own edits, so they are left
+              # out. They are code-owned or agent configuration, which a fix round never edits.
+              git add -A -- . ':(exclude).claude' ':(exclude).mcp.json' ':(exclude).claude.json' \
+                ':(exclude).gitmodules' ':(exclude).ripgreprc' ':(exclude)CLAUDE.md' \
+                ':(exclude)CLAUDE.local.md' ':(exclude).husky'
               if git diff --cached --quiet; then
                 gh pr edit "$PR" --add-label needs-human
                 exit 0

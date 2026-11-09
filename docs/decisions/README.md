@@ -53,7 +53,7 @@ nothing cites these but this repository. They are added when something breaks wi
 | [0007](0007-append-only-from-posting-reversing-corrections.md) | Records become immutable at posting; corrections are reversing entries | Accepted |
 | [0008](0008-layered-architecture-pure-engine.md) | Four layers, with a pure booking engine at the bottom | Draft |
 | [0009](0009-one-app-two-protocol-adapters.md) | One application, two protocol adapters; MCP calls the service in-process | Draft |
-| [0010](0010-beancount-as-test-oracle.md) | Beancount is a differential test oracle, never an agent dependency | Draft |
+| [0010](0010-beancount-as-test-oracle.md) | Beancount is a differential test oracle, never an agent dependency | Superseded by ADR-0036 |
 | [0011](0011-entity-advisory-lock.md) | Writes serialize on a per-entity advisory lock | Draft |
 | [0012](0012-binding-non-goals-and-scope-discipline.md) | Binding non-goals, enforced as a gate rather than a ban | Draft |
 | [0013](0013-two-dates-bitemporality.md) | Two dates per transaction, and bitemporality for free | Accepted |
