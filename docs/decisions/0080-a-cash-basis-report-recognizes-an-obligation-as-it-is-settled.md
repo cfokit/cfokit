@@ -58,7 +58,8 @@ What exists:
   (*Commissioner v. Indianapolis Power & Light Co.*, 493 U.S. 203 (1990)).
 * **Allocation.** [ADR-0025](0025-rounding-and-allocation.md) forbids rounding in the ledger and
   makes allocation largest remainder, ties broken by line order, in the pure engine. The engine's
-  `allocate` takes non-negative integer weights and an increment, and refuses rather than rounds.
+  `allocate` took non-negative integer weights and an increment, and refuses rather than rounds;
+  this decision's change admits weights of both signs, refusing only a sum of zero.
 
 ## Decision Drivers
 
@@ -238,8 +239,8 @@ than a view of it**, and stay posted figures on every basis (ADR-0050 § 1).
 * Bad, because a partial payment that does not divide evenly can put its odd cent on a different
   line from QuickBooks', whose rule rounds each share and gives the last line the rest. The
   totals agree.
-* Bad, because `allocate` takes no negative weight, and an invoice with a discount line has lines
-  of both signs.
+* Bad, because an invoice with a discount line has lines of both signs, so `allocate` had to admit
+  weights of either sign. A line of the opposite sign takes a share of the opposite sign.
 * Neutral, because an accrual entity's reports do not change.
 
 ### Confirmation

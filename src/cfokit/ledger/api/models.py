@@ -256,6 +256,34 @@ class TrialBalanceLineModel(BaseModel):
     credit: str | None = None
 
 
+class UnlinkedModel(BaseModel):
+    """What a cash-basis report presents as posted, because no stored link reaches it.
+
+    ADR-0080 § 3 and NFR-16: a cash figure that rests on an accrual posting is disclosed on the
+    report's face rather than hidden.
+    """
+
+    postings: int = Field(
+        description="Postings in the report's span on an account that carries obligations, by "
+        "a transaction that neither raises nor settles one, such as a journal entry to "
+        "receivables. They read as posted."
+    )
+    imported_transactions: int = Field(
+        description="Transactions in the span that an import landed. No import records which "
+        "invoice a payment settled, so that history reads as posted."
+    )
+
+
+def _unlinked() -> Any:
+    """One field definition for every report that carries the counts, so they read alike."""
+    return Field(
+        default=None,
+        description="On a cash basis, what the report presents as posted because no link "
+        "between an obligation and its settlement reaches it (ADR-0080 § 3). Null on an "
+        "accrual basis.",
+    )
+
+
 class TrialBalanceResponse(BaseModel):
     """A trial balance as of a date (RPT-01).
 
@@ -281,6 +309,7 @@ class TrialBalanceResponse(BaseModel):
         description="Whether the two columns agree. False means a posting is unbalanced, "
         "which the schema should have made impossible (ADR-0006)."
     )
+    unlinked: UnlinkedModel | None = _unlinked()
 
 
 class AccountEntryModel(BaseModel):
@@ -320,6 +349,7 @@ class AccountDetailResponse(BaseModel):
     )
     closing_balance: str
     entries: list[AccountEntryModel]
+    unlinked: UnlinkedModel | None = _unlinked()
 
 
 class ComparativeLineModel(BaseModel):
@@ -354,6 +384,7 @@ class ComparativeProfitAndLossResponse(BaseModel):
     total_income: ComparativeLineModel
     total_expenses: ComparativeLineModel
     net_income: ComparativeLineModel
+    unlinked: UnlinkedModel | None = _unlinked()
 
 
 class SourceBalanceModel(BaseModel):
@@ -428,6 +459,7 @@ class ProfitAndLossResponse(BaseModel):
         description="Computed from the unrounded totals, so it cannot drift a unit from the "
         "difference a reader takes by hand (RPT-12)."
     )
+    unlinked: UnlinkedModel | None = _unlinked()
 
 
 class BalanceSheetResponse(BaseModel):
@@ -452,6 +484,7 @@ class BalanceSheetResponse(BaseModel):
         description="Whether assets equal liabilities plus equity, which is what the statement "
         "asserts."
     )
+    unlinked: UnlinkedModel | None = _unlinked()
 
 
 class IssueStatementRequest(BaseModel):

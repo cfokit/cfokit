@@ -1,0 +1,5 @@
+code,name,type,parent
+1000,Cash at bank,asset,
+1200,Accounts receivable,asset,
+4000,Design income,income,
+4100,Workshop income,income,

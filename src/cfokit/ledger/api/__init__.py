@@ -74,6 +74,7 @@ from cfokit.ledger.api.models import (
     TransactionResponse,
     TrialBalanceLineModel,
     TrialBalanceResponse,
+    UnlinkedModel,
     WriteResponse,
     YearClosedResponse,
 )
@@ -94,6 +95,7 @@ from cfokit.ledger.presentation import (
     present_reconciliation,
     present_trial_balance,
 )
+from cfokit.ledger.repository.cash import Unlinked
 from cfokit.ledger.repository.obligations import Obligation
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.administration import (
@@ -208,6 +210,15 @@ def _comparative(line: ComparativeLine) -> ComparativeLineModel:
 
 def _comparatives(lines: Iterable[ComparativeLine]) -> list[ComparativeLineModel]:
     return [_comparative(line) for line in lines]
+
+
+def _unlinked(found: Unlinked | None) -> UnlinkedModel | None:
+    """What a cash-basis report presents as posted (ADR-0080 § 3), or None on accrual."""
+    if found is None:
+        return None
+    return UnlinkedModel(
+        postings=found.postings, imported_transactions=found.imported_transactions
+    )
 
 
 def _lines(lines: Iterable[StatementLine]) -> list[StatementLineModel]:
@@ -696,6 +707,7 @@ def create_app(settings: Settings, authenticator: Authenticator | None = None) -
             total_debit=str(report.total_debit),
             total_credit=str(report.total_credit),
             balances=report.balances,
+            unlinked=_unlinked(report.unlinked),
         )
 
     @app.get(
@@ -739,6 +751,7 @@ def create_app(settings: Settings, authenticator: Authenticator | None = None) -
             total_income=str(report.total_income),
             total_expenses=str(report.total_expenses),
             net_income=str(report.net_income),
+            unlinked=_unlinked(report.unlinked),
         )
 
     @app.get(
@@ -787,6 +800,7 @@ def create_app(settings: Settings, authenticator: Authenticator | None = None) -
             total_income=_comparative(report.total_income),
             total_expenses=_comparative(report.total_expenses),
             net_income=_comparative(report.net_income),
+            unlinked=_unlinked(report.unlinked),
         )
 
     @app.get(
@@ -830,6 +844,7 @@ def create_app(settings: Settings, authenticator: Authenticator | None = None) -
             total_liabilities=str(report.total_liabilities),
             total_equity=str(report.total_equity),
             balances=report.balances,
+            unlinked=_unlinked(report.unlinked),
         )
 
     @app.get(
@@ -890,6 +905,7 @@ def create_app(settings: Settings, authenticator: Authenticator | None = None) -
                 )
                 for entry in report.entries
             ],
+            unlinked=_unlinked(report.unlinked),
         )
 
     @app.post(

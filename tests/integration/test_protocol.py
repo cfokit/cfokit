@@ -23,6 +23,8 @@ import uuid
 import zipfile
 from collections.abc import Iterator
 from contextlib import contextmanager
+from datetime import date
+from decimal import Decimal
 from typing import Any
 
 import httpx2 as httpx
@@ -38,8 +40,12 @@ from mcp.types import CallToolResult
 
 from cfokit.ledger.api import create_app
 from cfokit.ledger.config import Settings
+from cfokit.ledger.engine import Entry, Posting
 from cfokit.ledger.mcp import create_server
+from cfokit.ledger.repository.unit_of_work import Database
+from cfokit.ledger.service.administration import create_account, create_entity
 from cfokit.ledger.service.principal import ActorClass, Principal
+from cfokit.ledger.service.write import WriteContext, record_transaction
 
 pytestmark = pytest.mark.integration
 
@@ -643,6 +649,88 @@ async def test_both_surfaces_report_the_same_statements(
     assert mcp_pl["accounting_basis"] == rest_pl["accounting_basis"] == "accrual"
     assert mcp_bs["unclosed_earnings"] == rest_bs["unclosed_earnings"] == "100.00"
     assert mcp_bs["balances"] is rest_bs["balances"] is True
+    # Accrual states nothing about links, because nothing in an accrual report rests on one.
+    assert mcp_pl["unlinked"] is rest_pl["unlinked"] is None
+    assert mcp_bs["unlinked"] is rest_bs["unlinked"] is None
+
+
+@pytest.mark.anyio
+async def test_both_surfaces_state_what_a_cash_basis_report_presents_as_posted(
+    authenticated_caller: None, settings: Settings, database: Database, client: TestClient
+) -> None:
+    """ADR-0080 § 3 on the face of the report, the same on REST and MCP (`NFR-16`)."""
+    entity_id = create_entity(
+        database,
+        principal=PERSON,
+        request_id="fixture",
+        slug=f"cash-{uuid.uuid4().hex[:12]}",
+        name="Studio",
+        accounting_basis="cash",
+        fiscal_year_end_month=12,
+        fiscal_year_end_day=31,
+        functional_currency="USD",
+        time_zone="UTC",
+    ).entity_id
+    cash, receivable, revenue = (
+        create_account(
+            database,
+            entity_id=entity_id,
+            principal=PERSON,
+            request_id="fixture",
+            code=code,
+            name=name,
+            account_type=account_type,
+        )
+        for code, name, account_type in (
+            ("1000", "Cash", "asset"),
+            ("1200", "Accounts receivable", "asset"),
+            ("4000", "Revenue", "income"),
+        )
+    )
+    # An invoice, which raises an obligation, and a journal entry to receivables, which does
+    # not and so reads as posted.
+    for raises in ("100.00", None):
+        record_transaction(
+            database,
+            WriteContext(
+                entity_id=entity_id,
+                principal=PERSON,
+                request_id="req",
+                idempotency_key=uuid.uuid4().hex,
+            ),
+            entry=Entry(
+                transaction_date=date(2026, 9, 1),
+                postings=(
+                    Posting(account_id=receivable, amount=Decimal("100.00"), commodity="USD"),
+                    Posting(account_id=revenue, amount=Decimal("-100.00"), commodity="USD"),
+                ),
+                description="Entry",
+            ),
+            post=True,
+            raises_obligation=Decimal(raises) if raises is not None else None,
+        )
+    server = create_server(settings, authenticator=StubAuthenticator())
+
+    rest = client.get(f"/entities/{entity_id}/trial-balance", params={"as_of": "2026-12-31"})
+    result = await server.call_tool(
+        "trial_balance", {"entity_id": entity_id, "as_of": "2026-12-31"}
+    )
+
+    assert isinstance(result, CallToolResult)
+    mcp = result.structured_content
+    assert mcp is not None
+    assert rest.status_code == 200
+    assert mcp["accounting_basis"] == rest.json()["accounting_basis"] == "cash"
+    assert (
+        mcp["unlinked"]
+        == rest.json()["unlinked"]
+        == {
+            "postings": 1,
+            "imported_transactions": 0,
+        }
+    )
+    assert mcp["total_debit"] == rest.json()["total_debit"] == "100.00"
+    assert cash not in {line["account_id"] for line in mcp["lines"]}
 
 
 @pytest.mark.anyio

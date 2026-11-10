@@ -65,6 +65,9 @@ line order, and is property-tested. (ADR-0025)
 
 **Basis never branches a posting path.** An issued invoice posts whether the entity declared cash
 or accrual; the cash view is derived from the stored obligation-to-settlement link. (ADR-0037)
+The derivation is `engine/cash.py`, and `service/reports.py` is the only place it is applied:
+a cash-basis entity's balance-presenting reports add its adjustments and count, on their face,
+what no link reaches. The journal total and the export stay posted figures. (ADR-0080)
 
 ## Service layer obligations
 

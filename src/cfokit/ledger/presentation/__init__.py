@@ -22,6 +22,8 @@ from datetime import date, datetime
 from decimal import ROUND_HALF_UP, Decimal
 
 from cfokit.ledger.engine.accounts import AccountType, natural_amount
+from cfokit.ledger.engine.commodity import DEFAULT_DISPLAY_SCALE, display_scale
+from cfokit.ledger.repository.cash import Unlinked
 from cfokit.ledger.repository.reports import AccountBalance
 from cfokit.ledger.service.reports import (
     AccountDetail,
@@ -56,20 +58,6 @@ __all__ = [
     "present_total",
     "present_trial_balance",
 ]
-
-DEFAULT_DISPLAY_SCALE = 2
-"""Where a commodity's own scale is not known.
-
-ADR-0025 names the registry this stands in for — "USD 2, JPY 0, some currencies 3" — and
-defaults to 2 until one exists. Two is right for the currencies CFOKit holds today and wrong
-for JPY, which is the cost that record accepted. One function, so a registry replaces it in
-one place.
-"""
-
-
-def display_scale(commodity: str) -> int:
-    """The number of decimal places `commodity`'s amounts are shown at (`LED-06`)."""
-    return DEFAULT_DISPLAY_SCALE
 
 
 def present(amount: Decimal, commodity: str) -> Decimal:
@@ -116,6 +104,8 @@ class PresentedTrialBalance:
     lines: tuple[TrialBalanceLine, ...]
     total_debit: Decimal
     total_credit: Decimal
+    # What a cash-basis report presents as posted (ADR-0080 § 3). None on an accrual basis.
+    unlinked: Unlinked | None = None
 
     @property
     def balances(self) -> bool:
@@ -157,6 +147,7 @@ def present_trial_balance(report: TrialBalance) -> PresentedTrialBalance:
         as_of=report.as_of,
         watermark=report.watermark,
         accounting_basis=report.accounting_basis,
+        unlinked=report.unlinked,
         commodity=report.functional_currency,
         lines=tuple(lines),
         total_debit=present_total(debits, report.functional_currency),
@@ -189,6 +180,8 @@ class PresentedProfitAndLoss:
     total_income: Decimal
     total_expenses: Decimal
     net_income: Decimal
+    # What a cash-basis report presents as posted (ADR-0080 § 3). None on an accrual basis.
+    unlinked: Unlinked | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -206,6 +199,8 @@ class PresentedBalanceSheet:
     total_assets: Decimal
     total_liabilities: Decimal
     total_equity: Decimal
+    # What a cash-basis report presents as posted (ADR-0080 § 3). None on an accrual basis.
+    unlinked: Unlinked | None = None
 
     @property
     def balances(self) -> bool:
@@ -245,6 +240,7 @@ def present_profit_and_loss(report: ProfitAndLoss) -> PresentedProfitAndLoss:
         as_of=report.as_of,
         watermark=report.watermark,
         accounting_basis=report.accounting_basis,
+        unlinked=report.unlinked,
         commodity=commodity,
         income=tuple(_line(row) for row in income),
         expenses=tuple(_line(row) for row in expenses),
@@ -282,6 +278,7 @@ def present_balance_sheet(report: BalanceSheet) -> PresentedBalanceSheet:
         as_of=report.as_of,
         watermark=report.watermark,
         accounting_basis=report.accounting_basis,
+        unlinked=report.unlinked,
         commodity=commodity,
         assets=tuple(_line(row) for row in assets),
         liabilities=tuple(_line(row) for row in liabilities),
@@ -325,6 +322,8 @@ class PresentedAccountDetail:
     opening_balance: Decimal
     closing_balance: Decimal
     entries: tuple[PresentedEntry, ...]
+    # What a cash-basis report presents as posted (ADR-0080 § 3). None on an accrual basis.
+    unlinked: Unlinked | None = None
 
 
 def present_account_detail(report: AccountDetail) -> PresentedAccountDetail:
@@ -345,6 +344,7 @@ def present_account_detail(report: AccountDetail) -> PresentedAccountDetail:
         as_of=report.as_of,
         watermark=report.watermark,
         accounting_basis=report.accounting_basis,
+        unlinked=report.unlinked,
         commodity=commodity,
         opening_balance=present(
             natural_amount(account_type, report.opening_balance), commodity
@@ -402,6 +402,8 @@ class PresentedComparative:
     total_income: ComparativeLine
     total_expenses: ComparativeLine
     net_income: ComparativeLine
+    # What a cash-basis report presents as posted (ADR-0080 § 3). None on an accrual basis.
+    unlinked: Unlinked | None = None
 
 
 def _totals_line(
@@ -484,6 +486,7 @@ def present_comparative_profit_and_loss(
         comparison_as_of=report.comparison.as_of,
         watermark=report.current.watermark,
         accounting_basis=report.current.accounting_basis,
+        unlinked=report.current.unlinked,
         commodity=commodity,
         income=income,
         expenses=expenses,
