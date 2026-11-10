@@ -518,7 +518,13 @@ class EntityWrite:
     # --- obligations and settlements (LED-17, ADR-0037) ----------------------------------
 
     def raise_obligation(
-        self, *, transaction_id: str, account_id: str, amount: Decimal, commodity: str
+        self,
+        *,
+        transaction_id: str,
+        account_id: str,
+        amount: Decimal,
+        commodity: str,
+        on_account: bool = False,
     ) -> str:
         return obligations.insert_obligation(
             self._conn,
@@ -527,6 +533,7 @@ class EntityWrite:
             account_id=account_id,
             amount=amount,
             commodity=commodity,
+            on_account=on_account,
         )
 
     def obligations_as_of(

@@ -18,6 +18,12 @@ report here adds the adjustments `engine.cash` derives from the stored obligatio
 links, and states on its face what no link reached (`NFR-16`). This is the one place the
 declared basis changes a figure, and no posting path reads it. The journal total is the record
 rather than a view of it, and stays posted figures on every basis (ADR-0080 § 4).
+
+**Money on account is a line of the view**, not an account in the chart, because nothing is
+posted to it (ADR-0080 § 2): "Unapplied payments" among income for money received ahead of any
+invoice, and "Unapplied bill payments" among expense for money paid ahead of any bill. Each is
+a row like an account's, with its own id and no code, so a cash-basis statement still balances
+and still lists every figure.
 """
 
 from __future__ import annotations
@@ -29,7 +35,12 @@ from datetime import date, datetime
 from decimal import Decimal
 from enum import StrEnum
 
-from cfokit.ledger.engine import Adjustment, cash_adjustments
+from cfokit.ledger.engine import (
+    UNAPPLIED_PAID,
+    UNAPPLIED_RECEIVED,
+    Adjustment,
+    cash_adjustments,
+)
 from cfokit.ledger.engine.periods import preceding_window, year_earlier_window
 from cfokit.ledger.errors import AccountNotFound
 from cfokit.ledger.repository import reports as store
@@ -58,6 +69,20 @@ __all__ = [
 
 INCOME_STATEMENT_TYPES = ("income", "expense")
 BALANCE_SHEET_TYPES = ("asset", "liability", "equity")
+
+# The cash view's own lines (ADR-0080 § 2). No code, because no chart holds them and a code is
+# what two systems agree on (`IMP-08`).
+UNAPPLIED = {
+    UNAPPLIED_RECEIVED: Account(
+        account_id=UNAPPLIED_RECEIVED, code="", name="Unapplied payments", account_type="income"
+    ),
+    UNAPPLIED_PAID: Account(
+        account_id=UNAPPLIED_PAID,
+        code="",
+        name="Unapplied bill payments",
+        account_type="expense",
+    ),
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -410,7 +435,8 @@ class _Cash:
     def read(cls, write: EntityWrite, watermark: datetime | None) -> _Cash:
         found = write.cash_links(watermark=watermark)
         adjustments = cash_adjustments(found.raised, found.settled, found.reversals)
-        return cls(adjustments, {account.account_id: account for account in write.chart()})
+        chart = {account.account_id: account for account in write.chart()}
+        return cls(adjustments, {**chart, **UNAPPLIED})
 
     def _within(self, since: date | None, as_of: date) -> Iterable[Adjustment]:
         return (
@@ -431,7 +457,8 @@ class _Cash:
         """The posted balances with the cash view's adjustments added, in the same order.
 
         An account the adjustments bring to zero is omitted, and one they give a balance is
-        listed, exactly as a posted balance would be (`RPT-01`).
+        listed, exactly as a posted balance would be (`RPT-01`). So is a line of the view's own
+        for money on account.
         """
         totals: dict[tuple[str, str], Decimal] = {
             (row.account_id, row.commodity): row.balance for row in rows
@@ -455,7 +482,11 @@ class _Cash:
             for (account_id, commodity), balance in totals.items()
             if balance != 0
         ]
-        return sorted(balances, key=lambda row: (row.code, row.commodity))
+        # The view's own lines after the chart's, which is where a reader looks for what no
+        # account holds.
+        return sorted(
+            balances, key=lambda row: (row.account_id in UNAPPLIED, row.code, row.commodity)
+        )
 
     def detail(
         self,

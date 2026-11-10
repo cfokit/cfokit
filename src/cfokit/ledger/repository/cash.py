@@ -36,7 +36,7 @@ class Links:
 # a transaction's postings everywhere else (`repository.transactions`): when written, then id.
 RAISED = """
     SELECT o.id, o.transaction_id, t.transaction_date, o.account_id, o.amount, o.commodity,
-           p.account_id, p.amount
+           o.on_account, p.account_id, p.amount
       FROM obligation o
       JOIN ledger_transaction t ON t.id = o.transaction_id
       JOIN posting p ON p.transaction_id = o.transaction_id AND p.commodity = o.commodity
@@ -83,7 +83,7 @@ def links(
         grouped: dict[str, tuple[tuple[Any, ...], list[Line]]] = {}
         for row in cur.fetchall():
             _, lines = grouped.setdefault(str(row[0]), (row, []))
-            lines.append(Line(account_id=str(row[6]), amount=Decimal(row[7])))
+            lines.append(Line(account_id=str(row[7]), amount=Decimal(row[8])))
 
         cur.execute(SETTLED, parameters)
         settled = tuple(
@@ -113,6 +113,7 @@ def links(
             amount=Decimal(row[4]),
             commodity=str(row[5]),
             lines=tuple(lines),
+            on_account=bool(row[6]),
         )
         for obligation_id, (row, lines) in grouped.items()
     )

@@ -23,6 +23,8 @@ from cfokit.ledger.errors import (
     NotAuthorized,
     ObligationNotCarried,
     ObligationNotFound,
+    OneObligationPerTransaction,
+    SettlementExceedsOutstanding,
     TransactionIncomplete,
 )
 from cfokit.ledger.repository.unit_of_work import Database
@@ -65,6 +67,7 @@ def write(
     post: bool = True,
     raises: str | None = None,
     settles: tuple[Applied, ...] = (),
+    on_account: str | None = None,
 ) -> str:
     return record_transaction(
         database,
@@ -85,6 +88,7 @@ def write(
         post=post,
         raises_obligation=Decimal(raises) if raises is not None else None,
         settles=settles,
+        on_account=Decimal(on_account) if on_account is not None else None,
     ).transaction_id
 
 
@@ -96,6 +100,23 @@ def issue(
     return outstanding_obligations(database, entity_id=entity_id, principal=PERSON)[
         0
     ].obligation_id
+
+
+def issue_later(
+    database: Database, entity_id: str, receivable: str, revenue: str, amount: str
+) -> str:
+    """An invoice issued after whatever else the test recorded, by its obligation's id."""
+    before = {
+        o.obligation_id
+        for o in outstanding_obligations(database, entity_id=entity_id, principal=PERSON)
+    }
+    write(database, entity_id, receivable, revenue, ISSUED, amount, raises=amount)
+    [found] = [
+        o.obligation_id
+        for o in outstanding_obligations(database, entity_id=entity_id, principal=PERSON)
+        if o.obligation_id not in before
+    ]
+    return found
 
 
 def test_an_invoice_is_owed_until_it_is_settled(
@@ -240,24 +261,129 @@ def test_one_payment_settles_more_than_one_invoice(
 def test_overpayment_is_representable(
     database: Database, chart: tuple[str, str, str, str]
 ) -> None:
-    """`AR-12` says so, and refusing it would make the books unable to state what happened."""
+    """`AR-12` says so, and refusing it would make the books unable to state what happened.
+
+    ADR-0080 § 2 says how: the invoice is settled for what it was owed, and the excess is money
+    on account, owed back to the customer on the same receivable, signed as its posting there.
+    """
     entity_id, cash, revenue, receivable = chart
     obligation_id = issue(database, entity_id, receivable, revenue, "100.00")
 
-    write(
+    payment = write(
         database,
         entity_id,
         cash,
         receivable,
         PAID,
         "120.00",
-        settles=(Applied(obligation_id=obligation_id, amount=Decimal("120.00")),),
+        settles=(Applied(obligation_id=obligation_id, amount=Decimal("100.00")),),
+        on_account="-20.00",
     )
 
-    detail = obligation_detail(
-        database, entity_id=entity_id, principal=PERSON, obligation_id=obligation_id
+    [credit] = outstanding_obligations(database, entity_id=entity_id, principal=PERSON)
+    assert (credit.transaction_id, credit.account_id, credit.amount, credit.on_account) == (
+        payment,
+        receivable,
+        Decimal("-20.0000000000"),
+        True,
     )
-    assert detail.obligation.outstanding == Decimal("-20.0000000000")
+
+
+def test_a_settlement_past_what_is_outstanding_is_refused(
+    database: Database, chart: tuple[str, str, str, str]
+) -> None:
+    """ADR-0080 § 2: paid past zero, the invoice would recognize more than it raised, and the
+    credit could not be applied to anything else."""
+    entity_id, cash, revenue, receivable = chart
+    obligation_id = issue(database, entity_id, receivable, revenue, "100.00")
+
+    with pytest.raises(SettlementExceedsOutstanding):
+        write(
+            database,
+            entity_id,
+            cash,
+            receivable,
+            PAID,
+            "120.00",
+            settles=(Applied(obligation_id=obligation_id, amount=Decimal("120.00")),),
+        )
+
+    [owed] = outstanding_obligations(database, entity_id=entity_id, principal=PERSON)
+    assert owed.outstanding == Decimal("100.0000000000")
+
+
+def test_a_payment_before_any_invoice_is_held_on_account_and_applied_later(
+    database: Database, chart: tuple[str, str, str, str]
+) -> None:
+    """`AR-12`: money received ahead of the invoice is the customer's until an invoice takes
+    it. Applying it settles both, and leaves nothing owed either way."""
+    entity_id, cash, revenue, receivable = chart
+    write(database, entity_id, cash, receivable, ISSUED, "50.00", on_account="-50.00")
+    [credit] = outstanding_obligations(database, entity_id=entity_id, principal=PERSON)
+    invoice = issue_later(database, entity_id, receivable, revenue, "50.00")
+
+    record_transaction(
+        database,
+        WriteContext(
+            entity_id=entity_id,
+            principal=PERSON,
+            request_id="apply",
+            idempotency_key=uuid.uuid4().hex,
+        ),
+        entry=Entry(
+            transaction_date=PAID,
+            postings=(
+                Posting(account_id=receivable, amount=Decimal("-50.00"), commodity="USD"),
+                Posting(account_id=receivable, amount=Decimal("50.00"), commodity="USD"),
+            ),
+            description="Apply credit",
+        ),
+        post=True,
+        settles=(
+            Applied(obligation_id=invoice, amount=Decimal("50.00")),
+            Applied(obligation_id=credit.obligation_id, amount=Decimal("-50.00")),
+        ),
+    )
+
+    assert outstanding_obligations(database, entity_id=entity_id, principal=PERSON) == ()
+
+
+def test_money_on_account_needs_an_account_carrying_it(
+    database: Database, chart: tuple[str, str, str, str]
+) -> None:
+    """Paid exactly, nothing is left on the receivable to hold, and nothing is guessed."""
+    entity_id, cash, revenue, receivable = chart
+    obligation_id = issue(database, entity_id, receivable, revenue, "100.00")
+
+    with pytest.raises(ObligationNotCarried):
+        write(
+            database,
+            entity_id,
+            cash,
+            receivable,
+            PAID,
+            "100.00",
+            settles=(Applied(obligation_id=obligation_id, amount=Decimal("100.00")),),
+            on_account="-100.00",
+        )
+
+
+def test_an_invoice_is_not_also_money_on_account(
+    database: Database, chart: tuple[str, str, str, str]
+) -> None:
+    entity_id, _, revenue, receivable = chart
+
+    with pytest.raises(OneObligationPerTransaction):
+        write(
+            database,
+            entity_id,
+            receivable,
+            revenue,
+            ISSUED,
+            "100.00",
+            raises="100.00",
+            on_account="100.00",
+        )
 
 
 def test_it_is_recoverable_as_either_event(

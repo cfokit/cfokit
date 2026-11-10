@@ -65,3 +65,33 @@ def test_no_account_carrying_the_figure_names_none() -> None:
 
     assert carrying_account(invoice, Decimal("90.00"), "USD") is None
     assert carrying_account(invoice, Decimal("100.00"), "EUR") is None
+
+
+BANK = "1000"
+
+
+def test_an_overpayment_s_excess_is_carried_by_what_is_left_on_the_receivable() -> None:
+    """ADR-0080 § 2: 1,200.00 received against a 1,000.00 invoice settles it and leaves the
+    customer a 200.00 credit, a credit on the receivable."""
+    payment = entry((BANK, "1200.00"), (RECEIVABLE, "-1200.00"))
+
+    assert (
+        carrying_account(payment, Decimal("-200.00"), "USD", {RECEIVABLE: Decimal("1000.00")})
+        == RECEIVABLE
+    )
+
+
+def test_a_payment_before_any_invoice_is_carried_by_its_whole_credit() -> None:
+    payment = entry((BANK, "500.00"), (RECEIVABLE, "-500.00"))
+
+    assert carrying_account(payment, Decimal("-500.00"), "USD") == RECEIVABLE
+
+
+def test_what_a_settlement_accounts_for_is_not_carried_again() -> None:
+    """Paid exactly, nothing is left on the receivable to carry money on account."""
+    payment = entry((BANK, "1000.00"), (RECEIVABLE, "-1000.00"))
+
+    assert (
+        carrying_account(payment, Decimal("-1000.00"), "USD", {RECEIVABLE: Decimal("1000.00")})
+        is None
+    )

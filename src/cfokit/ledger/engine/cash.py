@@ -18,6 +18,10 @@ adjustments for a transaction sums to zero.
 * **A settlement** puts back, on the settling transaction's date, the share of the raising
   transaction's other lines that the amount settled stands for, and takes out the settling
   transaction's own posting on the carrying account to the amount settled (§ 1).
+* **Money on account** is recognized when it moves, on a line of the view's own rather than an
+  account in the chart (§ 2): money received on `UNAPPLIED_RECEIVED`, money paid on
+  `UNAPPLIED_PAID`. Its settlements are the same rule as any other, applying it to an invoice or
+  refunding it, and what each takes off that line is what it recognizes elsewhere.
 * **A reversal** of either reads as the negation of what it reverses, on its own date (§ 2): a
   voided invoice is deferred with its original, and a payment that bounces takes back what it
   recognized.
@@ -41,7 +45,22 @@ from decimal import Decimal
 from cfokit.ledger.engine.allocation import allocate
 from cfokit.ledger.engine.commodity import display_scale
 
-__all__ = ["Adjustment", "Line", "Raised", "Reversal", "Settled", "cash_adjustments"]
+__all__ = [
+    "UNAPPLIED_PAID",
+    "UNAPPLIED_RECEIVED",
+    "Adjustment",
+    "Line",
+    "Raised",
+    "Reversal",
+    "Settled",
+    "cash_adjustments",
+]
+
+# The view's own lines for money on account, which nothing is posted to (ADR-0080 § 2). Not
+# account ids, so a chart can never hold one: money received that no invoice takes is income
+# when it arrives, and money paid that no bill takes is expense when it leaves.
+UNAPPLIED_RECEIVED = "unapplied-payments"
+UNAPPLIED_PAID = "unapplied-bill-payments"
 
 
 @dataclass(frozen=True, slots=True)
@@ -58,6 +77,11 @@ class Raised:
 
     `amount` is signed as its posting on `account_id`, the account that carries it: a
     receivable positive, a payable negative.
+
+    `on_account` marks money already moved that no obligation took (ADR-0080 § 2): a customer's
+    credit, negative on a receivable, or a deposit with a vendor, positive on a payable. Its
+    raising transaction is the payment, and only the part of it on the carrying account to the
+    obligation's amount reads differently, so its `lines` are not read.
     """
 
     obligation_id: str
@@ -67,6 +91,7 @@ class Raised:
     amount: Decimal
     commodity: str
     lines: tuple[Line, ...]
+    on_account: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -133,17 +158,32 @@ def cash_adjustments(
         own.setdefault(transaction_id, defaultdict(Decimal))[(account_id, commodity)] += amount
 
     for obligation in raised:
-        # Deferred whole: the carrying posting is never presented, and the other lines wait.
-        for line in obligation.lines:
-            add(
-                obligation.transaction_id,
-                obligation.transaction_date,
-                line.account_id,
-                obligation.commodity,
-                -line.amount,
-            )
-
-        others = [line for line in obligation.lines if line.account_id != obligation.account_id]
+        if obligation.on_account:
+            # Recognized on receipt, in place of the carrying posting it stands for. What it
+            # recognizes is one line, which its settlements take back as they apply it.
+            others = [Line(account_id=_unapplied(obligation.amount), amount=-obligation.amount)]
+            for line in (Line(obligation.account_id, obligation.amount), *others):
+                add(
+                    obligation.transaction_id,
+                    obligation.transaction_date,
+                    line.account_id,
+                    obligation.commodity,
+                    -line.amount,
+                )
+        else:
+            # Deferred whole: the carrying posting is never presented, and the other lines
+            # wait.
+            for line in obligation.lines:
+                add(
+                    obligation.transaction_id,
+                    obligation.transaction_date,
+                    line.account_id,
+                    obligation.commodity,
+                    -line.amount,
+                )
+            others = [
+                line for line in obligation.lines if line.account_id != obligation.account_id
+            ]
         # The other lines sum to minus the obligation in a balanced transaction. Lines that sum
         # to nothing give no proportion to recognize by, and nothing is guessed (`NFR-16`).
         if sum((line.amount for line in others), start=Decimal(0)) == 0:
@@ -198,6 +238,12 @@ def cash_adjustments(
         for (account_id, commodity), amount in amounts.items()
         if amount != 0
     ]
+
+
+def _unapplied(amount: Decimal) -> str:
+    """The view's line for money on account. A credit on the carrying account is money the
+    counterparty paid in, and a debit is money paid out to them."""
+    return UNAPPLIED_RECEIVED if amount < 0 else UNAPPLIED_PAID
 
 
 def _shares(settled: Decimal, others: Sequence[Line], scale: int) -> list[Decimal]:

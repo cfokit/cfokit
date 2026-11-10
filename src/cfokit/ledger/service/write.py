@@ -39,7 +39,9 @@ from cfokit.ledger.errors import (
     IdempotencyKeyRequired,
     ObligationNotCarried,
     ObligationNotFound,
+    OneObligationPerTransaction,
     PeriodClosed,
+    SettlementExceedsOutstanding,
     TransactionAlreadyPosted,
     TransactionIncomplete,
     TransactionNotFound,
@@ -142,6 +144,21 @@ def _require_open(write: EntityWrite, when: date) -> None:
         raise PeriodClosed(f"period {period_of(when)} is closed; reopen it to post into it")
 
 
+def _require_within(amount: Decimal, outstanding: Decimal, applied: Applied) -> None:
+    """Refuse a settlement that would carry an obligation past zero (`AR-12`, ADR-0080 § 2).
+
+    Outstanding stays on the obligation's side of zero or reaches it. A settlement signed
+    against its obligation, which takes it further from zero, is not refused here: that is not
+    an overpayment, and nothing about it is new.
+    """
+    after = outstanding - applied.amount
+    if after != 0 and (after > 0) != (amount > 0):
+        raise SettlementExceedsOutstanding(
+            f"the settlement of obligation {applied.obligation_id} is more than is outstanding "
+            "on it; settle what is outstanding and record the rest as money on account"
+        )
+
+
 def record_transaction(
     database: Database,
     context: WriteContext,
@@ -151,6 +168,7 @@ def record_transaction(
     entry_kind: str = "ordinary",
     raises_obligation: Decimal | None = None,
     settles: tuple[Applied, ...] = (),
+    on_account: Decimal | None = None,
     derived_from: dict[str, Any] | None = None,
     assigned: tuple[Assigned, ...] = (),
 ) -> WrittenTransaction:
@@ -167,6 +185,7 @@ def record_transaction(
             entry_kind=entry_kind,
             raises_obligation=raises_obligation,
             settles=settles,
+            on_account=on_account,
             derived_from=derived_from,
             assigned=assigned,
         )
@@ -181,6 +200,7 @@ def record_in(
     entry_kind: str = "ordinary",
     raises_obligation: Decimal | None = None,
     settles: tuple[Applied, ...] = (),
+    on_account: Decimal | None = None,
     derived_from: dict[str, Any] | None = None,
     assigned: tuple[Assigned, ...] = (),
     by_rule: bool = False,
@@ -220,6 +240,18 @@ def record_in(
     be inferred from an obligation that does not say. Read from the entry rather than stated
     beside it, so the two cannot disagree; refused as `obligation_not_carried` when no account,
     or more than one, carries the figure.
+
+    **A settlement applies no more than is outstanding** (`AR-12`), refused as
+    `settlement_exceeds_outstanding`. Overpayment is representable as **`on_account`**: money
+    received or paid that no obligation takes, signed as its posting on the account that
+    carries it, recorded as an obligation owed back and marked so (ADR-0080 § 2). A payment of
+    1,200.00 against an invoice of 1,000.00 settles 1,000.00 and puts -200.00 on account, which
+    a later invoice or a refund settles. The carrying account is read from the entry as an
+    obligation's is, from what is left on each account once what this transaction settles is
+    taken out. The mark is stated rather than inferred from the account the money lands on,
+    because a journal entry to receivables would read as a payment (ADR-0037 § 3). It is an
+    obligation, so it is refused beside `raises_obligation` as
+    `one_obligation_per_transaction`.
 
     **`assigned` records that a rule chose a coding, and which rule version** (`BKP-10`).
     ADR-0042 § 4 reserved this: "`RULE` arrives when the rules engine does — as a value the
@@ -279,10 +311,15 @@ def record_in(
 
     authorize(write, Capability.POST if post else Capability.RECORD, context.principal)
 
-    if (raises_obligation is not None or settles) and not post:
+    if (raises_obligation is not None or settles or on_account is not None) and not post:
         raise TransactionIncomplete(
             "an obligation or a settlement needs the transaction posted; a draft is not "
             "in the books"
+        )
+    if raises_obligation is not None and on_account is not None:
+        raise OneObligationPerTransaction(
+            "money on account is an obligation, and a transaction raises at most one; record "
+            "the invoice and the money received as two transactions"
         )
     carried_by = None
     if raises_obligation is not None:
@@ -292,6 +329,33 @@ def record_in(
                 "an obligation is carried by the one account whose postings in this "
                 "transaction sum to its amount, signed as a posting; none, or more than one, "
                 "does"
+            )
+
+    # What each settlement applies against, read once and checked before anything is written.
+    settling: list[tuple[Applied, str]] = []
+    for applied in settles:
+        found = write.outstanding(obligation_id=applied.obligation_id)
+        if not found:
+            raise ObligationNotFound(f"no obligation {applied.obligation_id} in this entity")
+        owed = found[0]
+        _require_within(owed.amount, owed.outstanding, applied)
+        settling.append((applied, owed.account_id))
+
+    held_by = None
+    if on_account is not None:
+        offsets: dict[str, Decimal] = {}
+        for applied, account_id in settling:
+            offsets[account_id] = offsets.get(account_id, Decimal(0)) + applied.amount
+        held_by = (
+            carrying_account(entry, on_account, write.functional_currency, offsets)
+            if on_account != 0
+            else None
+        )
+        if held_by is None:
+            raise ObligationNotCarried(
+                "money on account is carried by the one account whose postings in this "
+                "transaction, less what it settles there, sum to its amount; none, or more "
+                "than one, does"
             )
 
     if post:
@@ -332,9 +396,15 @@ def record_in(
             amount=raises_obligation,
             commodity=write.functional_currency,
         )
-    for applied in settles:
-        if write.outstanding(obligation_id=applied.obligation_id) == []:
-            raise ObligationNotFound(f"no obligation {applied.obligation_id} in this entity")
+    if on_account is not None and held_by is not None:  # both, or neither
+        write.raise_obligation(
+            transaction_id=transaction_id,
+            account_id=held_by,
+            amount=on_account,
+            commodity=write.functional_currency,
+            on_account=True,
+        )
+    for applied, _ in settling:
         write.apply_settlement(
             obligation_id=applied.obligation_id,
             transaction_id=transaction_id,

@@ -40,11 +40,13 @@ from cfokit.ledger.errors import (
     NotificationNotFound,
     ObligationNotCarried,
     ObligationNotFound,
+    OneObligationPerTransaction,
     OpeningBalanceAccountUnset,
     PeriodClosed,
     PeriodNotClosed,
     RetainedEarningsUnset,
     RoleAlreadyHeld,
+    SettlementExceedsOutstanding,
     TransactionAlreadyPosted,
     TransactionIncomplete,
     TransactionNotFound,
@@ -94,6 +96,10 @@ STATUS_FOR_CODE: dict[str, int] = {
     CommodityNotPermitted.code: HTTPStatus.UNPROCESSABLE_ENTITY,
     TransactionIncomplete.code: HTTPStatus.UNPROCESSABLE_ENTITY,
     ObligationNotCarried.code: HTTPStatus.UNPROCESSABLE_ENTITY,
+    OneObligationPerTransaction.code: HTTPStatus.UNPROCESSABLE_ENTITY,
+    # 422: the obligation exists and the caller may settle it; what is wrong is the amount
+    # the body states, and the remedy is to put the excess on account.
+    SettlementExceedsOutstanding.code: HTTPStatus.UNPROCESSABLE_ENTITY,
     AllocationInvalid.code: HTTPStatus.UNPROCESSABLE_ENTITY,
 }
 

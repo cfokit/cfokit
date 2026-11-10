@@ -156,6 +156,20 @@ it to an invoice, the cash view recognizes the invoice's share and takes the sam
 unapplied payments, so the income is counted once. A refund settles it and takes it off unapplied
 payments too, as the cash leaves.
 
+**The payment states the excess; the ledger does not work it out.** A settlement applies no more
+than is outstanding on its obligation, and one that would carry it past zero is refused: paid past
+zero, an invoice would recognize more than it raised, and the credit could never be applied to
+anything else. The caller records the excess as money on account, signed as its posting on the
+account that carries it, which is read from the entry as an obligation's is: the one account whose
+postings, less what the transaction settles there, sum to it. A payment is the place that knows
+how much of it was meant for which invoice (`AR-12`), so it is the place that says what was left.
+
+**Money paid to a vendor ahead of any bill is the mirror**: an obligation owed back by the vendor,
+positive on the payable, recognized as expense when it leaves, on a line of its own among expense,
+"Unapplied bill payments", as QuickBooks reports "Unapplied Cash Bill Payment Expense". Which line a
+credit takes is read from its sign, because a credit on the carrying account is money paid in and a
+debit is money paid out.
+
 **A refundable deposit is recorded to a liability account, as QuickBooks records a retainer or
 deposit**, not as a payment on account. It is then a posting no link reaches, presented as posted on
 both bases (§ 3): held, not income, which is right while the customer can reclaim it. Applied to an
@@ -363,8 +377,10 @@ The strictest reading of `NFR-16`: where the books cannot support the answer, gi
 * `allocate` across weights of both signs.
 * `AR-14` and `AR-18` record a settlement of the obligation they correct.
 * The write path records a payment's unapplied excess as an obligation owed to the customer. That
-  is a change to the write path, which needs a person's review.
-* The cash view's "Unapplied payments" line.
+  is a change to the write path, which needs a person's review. Built over REST, with the cash
+  view's "Unapplied payments" and "Unapplied bill payments" lines; the MCP tool and the
+  bookkeeper skill learn it in a release of their own, because a change to the skill's tools is
+  one.
 * The ledger's receivables service names a cash entity's own statements as `AR-16`'s, not
   `RPT-19`'s.
 * ADR-0079 notes that a cash-basis company's imported history is presented as posted.

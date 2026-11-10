@@ -691,6 +691,7 @@
         "description": "One account across two periods, and what changed (RPT-07).",
         "properties": {
           "account_id": {
+            "description": "The account, or on a cash basis one of the view's own lines for money on account, which no chart holds and which have no code: unapplied-payments, income received ahead of any invoice, and unapplied-bill-payments, expense paid ahead of any bill (ADR-0080 § 2).",
             "title": "Account Id",
             "type": "string"
           },
@@ -1795,6 +1796,12 @@
             "title": "Obligation Id",
             "type": "string"
           },
+          "on_account": {
+            "default": false,
+            "description": "Money already received or paid that no obligation took, held for the counterparty: a customer's credit is negative on a receivable (ADR-0080 § 2).",
+            "title": "On Account",
+            "type": "boolean"
+          },
           "outstanding": {
             "description": "Derived, never stored: the amount less what has been applied.",
             "title": "Outstanding",
@@ -2533,6 +2540,22 @@
             ],
             "title": "Description"
           },
+          "on_account": {
+            "anyOf": [
+              {
+                "examples": [
+                  "100.00",
+                  "-1250.5000000000"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Money received or paid that no obligation takes: an overpayment's excess, or a payment before any invoice (AR-12, ADR-0080 § 2). Recorded as an obligation owed back, which a later invoice or a refund settles. Signed as its posting on the account that carries it, which must be the only account whose postings here, less what this transaction settles there, sum to it: negative for a customer's credit on a receivable. Requires post, and not beside raises_obligation.",
+            "title": "On Account"
+          },
           "post": {
             "default": false,
             "description": "Post immediately. A draft is freely editable; posting is the point of no return.",
@@ -2564,7 +2587,7 @@
             "title": "Raises Obligation"
           },
           "settles": {
-            "description": "Obligations this transaction settles, and by how much (AR-12). Partial payment and overpayment are both representable. Requires post.",
+            "description": "Obligations this transaction settles, and by how much (AR-12). Partial payment is representable; a settlement past what is outstanding is refused, and an overpayment's excess goes in on_account. Requires post.",
             "items": {
               "$ref": "#/components/schemas/AppliedModel"
             },
@@ -3019,6 +3042,7 @@
         "description": "One line of a statement, signed so positive means more of what the account is.",
         "properties": {
           "account_id": {
+            "description": "The account, or on a cash basis one of the view's own lines for money on account, which no chart holds and which have no code: unapplied-payments, income received ahead of any invoice, and unapplied-bill-payments, expense paid ahead of any bill (ADR-0080 § 2).",
             "title": "Account Id",
             "type": "string"
           },
@@ -3276,6 +3300,7 @@
         "description": "One line of a trial balance. Exactly one of debit or credit carries a figure.",
         "properties": {
           "account_id": {
+            "description": "The account, or on a cash basis one of the view's own lines for money on account, which no chart holds and which have no code: unapplied-payments, income received ahead of any invoice, and unapplied-bill-payments, expense paid ahead of any bill (ADR-0080 § 2).",
             "title": "Account Id",
             "type": "string"
           },

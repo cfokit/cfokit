@@ -136,6 +136,10 @@
     "error": "ObligationNotFound"
   },
   {
+    "code": "one_obligation_per_transaction",
+    "error": "OneObligationPerTransaction"
+  },
+  {
     "code": "opening_balance_account_unset",
     "error": "OpeningBalanceAccountUnset"
   },
@@ -170,6 +174,10 @@
   {
     "code": "rule_not_found",
     "error": "RuleNotFound"
+  },
+  {
+    "code": "settlement_exceeds_outstanding",
+    "error": "SettlementExceedsOutstanding"
   },
   {
     "code": "statement_does_not_balance",
