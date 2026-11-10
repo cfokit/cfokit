@@ -44,7 +44,7 @@ RUN corepack pnpm build
 # The issuer's sign-in theme (ADR-0054 § 1), built by Keycloakify from the same project into a
 # JAR. That needs Maven and a JDK beside Node, taken from the Maven image into the client's stage.
 # The `identity` target below puts the JAR into Keycloak's image.
-FROM maven:3.9.16-eclipse-temurin-21@sha256:99e61abcff91a9b1333463bd8451fb18495d6eba9250ac66a338b518f8278320 AS maven
+FROM maven:3.9.16-eclipse-temurin-25@sha256:93b8a14ea2f412782e4e842651273b4d903e35cc496284f178fbbe2d67d00976 AS maven
 
 FROM web AS sign-in-theme
 COPY --from=maven /opt/java/openjdk /opt/java/openjdk
@@ -72,7 +72,7 @@ RUN --mount=type=cache,target=/root/.m2 \
 # and checksum, kept to those of 12 to 128 characters: 12 is the shortest minimum a deployment may
 # set (CFOKIT_PASSWORD_MIN_LENGTH), and anything shorter is refused before the list is read. The
 # download stays in this stage; the identity image carries the 9.5 MB result and its license.
-FROM python:3.14.7-slim@sha256:51dafde81dbdb6ebde285137a295cf18a47ca95234fe388a343719cb97305b3d AS breached-passwords
+FROM python:3.15.0-slim@sha256:f5b92f2a669a4c347044f29367f31983280b648250ca94dea66f98c53bc87e58 AS breached-passwords
 ADD --checksum=sha256:18dc49ca32b62455a61e3398f4ab9f93eb700ff142fa0d4b9fd11a727f3b80e4 \
     https://raw.githubusercontent.com/danielmiessler/SecLists/12274c98fdebe98c7a7284914436a472ed469aed/Passwords/Common-Credentials/Pwdb_top-10000000.txt \
     /tmp/passwords.txt
@@ -95,9 +95,9 @@ COPY infra/keycloak/cfokit-realm.json /opt/keycloak/data/import/cfokit-realm.jso
 COPY infra/keycloak/realm-settings.sh /opt/cfokit/realm-settings.sh
 
 # ---------------------------------------------------------------------------
-FROM python:3.14.7-slim@sha256:51dafde81dbdb6ebde285137a295cf18a47ca95234fe388a343719cb97305b3d AS builder
+FROM python:3.15.0-slim@sha256:f5b92f2a669a4c347044f29367f31983280b648250ca94dea66f98c53bc87e58 AS builder
 
-COPY --from=ghcr.io/astral-sh/uv:0.11.33@sha256:77280f2f771df71f90786c314fe1bbc1e023feac652969bbf139c280babf2eb7 /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.13.6@sha256:af22a52f5eafef3d78e551599d405c02df61919d18028f0cea8eda93bc9986d0 /uv /usr/local/bin/uv
 
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
@@ -147,7 +147,7 @@ COPY scripts/synthetic_books/ ./scripts/synthetic_books/
 CMD ["uv", "run", "--no-sync", "pytest", "tests/integration"]
 
 # ---------------------------------------------------------------------------
-FROM python:3.14.7-slim@sha256:51dafde81dbdb6ebde285137a295cf18a47ca95234fe388a343719cb97305b3d AS runtime
+FROM python:3.15.0-slim@sha256:f5b92f2a669a4c347044f29367f31983280b648250ca94dea66f98c53bc87e58 AS runtime
 
 RUN groupadd --system cfokit && useradd --system --gid cfokit --create-home cfokit
 

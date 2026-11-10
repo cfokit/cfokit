@@ -1,7 +1,7 @@
 #!/bin/bash
 # Prepares a Claude Code cloud session to run the gates CI runs (CLAUDE.md § CI gates).
 #
-# Host: uv at the version CI pins, which fetches Python 3.14 into its own cache, then
+# Host: uv at the version CI pins, which fetches Python 3.15 into its own cache, then
 # `uv sync --locked`. That covers lint, money, decisions, contracts and the unit tests.
 # Node: the version web/.nvmrc pins, and the web client's dependencies through pnpm, so the
 # web client's lint, tests and build run as its CI job runs them (ADR-0054).
@@ -18,7 +18,7 @@ fi
 cd "${CLAUDE_PROJECT_DIR:-$(dirname "$0")/../..}"
 
 # Keep in step with UV_VERSION in .github/workflows/ci.yml.
-UV_VERSION="0.11.33"
+UV_VERSION="0.13.6"
 # From the GitHub release, which is what the installer fetches too; `uv self update` resolves
 # versions through a host this environment's network policy does not allow.
 if [ "$(uv --version 2>/dev/null | awk '{print $2}')" != "$UV_VERSION" ]; then
@@ -28,7 +28,7 @@ if [ "$(uv --version 2>/dev/null | awk '{print $2}')" != "$UV_VERSION" ]; then
   hash -r
 fi
 
-uv python install --quiet 3.14
+uv python install --quiet 3.15
 uv sync --locked --quiet
 
 # Node's own CA store does not include the session proxy's, so corepack and pnpm need it named.
@@ -51,7 +51,7 @@ export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 (cd web && corepack pnpm install --frozen-lockfile --silent)
 
 if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
-  echo 'export UV_PYTHON=3.14' >> "$CLAUDE_ENV_FILE"
+  echo 'export UV_PYTHON=3.15' >> "$CLAUDE_ENV_FILE"
   echo 'export COREPACK_ENABLE_DOWNLOAD_PROMPT=0' >> "$CLAUDE_ENV_FILE"
   if [ -d "$HOME/.local/node/bin" ]; then
     echo "export PATH=\"$HOME/.local/node/bin:\$PATH\"" >> "$CLAUDE_ENV_FILE"
