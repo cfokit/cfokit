@@ -311,6 +311,12 @@ description = "The vendor credit taken inside a bill payment."
 check = { kind = "stated", account = "Cost of Services:Contractors", report = "profit_and_loss", archive = "cash" }
 
 [[case]]
+id = "d-cash-vendor-credit-before-bill"
+category = "data"
+description = "A contractor's credit dated a month before the bill a later bill payment takes it against."
+check = { kind = "stated", account = "Cost of Services:Contractors", report = "profit_and_loss", archive = "cash" }
+
+[[case]]
 id = "d-cash-year-boundary"
 category = "data"
 description = "A June retainer paid in July: income falls in different fiscal years on the two bases."

@@ -1249,6 +1249,18 @@ class Business:
             )
         )
 
+        # Northwind credits a canceled storyboard before it bills November's work; the credit is
+        # taken in December, against the first of those bills.
+        self.add(
+            VendorCredit(
+                on=date(2024, 10, 28),
+                key="vcredit-northwind-2024-10-28",
+                vendor="northwind-v",
+                lines=(Line("contractors", money(30000), "Credit — canceled storyboard"),),
+                cases=("d-cash-vendor-credit-before-bill",),
+            )
+        )
+
         # Northwind credits a reshoot; the credit rides the next bill payment.
         self.add(
             VendorCredit(
@@ -1431,8 +1443,20 @@ class Business:
                 )
 
     def _northwind_payments(self) -> None:
-        """Northwind is paid on the 10th for every bill open at the end of the month before."""
-        credit_taken = False
+        """Northwind is paid on the 10th for every bill open at the end of the month before,
+        less any of its credits that month's payment takes."""
+        taking = {  # the month of the payment that takes each credit
+            date(2024, 12, 1): (
+                "vcredit-northwind-2024-10-28",
+                30000,
+                ("d-cash-vendor-credit-before-bill",),
+            ),
+            date(2025, 3, 1): (
+                "vcredit-northwind-2025-02-18",
+                45000,
+                ("d-vendor-credit", "d-cash-vendor-credit"),
+            ),
+        }
         for first in months()[1:]:
             on = first.replace(day=10)
             due = [(k, c) for d, k, c in self._northwind_bills if d < first]
@@ -1441,10 +1465,9 @@ class Business:
                 continue
             taken: tuple[Applied, ...] = ()
             cases: tuple[str, ...] = ()
-            if not credit_taken and first == date(2025, 3, 1):
-                taken = (Applied("vcredit-northwind-2025-02-18", money(45000)),)
-                cases = ("d-vendor-credit", "d-cash-vendor-credit")
-                credit_taken = True
+            if first in taking:
+                credit, cents, cases = taking[first]
+                taken = (Applied(credit, money(cents)),)
             if first == date(2023, 11, 1):
                 cases = ("d-bill-payment-multi",)
             self.add(
