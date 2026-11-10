@@ -208,6 +208,7 @@ def _obligation(found: Obligation) -> dict[str, Any]:
         "settled": str(found.settled),
         "outstanding": str(found.outstanding),
         "commodity": found.commodity,
+        "on_account": found.on_account,
     }
 
 
@@ -660,7 +661,11 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
             "idempotency key; replaying one books nothing further. Pass raises_obligation to "
             "record it as an invoice or anything else owed — signed as its posting on the one "
             "account that carries it, positive for a receivable — and settles to apply it "
-            "against obligations; both need post."
+            "against obligations; both need post. A settlement may not take an obligation "
+            "past what is outstanding: money received or paid beyond that is passed as "
+            "on_account, signed as its posting on the account that carries it (negative for "
+            "a customer's credit on a receivable), and is held as an obligation owed back "
+            "until a later invoice, bill or refund settles it; it needs post too."
         ),
     )
     def record(
@@ -672,6 +677,7 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
         post: bool = False,
         raises_obligation: str | None = None,
         settles: list[AppliedArgument] | None = None,
+        on_account: str | None = None,
     ) -> dict[str, Any]:
         def work() -> dict[str, Any]:
             entry = Entry(
@@ -694,6 +700,7 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
                     )
                     for applied in settles or ()
                 ),
+                on_account=_to_decimal(on_account) if on_account is not None else None,
             )
             return {
                 "ok": True,

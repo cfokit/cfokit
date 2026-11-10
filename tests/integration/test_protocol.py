@@ -734,6 +734,106 @@ async def test_both_surfaces_state_what_a_cash_basis_report_presents_as_posted(
 
 
 @pytest.mark.anyio
+async def test_mcp_records_an_overpayments_excess_on_account(
+    authenticated_caller: None, settings: Settings, database: Database
+) -> None:
+    """ADR-0080 § 2 over MCP: the excess is stated as `on_account`, never settled past zero.
+
+    A 1,000.00 invoice paid with 1,200.00 settles the invoice for 1,000.00 and holds the other
+    200.00 as an obligation owed back to the customer, negative on the receivable that carries
+    it. Settling the invoice for the whole 1,200.00 is refused with the same code as REST.
+    """
+    entity_id = create_entity(
+        database,
+        principal=PERSON,
+        request_id="fixture",
+        slug=f"overpaid-{uuid.uuid4().hex[:12]}",
+        name="Studio",
+        accounting_basis="accrual",
+        fiscal_year_end_month=12,
+        fiscal_year_end_day=31,
+        functional_currency="USD",
+        time_zone="UTC",
+    ).entity_id
+    cash, receivable, revenue = (
+        create_account(
+            database,
+            entity_id=entity_id,
+            principal=PERSON,
+            request_id="fixture",
+            code=code,
+            name=name,
+            account_type=account_type,
+        )
+        for code, name, account_type in (
+            ("1000", "Cash", "asset"),
+            ("1200", "Accounts receivable", "asset"),
+            ("4000", "Revenue", "income"),
+        )
+    )
+    server = create_server(settings, authenticator=StubAuthenticator())
+
+    async def record(**arguments: Any) -> dict[str, Any]:
+        result = await server.call_tool(
+            "record_transaction",
+            {
+                "entity_id": entity_id,
+                "idempotency_key": uuid.uuid4().hex,
+                "post": True,
+                **arguments,
+            },
+        )
+        assert isinstance(result, CallToolResult)
+        answered: dict[str, Any] | None = result.structured_content
+        assert answered is not None
+        return answered
+
+    invoiced = await record(
+        transaction_date="2026-09-01",
+        postings=[
+            {"account_id": receivable, "amount": "1000.00", "commodity": "USD"},
+            {"account_id": revenue, "amount": "-1000.00", "commodity": "USD"},
+        ],
+        raises_obligation="1000.00",
+    )
+    assert invoiced["ok"] is True
+    owed = await server.call_tool("outstanding_obligations", {"entity_id": entity_id})
+    assert isinstance(owed, CallToolResult)
+    assert owed.structured_content is not None
+    [invoice] = owed.structured_content["obligations"]
+    assert invoice["on_account"] is False
+
+    payment = [
+        {"account_id": cash, "amount": "1200.00", "commodity": "USD"},
+        {"account_id": receivable, "amount": "-1200.00", "commodity": "USD"},
+    ]
+    past_zero = await record(
+        transaction_date="2026-09-20",
+        postings=payment,
+        settles=[{"obligation_id": invoice["obligation_id"], "amount": "1200.00"}],
+    )
+    assert past_zero["ok"] is False
+    assert past_zero["code"] == "settlement_exceeds_outstanding"
+
+    paid = await record(
+        transaction_date="2026-09-20",
+        postings=payment,
+        settles=[{"obligation_id": invoice["obligation_id"], "amount": "1000.00"}],
+        on_account="-200.00",
+    )
+    assert paid["ok"] is True
+
+    left = await server.call_tool("outstanding_obligations", {"entity_id": entity_id})
+    assert isinstance(left, CallToolResult)
+    assert left.structured_content is not None
+    [credit] = left.structured_content["obligations"]
+    assert credit["on_account"] is True
+    assert credit["account_id"] == receivable
+    assert credit["transaction_id"] == paid["transaction_id"]
+    assert Decimal(credit["outstanding"]) == Decimal("-200.00")
+
+
+@pytest.mark.anyio
 async def test_a_report_refuses_a_malformed_date_with_a_code(
     authenticated_caller: None, settings: Settings, books: tuple[str, str, str]
 ) -> None:
