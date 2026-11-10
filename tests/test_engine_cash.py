@@ -18,6 +18,8 @@ from hypothesis import given
 from hypothesis import strategies as st
 
 from cfokit.ledger.engine import (
+    UNAPPLIED_PAID,
+    UNAPPLIED_RECEIVED,
     Adjustment,
     Line,
     Raised,
@@ -62,6 +64,27 @@ def paid(
         transaction_id=transaction_id,
         transaction_date=when,
         amount=Decimal(amount),
+    )
+
+
+def on_account(
+    transaction_id: str,
+    amount: str,
+    when: date = PAID,
+    account: str = RECEIVABLE,
+    obligation: str = "credit",
+) -> Raised:
+    """Money on account, raised by the payment that brought it in (§ 2). Its lines are the
+    payment's, which the view does not read."""
+    return Raised(
+        obligation_id=obligation,
+        transaction_id=transaction_id,
+        transaction_date=when,
+        account_id=account,
+        amount=Decimal(amount),
+        commodity="USD",
+        lines=(),
+        on_account=True,
     )
 
 
@@ -207,6 +230,87 @@ def test_a_settlement_of_an_obligation_not_given_changes_nothing() -> None:
     assert cash_adjustments([], [paid("pay", "100.00")], []) == []
 
 
+def test_an_overpayment_recognizes_the_invoice_and_its_excess_on_receipt() -> None:
+    """§ 2: 1,200.00 paid on the 1,000.00 invoice settles it and leaves 200.00 on account,
+    which is income when it arrives, on a line of its own."""
+    raised = invoice("1000.00", (DESIGN, "600.00"), (WORKSHOPS, "400.00"))
+    credit = on_account("pay", "-200.00")
+
+    adjustments = by_transaction(
+        cash_adjustments([raised, credit], [paid("pay", "1000.00")], [])
+    )
+
+    assert adjustments["pay"] == {
+        RECEIVABLE: Decimal("1200.00"),
+        DESIGN: Decimal("-600.00"),
+        WORKSHOPS: Decimal("-400.00"),
+        UNAPPLIED_RECEIVED: Decimal("-200.00"),
+    }
+
+
+def test_money_applied_to_a_later_invoice_moves_off_unapplied_payments() -> None:
+    """§ 2: applied to an invoice, the credit recognizes the invoice's share and takes the same
+    amount off unapplied payments, so the income is counted once."""
+    credit = on_account("pay", "-500.00", when=ISSUED)
+    later = invoice("300.00", (DESIGN, "300.00"), obligation="inv2")
+    applied = [
+        paid("apply", "300.00", obligation="inv2"),
+        paid("apply", "-300.00", obligation="credit"),
+    ]
+
+    adjustments = by_transaction(cash_adjustments([credit, later], applied, []))
+
+    assert adjustments["pay"] == {
+        RECEIVABLE: Decimal("500.00"),
+        UNAPPLIED_RECEIVED: Decimal("-500.00"),
+    }
+    assert adjustments["apply"] == {
+        DESIGN: Decimal("-300.00"),
+        UNAPPLIED_RECEIVED: Decimal("300.00"),
+    }
+
+
+def test_a_refund_takes_the_credit_off_unapplied_payments_as_the_cash_leaves() -> None:
+    credit = on_account("pay", "-200.00")
+    refund = paid("refund", "-200.00", when=LATER, obligation="credit")
+
+    adjustments = by_transaction(cash_adjustments([credit], [refund], []))
+
+    assert adjustments["refund"] == {
+        RECEIVABLE: Decimal("-200.00"),
+        UNAPPLIED_RECEIVED: Decimal("200.00"),
+    }
+
+
+def test_an_overpayment_that_bounces_takes_back_all_it_recognized() -> None:
+    raised = invoice("1000.00", (DESIGN, "1000.00"))
+    credit = on_account("pay", "-200.00")
+    bounced = Reversal(transaction_id="bounce", transaction_date=LATER, reverses_id="pay")
+
+    adjustments = by_transaction(
+        cash_adjustments([raised, credit], [paid("pay", "1000.00")], [bounced])
+    )
+
+    assert adjustments["bounce"] == {
+        RECEIVABLE: Decimal("-1200.00"),
+        DESIGN: Decimal("1000.00"),
+        UNAPPLIED_RECEIVED: Decimal("200.00"),
+    }
+
+
+def test_money_paid_to_a_vendor_ahead_of_any_bill_is_expense_when_it_leaves() -> None:
+    """Payables inherit § 2 unchanged: a deposit with a vendor is positive on the payable,
+    and reads as unapplied bill payments until a bill takes it."""
+    deposit = on_account("pay", "300.00", account=PAYABLE)
+
+    adjustments = by_transaction(cash_adjustments([deposit], [], []))
+
+    assert adjustments["pay"] == {
+        PAYABLE: Decimal("-300.00"),
+        UNAPPLIED_PAID: Decimal("300.00"),
+    }
+
+
 # --- Properties --------------------------------------------------------------------------
 
 LINE_CENTS = st.lists(
@@ -319,3 +423,29 @@ def test_reversing_everything_restores_the_posted_figures(
         net[adjustment.account_id] += adjustment.amount
 
     assert all(amount == 0 for amount in net.values())
+
+
+@st.composite
+def overpaid_invoices(draw: st.DrawFn) -> tuple[Raised, list[Settled], Raised]:
+    """An invoice settled in full, the last payment bringing in more than it settled (§ 2)."""
+    raised, payments = draw(settled_invoices())
+    excess = draw(st.integers(min_value=1, max_value=5_000_000))
+    return raised, payments, on_account(payments[-1].transaction_id, str(-cents(excess)))
+
+
+@given(overpaid_invoices())
+def test_an_overpayment_recognizes_what_was_received(
+    case: tuple[Raised, list[Settled], Raised],
+) -> None:
+    """Cash method: income is what was received, so each payment recognizes its whole amount,
+    and the transaction still balances."""
+    raised, payments, credit = case
+    adjustments = by_transaction(cash_adjustments([raised, credit], payments, []))
+    for payment in payments:
+        amounts = adjustments[payment.transaction_id]
+        assert sum(amounts.values(), start=Decimal(0)) == 0
+        received = payment.amount
+        if payment.transaction_id == credit.transaction_id:
+            received -= credit.amount
+        recognized = sum((v for k, v in amounts.items() if k != RECEIVABLE), start=Decimal(0))
+        assert recognized == -received

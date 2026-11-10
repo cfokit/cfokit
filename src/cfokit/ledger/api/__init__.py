@@ -193,6 +193,7 @@ def _obligation(found: Obligation) -> ObligationModel:
         settled=str(found.settled),
         outstanding=str(found.outstanding),
         commodity=found.commodity,
+        on_account=found.on_account,
     )
 
 
@@ -1323,6 +1324,7 @@ def create_app(settings: Settings, authenticator: Authenticator | None = None) -
             settles=tuple(
                 Applied(obligation_id=a.obligation_id, amount=a.amount) for a in body.settles
             ),
+            on_account=body.on_account,
         )
         return WriteResponse(
             transaction_id=written.transaction_id,

@@ -87,7 +87,17 @@ class RecordTransactionRequest(BaseModel):
     settles: list[AppliedModel] = Field(
         default_factory=list,
         description="Obligations this transaction settles, and by how much (AR-12). Partial "
-        "payment and overpayment are both representable. Requires post.",
+        "payment is representable; a settlement past what is outstanding is refused, and an "
+        "overpayment's excess goes in on_account. Requires post.",
+    )
+    on_account: Money | None = Field(
+        default=None,
+        description="Money received or paid that no obligation takes: an overpayment's excess, "
+        "or a payment before any invoice (AR-12, ADR-0080 § 2). Recorded as an obligation "
+        "owed back, which a later invoice or a refund settles. Signed as its posting on the "
+        "account that carries it, which must be the only account whose postings here, less "
+        "what this transaction settles there, sum to it: negative for a customer's credit on a "
+        "receivable. Requires post, and not beside raises_obligation.",
     )
     post: bool = Field(
         default=False,
@@ -243,10 +253,17 @@ class YearClosedResponse(BaseModel):
     )
 
 
+_LINE_ACCOUNT = (
+    "The account, or on a cash basis one of the view's own lines for money on account, which "
+    "no chart holds and which have no code: unapplied-payments, income received ahead of any "
+    "invoice, and unapplied-bill-payments, expense paid ahead of any bill (ADR-0080 § 2)."
+)
+
+
 class TrialBalanceLineModel(BaseModel):
     """One line of a trial balance. Exactly one of debit or credit carries a figure."""
 
-    account_id: str
+    account_id: str = Field(description=_LINE_ACCOUNT)
     code: str
     name: str
     account_type: str
@@ -355,7 +372,7 @@ class AccountDetailResponse(BaseModel):
 class ComparativeLineModel(BaseModel):
     """One account across two periods, and what changed (RPT-07)."""
 
-    account_id: str
+    account_id: str = Field(description=_LINE_ACCOUNT)
     code: str
     name: str
     account_type: str
@@ -436,7 +453,7 @@ class ReconciliationResponse(BaseModel):
 class StatementLineModel(BaseModel):
     """One line of a statement, signed so positive means more of what the account is."""
 
-    account_id: str
+    account_id: str = Field(description=_LINE_ACCOUNT)
     code: str
     name: str
     account_type: str
@@ -555,6 +572,11 @@ class ObligationModel(BaseModel):
         description="Derived, never stored: the amount less what has been applied."
     )
     commodity: str
+    on_account: bool = Field(
+        default=False,
+        description="Money already received or paid that no obligation took, held for the "
+        "counterparty: a customer's credit is negative on a receivable (ADR-0080 § 2).",
+    )
 
 
 class SettlementModel(BaseModel):

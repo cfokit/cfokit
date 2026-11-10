@@ -69,6 +69,10 @@ The derivation is `engine/cash.py`, and `service/reports.py` is the only place i
 a cash-basis entity's balance-presenting reports add its adjustments and count, on their face,
 what no link reaches. The journal total and the export stay posted figures. (ADR-0080)
 
+**Overpayment is money on account, never an invoice paid past zero.** A settlement past what is
+outstanding is refused; the payment states its excess as `on_account`, an obligation owed back and
+marked so, which the cash view recognizes on receipt as "Unapplied payments". (ADR-0080 § 2)
+
 ## Service layer obligations
 
 Each of these is a bug if missed, not a nice-to-have:

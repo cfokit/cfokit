@@ -6,7 +6,8 @@
 Layer 3 of ADR-0036 against the service, with the database. The figures are ADR-0080 § 1's own
 worked example: an invoice of 1,000.00, 600.00 design and 400.00 workshops, paid 400.00 in a
 later period, recognizes 240.00 and 160.00 on the payment's date. Everything else follows from
-the decision's Confirmation: a voided invoice recognizes nothing, what no link reaches reads as
+the decision's Confirmation: money paid that no invoice takes is income on receipt, on a line of
+its own (§ 2), a voided invoice recognizes nothing, what no link reaches reads as
 posted and is counted on the report's face (`NFR-16`), a watermark reproduces the links as they
 stood (`RPT-11`), and an accrual entity's reports are unchanged.
 """
@@ -20,7 +21,7 @@ from typing import Any
 
 import pytest
 
-from cfokit.ledger.engine import Entry, Posting
+from cfokit.ledger.engine import UNAPPLIED_RECEIVED, Entry, Posting
 from cfokit.ledger.repository.cash import Unlinked
 from cfokit.ledger.repository.unit_of_work import Database
 from cfokit.ledger.service.administration import create_account, create_entity
@@ -107,6 +108,7 @@ def write(
     *postings: tuple[str, str],
     raises: str | None = None,
     settles: tuple[Applied, ...] = (),
+    on_account: str | None = None,
     derived_from: dict[str, Any] | None = None,
 ) -> str:
     return record_transaction(
@@ -123,6 +125,7 @@ def write(
         post=True,
         raises_obligation=Decimal(raises) if raises is not None else None,
         settles=settles,
+        on_account=Decimal(on_account) if on_account is not None else None,
         derived_from=derived_from,
     ).transaction_id
 
@@ -349,3 +352,90 @@ def test_an_accrual_entity_is_unchanged(database: Database) -> None:
         "4100": Decimal("-400.0000000000"),
     }
     assert report.unlinked is None
+
+
+def test_an_overpayment_s_excess_is_income_on_receipt_as_unapplied_payments(
+    database: Database, cash_books: tuple[str, dict[str, str]]
+) -> None:
+    """§ 2: 1,200.00 received on the 1,000.00 invoice recognizes the invoice and 200.00 of
+    unapplied payments, on the payment's date, and the receivable reads nothing."""
+    entity_id, accounts = cash_books
+    obligation = invoice(database, entity_id, accounts)
+    write(
+        database,
+        entity_id,
+        PAID,
+        (accounts["1000"], "1200.00"),
+        (accounts["1200"], "-1200.00"),
+        settles=(Applied(obligation_id=obligation, amount=Decimal("1000.00")),),
+        on_account="-200.00",
+    )
+
+    report = profit_and_loss(
+        database, entity_id=entity_id, principal=PERSON, since=Q2[0], as_of=Q2[1]
+    )
+    whole = trial_balance(database, entity_id=entity_id, principal=PERSON, as_of=YEAR_END)
+
+    assert [(row.account_id, row.name, row.balance) for row in report.rows] == [
+        (accounts["4000"], "Design", Decimal("-600.0000000000")),
+        (accounts["4100"], "Workshops", Decimal("-400.0000000000")),
+        (UNAPPLIED_RECEIVED, "Unapplied payments", Decimal("-200.00")),
+    ]
+    assert "1200" not in balances(whole.rows)
+    assert sum(row.balance for row in whole.rows) == 0
+
+
+def test_a_credit_applied_to_a_later_invoice_counts_its_income_once(
+    database: Database, cash_books: tuple[str, dict[str, str]]
+) -> None:
+    """§ 2: 500.00 received before any invoice is income when it arrives. Applied to a 300.00
+    invoice later, the invoice's income is recognized and the same 300.00 leaves unapplied
+    payments, so the year's income is still the 500.00 received."""
+    entity_id, accounts = cash_books
+    write(
+        database,
+        entity_id,
+        ISSUED,
+        (accounts["1000"], "500.00"),
+        (accounts["1200"], "-500.00"),
+        on_account="-500.00",
+    )
+    [credit] = outstanding_obligations(database, entity_id=entity_id, principal=PERSON)
+    write(
+        database,
+        entity_id,
+        PAID,
+        (accounts["1200"], "300.00"),
+        (accounts["4000"], "-300.00"),
+        raises="300.00",
+    )
+    owed = next(
+        o
+        for o in outstanding_obligations(database, entity_id=entity_id, principal=PERSON)
+        if not o.on_account
+    )
+    write(
+        database,
+        entity_id,
+        PAID,
+        (accounts["1200"], "-300.00"),
+        (accounts["1200"], "300.00"),
+        settles=(
+            Applied(obligation_id=owed.obligation_id, amount=Decimal("300.00")),
+            Applied(obligation_id=credit.obligation_id, amount=Decimal("-300.00")),
+        ),
+    )
+
+    first = profit_and_loss(
+        database, entity_id=entity_id, principal=PERSON, since=Q1[0], as_of=Q1[1]
+    )
+    second = profit_and_loss(
+        database, entity_id=entity_id, principal=PERSON, since=Q2[0], as_of=Q2[1]
+    )
+    year = profit_and_loss(
+        database, entity_id=entity_id, principal=PERSON, since=Q1[0], as_of=YEAR_END
+    )
+
+    assert balances(first.rows) == {"": Decimal("-500.00")}
+    assert balances(second.rows) == {"": Decimal("300.00"), "4000": Decimal("-300.00")}
+    assert sum(row.balance for row in year.rows) == Decimal("-500.00")

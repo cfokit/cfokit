@@ -192,6 +192,29 @@ class ObligationNotCarried(LedgerError):
     code = "obligation_not_carried"
 
 
+class SettlementExceedsOutstanding(LedgerError):
+    """A settlement would apply more to an obligation than is outstanding on it (`AR-12`).
+
+    Overpayment is representable, but not as an invoice paid past zero: the excess is money on
+    account, an obligation owed back to the customer that a later invoice or a refund settles
+    (ADR-0080 § 2). Settled past zero, the invoice would recognize more than it raised on a cash
+    basis, and the credit could never be applied to anything else.
+    """
+
+    code = "settlement_exceeds_outstanding"
+
+
+class OneObligationPerTransaction(LedgerError):
+    """A transaction would raise an obligation and record money on account (`LED-17`).
+
+    Each is an obligation, and a transaction raises at most one: two would make what it owes
+    ambiguous without a rule nobody has written down. An invoice and a deposit taken with it are
+    two transactions.
+    """
+
+    code = "one_obligation_per_transaction"
+
+
 class RetainedEarningsUnset(LedgerError):
     """No retained earnings account is named, so a year cannot be closed (`LED-12`)."""
 

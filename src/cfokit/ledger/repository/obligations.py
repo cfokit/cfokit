@@ -33,6 +33,9 @@ class Obligation:
     `account_id` is the account that carries it, and `amount` is signed as its posting there: a
     receivable is a debit, so positive; a payable a credit, so negative (ADR-0059 § 3). A
     settlement is signed as the obligation it settles.
+
+    `on_account` marks money already received or paid that no obligation took, held for the
+    counterparty: a customer's credit is negative on a receivable (ADR-0080 § 2).
     """
 
     obligation_id: str
@@ -42,6 +45,7 @@ class Obligation:
     amount: Decimal
     commodity: str
     settled: Decimal
+    on_account: bool = False
 
     @property
     def outstanding(self) -> Decimal:
@@ -68,12 +72,14 @@ def insert_obligation(
     account_id: str,
     amount: Decimal,
     commodity: str,
+    on_account: bool = False,
 ) -> str:
     with conn.cursor() as cur:
         cur.execute(
-            "INSERT INTO obligation (entity_id, transaction_id, account_id, amount, commodity)"
-            " VALUES (%s, %s, %s, %s, %s) RETURNING id",
-            (entity_id, transaction_id, account_id, amount, commodity),
+            "INSERT INTO obligation"
+            " (entity_id, transaction_id, account_id, amount, commodity, on_account)"
+            " VALUES (%s, %s, %s, %s, %s, %s) RETURNING id",
+            (entity_id, transaction_id, account_id, amount, commodity, on_account),
         )
         row = cur.fetchone()
     if row is None:  # pragma: no cover
@@ -108,14 +114,15 @@ def insert_settlement(
 # whatever the database happened to return. `RPT-09` needs the same answer every time.
 OUTSTANDING = """
     SELECT o.id, o.transaction_id, t.transaction_date, o.account_id, o.amount, o.commodity,
-           COALESCE(SUM(s.amount), 0)
+           COALESCE(SUM(s.amount), 0), o.on_account
       FROM obligation o
       JOIN ledger_transaction t ON t.id = o.transaction_id
       LEFT JOIN settlement s ON s.obligation_id = o.id
      WHERE o.entity_id = %(entity_id)s
        AND (%(obligation_id)s::uuid IS NULL OR o.id = %(obligation_id)s)
        AND (%(as_of)s::date IS NULL OR t.transaction_date <= %(as_of)s)
-     GROUP BY o.id, o.transaction_id, t.transaction_date, o.account_id, o.amount, o.commodity
+     GROUP BY o.id, o.transaction_id, t.transaction_date, o.account_id, o.amount, o.commodity,
+              o.on_account
      ORDER BY t.transaction_date, o.created_at, o.id
 """
 
@@ -148,6 +155,7 @@ def outstanding(
                 amount=Decimal(row[4]),
                 commodity=str(row[5]),
                 settled=Decimal(row[6]),
+                on_account=bool(row[7]),
             )
             for row in cur.fetchall()
         ]
@@ -164,7 +172,8 @@ OBLIGATIONS_AS_OF = """
     SELECT o.id, o.transaction_id, t.transaction_date, o.account_id, o.amount, o.commodity,
            COALESCE((SELECT SUM(s.amount) FROM settlement s
                       WHERE s.obligation_id = o.id AND s.created_at < %(at)s
-                        AND s.transaction_id IS DISTINCT FROM %(excluding)s::uuid), 0)
+                        AND s.transaction_id IS DISTINCT FROM %(excluding)s::uuid), 0),
+           o.on_account
       FROM obligation o
       JOIN ledger_transaction t ON t.id = o.transaction_id
      WHERE o.entity_id = %(entity_id)s
@@ -207,6 +216,7 @@ def obligations_as_of(
                 amount=Decimal(row[4]),
                 commodity=str(row[5]),
                 settled=Decimal(row[6]),
+                on_account=bool(row[7]),
             )
             for row in cur.fetchall()
         ]
