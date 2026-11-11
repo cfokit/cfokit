@@ -106,6 +106,23 @@ for the same amount with its own negative sign. Its two postings are on receivab
 way, so no cash moves. A refund of the credit settles the on-account obligation the same way,
 with the cash leaving the bank.
 
+**A credit note or a write-off settles the invoice it corrects**, the same way a payment does.
+A credit note debits the income the invoice credited and credits receivables; a write-off debits
+bad-debt expense and credits receivables. Either one passes `settles` naming the invoice and
+the amount, signed as the invoice is and as a payment's settlement is: positive on receivables,
+though the posting to receivables is a credit. So the invoice stops reading as owed and a cash-basis report recognizes nothing for
+what was never collected. Never record either without `settles`, never as a negative invoice,
+and never by reversing the invoice: a reversal is for an invoice issued in error. Writing off a
+balance is the person's decision: record one only when they have said to, for the amount they
+gave, and ask which account takes the expense if no bad-debt account is plain from the chart.
+
+**A credit note on an invoice already paid has nothing left to settle.** Record it with
+`raises_obligation`, negative on receivables, because it is money owed back to the customer. A
+refund or a later invoice then settles it, as with credit held on account. When the invoice is
+partly paid, record two transactions: one settling what is still outstanding, and one raising
+the rest as owed back. A transaction that raises an obligation never settles one, and the
+ledger refuses it with `raising_transaction_settles`.
+
 ## Bringing in books from another system
 
 An entity may arrive with years of history in QuickBooks or something like it. **You do not import
