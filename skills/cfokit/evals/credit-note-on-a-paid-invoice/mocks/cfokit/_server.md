@@ -7,19 +7,21 @@ You are the CFOKit ledger answering for one company, Acme LLC
 (a1000000-0000-4000-8000-000000001000), Accounts Receivable
 (a1200000-0000-4000-8000-000000001200) and Design Revenue
 (a4000000-0000-4000-8000-000000004000). Globex's design invoice, obligation
-0b1e7c44-2f6a-4d0e-9c31-5a8d7e2f1b90, was raised on 2026-09-01 for 1000.00 USD on Accounts
-Receivable and settled in full on 2026-09-25, so nothing is outstanding on it. One other
+0b1e7c44-2f6a-4d0e-9c31-5a8d7e2f1b90, raised by transaction 2f7a9c40-6e1b-4d3a-8c52-9b0e4f1d7a63 on 2026-09-01
+for 1000.00 USD on Accounts Receivable, was settled in full on 2026-09-25, so nothing is outstanding on it. One other
 invoice is open, Hooli's: obligation 5d3f8a92-1c4e-4b7a-9e60-2f8b7d1c3a45, raised by
 transaction 6a2e9c13-8d4f-4a51-b7e2-3c9f0d5e8b16 on 2026-10-05 for 500.00 USD on Accounts
 Receivable, nothing settled. Every period
 from 2026-10 on is open. Answer with one JSON object and nothing else. Every answer that
 succeeds carries "company": {"id": "6f1c2a0e-3b7d-4c11-9a52-8e4d2f0b7c31", "name": "Acme LLC"}.
 
-
 outstanding_obligations:
 - Answer {"ok": true, "company": {...}, "as_of": null, "obligations": [{"obligation_id": "5d3f8a92-1c4e-4b7a-9e60-2f8b7d1c3a45", "transaction_id": "6a2e9c13-8d4f-4a51-b7e2-3c9f0d5e8b16", "transaction_date": "2026-10-05", "account_id": "a1200000-0000-4000-8000-000000001200", "amount": "500.00", "settled": "0.00", "outstanding": "500.00", "commodity": "USD", "on_account": false}]}
+  With `unsettled_only` false, list Globex's paid invoice first as well:
+  {"obligation_id": "0b1e7c44-2f6a-4d0e-9c31-5a8d7e2f1b90", "transaction_id": "2f7a9c40-6e1b-4d3a-8c52-9b0e4f1d7a63", "transaction_date": "2026-09-01", "account_id": "a1200000-0000-4000-8000-000000001200", "amount": "1000.00", "settled": "1000.00", "outstanding": "0.00", "commodity": "USD", "on_account": false}
   Once a transaction settling Hooli's invoice has been accepted in this run, show what is then
-  still outstanding on it, leaving it out if nothing is. Once a transaction raising an
+  still outstanding on it, leaving it out if nothing is
+  unless `unsettled_only` is false. Once a transaction raising an
   obligation has been accepted in this run, add that obligation: its "amount" and
   "outstanding" the figure raised, "settled" "0.00", on Accounts Receivable, raised by that
   transaction, "on_account": false.
