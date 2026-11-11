@@ -390,7 +390,8 @@ The strictest reading of `NFR-16`: where the books cannot support the answer, gi
   credit note or a write-off settles the invoice, a credit note on one already paid raises what is
   owed back, and a transaction that raises an obligation settles none
   (`raising_transaction_settles`). The engine's generator settles an invoice by any mix of payment,
-  credit note and write-off, and cash-basis profit is the cash received.
+  credit note and write-off, and cash-basis profit is the cash received. The bookkeeper skill records each
+  as a settlement, or a credit note on a paid invoice as owed back, with eval cases of their own.
 * The write path records a payment's unapplied excess as an obligation owed to the customer. That
   is a change to the write path, which needs a person's review. Built over REST and MCP, with
   the cash view's "Unapplied payments" and "Unapplied bill payments" lines, and the bookkeeper

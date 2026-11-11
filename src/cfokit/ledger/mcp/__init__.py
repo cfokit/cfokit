@@ -665,7 +665,10 @@ def create_server(settings: Settings, authenticator: Authenticator | None = None
             "past what is outstanding: money received or paid beyond that is passed as "
             "on_account, signed as its posting on the account that carries it (negative for "
             "a customer's credit on a receivable), and is held as an obligation owed back "
-            "until a later invoice, bill or refund settles it; it needs post too."
+            "until a later invoice, bill or refund settles it; it needs post too. A credit "
+            "note or a write-off settles the invoice it corrects; one on an invoice already "
+            "paid raises an obligation owed back instead. A transaction that raises an "
+            "obligation settles none."
         ),
     )
     def record(
