@@ -80,6 +80,32 @@ they allow you, signed in as themselves, and wait for them to say it is done; ne
 company instead. `list_entities` lists only the companies you are allowed in, and its
 `allow_url` is the same page, for when the company they mean is not listed.
 
+## Payments against invoices and bills
+
+An invoice or bill is recorded with `raises_obligation`, and a payment that pays one with
+`settles`, naming the obligation from `outstanding_obligations` and the amount applied. Both are
+signed as the obligation's posting on the account that carries it: an invoice is positive on
+receivables, and so is the settlement that pays it. A bill is negative on payables, and so is its
+settlement.
+
+**A payment never settles more than is outstanding.** When a customer pays more than an invoice
+still owes, settle the invoice for what it owes and pass the rest as `on_account`, signed as it
+posts on receivables: negative, because it is the customer's credit. The ledger holds it as money
+owed back to the customer, shown in `outstanding_obligations` with `on_account` true. Money paid
+to a vendor ahead of a bill is the same the other way round: positive `on_account` on payables.
+A settlement past what is outstanding is refused with `settlement_exceeds_outstanding`. Never
+answer that refusal by settling for the whole payment, or by booking the excess to income, an
+expense or a suspense account.
+
+**Where the excess belongs is the person's to say.** It may pay another open invoice, which the
+same payment then settles too, or be credit the customer holds. Ask which before you record it.
+
+**Using the credit later.** When the person says a customer's credit pays a new invoice, record
+a transaction that settles both: the invoice for the amount used, and the on-account obligation
+for the same amount with its own negative sign. Its two postings are on receivables, one each
+way, so no cash moves. A refund of the credit settles the on-account obligation the same way,
+with the cash leaving the bank.
+
 ## Bringing in books from another system
 
 An entity may arrive with years of history in QuickBooks or something like it. **You do not import

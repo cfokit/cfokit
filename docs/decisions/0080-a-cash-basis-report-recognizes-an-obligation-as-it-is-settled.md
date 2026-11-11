@@ -377,10 +377,9 @@ The strictest reading of `NFR-16`: where the books cannot support the answer, gi
 * `allocate` across weights of both signs.
 * `AR-14` and `AR-18` record a settlement of the obligation they correct.
 * The write path records a payment's unapplied excess as an obligation owed to the customer. That
-  is a change to the write path, which needs a person's review. Built over REST, with the cash
-  view's "Unapplied payments" and "Unapplied bill payments" lines; the MCP tool and the
-  bookkeeper skill learn it in a release of their own, because a change to the skill's tools is
-  one.
+  is a change to the write path, which needs a person's review. Built over REST and MCP, with
+  the cash view's "Unapplied payments" and "Unapplied bill payments" lines, and the bookkeeper
+  skill states an overpayment's excess on account, with an eval case of its own.
 * The ledger's receivables service names a cash entity's own statements as `AR-16`'s, not
   `RPT-19`'s.
 * ADR-0079 notes that a cash-basis company's imported history is presented as posted.
