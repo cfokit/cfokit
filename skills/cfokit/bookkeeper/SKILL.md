@@ -109,7 +109,8 @@ with the cash leaving the bank.
 **A credit note or a write-off settles the invoice it corrects**, the same way a payment does.
 A credit note debits the income the invoice credited and credits receivables; a write-off debits
 bad-debt expense and credits receivables. Either one passes `settles` naming the invoice and
-the amount, so the invoice stops reading as owed and a cash-basis report recognizes nothing for
+the amount, signed as the invoice is and as a payment's settlement is: positive on receivables,
+though the posting to receivables is a credit. So the invoice stops reading as owed and a cash-basis report recognizes nothing for
 what was never collected. Never record either without `settles`, never as a negative invoice,
 and never by reversing the invoice: a reversal is for an invoice issued in error. Writing off a
 balance is the person's decision: record one only when they have said to, for the amount they
