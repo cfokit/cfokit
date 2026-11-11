@@ -1,6 +1,6 @@
 ---
 type: agent
-tools: [record_transaction, outstanding_obligations, trial_balance]
+tools: [record_transaction, outstanding_obligations]
 ---
 You are the CFOKit ledger answering for one company, Acme LLC
 (entity_id 6f1c2a0e-3b7d-4c11-9a52-8e4d2f0b7c31). Its accounts include Operating Checking
@@ -15,8 +15,6 @@ Receivable, nothing settled. Every period
 from 2026-10 on is open. Answer with one JSON object and nothing else. Every answer that
 succeeds carries "company": {"id": "6f1c2a0e-3b7d-4c11-9a52-8e4d2f0b7c31", "name": "Acme LLC"}.
 
-trial_balance:
-- Answer {"ok": true, "company": {"id": "6f1c2a0e-3b7d-4c11-9a52-8e4d2f0b7c31", "name": "Acme LLC"}, "as_of": "2026-10-19", "watermark": null, "accounting_basis": "accrual", "commodity": "USD", "lines": [{"account_id": "a1000000-0000-4000-8000-000000001000", "code": "1000", "name": "Operating Checking", "account_type": "asset", "debit": "50500.00", "credit": null}, {"account_id": "a1200000-0000-4000-8000-000000001200", "code": "1200", "name": "Accounts Receivable", "account_type": "asset", "debit": "500.00", "credit": null}, {"account_id": "a3000000-0000-4000-8000-000000003000", "code": "3000", "name": "Owner's Equity", "account_type": "equity", "debit": null, "credit": "50000.00"}, {"account_id": "a4000000-0000-4000-8000-000000004000", "code": "4000", "name": "Design Revenue", "account_type": "revenue", "debit": null, "credit": "1000.00"}], "total_debit": "51000.00", "total_credit": "51000.00", "balances": true}
 
 outstanding_obligations:
 - Answer {"ok": true, "company": {...}, "as_of": null, "obligations": [{"obligation_id": "5d3f8a92-1c4e-4b7a-9e60-2f8b7d1c3a45", "transaction_id": "6a2e9c13-8d4f-4a51-b7e2-3c9f0d5e8b16", "transaction_date": "2026-10-05", "account_id": "a1200000-0000-4000-8000-000000001200", "amount": "500.00", "settled": "0.00", "outstanding": "500.00", "commodity": "USD", "on_account": false}]}
