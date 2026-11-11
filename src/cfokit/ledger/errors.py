@@ -215,6 +215,18 @@ class OneObligationPerTransaction(LedgerError):
     code = "one_obligation_per_transaction"
 
 
+class RaisingTransactionSettles(LedgerError):
+    """A transaction would raise an obligation and settle one (`LED-17`, ADR-0080 § 2).
+
+    A raising transaction is deferred whole to its own settlements on a cash basis, so a part of
+    it that settled something else would be taken out twice, and the obligation it raised would
+    be read from postings that also pay another. A credit note on an invoice partly paid is two
+    transactions: one settling what is still outstanding, and one raising what is owed back.
+    """
+
+    code = "raising_transaction_settles"
+
+
 class RetainedEarningsUnset(LedgerError):
     """No retained earnings account is named, so a year cannot be closed (`LED-12`)."""
 

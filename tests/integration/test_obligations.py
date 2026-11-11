@@ -24,6 +24,7 @@ from cfokit.ledger.errors import (
     ObligationNotCarried,
     ObligationNotFound,
     OneObligationPerTransaction,
+    RaisingTransactionSettles,
     SettlementExceedsOutstanding,
     TransactionIncomplete,
 )
@@ -384,6 +385,41 @@ def test_an_invoice_is_not_also_money_on_account(
             raises="100.00",
             on_account="100.00",
         )
+
+
+def test_a_transaction_that_raises_an_obligation_settles_none(
+    database: Database, chart: tuple[str, str, str, str]
+) -> None:
+    """A credit note for the whole of a 100.00 invoice partly paid would settle the 60.00
+    outstanding and owe 40.00 back. Raising and settling in one transaction is refused, because
+    a cash view defers a raising transaction whole (ADR-0080 § 1), and nothing is written: it is
+    two transactions."""
+    entity_id, cash, revenue, receivable = chart
+    obligation_id = issue(database, entity_id, receivable, revenue, "100.00")
+    write(
+        database,
+        entity_id,
+        cash,
+        receivable,
+        PAID,
+        "40.00",
+        settles=(Applied(obligation_id=obligation_id, amount=Decimal("40.00")),),
+    )
+
+    with pytest.raises(RaisingTransactionSettles):
+        write(
+            database,
+            entity_id,
+            revenue,
+            receivable,
+            PAID,
+            "100.00",
+            raises="-40.00",
+            settles=(Applied(obligation_id=obligation_id, amount=Decimal("60.00")),),
+        )
+
+    [owed] = outstanding_obligations(database, entity_id=entity_id, principal=PERSON)
+    assert (owed.obligation_id, Decimal(owed.outstanding)) == (obligation_id, Decimal("60.00"))
 
 
 def test_it_is_recoverable_as_either_event(

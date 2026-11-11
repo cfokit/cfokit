@@ -38,6 +38,8 @@ DESIGN = "4000"
 WORKSHOPS = "4100"
 PAYABLE = "2000"
 SUPPLIES = "6000"
+RETURNS = "4900"
+BAD_DEBTS = "6900"
 
 
 def invoice(amount: str, *lines: tuple[str, str], obligation: str = "inv") -> Raised:
@@ -86,6 +88,26 @@ def on_account(
         lines=(),
         on_account=True,
     )
+
+
+def cash_view(
+    posted: Iterable[tuple[str, str, str]], adjustments: Iterable[Adjustment]
+) -> dict[str, Decimal]:
+    """Each account's cash-basis figure: the posted amounts, as (transaction, account, amount),
+    plus the view's adjustments, with the accounts that come to nothing left out."""
+    figures: defaultdict[str, Decimal] = defaultdict(Decimal)
+    for _, account, amount in posted:
+        figures[account] += Decimal(amount)
+    for adjustment in adjustments:
+        figures[adjustment.account_id] += adjustment.amount
+    return {account: amount for account, amount in figures.items() if amount != 0}
+
+
+INVOICE_POSTED = (
+    ("inv-tx", RECEIVABLE, "1000.00"),
+    ("inv-tx", DESIGN, "-600.00"),
+    ("inv-tx", WORKSHOPS, "-400.00"),
+)
 
 
 def by_transaction(adjustments: Iterable[Adjustment]) -> dict[str, dict[str, Decimal]]:
@@ -311,6 +333,106 @@ def test_money_paid_to_a_vendor_ahead_of_any_bill_is_expense_when_it_leaves() ->
     }
 
 
+def test_a_credit_note_settles_the_invoice_it_corrects_and_recognizes_nothing() -> None:
+    """§ 2: a credit note settles the invoice it corrects. Its own debit to income and the share
+    it recognizes cancel, so a credited invoice recognizes nothing on a cash basis (`AR-14`)."""
+    raised = invoice("1000.00", (DESIGN, "600.00"), (WORKSHOPS, "400.00"))
+    credited = (
+        ("credit-tx", DESIGN, "600.00"),
+        ("credit-tx", WORKSHOPS, "400.00"),
+        ("credit-tx", RECEIVABLE, "-1000.00"),
+    )
+
+    adjustments = cash_adjustments([raised], [paid("credit-tx", "1000.00")], [])
+
+    assert cash_view([*INVOICE_POSTED, *credited], adjustments) == {}
+
+
+def test_a_write_off_settles_what_is_left_and_nets_to_nothing() -> None:
+    """§ 2: paid 400.00 and the rest written off, the invoice recognizes 400.00 on the payment
+    and the write-off's bad-debt expense nets against the share it settles, so profit is the
+    cash received and the write-off is no expense on a cash basis (`AR-18`, Treas. Reg.
+    § 1.166-1(e))."""
+    raised = invoice("1000.00", (DESIGN, "600.00"), (WORKSHOPS, "400.00"))
+    payment = (("pay", BANK, "400.00"), ("pay", RECEIVABLE, "-400.00"))
+    written_off = (("write-off", BAD_DEBTS, "600.00"), ("write-off", RECEIVABLE, "-600.00"))
+    settled = [paid("pay", "400.00"), paid("write-off", "600.00", when=LATER)]
+
+    adjustments = cash_adjustments([raised], settled, [])
+    view = cash_view([*INVOICE_POSTED, *payment, *written_off], adjustments)
+
+    assert view == {
+        BANK: Decimal("400.00"),
+        DESIGN: Decimal("-600.00"),
+        WORKSHOPS: Decimal("-400.00"),
+        BAD_DEBTS: Decimal("600.00"),
+    }
+    assert by_transaction(adjustments)["write-off"] == {
+        RECEIVABLE: Decimal("600.00"),
+        DESIGN: Decimal("-360.00"),
+        WORKSHOPS: Decimal("-240.00"),
+    }
+
+
+def test_a_credit_note_on_a_paid_invoice_waits_for_the_refund() -> None:
+    """§ 2: a credit note on an invoice already paid raises an obligation owed to the customer.
+    It recognizes nothing until the refund settles it, and the refund takes the income back on
+    its own date, as the cash leaves."""
+    credit_note = Raised(
+        obligation_id="credit",
+        transaction_id="credit-tx",
+        transaction_date=PAID,
+        account_id=RECEIVABLE,
+        amount=Decimal("-1000.00"),
+        commodity="USD",
+        lines=(
+            Line(account_id=DESIGN, amount=Decimal("600.00")),
+            Line(account_id=WORKSHOPS, amount=Decimal("400.00")),
+            Line(account_id=RECEIVABLE, amount=Decimal("-1000.00")),
+        ),
+    )
+    refund = paid("refund", "-1000.00", when=LATER, obligation="credit")
+
+    adjustments = by_transaction(cash_adjustments([credit_note], [refund], []))
+
+    assert adjustments["credit-tx"] == {
+        DESIGN: Decimal("-600.00"),
+        WORKSHOPS: Decimal("-400.00"),
+        RECEIVABLE: Decimal("1000.00"),
+    }
+    assert adjustments["refund"] == {
+        RECEIVABLE: Decimal("-1000.00"),
+        DESIGN: Decimal("600.00"),
+        WORKSHOPS: Decimal("400.00"),
+    }
+
+
+def test_a_credit_note_applied_to_a_later_invoice_moves_no_income() -> None:
+    """§ 2: applied to a later invoice, the credit note's reduction and the invoice's share land
+    on the same date and net to nothing, because no cash moved."""
+    credit_note = Raised(
+        obligation_id="credit",
+        transaction_id="credit-tx",
+        transaction_date=PAID,
+        account_id=RECEIVABLE,
+        amount=Decimal("-500.00"),
+        commodity="USD",
+        lines=(
+            Line(account_id=DESIGN, amount=Decimal("500.00")),
+            Line(account_id=RECEIVABLE, amount=Decimal("-500.00")),
+        ),
+    )
+    later = invoice("300.00", (WORKSHOPS, "300.00"), obligation="inv2")
+    applied = [
+        paid("apply", "300.00", when=LATER, obligation="inv2"),
+        paid("apply", "-300.00", when=LATER, obligation="credit"),
+    ]
+
+    adjustments = by_transaction(cash_adjustments([credit_note, later], applied, []))
+
+    assert adjustments["apply"] == {DESIGN: Decimal("300.00"), WORKSHOPS: Decimal("-300.00")}
+
+
 # --- Properties --------------------------------------------------------------------------
 
 LINE_CENTS = st.lists(
@@ -449,3 +571,58 @@ def test_an_overpayment_recognizes_what_was_received(
             received -= credit.amount
         recognized = sum((v for k, v in amounts.items() if k != RECEIVABLE), start=Decimal(0))
         assert recognized == -received
+
+
+# What each kind of settling transaction posts against the receivable: a payment the bank, a
+# credit note income, and a write-off bad-debt expense (§ 2).
+COUNTER = {"payment": BANK, "credit note": RETURNS, "write-off": BAD_DEBTS}
+
+
+@st.composite
+def settled_any_way(
+    draw: st.DrawFn,
+) -> tuple[Raised, list[Settled], dict[str, str]]:
+    """An invoice settled in full by some mix of payments, credit notes and write-offs."""
+    raised, settlements = draw(settled_invoices())
+    kinds = {
+        settlement.transaction_id: draw(st.sampled_from(sorted(COUNTER)))
+        for settlement in settlements
+    }
+    return raised, settlements, kinds
+
+
+@given(settled_any_way())
+def test_cash_basis_profit_is_the_cash_received_however_the_invoice_is_settled(
+    case: tuple[Raised, list[Settled], dict[str, str]],
+) -> None:
+    """§ 2: a payment, a credit note and a write-off are the same rule. Whatever mix settles an
+    invoice, its cash-basis profit is what was paid, and a credit note or a write-off nets to
+    nothing in profit on its own date."""
+    raised, settlements, kinds = case
+    posted = [("inv-tx", line.account_id, str(line.amount)) for line in raised.lines]
+    for settlement in settlements:
+        tx, amount = settlement.transaction_id, str(settlement.amount)
+        posted += [(tx, COUNTER[kinds[tx]], amount), (tx, RECEIVABLE, f"-{amount}")]
+    adjustments = cash_adjustments([raised], settlements, [])
+
+    def profit(view: dict[str, Decimal]) -> Decimal:
+        return -sum(
+            (amount for account, amount in view.items() if account not in {BANK, RECEIVABLE}),
+            start=Decimal(0),
+        )
+
+    view = cash_view(posted, adjustments)
+    received = sum(
+        (s.amount for s in settlements if kinds[s.transaction_id] == "payment"),
+        start=Decimal(0),
+    )
+    assert RECEIVABLE not in view
+    assert profit(view) == received
+
+    for tx, kind in kinds.items():
+        if kind != "payment":
+            own = cash_view(
+                [each for each in posted if each[0] == tx],
+                [each for each in adjustments if each.transaction_id == tx],
+            )
+            assert profit(own) == 0
