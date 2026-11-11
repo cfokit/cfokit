@@ -48,6 +48,8 @@ ISSUED = date(2026, 3, 14)
 PAID = date(2026, 5, 2)
 Q1 = (date(2026, 1, 1), date(2026, 3, 31))
 Q2 = (date(2026, 4, 1), date(2026, 6, 30))
+Q3 = (date(2026, 7, 1), date(2026, 9, 30))
+REFUNDED = date(2026, 8, 3)
 YEAR_END = date(2026, 12, 31)
 
 CHART = (
@@ -439,3 +441,113 @@ def test_a_credit_applied_to_a_later_invoice_counts_its_income_once(
     assert balances(first.rows) == {"": Decimal("-500.00")}
     assert balances(second.rows) == {"": Decimal("300.00"), "4000": Decimal("-300.00")}
     assert sum(row.balance for row in year.rows) == Decimal("-500.00")
+
+
+def test_a_credit_note_settles_the_invoice_and_recognizes_nothing(
+    database: Database, cash_books: tuple[str, dict[str, str]]
+) -> None:
+    """§ 2: a credit note for the whole invoice settles it (`AR-14`). Its debit to each income
+    line and the share it recognizes cancel, so the year's profit and loss is empty and nothing
+    is outstanding."""
+    entity_id, accounts = cash_books
+    obligation = invoice(database, entity_id, accounts)
+    write(
+        database,
+        entity_id,
+        PAID,
+        (accounts["4000"], "600.00"),
+        (accounts["4100"], "400.00"),
+        (accounts["1200"], "-1000.00"),
+        settles=(Applied(obligation_id=obligation, amount=Decimal("1000.00")),),
+    )
+
+    year = profit_and_loss(
+        database, entity_id=entity_id, principal=PERSON, since=Q1[0], as_of=YEAR_END
+    )
+
+    assert balances(year.rows) == {}
+    assert outstanding_obligations(database, entity_id=entity_id, principal=PERSON) == ()
+
+
+def test_a_write_off_settles_what_is_left_and_its_profit_is_the_cash_received(
+    database: Database, cash_books: tuple[str, dict[str, str]]
+) -> None:
+    """§ 2: paid 400.00 in May and the 600.00 left written off in August (`AR-18`). On a cash
+    basis the write-off's bad-debt expense nets against the 360.00 and 240.00 it settles, so the
+    quarter it lands in nets to nothing and the year's profit is the 400.00 received."""
+    entity_id, accounts = cash_books
+    bad_debts = create_account(
+        database,
+        entity_id=entity_id,
+        principal=PERSON,
+        request_id="fixture",
+        code="6900",
+        name="Bad debts",
+        account_type="expense",
+    )
+    obligation = invoice(database, entity_id, accounts)
+    pay(database, entity_id, accounts, obligation, "400.00")
+    write(
+        database,
+        entity_id,
+        REFUNDED,
+        (bad_debts, "600.00"),
+        (accounts["1200"], "-600.00"),
+        settles=(Applied(obligation_id=obligation, amount=Decimal("600.00")),),
+    )
+
+    third = profit_and_loss(
+        database, entity_id=entity_id, principal=PERSON, since=Q3[0], as_of=Q3[1]
+    )
+    year = profit_and_loss(
+        database, entity_id=entity_id, principal=PERSON, since=Q1[0], as_of=YEAR_END
+    )
+
+    assert balances(third.rows) == {
+        "4000": Decimal("-360.00"),
+        "4100": Decimal("-240.00"),
+        "6900": Decimal("600.00"),
+    }
+    assert sum(row.balance for row in year.rows) == Decimal("-400.00")
+    assert outstanding_obligations(database, entity_id=entity_id, principal=PERSON) == ()
+
+
+def test_a_credit_note_on_a_paid_invoice_reduces_income_when_it_is_refunded(
+    database: Database, cash_books: tuple[str, dict[str, str]]
+) -> None:
+    """§ 2: paid in full in May and credited in full the same month, the invoice raises an
+    obligation owed to the customer instead. May's income stands, and the reduction lands in
+    August with the refund, as the cash leaves."""
+    entity_id, accounts = cash_books
+    pay(database, entity_id, accounts, invoice(database, entity_id, accounts), "1000.00")
+    write(
+        database,
+        entity_id,
+        PAID,
+        (accounts["4000"], "600.00"),
+        (accounts["4100"], "400.00"),
+        (accounts["1200"], "-1000.00"),
+        raises="-1000.00",
+    )
+    [owed] = outstanding_obligations(database, entity_id=entity_id, principal=PERSON)
+    write(
+        database,
+        entity_id,
+        REFUNDED,
+        (accounts["1200"], "1000.00"),
+        (accounts["1000"], "-1000.00"),
+        settles=(Applied(obligation_id=owed.obligation_id, amount=Decimal("-1000.00")),),
+    )
+
+    second = profit_and_loss(
+        database, entity_id=entity_id, principal=PERSON, since=Q2[0], as_of=Q2[1]
+    )
+    third = profit_and_loss(
+        database, entity_id=entity_id, principal=PERSON, since=Q3[0], as_of=Q3[1]
+    )
+    whole = trial_balance(database, entity_id=entity_id, principal=PERSON, as_of=YEAR_END)
+
+    assert balances(second.rows) == {"4000": Decimal("-600.00"), "4100": Decimal("-400.00")}
+    assert balances(third.rows) == {"4000": Decimal("600.00"), "4100": Decimal("400.00")}
+    assert balances(whole.rows) == {}
+    assert outstanding_obligations(database, entity_id=entity_id, principal=PERSON) == ()

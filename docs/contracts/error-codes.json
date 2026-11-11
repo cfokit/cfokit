@@ -160,6 +160,10 @@
     "error": "QuestionNotFound"
   },
   {
+    "code": "raising_transaction_settles",
+    "error": "RaisingTransactionSettles"
+  },
+  {
     "code": "recipient_holds_no_role",
     "error": "RecipientHoldsNoRole"
   },

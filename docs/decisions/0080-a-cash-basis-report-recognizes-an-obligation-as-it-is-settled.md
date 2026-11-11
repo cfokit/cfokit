@@ -1,5 +1,5 @@
 ---
-status: "proposed"
+status: "accepted"
 kind: "requirement-driven"
 date: 2026-10-26
 decision-makers: [Geoff]
@@ -129,12 +129,18 @@ cash-basis balance sheet.
 **A payment, a credit note and a write-off are the same rule.** A credit note settles the invoice it
 corrects: its own debit to income and the share it recognizes cancel, so a credited invoice
 recognizes nothing on a cash basis. A write-off settles the invoice: its bad-debt expense and the
-share cancel, so an invoice never collected was never income and its write-off is no expense, as
-the cash method has it (Treas. Reg. § 1.166-1(e)). This holds only if both are recorded as
-settlements of the obligation, which is the obligation this record puts on `AR-14` and `AR-18`.
+share cancel in profit, so an invoice never collected was never income and its write-off is no
+expense, as the cash method has it (Treas. Reg. § 1.166-1(e)). The two are presented, not
+suppressed: the write-off's date shows the share among income and the expense beside it, netting to
+nothing, because the view reads which obligation a transaction settles and never what kind of
+transaction it is. This holds only if both are recorded as settlements of the obligation, which is
+the obligation this record puts on `AR-14` and `AR-18`.
 
 **A credit note against an invoice already paid raises an obligation instead**, owed to the
-customer, because there is nothing left to settle. Like any obligation for money not yet paid, it
+customer, because there is nothing left to settle. A credit note on an invoice partly paid is both,
+and is recorded as two transactions, one settling what is outstanding and one raising what is owed
+back: a transaction that raises an obligation settles none, because § 1 defers a raising
+transaction whole, and a part of it that settled something else would be taken out twice. Like any obligation for money not yet paid, it
 waits for its settlements: the refund that pays it, or the later invoice it is applied to. The
 reduction in income lands then, when the cash leaves or the credit is used, which is when the cash
 method deducts a refund — not as a reversal of income already received.
@@ -253,6 +259,11 @@ than a view of it**, and stay posted figures on every basis (ADR-0050 § 1).
 * Bad, because a partial payment that does not divide evenly can put its odd cent on a different
   line from QuickBooks', whose rule rounds each share and gives the last line the rest. The
   totals agree.
+* Bad, because a write-off presents its invoice's share among income and its bad-debt expense
+  beside it, on the write-off's date, rather than neither. They net to nothing in profit, but a
+  cash-basis income line reads larger than the cash received by what was written off.
+* Bad, because a credit note on an invoice partly paid takes two transactions, since one that
+  raises an obligation settles none.
 * Bad, because an invoice with a discount line has lines of both signs, so `allocate` had to admit
   weights of either sign. A line of the opposite sign takes a share of the opposite sign.
 * Neutral, because an accrual entity's reports do not change.
@@ -375,7 +386,11 @@ The strictest reading of `NFR-16`: where the books cannot support the answer, gi
   services applying it where the declared basis is cash; the count of unlinked and imported postings
   on the face of each report.
 * `allocate` across weights of both signs.
-* `AR-14` and `AR-18` record a settlement of the obligation they correct.
+* `AR-14` and `AR-18` record a settlement of the obligation they correct. Built in the ledger: a
+  credit note or a write-off settles the invoice, a credit note on one already paid raises what is
+  owed back, and a transaction that raises an obligation settles none
+  (`raising_transaction_settles`). The engine's generator settles an invoice by any mix of payment,
+  credit note and write-off, and cash-basis profit is the cash received.
 * The write path records a payment's unapplied excess as an obligation owed to the customer. That
   is a change to the write path, which needs a person's review. Built over REST and MCP, with
   the cash view's "Unapplied payments" and "Unapplied bill payments" lines, and the bookkeeper

@@ -73,6 +73,11 @@ what no link reaches. The journal total and the export stay posted figures. (ADR
 outstanding is refused; the payment states its excess as `on_account`, an obligation owed back and
 marked so, which the cash view recognizes on receipt as "Unapplied payments". (ADR-0080 § 2)
 
+**A credit note and a write-off settle the invoice they correct**, as a payment does; a credit
+note on an invoice already paid raises what is owed back instead. A transaction that raises an
+obligation settles none, because the cash view defers a raising transaction whole: a credit note
+on an invoice partly paid is two transactions. (ADR-0080 § 2)
+
 ## Service layer obligations
 
 Each of these is a bug if missed, not a nice-to-have:

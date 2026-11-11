@@ -41,6 +41,7 @@ from cfokit.ledger.errors import (
     ObligationNotFound,
     OneObligationPerTransaction,
     PeriodClosed,
+    RaisingTransactionSettles,
     SettlementExceedsOutstanding,
     TransactionAlreadyPosted,
     TransactionIncomplete,
@@ -253,6 +254,15 @@ def record_in(
     obligation, so it is refused beside `raises_obligation` as
     `one_obligation_per_transaction`.
 
+    **A credit note and a write-off settle the invoice they correct**, as a payment does
+    (`AR-14`, `AR-18`, ADR-0080 § 2): a credit to the receivable against income or bad-debt
+    expense, settling the invoice. A credit note against an invoice already paid raises an
+    obligation instead, owed to the customer and settled by the refund or the later invoice it
+    is applied to. A transaction that raises an obligation settles none, refused as
+    `raising_transaction_settles`, because a cash view defers a raising transaction whole: a
+    credit note on an invoice partly paid is two transactions, one settling what is outstanding
+    and one raising what is owed back.
+
     **`assigned` records that a rule chose a coding, and which rule version** (`BKP-10`).
     ADR-0042 § 4 reserved this: "`RULE` arrives when the rules engine does — as a value the
     write path sets on a posting whose coding a rule determined, not as a branch in
@@ -320,6 +330,11 @@ def record_in(
         raise OneObligationPerTransaction(
             "money on account is an obligation, and a transaction raises at most one; record "
             "the invoice and the money received as two transactions"
+        )
+    if raises_obligation is not None and settles:
+        raise RaisingTransactionSettles(
+            "a transaction that raises an obligation settles none; record what it settles and "
+            "what it raises as two transactions, as a credit note on an invoice partly paid is"
         )
     carried_by = None
     if raises_obligation is not None:
