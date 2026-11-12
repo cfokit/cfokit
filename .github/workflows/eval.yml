@@ -15,8 +15,8 @@
 # from an empty directory, so no project settings or hooks the pull request carries are loaded.
 # Its cases are prompts and mocks: no case script runs (`--scaffold` is off), no real server
 # starts, and no gated tool is granted. The bar it must meet is the policy's, not the run's. The
-# run's transcripts stay on the runner: only the report, which prints scores and sanitized names,
-# leaves it.
+# run's transcripts stay on the runner: only the report leaves it. That prints scores, sanitized
+# names, and each check a run missed with the plugin as the harness explains it, sanitized too.
 #
 # Nothing here touches ci.yml, whose portability job must stay free of credentials (ADR-0004).
 

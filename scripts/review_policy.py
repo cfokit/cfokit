@@ -66,6 +66,10 @@ EVAL_MARKER = "<!-- cfokit-eval sha={sha} result={result} -->"
 EVAL_PATTERN = re.compile(r"\A<!-- cfokit-eval sha=([0-9a-f]{40}) result=(pass|fail) -->\n")
 # What the eval report prints from the run. Names come from the pull request's directories.
 REPORTED_TEXT = re.compile(r"[^A-Za-z0-9._-]")
+# A missed check's explanation is the harness's, but it quotes the pull request's grader, so it
+# keeps only plain words and the counts it states: no backtick, bracket, angle or marker.
+REPORTED_EXPLANATION = re.compile(r"[^A-Za-z0-9 ._()\u221e-]")
+EXPLANATION_LENGTH = 160
 
 # What the plugin may hold while the evals run with credentials in the environment: its
 # manifest, its README, its eval cases, and the skills its manifest names. A hook, a command,
@@ -548,12 +552,38 @@ def eval_report(*, sha: str, run: dict[str, Any] | None) -> tuple[str, str]:
         ]
         if partial:
             lines.append("The run stopped at its cost ceiling, so some cases did not run.")
+        missed = missed_checks(cases)
+        if missed:
+            lines += ["", "Checks missed with the plugin:", *missed]
     verdict = "passed" if result == "pass" else "failed"
     header = [
         EVAL_MARKER.format(sha=sha, result=result),
         f"### Evals at `{sha[:7]}`: {verdict}",
     ]
     return result, "\n".join([*header, "", *lines]) + "\n"
+
+
+def missed_checks(cases: list[dict[str, Any]]) -> list[str]:
+    """A line for each check a run missed with the plugin, as the harness explained it.
+
+    Only the arm the bar judges is reported: the baseline is expected to miss. A run that
+    ended in an error says so without its message, which may quote anything.
+    """
+    lines: list[str] = []
+    for case in cases:
+        name = REPORTED_TEXT.sub("", str(case.get("name", "")))
+        for number, run in enumerate(case.get("arms", {}).get("with", []), start=1):
+            if run.get("error"):
+                lines.append(f"- `{name}` run {number}: ended in an error")
+            for grader in run.get("graders", []):
+                if grader.get("passed") or not grader.get("scored", True):
+                    continue
+                check = REPORTED_TEXT.sub("", str(grader.get("name", "")))
+                why = REPORTED_EXPLANATION.sub("", str(grader.get("explanation", "")))
+                lines.append(
+                    f"- `{name}` run {number}, `{check}`: {why[:EXPLANATION_LENGTH].strip()}"
+                )
+    return lines
 
 
 def cmd_eval_report(args: argparse.Namespace) -> None:

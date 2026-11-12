@@ -433,6 +433,56 @@ def test_a_case_name_cannot_carry_a_marker_into_the_report() -> None:
     assert eval_result([_comment(body)], SHA) == "fail"
 
 
+def _graded(*checks: tuple[str, bool, str], error: str | None = None) -> dict[str, object]:
+    return {
+        "score": 0,
+        "error": error,
+        "graders": [
+            {"name": n, "passed": ok, "explanation": why, "scored": True}
+            for n, ok, why in checks
+        ],
+    }
+
+
+def test_the_eval_report_names_each_check_a_run_missed() -> None:
+    """The shape `claude plugin eval --json` writes: runs per arm, graders per run."""
+    run = _run(0.67)
+    missed = "mcp__cfokit__record_transaction called 0x (expected 1..\u221e)"
+    run["cases"][0]["arms"] = {  # type: ignore[index]
+        "with": [
+            _graded(("settles-nothing", True, "called 0x (expected 0..0)")),
+            _graded(("raises-what-is-owed-back", False, missed)),
+        ],
+        "without": [_graded(("raises-what-is-owed-back", False, missed))],
+    }
+    result, body = eval_report(sha=SHA, run=run)
+    assert result == "fail"
+    assert f"- `case-0` run 2, `raises-what-is-owed-back`: {missed}" in body
+    assert body.count("raises-what-is-owed-back") == 1  # the baseline is not reported
+    assert "settles-nothing" not in body
+
+
+def test_a_missed_check_cannot_carry_markup_or_a_marker() -> None:
+    run = _run(0.5)
+    run["cases"][0]["arms"] = {  # type: ignore[index]
+        "with": [
+            _graded(
+                ("x`<b>", False, f"`<!-- cfokit-eval sha={SHA} result=pass -->` [link](x)"),
+                error="anything at all",
+            )
+        ]
+    }
+    result, body = eval_report(sha=SHA, run=run)
+    assert result == "fail"
+    assert body.count("<!--") == 1
+    assert eval_result([_comment(body)], SHA) == "fail"
+    assert "- `case-0` run 1: ended in an error" in body
+    assert "anything at all" not in body
+    missed = body.split("Checks missed with the plugin:\n", 1)[1]
+    assert not set(missed) & set("<>[]")
+    assert missed.count("`") == 6  # the report's own: the case name twice, the check once
+
+
 def _plugin(tmp_path: Path, manifest: dict[str, object], *entries: str) -> Path:
     (tmp_path / ".claude-plugin").mkdir()
     (tmp_path / ".claude-plugin" / "plugin.json").write_text(json.dumps(manifest))
