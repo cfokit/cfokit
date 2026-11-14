@@ -312,6 +312,8 @@ websockets, SSE transport, or an event bus. (ADR-0012) The web client has passed
   you proceed.
 - If you make a decision future work should be bound by, propose an ADR rather than
   burying it in a code comment.
+- **Open a pull request ready for review, never as a draft, and stop.** Merge it only when the
+  user tells you to, and then by the label below.
 - **Merge by labeling, not by `gh pr merge`.** Add the `merge` label and stop. That label
   runs the reviewer, which approves and auto-merges only what `scripts/review_policy.py`
   allows, and marks everything else `needs-human`. Paths in `.github/CODEOWNERS` always need
